@@ -26,8 +26,6 @@ services:
       - REDIS_HOST=redis-queue
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    env_file:
-      - .env.local
     depends_on:
       - redis-queue
     networks:

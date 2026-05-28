@@ -2,9 +2,39 @@ export type ClientStatus = 'active' | 'inactive' | 'pending'
 export type AlertType = 'before_due' | 'on_due' | 'after_due' | 'renewal' | 'promotion' | 'quick_message'
 export type AlertSendStatus = 'sent' | 'failed' | 'pending'
 export type InstanceStatus = 'connected' | 'disconnected'
+export type OrganizationRole = 'owner' | 'admin' | 'member'
+
+export interface Organization {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OrganizationMember {
+  id: string
+  organization_id: string
+  user_id: string
+  role: OrganizationRole
+  created_at: string
+  organization?: Organization
+}
+
+export interface AuditLog {
+  id: string
+  organization_id: string | null
+  user_id: string | null
+  action: string
+  resource: string
+  resource_id: string | null
+  details: any | null
+  ip_address: string | null
+  created_at: string
+}
 
 export interface Service {
   id: string
+  organization_id?: string
   user_id: string
   name: string
   cost: number
@@ -15,6 +45,7 @@ export interface Service {
 
 export interface Client {
   id: string
+  organization_id?: string
   user_id: string
   name: string
   phone: string | null
@@ -41,6 +72,7 @@ export interface ClientService {
 
 export interface Promotion {
   id: string
+  organization_id?: string
   user_id: string
   name: string
   description: string | null
@@ -54,6 +86,7 @@ export interface Promotion {
 
 export interface Automation {
   id: string
+  organization_id?: string
   user_id: string
   alert_type: AlertType
   days_offset: number
@@ -66,6 +99,7 @@ export interface Automation {
 
 export interface AlertHistory {
   id: string
+  organization_id?: string
   user_id: string
   client_id: string
   automation_id: string
@@ -81,6 +115,7 @@ export interface AlertHistory {
 
 export interface EvolutionInstance {
   id: string
+  organization_id?: string
   user_id: string
   instance_name: string
   status: InstanceStatus
@@ -107,6 +142,7 @@ export interface DashboardMetrics {
 
 export interface Payment {
   id: string
+  organization_id?: string
   user_id: string
   client_id: string
   amount_paid: number

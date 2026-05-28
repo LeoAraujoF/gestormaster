@@ -26,3 +26,14 @@ export async function createClient() {
     }
   )
 }
+
+export async function getActiveOrganization(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('organization_members')
+    .select('organization_id, role, organizations(*)')
+    .eq('user_id', userId)
+    .single()
+  
+  if (error || !data) return null
+  return data
+}

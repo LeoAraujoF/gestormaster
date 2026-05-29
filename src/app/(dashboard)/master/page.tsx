@@ -130,14 +130,23 @@ export default function MasterAdminPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
-          <ShieldAlert className="w-8 h-8 text-rose-500" />
-          Master Admin
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400">
-          Visão global da plataforma, faturamento estimado e saúde das instâncias.
-        </p>
+      <div className="flex justify-between items-start flex-col sm:flex-row gap-4">
+        <div>
+          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
+            <ShieldAlert className="w-8 h-8 text-rose-500" />
+            Master Admin
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Visão global da plataforma, faturamento estimado e saúde das instâncias.
+          </p>
+        </div>
+        <Button 
+          onClick={() => window.open('http://localhost:3001/admin/queues', '_blank')} 
+          className="bg-amber-500 hover:bg-amber-600 text-white gap-2 shrink-0"
+        >
+          <Activity className="w-4 h-4" />
+          Ver Filas do Sistema
+        </Button>
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">

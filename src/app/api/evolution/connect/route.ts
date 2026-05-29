@@ -96,9 +96,15 @@ export async function POST(request: Request) {
     let qrCodeValue = null;
 
     try {
-      // 2. Create the instance in Evolution API (if it doesn't exist)
+      // Monta a URL do Webhook usando o Host da requisição
+      const host = request.headers.get('host');
+      const protocol = host?.includes('localhost') || host?.match(/^[0-9.]+:[0-9]+$/) ? 'http' : 'https';
+      const webhookSecret = process.env.WEBHOOK_SECRET || '';
+      const webhookUrl = `${protocol}://${host}/api/evolution/webhook${webhookSecret ? `?token=${webhookSecret}` : ''}`;
+
+      // 2. Create the instance in Evolution API
       // Evolution v2.2.1 retorna o QR Code AQUI na criação se passarmos qrcode: true
-      const createData = await client.createInstance(finalInstanceName)
+      const createData = await client.createInstance(finalInstanceName, webhookUrl)
       if (createData?.qrcode?.base64) {
          qrCodeValue = createData.qrcode.base64;
       } else if (createData?.hash?.qrcode) {

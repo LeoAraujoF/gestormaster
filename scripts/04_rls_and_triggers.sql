@@ -55,35 +55,35 @@ ALTER TABLE public.client_services ENABLE ROW LEVEL SECURITY; -- Tabela pivô
 -- Regra: O usuário só pode fazer SELECT, INSERT, UPDATE ou DELETE se o organization_id
 -- do registro pertencer a uma organização na qual ele é membro.
 
-CREATE OR REPLACE FUNCTION auth.user_orgs()
+CREATE OR REPLACE FUNCTION public.user_orgs()
 RETURNS SETOF UUID AS $$
   SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER;
 
 -- Clients
 CREATE POLICY "tenant_isolation_clients" ON public.clients FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Services
 CREATE POLICY "tenant_isolation_services" ON public.services FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Promotions
 CREATE POLICY "tenant_isolation_promotions" ON public.promotions FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Automations
 CREATE POLICY "tenant_isolation_automations" ON public.automations FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Alert History
 CREATE POLICY "tenant_isolation_alert_history" ON public.alert_history FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Payments
 CREATE POLICY "tenant_isolation_payments" ON public.payments FOR ALL 
-USING (organization_id IN (SELECT auth.user_orgs()));
+USING (organization_id IN (SELECT public.user_orgs()));
 
 -- Client_Services (Pivô) - Usa o cliente como âncora
 CREATE POLICY "tenant_isolation_client_services" ON public.client_services FOR ALL 
-USING (client_id IN (SELECT id FROM public.clients WHERE organization_id IN (SELECT auth.user_orgs())));
+USING (client_id IN (SELECT id FROM public.clients WHERE organization_id IN (SELECT public.user_orgs())));

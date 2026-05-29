@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\""
+    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\"",
+    "scheduler:start": "tsx src/workers/scheduler-service.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -28,6 +29,7 @@
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
+    "node-cron": "^4.2.1",
     "openai": "^6.39.0",
     "papaparse": "^5.5.3",
     "qrcode.react": "^4.2.0",
@@ -46,6 +48,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^10.0.0",

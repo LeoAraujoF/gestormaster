@@ -3,6 +3,7 @@ import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { MESSAGE_QUEUE_NAME } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
+import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 
 console.log('🚀 Queue Worker iniciado e aguardando jobs...');
 
@@ -15,23 +16,15 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   console.log(`[Job ${job.id}] Processando disparo para ${phone}...`);
 
   try {
-    const apiReq = await fetch(instanceUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': apiKey
-      },
-      body: JSON.stringify({
-        number: phone,
-        options: { delay: 1200, presence: 'composing' },
-        text: finalMessage
-      })
-    });
+    const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), apiKey);
+    
+    // Opcional: extrair o instanceName da instanceUrl (ex: http://api/message/sendText/Mylena -> Mylena)
+    const instanceName = instanceUrl.split('/').pop() || '';
 
-    if (!apiReq.ok) {
-      const errData = await apiReq.text();
-      throw new Error(`API erro: ${errData}`);
-    }
+    await provider.sendMessage(instanceName, phone, finalMessage, {
+      delay: 1200,
+      presence: 'composing'
+    });
 
     // Sucesso - Registra no banco ignorando RLS via supabaseAdmin
     const { error } = await supabaseAdmin.from('alert_history').insert({

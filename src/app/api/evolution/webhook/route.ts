@@ -3,6 +3,22 @@ import { webhookQueue } from '@/lib/queue';
 
 export async function POST(req: Request) {
   try {
+    // 1. Log dos Headers Reais (Para descobrir se a Evolution versão atual envia HMAC)
+    const headersList = req.headers;
+    console.log('--- [WEBHOOK INBOUND] HEADERS RECEBIDOS ---');
+    headersList.forEach((value, key) => console.log(`${key}: ${value}`));
+    console.log('-------------------------------------------');
+
+    // 2. Proteção provisória/permanente por Secret Token via Query ou Header
+    const url = new URL(req.url);
+    const token = url.searchParams.get('token') || headersList.get('authorization');
+    const mySecret = process.env.WEBHOOK_SECRET;
+
+    if (mySecret && token !== mySecret) {
+      console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const payload = await req.json();
     
     // Roteamento para Fila

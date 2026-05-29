@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { RateLimiter } from '../lib/rate-limiter';
+import { CircuitBreaker } from '../lib/circuit-breaker';
 
 logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
@@ -17,6 +18,12 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
   return runWithCorrelationId(correlationId, organizationId, async () => {
     logger.info(`[Job ${job.id}] Processando disparo para ${phone}...`);
+
+    // 1. Checa Circuit Breaker (Backpressure global)
+    if (await CircuitBreaker.isTripped()) {
+      logger.warn(`[Job ${job.id}] 🛑 Circuit Breaker ABERTO! Evolution API parece estar instável. Atrasando mensagem.`);
+      throw new Error('CIRCUIT_BREAKER_OPEN');
+    }
 
     if (organizationId) {
       // Limite: 60 mensagens por minuto por cliente (Pode virar dinâmico pelo DB futuramente)
@@ -53,24 +60,32 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     });
 
     if (error) logger.error(`[Job ${job.id}] Erro ao salvar histórico: ${error.message}`);
-    else logger.info(`[Job ${job.id}] ✅ Enviado com sucesso!`);
+    else {
+      logger.info(`[Job ${job.id}] ✅ Enviado com sucesso!`);
+      await CircuitBreaker.recordSuccess(); // Requisição limpa, reseta falhas
+    }
 
   } catch (err: any) {
     // Falha - Registra no banco e lança o erro para o BullMQ fazer o Retry (Backoff)
     logger.error(`[Job ${job.id}] ❌ Falha: ${err.message}`);
     
-    await supabaseAdmin.from('alert_history').insert({
-      user_id: userId,
-      organization_id: organizationId,
-      client_id: clientId,
-      automation_id: ruleId,
-      status: 'failed',
-      error_message: err.message,
-      scheduled_at: new Date().toISOString()
-    });
+    // Ignora falhas controladas para não abrir o circuito injustamente
+    if (!err.message.startsWith('RATE_LIMIT_EXCEEDED') && !err.message.startsWith('CIRCUIT_BREAKER_OPEN')) {
+      await CircuitBreaker.recordFailure(); // Falha real (ex: timeout da Evolution API)
+      
+      await supabaseAdmin.from('alert_history').insert({
+        user_id: userId,
+        organization_id: organizationId,
+        client_id: clientId,
+        automation_id: ruleId,
+        status: 'failed',
+        error_message: err.message,
+        scheduled_at: new Date().toISOString()
+      });
+    }
 
     // Se lançar o erro, o job será marcado como failed e irá retentar ou ir pra DLQ
-    if (err.message.startsWith('RATE_LIMIT_EXCEEDED')) {
+    if (err.message.startsWith('RATE_LIMIT_EXCEEDED') || err.message.startsWith('CIRCUIT_BREAKER_OPEN')) {
        // Apenas lança para re-enfileirar, sem gravar failed history
        throw err;
     }

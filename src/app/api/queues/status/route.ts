@@ -21,9 +21,16 @@ export async function GET() {
     // Filtra apenas os jobs desse usuário
     const userJobs = bullJobs.filter(j => j.data.userId === userId)
     
-    const waitingCount = userJobs.filter(j => await j.getState() === 'waiting').length
-    const activeCount = userJobs.filter(j => await j.getState() === 'active').length
-    const delayedCount = userJobs.filter(j => await j.getState() === 'delayed').length
+    let waitingCount = 0;
+    let activeCount = 0;
+    let delayedCount = 0;
+
+    for (const j of userJobs) {
+      const state = await j.getState();
+      if (state === 'waiting') waitingCount++;
+      if (state === 'active') activeCount++;
+      if (state === 'delayed') delayedCount++;
+    }
 
     // Mapeia alguns pendentes para exibir (máximo 10)
     const pendingList = userJobs.slice(0, 10).map(j => ({

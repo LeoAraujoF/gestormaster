@@ -17,6 +17,7 @@ import {
   LifeBuoy,
   ShieldAlert,
   Flame,
+  Activity,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -84,6 +85,12 @@ const data = {
       url: "/aquecimento",
       icon: Flame,
       color: "text-orange-500",
+    },
+    {
+      title: "Status de Envios",
+      url: "/fila",
+      icon: Activity,
+      color: "text-amber-500",
     },
     /* {
       title: "Revendas (Créditos)",

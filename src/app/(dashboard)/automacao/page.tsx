@@ -120,6 +120,7 @@ export default function AutomacaoPage() {
   const [massAudience, setMassAudience] = useState<string>("all")
   const [massServiceId, setMassServiceId] = useState<string>("")
   const [massMessage, setMassMessage] = useState<string>("Olá {{primeiro_nome}}, temos uma oferta especial para você!")
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
   const [isSendingMass, setIsSendingMass] = useState(false)
   const [services, setServices] = useState<any[]>([])
 
@@ -174,7 +175,8 @@ export default function AutomacaoPage() {
           audience: massAudience,
           serviceId: massServiceId,
           messageTemplate: massMessage,
-          delaySeconds: 5
+          delaySeconds: 5,
+          scheduledAt: scheduledAt ? scheduledAt.toISOString() : null
         })
       })
       const data = await res.json()
@@ -1428,6 +1430,23 @@ export default function AutomacaoPage() {
                 <p className="text-xs text-muted-foreground mt-2">
                   Variáveis suportadas: <code className="bg-muted px-1 rounded text-primary">{"{{"}primeiro_nome{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}client_name{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}plan_value{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}due_date{"}}"}</code>
                 </p>
+              </div>
+
+              <div className="space-y-2 mt-4 p-4 border rounded-xl bg-muted/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <Label>Agendar Disparo (Opcional)</Label>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Deixe em branco para enviar imediatamente, ou escolha uma data futura.
+                </p>
+                <Input 
+                  type="datetime-local" 
+                  className="bg-background/50"
+                  value={scheduledAt ? new Date(scheduledAt.getTime() - scheduledAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setScheduledAt(e.target.value ? new Date(e.target.value) : null)}
+                  min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                />
               </div>
             </CardContent>
             <CardFooter className="bg-muted/10 border-t flex flex-col items-stretch pt-6 gap-4">

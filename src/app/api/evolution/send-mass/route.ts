@@ -29,13 +29,27 @@ function parseMessageTemplate(template: string, client: any, userMeta: any = {})
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { session } } = await supabase.auth.getSession()
 
-    const { audience, messageTemplate, delaySeconds = 5, serviceId } = await req.json()
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
 
-    if (!audience || !messageTemplate) {
-      return NextResponse.json({ error: 'Faltam campos obrigatórios' }, { status: 400 })
+    const user = session.user
+    const { audience, serviceId, messageTemplate, delaySeconds = 5, scheduledAt } = await req.json()
+
+    if (!messageTemplate) {
+      return NextResponse.json({ error: 'Mensagem é obrigatória' }, { status: 400 })
+    }
+
+    // Calcula o delay inicial se houver agendamento
+    let initialDelayMs = 0;
+    if (scheduledAt) {
+      const scheduledTime = new Date(scheduledAt).getTime();
+      const now = Date.now();
+      if (scheduledTime > now) {
+        initialDelayMs = scheduledTime - now;
+      }
     }
 
     // 1. Check WhatsApp connection (Get primary instance)
@@ -145,6 +159,9 @@ export async function POST(req: Request) {
           ruleId: tempRule.id,
           userId: user.id,
           organizationId: organizationId
+        },
+        opts: {
+          delay: initialDelayMs
         }
       }
     })

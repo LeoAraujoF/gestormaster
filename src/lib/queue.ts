@@ -35,9 +35,7 @@ export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {
     removeOnComplete: true,
     removeOnFail: true,
   },
-  },
 });
-
 export const WARMUP_QUEUE_NAME = 'warmup-queue';
 
 export const warmupQueue = new Queue(WARMUP_QUEUE_NAME, {

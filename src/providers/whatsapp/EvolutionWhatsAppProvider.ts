@@ -6,7 +6,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
 
   constructor(baseUrl: string, apiKey: string) {
     // Normaliza a URL para não ter barra no final
-    this.baseUrl = baseUrl.replace(/\\/$/, '');
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.apiKey = apiKey;
   }
 

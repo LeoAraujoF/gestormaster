@@ -75,8 +75,8 @@ export async function POST(request: Request) {
     // --------------------------
 
     // Initialize Evolution API client
-    const { EvolutionAPI } = require('@/lib/evolution')
-    const client = new EvolutionAPI({ baseUrl: finalBaseUrl, apiKey: finalApiKey })
+    const { EvolutionWhatsAppProvider } = require('@/providers/whatsapp/EvolutionWhatsAppProvider')
+    const client = new EvolutionWhatsAppProvider(finalBaseUrl, finalApiKey)
 
     // 1. Save or update the connection settings in the database
     const { error: dbError } = await supabase
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       .upsert({
         user_id: user.id,
         instance_name: finalInstanceName,
-        base_url: connectionMode === 'external' ? finalBaseUrl : null, // Don't store admin credentials in DB
+        base_url: connectionMode === 'external' ? finalBaseUrl : null,
         api_key: connectionMode === 'external' ? finalApiKey : null,
         status: 'disconnected',
         connection_mode: connectionMode,
@@ -93,17 +93,41 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError
 
+    let qrCodeValue = null;
+
     try {
       // 2. Create the instance in Evolution API (if it doesn't exist)
-      await client.createInstance(finalInstanceName)
+      // Evolution v2.2.1 retorna o QR Code AQUI na criação se passarmos qrcode: true
+      const createData = await client.createInstance(finalInstanceName)
+      if (createData?.qrcode?.base64) {
+         qrCodeValue = createData.qrcode.base64;
+      } else if (createData?.hash?.qrcode) {
+         // Fallback Evolution v1.x ou v2.0
+         qrCodeValue = createData.hash.qrcode;
+      }
     } catch (e: any) {
-      // If it already exists, that's fine. We just try to connect.
-      console.log('Instance creation note:', e.message)
+      console.log('Instance creation note (already exists?):', e.message)
     }
 
-    // 3. Request the QR Code to connect
-    const qrData = await client.connectInstance(finalInstanceName)
-    const qrCodeValue = qrData?.base64 || qrData?.qrcode || qrData?.code || null
+    // 3. Se não pegou no create, solicita via GET (connect endpoint)
+    if (!qrCodeValue) {
+      console.log('Aguardando geração do QR Code pela Evolution...');
+      // Faz um polling de até 10 segundos (5 tentativas a cada 2s)
+      for (let i = 0; i < 5; i++) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos
+          const qrData = await client.getQR(finalInstanceName);
+          qrCodeValue = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || qrData?.qrcode || null;
+          
+          if (qrCodeValue && qrCodeValue !== '[object Object]') {
+            console.log('QR Code capturado com sucesso!');
+            break;
+          }
+        } catch (e: any) {
+          console.log(`Tentativa ${i+1} falhou:`, e.message);
+        }
+      }
+    }
 
     // 4. Update the DB with the QR code
     if (qrCodeValue) {
@@ -114,7 +138,11 @@ export async function POST(request: Request) {
         .eq('instance_name', finalInstanceName)
     }
 
-    return NextResponse.json(qrData)
+    return NextResponse.json({ 
+      success: true, 
+      base64: qrCodeValue, 
+      instanceName: finalInstanceName 
+    })
   } catch (error: any) {
     console.error('API Connect Error:', error)
     return NextResponse.json(

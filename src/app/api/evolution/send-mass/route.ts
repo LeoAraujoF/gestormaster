@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getActiveOrganization } from '@/lib/supabase/server'
+import { messageQueue } from '@/lib/queue'
 
 // Formats the template with the client data
 function parseMessageTemplate(template: string, client: any, userMeta: any = {}) {
@@ -92,91 +93,67 @@ export async function POST(req: Request) {
     // (Note: On Vercel Hobby this might be killed after 10s-60s, but for local/small scale it's acceptable.
     // Ideally we would use a queue like Inngest, but this provides the functionality immediately).
     
-    const sendMassMessages = async () => {
-      // Create a temporary "Rule" specifically for this mass message to group logs
-      const { data: tempRule } = await supabase.from('automations').insert({
-        user_id: user.id,
-        alert_type: 'promotion',
-        days_offset: 0,
-        send_time: '00:00',
-        message_template: messageTemplate,
-        is_active: false // Keep it false so it doesn't run automatically
-      }).select().single()
+    // Obtem a organização ativa
+    const org = await getActiveOrganization(supabase, user.id);
+    const organizationId = org?.organization_id;
 
-      if (!tempRule) return
+    // Create a temporary "Rule" specifically for this mass message to group logs
+    const { data: tempRule } = await supabase.from('automations').insert({
+      user_id: user.id,
+      alert_type: 'promotion',
+      days_offset: 0,
+      send_time: '00:00',
+      message_template: messageTemplate,
+      is_active: false // Keep it false so it doesn't run automatically
+    }).select().single()
 
-      for (let i = 0; i < validClients.length; i++) {
-        const client = validClients[i]
-        
-        // Format phone
-        let phone = client.phone.replace(/\D/g, '')
-        if (!phone.startsWith('55') && phone.length <= 11) {
-          phone = '55' + phone
-        }
-
-        const userMeta = user.user_metadata || {}
-        const finalMessage = parseMessageTemplate(messageTemplate, client, userMeta)
-
-        const instance = primaryInstance // Usa a instância principal sem roleta
-
-        let finalBaseUrl = instance.base_url
-        let finalApiKey = instance.api_key
-
-        if (instance.connection_mode === 'integrated' || !finalBaseUrl) {
-          finalBaseUrl = process.env.EVOLUTION_API_URL || ''
-          finalApiKey = process.env.EVOLUTION_API_KEY || ''
-        }
-
-        try {
-          const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`
-          const apiReq = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': finalApiKey
-            },
-            body: JSON.stringify({
-              number: phone,
-              options: { delay: 1200, presence: 'composing' },
-              text: finalMessage
-            })
-          })
-
-          if (!apiReq.ok) {
-            const errData = await apiReq.text()
-            await supabase.from('alert_history').insert({
-              user_id: user.id, client_id: client.id, automation_id: tempRule.id,
-              status: 'failed', error_message: `API erro: ${errData}`,
-              scheduled_at: new Date().toISOString()
-            })
-          } else {
-            await supabase.from('alert_history').insert({
-              user_id: user.id, client_id: client.id, automation_id: tempRule.id,
-              status: 'sent', message_content: finalMessage,
-              sent_at: new Date().toISOString(), scheduled_at: new Date().toISOString()
-            })
-          }
-        } catch (err: any) {
-          await supabase.from('alert_history').insert({
-            user_id: user.id, client_id: client.id, automation_id: tempRule.id,
-            status: 'failed', error_message: err.message,
-            scheduled_at: new Date().toISOString()
-          })
-        }
-
-        // Delay between messages (Anti-ban)
-        if (i < validClients.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000))
-        }
-      }
+    if (!tempRule) {
+      return NextResponse.json({ error: 'Erro ao criar regra de automação' }, { status: 500 })
     }
 
-    // Trigger async background processing
-    sendMassMessages().catch(console.error)
+    const userMeta = user.user_metadata || {}
+    const instance = primaryInstance
+
+    let finalBaseUrl = instance.base_url
+    let finalApiKey = instance.api_key
+
+    if (instance.connection_mode === 'integrated' || !finalBaseUrl) {
+      finalBaseUrl = process.env.EVOLUTION_API_URL || ''
+      finalApiKey = process.env.EVOLUTION_API_KEY || ''
+    }
+
+    const url = `${finalBaseUrl.replace(/\\/$/, '')}/message/sendText/${instance.instance_name}`
+
+    // Prepare Jobs Array for BullMQ
+    const jobs = validClients.map((client: any) => {
+      let phone = client.phone.replace(/\\D/g, '')
+      if (!phone.startsWith('55') && phone.length <= 11) {
+        phone = '55' + phone
+      }
+
+      const finalMessage = parseMessageTemplate(messageTemplate, client, userMeta)
+
+      return {
+        name: 'send-message',
+        data: {
+          clientId: client.id,
+          phone,
+          finalMessage,
+          instanceUrl: url,
+          apiKey: finalApiKey,
+          ruleId: tempRule.id,
+          userId: user.id,
+          organizationId: organizationId
+        }
+      }
+    })
+
+    // Enfileira todos os clientes de uma vez (Super Rápido)
+    await messageQueue.addBulk(jobs)
 
     return NextResponse.json({ 
       success: true, 
-      message: `Disparo iniciado para ${validClients.length} clientes. As mensagens estão sendo enviadas com intervalo de ${delaySeconds}s.` 
+      message: `Disparo enfileirado com sucesso! ${validClients.length} mensagens estão sendo processadas em background pelo Worker.` 
     })
 
   } catch (error: any) {

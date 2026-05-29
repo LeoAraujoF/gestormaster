@@ -1,7 +1,7 @@
 import '../lib/env';
 import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
-import { messageQueue } from '../lib/queue';
+import { messageQueue, healthQueue } from '../lib/queue';
 
 console.log('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
@@ -19,7 +19,12 @@ cron.schedule('*/5 * * * *', async () => {
     // const jobs = [...];
     // await messageQueue.addBulk(jobs);
 
-    console.log('[Scheduler] ✅ Varredura concluída sem novos jobs na fila.');
+    // 2. Dispara o Health Monitor para checar instâncias do WhatsApp
+    await healthQueue.add('sync-instances', { timestamp: Date.now() }, {
+      removeOnComplete: true,
+    });
+
+    console.log('[Scheduler] ✅ Varredura concluída sem novos jobs de mensagem na fila. Job de sync-instances disparado.');
 
   } catch (error: any) {
     console.error('[Scheduler] ❌ Erro na rotina de agendamento:', error.message);

@@ -96,4 +96,8 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
   async getInstanceStatus(instanceName: string) {
     return this.request(`/instance/fetchInstances?instanceName=${instanceName}`, 'GET');
   }
+
+  async fetchAllInstances() {
+    return this.request(`/instance/fetchInstances`, 'GET');
+  }
 }

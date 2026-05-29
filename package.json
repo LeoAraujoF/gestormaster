@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\"",
+    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\" \"tsx src/workers/health-worker.ts\"",
     "scheduler:start": "tsx src/workers/scheduler-service.ts"
   },
   "dependencies": {

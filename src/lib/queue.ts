@@ -24,3 +24,15 @@ export const webhookQueue = new Queue(WEBHOOK_QUEUE_NAME, {
     removeOnFail: false,
   },
 });
+
+export const HEALTH_QUEUE_NAME = 'health-queue';
+
+export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2,
+    backoff: { type: 'fixed', delay: 5000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
+});

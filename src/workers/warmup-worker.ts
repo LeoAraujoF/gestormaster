@@ -20,11 +20,7 @@ const warmupWorker = new Worker(WARMUP_QUEUE_NAME, async (job: Job) => {
         .from('evolution_instances')
         .select('instance_name, phone_number, base_url, api_key')
         .eq('status', 'connected')
-        // OBS: Precisamos adicionar essa coluna no banco via Supabase depois (is_warming_up)
-        // Por agora, para não quebrar a tipagem sem a migration, vamos buscar as conectadas
-        // e se o cliente adicionar a coluna is_warming_up, basta descomentar a linha abaixo:
-        // .eq('is_warming_up', true)
-        ;
+        .eq('is_warming_up', true);
 
       if (error || !warmingInstances || warmingInstances.length < 2) {
         logger.info('[Warmup] Instâncias insuficientes para aquecimento (Mínimo: 2 conectadas). Pulando ciclo.');

@@ -16,6 +16,7 @@ import {
   BellRing,
   LifeBuoy,
   ShieldAlert,
+  Flame,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -77,6 +78,12 @@ const data = {
       url: "/leads",
       icon: Search,
       color: "text-rose-500",
+    },
+    {
+      title: "Aquecimento",
+      url: "/aquecimento",
+      icon: Flame,
+      color: "text-orange-500",
     },
     /* {
       title: "Revendas (Créditos)",

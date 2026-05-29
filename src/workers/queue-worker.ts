@@ -1,3 +1,4 @@
+import '../lib/env';
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { MESSAGE_QUEUE_NAME } from '../lib/queue';

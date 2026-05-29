@@ -1,3 +1,4 @@
+import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     let finalBaseUrl = instance.base_url
-    let finalApiKey = instance.api_key
+    let finalApiKey = SecretsManager.decrypt(instance.api_key || '')
 
     if (instance.connection_mode === 'integrated' || !finalBaseUrl) {
       finalBaseUrl = process.env.EVOLUTION_API_URL || ''

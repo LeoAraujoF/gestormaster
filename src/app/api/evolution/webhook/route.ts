@@ -12,11 +12,14 @@ export async function POST(req: Request) {
     // 2. Proteção provisória/permanente por Secret Token via Query ou Header
     const url = new URL(req.url);
     const token = url.searchParams.get('token') || headersList.get('authorization');
-    const mySecret = process.env.WEBHOOK_SECRET;
+    const secretsEnv = process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '';
+    const validSecrets = secretsEnv.split(',').map(s => s.trim()).filter(Boolean);
 
-    if (mySecret && token !== mySecret) {
-      console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (validSecrets.length > 0) {
+      if (!token || !validSecrets.includes(token)) {
+        console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     const payload = await req.json();

@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { generateWarmupMessage } from '../lib/openai';
+import { SecretsManager } from '../lib/encryption';
 
 logger.info('🔥 Warmup Worker iniciado e aguardando ciclos...');
 
@@ -51,7 +52,8 @@ const warmupWorker = new Worker(WARMUP_QUEUE_NAME, async (job: Job) => {
       const globalApiKey = process.env.EVOLUTION_API_KEY || '';
       
       const baseUrl = sender.base_url || globalBaseUrl;
-      const apiKey = sender.api_key || globalApiKey;
+      const rawApiKey = sender.api_key || globalApiKey;
+      const apiKey = SecretsManager.decrypt(rawApiKey);
       
       const provider = new EvolutionWhatsAppProvider(baseUrl, apiKey);
       

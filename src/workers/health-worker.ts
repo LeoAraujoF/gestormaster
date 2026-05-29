@@ -5,6 +5,7 @@ import { redisConnection } from '../lib/redis';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 import { logger, runWithCorrelationId } from '../lib/logger';
+import { SecretsManager } from '../lib/encryption';
 
 logger.info('🩺 Health Monitor Worker iniciado e aguardando jobs...');
 
@@ -31,7 +32,9 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
 
     dbInstances.forEach(inst => {
       const baseUrl = inst.connection_mode === 'external' && inst.base_url ? inst.base_url : globalBaseUrl;
-      const apiKey = inst.connection_mode === 'external' && inst.api_key ? inst.api_key : globalApiKey;
+      const rawApiKey = inst.connection_mode === 'external' && inst.api_key ? inst.api_key : globalApiKey;
+      const apiKey = SecretsManager.decrypt(rawApiKey);
+      
       const groupKey = `${baseUrl}|${apiKey}`;
 
       if (!providerGroups[groupKey]) {

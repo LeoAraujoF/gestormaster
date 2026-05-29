@@ -1,3 +1,4 @@
+import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       apiKey = process.env.EVOLUTION_API_KEY || ''
     } else {
       baseUrl = instance.base_url || ''
-      apiKey = instance.api_key || ''
+      apiKey = SecretsManager.decrypt(instance.api_key || '')
     }
 
     if (!baseUrl || !apiKey) {

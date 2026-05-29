@@ -7,6 +7,7 @@ import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsA
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { RateLimiter } from '../lib/rate-limiter';
 import { CircuitBreaker } from '../lib/circuit-breaker';
+import { SecretsManager } from '../lib/encryption';
 
 logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
@@ -37,7 +38,8 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     }
 
   try {
-    const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), apiKey);
+    const rawApiKey = SecretsManager.decrypt(apiKey);
+    const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), rawApiKey);
     
     // Opcional: extrair o instanceName da instanceUrl (ex: http://api/message/sendText/Mylena -> Mylena)
     const instanceName = instanceUrl.split('/').pop() || '';

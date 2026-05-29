@@ -76,7 +76,11 @@ export async function POST(request: Request) {
 
     // Initialize Evolution API client
     const { EvolutionWhatsAppProvider } = require('@/providers/whatsapp/EvolutionWhatsAppProvider')
+    const { SecretsManager } = require('@/lib/encryption')
     const client = new EvolutionWhatsAppProvider(finalBaseUrl, finalApiKey)
+
+    // Criptografa a API Key antes de salvar no banco se for externa
+    const apiKeyToSave = connectionMode === 'external' ? SecretsManager.encrypt(finalApiKey) : null;
 
     // 1. Save or update the connection settings in the database
     const { error: dbError } = await supabase
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         instance_name: finalInstanceName,
         base_url: connectionMode === 'external' ? finalBaseUrl : null,
-        api_key: connectionMode === 'external' ? finalApiKey : null,
+        api_key: apiKeyToSave,
         status: 'disconnected',
         connection_mode: connectionMode,
         updated_at: new Date().toISOString()

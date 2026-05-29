@@ -1,3 +1,4 @@
+import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
 
     for (const instance of instances) {
       let baseUrl = instance.connection_mode === 'integrated' ? process.env.EVOLUTION_API_URL || '' : instance.base_url || ''
-      let apiKey = instance.connection_mode === 'integrated' ? process.env.EVOLUTION_API_KEY || '' : instance.api_key || ''
+      let apiKey = instance.connection_mode === 'integrated' ? process.env.EVOLUTION_API_KEY || '' : SecretsManager.decrypt(instance.api_key || '')
 
       if (!baseUrl || !apiKey) {
         results.push({ ...instance, status: 'error', message: 'Credenciais ausentes' })

@@ -123,11 +123,11 @@ export async function POST(req: Request) {
       finalApiKey = process.env.EVOLUTION_API_KEY || ''
     }
 
-    const url = `${finalBaseUrl.replace(/\\/$/, '')}/message/sendText/${instance.instance_name}`
+    const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`
 
     // Prepare Jobs Array for BullMQ
     const jobs = validClients.map((client: any) => {
-      let phone = client.phone.replace(/\\D/g, '')
+      let phone = client.phone.replace(/\D/g, '')
       if (!phone.startsWith('55') && phone.length <= 11) {
         phone = '55' + phone
       }

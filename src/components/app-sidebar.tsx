@@ -15,6 +15,7 @@ import {
   UserCircle,
   BellRing,
   LifeBuoy,
+  ShieldAlert,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -118,6 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [userName, setUserName] = React.useState<string>("Carregando...")
   const [userEmail, setUserEmail] = React.useState<string>("")
   const [userPlan, setUserPlan] = React.useState<string>("Free")
+  const [isAdmin, setIsAdmin] = React.useState<boolean>(false)
 
   React.useEffect(() => {
     async function loadUser() {
@@ -126,6 +128,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || "Usuário")
         setUserEmail(user.email || "")
         setUserPlan(user.user_metadata?.plan_name || "Free")
+        
+        try {
+          const res = await fetch('/api/admin/check')
+          if (res.ok) {
+            const data = await res.json()
+            setIsAdmin(data.isAdmin)
+          }
+        } catch (e) {
+          console.error(e)
+        }
       }
     }
     loadUser()
@@ -173,6 +185,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
               )
             })}
+
+            {isAdmin && (
+              <>
+                <SidebarSeparator className="my-2" />
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    render={<Link href="/master" />} 
+                    isActive={pathname?.startsWith('/master')} 
+                    tooltip="Master Admin"
+                    className={pathname?.startsWith('/master') ? `bg-rose-500/10 text-rose-500 border-r-2 border-rose-500` : `hover:bg-rose-500/5 text-rose-500/80`}
+                  >
+                    <ShieldAlert className={pathname?.startsWith('/master') ? "text-rose-500" : "text-rose-500/80"} />
+                    <span className="font-bold text-rose-500">Master Admin</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

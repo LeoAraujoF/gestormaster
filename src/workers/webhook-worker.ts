@@ -4,23 +4,26 @@ import { redisConnection } from '../lib/redis';
 import { WEBHOOK_QUEUE_NAME } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import crypto from 'crypto';
+import { logger, runWithCorrelationId } from '../lib/logger';
 
-console.log('🛡️ Webhook Worker iniciado e aguardando eventos...');
+logger.info('🛡️ Webhook Worker iniciado e aguardando eventos...');
 
 const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
   const payload = job.data;
   
-  // 1. Controle de Idempotência
-  const hash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
-  const idempotencyKey = `webhook:idempotency:${hash}`;
+  // Webhooks geralmente não trazem correlationId, então o wrapper vai criar um
+  return runWithCorrelationId(payload.correlationId, undefined, async () => {
+    // 1. Controle de Idempotência
+    const hash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    const idempotencyKey = `webhook:idempotency:${hash}`;
 
-  const alreadyProcessed = await redisConnection.get(idempotencyKey);
-  if (alreadyProcessed) {
-    console.log(`[Job ${job.id}] ♻️ Evento duplicado descartado (Idempotency Key: ${idempotencyKey})`);
-    return; // Sucesso imediato (não processa novamente)
-  }
+    const alreadyProcessed = await redisConnection.get(idempotencyKey);
+    if (alreadyProcessed) {
+      logger.info(`[Job ${job.id}] ♻️ Evento duplicado descartado (Idempotency Key: ${idempotencyKey})`);
+      return; // Sucesso imediato (não processa novamente)
+    }
 
-  console.log(`[Job ${job.id}] 📥 Processando webhook: ${payload.event}`);
+    logger.info(`[Job ${job.id}] 📥 Processando webhook: ${payload.event}`);
 
   try {
     if (payload.event === 'CONNECTION_UPDATE') {
@@ -41,19 +44,20 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
     else if (payload.event === 'MESSAGES_UPSERT') {
       const msg = payload.data?.messages?.[0];
       if (msg && !msg.key.fromMe) {
-        console.log(`Mensagem recebida de ${msg.key.remoteJid}: ${msg.message?.conversation}`);
+        logger.info(`Mensagem recebida de ${msg.key.remoteJid}: ${msg.message?.conversation}`);
         // Futuro: Gravar no banco de dados quando a UI do Chat estiver pronta
       }
     }
 
     // 3. Marca como processado no Redis (Expira em 24h)
     await redisConnection.setex(idempotencyKey, 86400, 'processed');
-    console.log(`[Job ${job.id}] ✅ Evento Inbound processado com sucesso!`);
+    logger.info(`[Job ${job.id}] ✅ Evento Inbound processado com sucesso!`);
 
   } catch (error: any) {
-    console.error(`[Job ${job.id}] ❌ Falha ao processar webhook:`, error.message);
+    logger.error(`[Job ${job.id}] ❌ Falha ao processar webhook: ${error.message}`);
     throw error; // Devolve pra fila e retenta em 2 segundos (backoff)
   }
+  });
 
 }, { 
   connection: redisConnection,
@@ -62,6 +66,6 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
 
 worker.on('failed', (job, err) => {
   if (job) {
-    console.log(`[Webhook Job ${job.id}] Falhou: ${err.message}`);
+    logger.error(`[Webhook Job ${job.id}] Falhou: ${err.message}`);
   }
 });

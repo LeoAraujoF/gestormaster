@@ -4,14 +4,16 @@ import { HEALTH_QUEUE_NAME } from '../lib/queue';
 import { redisConnection } from '../lib/redis';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
+import { logger, runWithCorrelationId } from '../lib/logger';
 
-console.log('🩺 Health Monitor Worker iniciado e aguardando jobs...');
+logger.info('🩺 Health Monitor Worker iniciado e aguardando jobs...');
 
 const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
   if (job.name !== 'sync-instances') return;
 
-  try {
-    // 1. Busca todas as instâncias do nosso banco (únicas por base_url e api_key)
+  return runWithCorrelationId(undefined, undefined, async () => {
+    try {
+      // 1. Busca todas as instâncias do nosso banco (únicas por base_url e api_key)
     // Para simplificar e performar, se o usuário não tiver uma api_key externa, usamos a global.
     const globalBaseUrl = process.env.EVOLUTION_API_URL?.replace(/\/$/, '') || 'http://localhost:8080';
     const globalApiKey = process.env.EVOLUTION_API_KEY || '';
@@ -74,27 +76,28 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
               .update({ status: mappedStatus, updated_at: new Date().toISOString() })
               .eq('instance_name', localInstance);
             
-            console.log(`[HealthMonitor] 🔄 Instância '${localInstance}' atualizada: ${currentDbInst.status} -> ${mappedStatus}`);
+            logger.info(`[HealthMonitor] 🔄 Instância '${localInstance}' atualizada: ${currentDbInst.status} -> ${mappedStatus}`);
             totalUpdated++;
           }
         }
       } catch (err: any) {
-        console.error(`[HealthMonitor] ❌ Erro ao checar Evolution em ${baseUrl}:`, err.message);
+        logger.error(`[HealthMonitor] ❌ Erro ao checar Evolution em ${baseUrl}: ${err.message}`);
       }
     }
 
     if (totalUpdated > 0) {
-      console.log(`[HealthMonitor] ✅ Sincronização concluída. ${totalUpdated} instâncias atualizadas.`);
+      logger.info(`[HealthMonitor] ✅ Sincronização concluída. ${totalUpdated} instâncias atualizadas.`);
     }
 
   } catch (error: any) {
-    console.error('[HealthMonitor] Falha geral no sync-instances:', error.message);
+    logger.error(`[HealthMonitor] Falha geral no sync-instances: ${error.message}`);
     throw error;
   }
+  });
 }, { connection: redisConnection });
 
 healthWorker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} (HealthMonitor) falhou:`, err.message);
+  logger.error(`Job ${job?.id} (HealthMonitor) falhou: ${err.message}`);
 });
 
 export default healthWorker;

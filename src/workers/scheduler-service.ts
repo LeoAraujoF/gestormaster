@@ -2,13 +2,15 @@ import '../lib/env';
 import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { messageQueue, healthQueue } from '../lib/queue';
+import { logger, runWithCorrelationId } from '../lib/logger';
 
-console.log('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
+logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
 // Exemplo: Executar todo dia às 08:00 da manhã -> '0 8 * * *'
 // Para ambiente de desenvolvimento/testes, rodaremos a cada 5 minutos
 cron.schedule('*/5 * * * *', async () => {
-  console.log(`[Scheduler] 🤖 Iniciando varredura de automações... (${new Date().toISOString()})`);
+  return runWithCorrelationId(undefined, undefined, async () => {
+    logger.info(`[Scheduler] 🤖 Iniciando varredura de automações... (${new Date().toISOString()})`);
   
   try {
     // 1. Busca automações que precisam disparar
@@ -20,13 +22,14 @@ cron.schedule('*/5 * * * *', async () => {
     // await messageQueue.addBulk(jobs);
 
     // 2. Dispara o Health Monitor para checar instâncias do WhatsApp
-    await healthQueue.add('sync-instances', { timestamp: Date.now() }, {
+    await healthQueue.add('sync-instances', { timestamp: Date.now(), correlationId: logger.bindings()?.correlationId }, {
       removeOnComplete: true,
     });
 
-    console.log('[Scheduler] ✅ Varredura concluída sem novos jobs de mensagem na fila. Job de sync-instances disparado.');
+    logger.info('[Scheduler] ✅ Varredura concluída sem novos jobs de mensagem na fila. Job de sync-instances disparado.');
 
   } catch (error: any) {
-    console.error('[Scheduler] ❌ Erro na rotina de agendamento:', error.message);
+    logger.error(`[Scheduler] ❌ Erro na rotina de agendamento: ${error.message}`);
   }
+  });
 });

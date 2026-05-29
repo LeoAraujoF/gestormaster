@@ -4,16 +4,18 @@ import { redisConnection } from '../lib/redis';
 import { MESSAGE_QUEUE_NAME } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
+import { logger, runWithCorrelationId } from '../lib/logger';
 
-console.log('🚀 Queue Worker iniciado e aguardando jobs...');
+logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
 const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   const { 
     clientId, phone, finalMessage, instanceUrl, apiKey, 
-    ruleId, userId, organizationId 
+    ruleId, userId, organizationId, correlationId 
   } = job.data;
 
-  console.log(`[Job ${job.id}] Processando disparo para ${phone}...`);
+  return runWithCorrelationId(correlationId, organizationId, async () => {
+    logger.info(`[Job ${job.id}] Processando disparo para ${phone}...`);
 
   try {
     const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), apiKey);
@@ -38,12 +40,12 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       scheduled_at: new Date().toISOString()
     });
 
-    if (error) console.error(`[Job ${job.id}] Erro ao salvar histórico:`, error.message);
-    else console.log(`[Job ${job.id}] ✅ Enviado com sucesso!`);
+    if (error) logger.error(`[Job ${job.id}] Erro ao salvar histórico: ${error.message}`);
+    else logger.info(`[Job ${job.id}] ✅ Enviado com sucesso!`);
 
   } catch (err: any) {
     // Falha - Registra no banco e lança o erro para o BullMQ fazer o Retry (Backoff)
-    console.error(`[Job ${job.id}] ❌ Falha:`, err.message);
+    logger.error(`[Job ${job.id}] ❌ Falha: ${err.message}`);
     
     await supabaseAdmin.from('alert_history').insert({
       user_id: userId,
@@ -58,6 +60,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     // Se lançar o erro, o job será marcado como failed e irá retentar ou ir pra DLQ
     throw err; 
   }
+  });
 }, { 
   connection: redisConnection,
   concurrency: 5, // Limita a 5 jobs paralelos por vez

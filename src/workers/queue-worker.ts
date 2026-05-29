@@ -5,6 +5,7 @@ import { MESSAGE_QUEUE_NAME } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 import { logger, runWithCorrelationId } from '../lib/logger';
+import { RateLimiter } from '../lib/rate-limiter';
 
 logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
@@ -16,6 +17,17 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
   return runWithCorrelationId(correlationId, organizationId, async () => {
     logger.info(`[Job ${job.id}] Processando disparo para ${phone}...`);
+
+    if (organizationId) {
+      // Limite: 60 mensagens por minuto por cliente (Pode virar dinâmico pelo DB futuramente)
+      const { allowed, resetIn } = await RateLimiter.checkLimit(organizationId, 60, 60);
+      if (!allowed) {
+        logger.warn(`[Job ${job.id}] Tenant ${organizationId} excedeu limite. Atrasando job em ${resetIn}s`);
+        // Adia a mensagem (delayed job). Necessário lançar erro pro BullMQ aplicar backoff,
+        // ou usamos moveToDelayed se suportado (Aqui jogamos um erro padrão RateLimit)
+        throw new Error(`RATE_LIMIT_EXCEEDED:${resetIn}`);
+      }
+    }
 
   try {
     const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), apiKey);
@@ -58,6 +70,10 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     });
 
     // Se lançar o erro, o job será marcado como failed e irá retentar ou ir pra DLQ
+    if (err.message.startsWith('RATE_LIMIT_EXCEEDED')) {
+       // Apenas lança para re-enfileirar, sem gravar failed history
+       throw err;
+    }
     throw err; 
   }
   });

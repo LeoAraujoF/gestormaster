@@ -1,16 +1,15 @@
 import '../lib/env';
 import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
-import { messageQueue, healthQueue } from '../lib/queue';
+import { messageQueue, healthQueue, warmupQueue } from '../lib/queue';
 import { logger, runWithCorrelationId } from '../lib/logger';
 
 logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
-// Exemplo: Executar todo dia às 08:00 da manhã -> '0 8 * * *'
-// Para ambiente de desenvolvimento/testes, rodaremos a cada 5 minutos
+// --- Health Monitor Cron (A cada 5 min) ---
 cron.schedule('*/5 * * * *', async () => {
   return runWithCorrelationId(undefined, undefined, async () => {
-    logger.info(`[Scheduler] 🤖 Iniciando varredura de automações... (${new Date().toISOString()})`);
+    logger.info(`[Scheduler] 🤖 Iniciando varredura de instâncias (Health Monitor)... (${new Date().toISOString()})`);
   
   try {
     // 1. Busca automações que precisam disparar
@@ -29,7 +28,21 @@ cron.schedule('*/5 * * * *', async () => {
     logger.info('[Scheduler] ✅ Varredura concluída sem novos jobs de mensagem na fila. Job de sync-instances disparado.');
 
   } catch (error: any) {
-    logger.error(`[Scheduler] ❌ Erro na rotina de agendamento: ${error.message}`);
+    logger.error(`[Scheduler] ❌ Erro na rotina de agendamento do Health Monitor: ${error.message}`);
   }
+  });
+});
+
+// --- Warmup Engine Cron (A cada 2 min) ---
+cron.schedule('*/2 * * * *', async () => {
+  return runWithCorrelationId(undefined, undefined, async () => {
+    try {
+      await warmupQueue.add('execute-warmup', { timestamp: Date.now() }, {
+        removeOnComplete: true,
+      });
+      logger.info('[Scheduler] 🔥 Job de execute-warmup disparado.');
+    } catch (error: any) {
+      logger.error(`[Scheduler] ❌ Erro ao disparar Warmup: ${error.message}`);
+    }
   });
 });

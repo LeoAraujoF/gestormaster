@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\" \"tsx src/workers/health-worker.ts\" \"tsx src/workers/bull-board.ts\"",
+    "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\" \"tsx src/workers/health-worker.ts\" \"tsx src/workers/warmup-worker.ts\" \"tsx src/workers/bull-board.ts\"",
     "scheduler:start": "tsx src/workers/scheduler-service.ts"
   },
   "dependencies": {

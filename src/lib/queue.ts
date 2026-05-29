@@ -35,4 +35,17 @@ export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {
     removeOnComplete: true,
     removeOnFail: true,
   },
+  },
+});
+
+export const WARMUP_QUEUE_NAME = 'warmup-queue';
+
+export const warmupQueue = new Queue(WARMUP_QUEUE_NAME, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: true,
+    removeOnFail: false,
+  },
 });

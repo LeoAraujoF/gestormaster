@@ -97,15 +97,17 @@ export async function POST(req: Request) {
       phone = '55' + phone
     }
 
-    // Se for Lite, força a mensagem padrão estruturada, ignorando o que está na rule
+    // Se for Lite, força a mensagem padrão estruturada e bloqueia outros tipos
     let templateToUse = rule.message_template
     if (isLite) {
       if (rule.alert_type === 'renewal') {
         templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para agradecer e confirmar que sua renovação foi realizada com sucesso em nosso sistema! ✅\n\n💰 Valor Renovado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nQualquer dúvida, estamos à disposição!\n\n_Mensagem automática enviada via sistema._`
       } else if (rule.alert_type === 'promotion') {
         templateToUse = `Olá {{primeiro_nome}}!\n\nTemos uma novidade para você! Uma nova promoção ou benefício foi ativado no seu plano. 🚀\n\n💰 Valor Atualizado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nAproveite! Qualquer dúvida, é só nos chamar.\n\n_Mensagem automática enviada via sistema._`
+      } else if (rule.alert_type === 'activation' || rule.alert_type === 'welcome' || rule.alert_type === 'quick_message') {
+        templateToUse = `Olá {{primeiro_nome}}! Seja muito bem-vindo(a)!\n\nSua ativação foi concluída com sucesso em nosso sistema. Estamos muito felizes em ter você conosco! 🌟\n\n💰 Valor do Plano: R$ {{plan_value}}\n📅 Seu Vencimento: {{due_date}}\n\nSe precisar de qualquer suporte, basta nos chamar por aqui.\n\n_Mensagem automática enviada via sistema._`
       } else {
-        templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para informar que seu cadastro foi atualizado em nosso sistema.\n\n💰 Valor: R$ {{plan_value}}\n📅 Vencimento: {{due_date}}\n\n_Mensagem automática enviada via sistema._`
+        return NextResponse.json({ error: 'O plano Lite só permite disparos de Renovação, Ativação ou Promoção. Faça upgrade para usar notificações personalizadas de atraso e aviso prévio.' }, { status: 403 })
       }
     }
 

@@ -21,6 +21,18 @@ export async function GET() {
     // 3. Get Instances
     const { data: instancesData } = await supabaseAdmin.from('evolution_instances').select('user_id, status, connection_mode')
     
+    // 4. Get Alert History (Sent this month)
+    const currentMonth = new Date()
+    currentMonth.setDate(1)
+    currentMonth.setHours(0,0,0,0)
+    
+    // To avoid fetching too much data, we only select user_id
+    const { data: messagesData } = await supabaseAdmin
+      .from('alert_history')
+      .select('user_id')
+      .eq('status', 'sent')
+      .gte('created_at', currentMonth.toISOString())
+    
     const enrichedUsers = usersData.users.map(u => {
       let mrr = 0
       let activeClients = 0
@@ -44,6 +56,11 @@ export async function GET() {
         connectedInstances = userInstances.filter(i => i.status === 'connected').length
       }
 
+      let messagesMonth = 0
+      if (messagesData) {
+        messagesMonth = messagesData.filter(m => m.user_id === u.id).length
+      }
+
       return {
         id: u.id,
         email: u.email,
@@ -56,7 +73,8 @@ export async function GET() {
           mrr,
           activeClients,
           instancesCount,
-          connectedInstances
+          connectedInstances,
+          messagesMonth
         }
       }
     })

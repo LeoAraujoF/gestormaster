@@ -321,6 +321,7 @@ export default function MasterAdminPage() {
                     <TableHead>Usuário</TableHead>
                     <TableHead>Plano SaaS</TableHead>
                     <TableHead>Métricas</TableHead>
+                    <TableHead>Saúde</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Último Acesso</TableHead>
                     <TableHead>Status</TableHead>
@@ -340,6 +341,21 @@ export default function MasterAdminPage() {
                       <TableCell>
                         <div className="text-sm font-medium text-emerald-500">{formatCurrency(u.stats.mrr)}</div>
                         <div className="text-xs text-muted-foreground">{u.stats.activeClients} clts ativos</div>
+                      </TableCell>
+                      <TableCell>
+                        {u.stats.messagesMonth < 500 ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-0" title="Uso Saudável (Normal)">
+                            🟢 {u.stats.messagesMonth} msgs
+                          </Badge>
+                        ) : u.stats.messagesMonth <= 2000 ? (
+                          <Badge className="bg-amber-500/10 text-amber-600 border-0" title="Alerta: Alto Volume">
+                            🟡 {u.stats.messagesMonth} msgs
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-500/10 text-red-600 border-0 animate-pulse shadow-sm" title="Risco: Possível SPAMMER">
+                            🔴 {u.stats.messagesMonth} msgs
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">{u.stats.connectedInstances} on</div>

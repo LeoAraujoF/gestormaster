@@ -450,7 +450,7 @@ export default function MasterAdminPage() {
 
       {/* Tenant Profile Modal (Sheet) */}
       <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <SheetContent className="sm:max-w-md overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl">
+        <SheetContent className="sm:max-w-lg w-full overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl">
           <SheetHeader className="text-left mb-6">
             <SheetTitle className="text-2xl font-bold">Perfil do Inquilino</SheetTitle>
             <SheetDescription>Visão detalhada e ações de administração.</SheetDescription>
@@ -459,15 +459,15 @@ export default function MasterAdminPage() {
           {selectedUser && (
             <div className="space-y-6">
               {/* Header Profile */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-bold">{selectedUser.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xl font-bold truncate" title={selectedUser.name}>{selectedUser.name}</h3>
+                  <p className="text-sm text-muted-foreground truncate" title={selectedUser.email}>{selectedUser.email}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Cadastrado em: {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col items-end gap-2 shrink-0">
                   <Badge variant="outline" className="bg-primary/5">{selectedUser.plan}</Badge>
                   {selectedUser.is_banned ? (
                     <Badge className="bg-red-500/10 text-red-500 border-0">Acesso Bloqueado</Badge>

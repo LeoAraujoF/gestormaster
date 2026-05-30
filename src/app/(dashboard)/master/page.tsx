@@ -13,6 +13,7 @@ import { formatCurrency, phoneMask } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
@@ -34,6 +35,7 @@ export default function MasterAdminPage() {
   const [instances, setInstances] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isBlocking, setIsBlocking] = useState<string | null>(null)
+  const [systemHealth, setSystemHealth] = useState<any>(null)
 
   const supabase = createClient()
 
@@ -66,6 +68,15 @@ export default function MasterAdminPage() {
       if (resInst.ok) {
         const instData = await resInst.json()
         setInstances(instData.instances || [])
+      }
+
+      // 4. Carrega Saúde do Sistema
+      const resHealth = await fetch('/api/admin/health')
+      if (resHealth.ok) {
+        const healthData = await resHealth.json()
+        if (healthData.success) {
+          setSystemHealth(healthData.services)
+        }
       }
 
     } catch (e) {
@@ -213,16 +224,83 @@ export default function MasterAdminPage() {
             </div>
           </div>
           
-          <div className="glass-card rounded-xl p-8 border-rose-500/20 bg-rose-500/5 text-center flex flex-col items-center justify-center gap-4">
-             <Server className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
-             <h3 className="text-xl font-bold">Monitoramento de Infraestrutura Operacional</h3>
-             <p className="text-muted-foreground max-w-2xl">
-               O painel Master Admin permite governança total sobre a escala. Utilize as abas acima para auditar Inquilinos abusivos e gerir conexões da Evolution API.
-             </p>
-             <Button variant="outline" className="mt-4 border-rose-500/30 text-rose-500 hover:bg-rose-500/10" onClick={checkAdminAndLoadData}>
-               <RefreshCw className="w-4 h-4 mr-2" />
-               Sincronizar Dados em Tempo Real
-             </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-12 mb-4 gap-4">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <Activity className="w-5 h-5 text-rose-500" />
+              Saúde da Infraestrutura
+            </h3>
+            <Button variant="outline" size="sm" onClick={checkAdminAndLoadData} disabled={isLoading}>
+              <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+              Verificar Agora
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Database */}
+            <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-muted-foreground flex items-center gap-2">
+                  <Server className="w-4 h-4" /> Supabase (DB)
+                </span>
+                <span className={cn("flex h-3 w-3 rounded-full", systemHealth?.database?.status === 'online' ? "bg-emerald-500" : "bg-red-500")} />
+              </div>
+              <div>
+                <p className={cn("text-xl font-bold", systemHealth?.database?.status === 'online' ? "text-emerald-500" : "text-red-500")}>
+                  {systemHealth?.database?.status === 'online' ? 'Online' : 'Offline'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Latência: {systemHealth?.database?.latency || 0}ms</p>
+              </div>
+            </div>
+
+            {/* Redis */}
+            <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-muted-foreground flex items-center gap-2">
+                  <Activity className="w-4 h-4" /> Redis (Filas)
+                </span>
+                <span className={cn("flex h-3 w-3 rounded-full", systemHealth?.redis?.status === 'online' ? "bg-emerald-500" : "bg-red-500")} />
+              </div>
+              <div>
+                <p className={cn("text-xl font-bold", systemHealth?.redis?.status === 'online' ? "text-emerald-500" : "text-red-500")}>
+                  {systemHealth?.redis?.status === 'online' ? 'Online' : 'Offline'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Latência: {systemHealth?.redis?.latency || 0}ms</p>
+              </div>
+            </div>
+
+            {/* Evolution API */}
+            <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-muted-foreground flex items-center gap-2">
+                  <Smartphone className="w-4 h-4" /> Evolution API
+                </span>
+                <span className={cn("flex h-3 w-3 rounded-full", systemHealth?.evolution?.status === 'online' ? "bg-emerald-500" : "bg-red-500")} />
+              </div>
+              <div>
+                <p className={cn("text-xl font-bold", systemHealth?.evolution?.status === 'online' ? "text-emerald-500" : "text-red-500")}>
+                  {systemHealth?.evolution?.status === 'online' ? 'Online' : 'Offline'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate" title={systemHealth?.evolution?.url}>
+                  {systemHealth?.evolution?.url?.replace(/^https?:\/\//, '') || 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {/* Server */}
+            <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-muted-foreground flex items-center gap-2">
+                  <Power className="w-4 h-4" /> Servidor (Node)
+                </span>
+                <span className="flex h-3 w-3 rounded-full bg-emerald-500" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">
+                  {systemHealth?.server?.memoryMb || 0} MB RAM
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Uptime: {systemHealth?.server?.uptime || 'N/A'}</p>
+              </div>
+            </div>
           </div>
         </TabsContent>
 

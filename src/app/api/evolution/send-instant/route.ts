@@ -100,7 +100,13 @@ export async function POST(req: Request) {
     // Se for Lite, força a mensagem padrão estruturada, ignorando o que está na rule
     let templateToUse = rule.message_template
     if (isLite) {
-      templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para informar que sua renovação ou promoção foi aplicada com sucesso em nosso sistema! 🎉\n\n💰 Valor Atualizado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nQualquer dúvida, estamos à disposição!\n\n_Mensagem automática enviada via sistema._`
+      if (rule.alert_type === 'renewal') {
+        templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para agradecer e confirmar que sua renovação foi realizada com sucesso em nosso sistema! ✅\n\n💰 Valor Renovado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nQualquer dúvida, estamos à disposição!\n\n_Mensagem automática enviada via sistema._`
+      } else if (rule.alert_type === 'promotion') {
+        templateToUse = `Olá {{primeiro_nome}}!\n\nTemos uma novidade para você! Uma nova promoção ou benefício foi ativado no seu plano. 🚀\n\n💰 Valor Atualizado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nAproveite! Qualquer dúvida, é só nos chamar.\n\n_Mensagem automática enviada via sistema._`
+      } else {
+        templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para informar que seu cadastro foi atualizado em nosso sistema.\n\n💰 Valor: R$ {{plan_value}}\n📅 Vencimento: {{due_date}}\n\n_Mensagem automática enviada via sistema._`
+      }
     }
 
     const finalMessage = parseMessageTemplate(templateToUse, client)

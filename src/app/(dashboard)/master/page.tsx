@@ -582,12 +582,12 @@ export default function MasterAdminPage() {
               </div>
 
               {/* Actions */}
-              <div className="pt-8 mt-4">
+              <div className="pt-6 mt-2">
                 <Button 
                   variant={selectedUser.is_banned ? "outline" : "destructive"}
                   size="lg"
                   className={cn(
-                    "w-full justify-center text-base font-semibold h-14 rounded-xl transition-all duration-300 shadow-lg", 
+                    "w-full flex items-center justify-center gap-2 text-sm sm:text-base font-semibold h-14 rounded-xl transition-all duration-300 shadow-lg px-2 sm:px-4", 
                     selectedUser.is_banned 
                       ? "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                       : "hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:-translate-y-0.5"
@@ -601,20 +601,20 @@ export default function MasterAdminPage() {
                   }}
                 >
                   {isBlocking === selectedUser.id ? (
-                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                    <Loader2 className="w-5 h-5 shrink-0 animate-spin" />
                   ) : selectedUser.is_banned ? (
-                    <CheckCircle2 className="w-5 h-5 mr-3" />
+                    <CheckCircle2 className="w-5 h-5 shrink-0" />
                   ) : (
-                    <Ban className="w-5 h-5 mr-3" />
+                    <Ban className="w-5 h-5 shrink-0" />
                   )}
                   
-                  {selectedUser.is_banned ? 'Restaurar Acesso do Inquilino' : 'Suspender Inquilino Imediatamente'}
+                  <span className="truncate">{selectedUser.is_banned ? 'Restaurar Acesso do Inquilino' : 'Suspender Inquilino Imediatamente'}</span>
                 </Button>
                 
                 <p className="text-xs text-muted-foreground mt-4 text-center px-4 leading-relaxed opacity-70">
                   {selectedUser.is_banned 
-                    ? "Ao restaurar, o inquilino poderá voltar a fazer login no sistema e todas as automações voltarão a rodar normalmente." 
-                    : "Ação Imediata: Isso derrubará a sessão atual do inquilino e impedirá qualquer novo login até que você o desbloqueie."}
+                    ? "Ao restaurar, o inquilino poderá voltar a fazer login no sistema e usar automações." 
+                    : "Isso derrubará a sessão do inquilino em tempo real e impedirá novos acessos."}
                 </p>
               </div>
 

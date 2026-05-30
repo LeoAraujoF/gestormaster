@@ -450,119 +450,120 @@ export default function MasterAdminPage() {
 
       {/* Tenant Profile Modal (Sheet) */}
       <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <SheetContent className="sm:max-w-lg w-full overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl">
-          <SheetHeader className="text-left mb-6">
-            <SheetTitle className="text-2xl font-bold">Perfil do Inquilino</SheetTitle>
-            <SheetDescription>Visão detalhada e ações de administração.</SheetDescription>
+        <SheetContent className="sm:max-w-lg w-full overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl p-8">
+          <SheetHeader className="text-left mb-8">
+            <SheetTitle className="text-3xl font-bold tracking-tight">Perfil do Inquilino</SheetTitle>
+            <SheetDescription className="text-base mt-1">Visão detalhada e ações de administração.</SheetDescription>
           </SheetHeader>
 
           {selectedUser && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Header Profile */}
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xl font-bold truncate" title={selectedUser.name}>{selectedUser.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate" title={selectedUser.email}>{selectedUser.email}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <h3 className="text-2xl font-bold truncate tracking-tight" title={selectedUser.name}>{selectedUser.name}</h3>
+                  <p className="text-base text-muted-foreground truncate mt-1" title={selectedUser.email}>{selectedUser.email}</p>
+                  <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
                     Cadastrado em: {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <Badge variant="outline" className="bg-primary/5">{selectedUser.plan}</Badge>
+                <div className="flex flex-col items-end gap-3 shrink-0">
+                  <Badge variant="outline" className="bg-primary/5 text-sm py-1 px-3">{selectedUser.plan}</Badge>
                   {selectedUser.is_banned ? (
-                    <Badge className="bg-red-500/10 text-red-500 border-0">Acesso Bloqueado</Badge>
+                    <Badge className="bg-red-500/10 text-red-500 border-0 text-sm py-1 px-3">Bloqueado</Badge>
                   ) : (
-                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0">Acesso Ativo</Badge>
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-sm py-1 px-3">Ativo</Badge>
                   )}
                 </div>
               </div>
 
               {/* Saúde / Disparos */}
-              <div className="glass-card p-4 rounded-xl border bg-muted/20">
-                <p className="text-sm font-semibold mb-2">Classificação de Saúde (SPAM)</p>
+              <div className="glass-card p-6 rounded-xl border bg-muted/20 shadow-sm">
+                <p className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Classificação de Saúde (SPAM)</p>
                 {selectedUser.stats.messagesMonth < 500 ? (
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-4 w-4 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
                     <div>
-                      <p className="text-emerald-500 font-bold">Uso Saudável</p>
-                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                      <p className="text-emerald-500 font-bold text-lg">Uso Saudável</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
                     </div>
                   </div>
                 ) : selectedUser.stats.messagesMonth <= 2000 ? (
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-4 w-4 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]" />
                     <div>
-                      <p className="text-amber-500 font-bold">Alto Volume (Alerta)</p>
-                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                      <p className="text-amber-500 font-bold text-lg">Alto Volume (Alerta)</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)]" />
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-4 w-4 rounded-full bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.8)]" />
                     <div>
-                      <p className="text-red-500 font-bold">Risco de SPAM</p>
-                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                      <p className="text-red-500 font-bold text-lg">Risco de SPAM</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Grid Metrics */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="glass-card p-4 rounded-xl border text-center">
-                  <DollarSign className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
-                  <p className="text-xs text-muted-foreground">MRR Total</p>
-                  <p className="text-lg font-bold text-emerald-500">{formatCurrency(selectedUser.stats.mrr)}</p>
+              <div className="grid grid-cols-2 gap-5">
+                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
+                  <DollarSign className="w-6 h-6 mx-auto mb-2 text-emerald-500 opacity-80" />
+                  <p className="text-sm text-muted-foreground mb-1">MRR Total</p>
+                  <p className="text-2xl font-bold text-emerald-500">{formatCurrency(selectedUser.stats.mrr)}</p>
                 </div>
-                <div className="glass-card p-4 rounded-xl border text-center">
-                  <Users className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                  <p className="text-xs text-muted-foreground">Clientes Ativos</p>
-                  <p className="text-lg font-bold">{selectedUser.stats.activeClients}</p>
+                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
+                  <Users className="w-6 h-6 mx-auto mb-2 text-blue-500 opacity-80" />
+                  <p className="text-sm text-muted-foreground mb-1">Clientes Ativos</p>
+                  <p className="text-2xl font-bold">{selectedUser.stats.activeClients}</p>
                 </div>
-                <div className="glass-card p-4 rounded-xl border text-center">
-                  <Smartphone className="w-5 h-5 mx-auto mb-1 text-sky-500" />
-                  <p className="text-xs text-muted-foreground">Instâncias Conectadas</p>
-                  <p className="text-lg font-bold">{selectedUser.stats.connectedInstances} / {selectedUser.stats.instancesCount}</p>
+                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
+                  <Smartphone className="w-6 h-6 mx-auto mb-2 text-sky-500 opacity-80" />
+                  <p className="text-sm text-muted-foreground mb-1">Instâncias Ativas</p>
+                  <p className="text-2xl font-bold">{selectedUser.stats.connectedInstances} <span className="text-lg text-muted-foreground font-normal">/ {selectedUser.stats.instancesCount}</span></p>
                 </div>
-                <div className="glass-card p-4 rounded-xl border text-center">
-                  <MessageCircle className="w-5 h-5 mx-auto mb-1 text-indigo-500" />
-                  <p className="text-xs text-muted-foreground">Último Login</p>
-                  <p className="text-sm font-semibold mt-1">
+                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
+                  <MessageCircle className="w-6 h-6 mx-auto mb-2 text-indigo-500 opacity-80" />
+                  <p className="text-sm text-muted-foreground mb-1">Último Acesso</p>
+                  <p className="text-lg font-semibold mt-1.5">
                     {selectedUser.last_sign_in ? new Date(selectedUser.last_sign_in).toLocaleDateString('pt-BR') : 'Nunca'}
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-6 border-t mt-6">
-                <h4 className="text-sm font-semibold mb-4 text-muted-foreground">Ações Administrativas</h4>
+              <div className="pt-8 border-t border-border/50">
+                <h4 className="text-sm font-semibold mb-5 text-muted-foreground uppercase tracking-wider">Ações Administrativas</h4>
                 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <Button 
                     variant={selectedUser.is_banned ? "outline" : "destructive"}
-                    className={cn("w-full justify-start", selectedUser.is_banned && "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10")}
+                    size="lg"
+                    className={cn("w-full justify-start text-base font-medium h-12", selectedUser.is_banned && "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10")}
                     disabled={isBlocking === selectedUser.id || selectedUser.email === 'contato@leandroaraujo.com'}
                     onClick={async () => {
                       await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
-                      // Atualiza o modal internamente se der sucesso
                       setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
                     }}
                   >
                     {isBlocking === selectedUser.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-5 h-5 mr-3 animate-spin" />
                     ) : selectedUser.is_banned ? (
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      <CheckCircle2 className="w-5 h-5 mr-3" />
                     ) : (
-                      <Ban className="w-4 h-4 mr-2" />
+                      <Ban className="w-5 h-5 mr-3" />
                     )}
                     
-                    {selectedUser.is_banned ? 'Desbloquear Inquilino' : 'Bloquear / Suspender Acesso'}
+                    {selectedUser.is_banned ? 'Desbloquear Acesso do Inquilino' : 'Suspender Acesso Imediatamente'}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3 text-center">
+                <p className="text-sm text-muted-foreground mt-4 text-center">
                   {selectedUser.is_banned 
-                    ? "O inquilino poderá voltar a fazer login no sistema." 
-                    : "Isso derrubará a sessão do inquilino e o impedirá de acessar o painel imediatamente."}
+                    ? "O inquilino poderá voltar a fazer login no sistema e usar suas instâncias." 
+                    : "Isso derrubará a sessão do inquilino em tempo real e impedirá novos acessos."}
                 </p>
               </div>
 

@@ -90,7 +90,7 @@ export default function MasterAdminPage() {
   }
 
   const toggleUserBlock = async (userId: string, currentBannedStatus: boolean) => {
-    if (!confirm(`Tem certeza que deseja ${currentBannedStatus ? 'desbloquear' : 'bloquear'} este usuário? O login será suspenso.`)) return
+    if (!window.confirm(`Tem certeza que deseja ${currentBannedStatus ? 'desbloquear' : 'bloquear'} este usuário?`)) return false
     
     setIsBlocking(userId)
     try {
@@ -105,8 +105,10 @@ export default function MasterAdminPage() {
       toast.success(data.message)
       // Update local state
       setUsers(users.map(u => u.id === userId ? { ...u, is_banned: !currentBannedStatus } : u))
+      return true
     } catch (e: any) {
       toast.error(e.message)
+      return false
     } finally {
       setIsBlocking(null)
     }
@@ -545,8 +547,10 @@ export default function MasterAdminPage() {
                     className={cn("w-full justify-start text-base font-medium h-12", selectedUser.is_banned && "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10")}
                     disabled={isBlocking === selectedUser.id || selectedUser.email === 'contato@leandroaraujo.com'}
                     onClick={async () => {
-                      await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
-                      setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
+                      const success = await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
+                      if (success) {
+                        setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
+                      }
                     }}
                   >
                     {isBlocking === selectedUser.id ? (

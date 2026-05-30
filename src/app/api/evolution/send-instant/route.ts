@@ -35,12 +35,13 @@ export async function POST(req: Request) {
     const { data: userData } = await supabase.from('users').select('plan_name').eq('id', user.id).single()
     const userPlan = (userData?.plan_name || user.user_metadata?.plan_name || 'Lite').toLowerCase()
     
+    let isLite = false
     let messageLimit = 0
     if (userPlan.includes('pro')) messageLimit = 2000
     else if (userPlan.includes('plus') || userPlan.includes('max')) messageLimit = 10000
-
-    if (messageLimit === 0) {
-      return NextResponse.json({ error: 'O plano Lite não permite automação. Faça upgrade para o Pro ou Plus.' }, { status: 403 })
+    else {
+      isLite = true
+      messageLimit = 300 // Limite razoável para cliques manuais no Lite
     }
 
     const currentMonth = new Date().toISOString().slice(0, 7)
@@ -96,7 +97,13 @@ export async function POST(req: Request) {
       phone = '55' + phone
     }
 
-    const finalMessage = parseMessageTemplate(rule.message_template, client)
+    // Se for Lite, força a mensagem padrão estruturada, ignorando o que está na rule
+    let templateToUse = rule.message_template
+    if (isLite) {
+      templateToUse = `Olá {{primeiro_nome}}!\n\nPassando para informar que sua renovação ou promoção foi aplicada com sucesso em nosso sistema! 🎉\n\n💰 Valor Atualizado: R$ {{plan_value}}\n📅 Próximo Vencimento: {{due_date}}\n\nQualquer dúvida, estamos à disposição!\n\n_Mensagem automática enviada via sistema._`
+    }
+
+    const finalMessage = parseMessageTemplate(templateToUse, client)
 
     // 4. Send Instantly
     const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`

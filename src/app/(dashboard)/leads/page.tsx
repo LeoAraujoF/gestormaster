@@ -1305,10 +1305,8 @@ export default function LeadsPage() {
                                 )}
                                   <AlertDialog>
                                     <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" title="Mais opções">
-                                          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                                        </Button>
+                                      <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9" title="Mais opções">
+                                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
                                         <div className="px-2 py-1.5 text-sm font-semibold text-foreground">Ações</div>
@@ -1325,7 +1323,7 @@ export default function LeadsPage() {
                                           Converter em Cliente
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <AlertDialogTrigger asChild>
+                                        <AlertDialogTrigger render={
                                           <DropdownMenuItem 
                                             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                                             onSelect={(e) => e.preventDefault()}
@@ -1333,7 +1331,7 @@ export default function LeadsPage() {
                                             <Trash2 className="w-4 h-4 mr-2" />
                                             Excluir
                                           </DropdownMenuItem>
-                                        </AlertDialogTrigger>
+                                        } />
                                       </DropdownMenuContent>
                                     </DropdownMenu>
 

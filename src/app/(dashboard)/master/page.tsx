@@ -459,115 +459,162 @@ export default function MasterAdminPage() {
           </SheetHeader>
 
           {selectedUser && (
-            <div className="space-y-8">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
               {/* Header Profile */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-2xl font-bold truncate tracking-tight" title={selectedUser.name}>{selectedUser.name}</h3>
-                  <p className="text-base text-muted-foreground truncate mt-1" title={selectedUser.email}>{selectedUser.email}</p>
-                  <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
-                    Cadastrado em: {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
-                  </p>
+              <div className="flex items-center gap-5 pb-6 border-b border-border/40 relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-50 blur-3xl -z-10" />
+                
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-2xl font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] shrink-0 ring-1 ring-white/20">
+                  {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  <Badge variant="outline" className="bg-primary/5 text-sm py-1 px-3">{selectedUser.plan}</Badge>
-                  {selectedUser.is_banned ? (
-                    <Badge className="bg-red-500/10 text-red-500 border-0 text-sm py-1 px-3">Bloqueado</Badge>
-                  ) : (
-                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-sm py-1 px-3">Ativo</Badge>
-                  )}
+                
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-2xl font-bold truncate tracking-tight text-foreground" title={selectedUser.name}>
+                      {selectedUser.name}
+                    </h3>
+                    <div className="flex gap-2 shrink-0">
+                      <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">{selectedUser.plan}</Badge>
+                      {selectedUser.is_banned ? (
+                        <Badge className="bg-red-500/10 text-red-500 border border-red-500/20">Bloqueado</Badge>
+                      ) : (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Ativo</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground truncate mt-0.5" title={selectedUser.email}>{selectedUser.email}</p>
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5 opacity-80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                    Cliente desde {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
+                  </p>
                 </div>
               </div>
 
               {/* Saúde / Disparos */}
-              <div className="glass-card p-6 rounded-xl border bg-muted/20 shadow-sm">
-                <p className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Classificação de Saúde (SPAM)</p>
+              <div className={cn(
+                "relative overflow-hidden p-6 rounded-2xl border backdrop-blur-md shadow-lg transition-all duration-300",
+                selectedUser.stats.messagesMonth < 500 ? "bg-emerald-500/5 border-emerald-500/20" :
+                selectedUser.stats.messagesMonth <= 2000 ? "bg-amber-500/5 border-amber-500/20" :
+                "bg-red-500/5 border-red-500/30"
+              )}>
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <ShieldAlert className="w-24 h-24" />
+                </div>
+                
+                <p className="text-xs font-bold mb-4 uppercase tracking-widest opacity-70">Monitoramento de SPAM</p>
+                
                 {selectedUser.stats.messagesMonth < 500 ? (
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-4 w-4 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <span className="flex h-5 w-5 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)] ring-4 ring-emerald-500/20" />
                     <div>
-                      <p className="text-emerald-500 font-bold text-lg">Uso Saudável</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
+                      <p className="text-emerald-500 font-bold text-xl">Risco Baixo (Uso Saudável)</p>
+                      <p className="text-sm opacity-80 mt-1">{selectedUser.stats.messagesMonth} mensagens disparadas neste mês.</p>
                     </div>
                   </div>
                 ) : selectedUser.stats.messagesMonth <= 2000 ? (
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-4 w-4 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <span className="flex h-5 w-5 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] ring-4 ring-amber-500/20" />
                     <div>
-                      <p className="text-amber-500 font-bold text-lg">Alto Volume (Alerta)</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
+                      <p className="text-amber-500 font-bold text-xl">Atenção (Volume Alto)</p>
+                      <p className="text-sm opacity-80 mt-1">{selectedUser.stats.messagesMonth} mensagens disparadas neste mês.</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-4 w-4 rounded-full bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.8)]" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <span className="flex h-5 w-5 rounded-full bg-red-500 animate-pulse shadow-[0_0_25px_rgba(239,68,68,0.9)] ring-4 ring-red-500/30" />
                     <div>
-                      <p className="text-red-500 font-bold text-lg">Risco de SPAM</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{selectedUser.stats.messagesMonth} disparos registrados neste mês.</p>
+                      <p className="text-red-500 font-bold text-xl">Risco Crítico (Possível SPAM)</p>
+                      <p className="text-sm text-red-500/80 mt-1">{selectedUser.stats.messagesMonth} mensagens disparadas neste mês.</p>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Grid Metrics */}
-              <div className="grid grid-cols-2 gap-5">
-                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
-                  <DollarSign className="w-6 h-6 mx-auto mb-2 text-emerald-500 opacity-80" />
-                  <p className="text-sm text-muted-foreground mb-1">MRR Total</p>
-                  <p className="text-2xl font-bold text-emerald-500">{formatCurrency(selectedUser.stats.mrr)}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="group relative overflow-hidden bg-background/40 p-5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(16,185,129,0.1)] hover:-translate-y-1">
+                  <div className="absolute -inset-2 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl z-0" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
+                      <DollarSign className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">Receita (MRR)</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{formatCurrency(selectedUser.stats.mrr)}</p>
+                  </div>
                 </div>
-                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
-                  <Users className="w-6 h-6 mx-auto mb-2 text-blue-500 opacity-80" />
-                  <p className="text-sm text-muted-foreground mb-1">Clientes Ativos</p>
-                  <p className="text-2xl font-bold">{selectedUser.stats.activeClients}</p>
+                
+                <div className="group relative overflow-hidden bg-background/40 p-5 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(59,130,246,0.1)] hover:-translate-y-1">
+                  <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl z-0" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-3">
+                      <Users className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">Clientes Ativos</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{selectedUser.stats.activeClients}</p>
+                  </div>
                 </div>
-                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
-                  <Smartphone className="w-6 h-6 mx-auto mb-2 text-sky-500 opacity-80" />
-                  <p className="text-sm text-muted-foreground mb-1">Instâncias Ativas</p>
-                  <p className="text-2xl font-bold">{selectedUser.stats.connectedInstances} <span className="text-lg text-muted-foreground font-normal">/ {selectedUser.stats.instancesCount}</span></p>
+                
+                <div className="group relative overflow-hidden bg-background/40 p-5 rounded-2xl border border-white/5 hover:border-sky-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(14,165,233,0.1)] hover:-translate-y-1">
+                  <div className="absolute -inset-2 bg-gradient-to-br from-sky-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl z-0" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-sky-500/10 flex items-center justify-center mb-3">
+                      <Smartphone className="w-5 h-5 text-sky-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">Instâncias WhatsApp</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {selectedUser.stats.connectedInstances} <span className="text-base text-muted-foreground font-normal">/ {selectedUser.stats.instancesCount} on</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="glass-card p-5 rounded-xl border text-center shadow-sm">
-                  <MessageCircle className="w-6 h-6 mx-auto mb-2 text-indigo-500 opacity-80" />
-                  <p className="text-sm text-muted-foreground mb-1">Último Acesso</p>
-                  <p className="text-lg font-semibold mt-1.5">
-                    {selectedUser.last_sign_in ? new Date(selectedUser.last_sign_in).toLocaleDateString('pt-BR') : 'Nunca'}
-                  </p>
+                
+                <div className="group relative overflow-hidden bg-background/40 p-5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.1)] hover:-translate-y-1">
+                  <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl z-0" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center mb-3">
+                      <MessageCircle className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">Último Acesso</p>
+                    <p className="text-lg font-semibold text-foreground mt-2">
+                      {selectedUser.last_sign_in ? new Date(selectedUser.last_sign_in).toLocaleDateString('pt-BR') : 'Nunca'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-8 border-t border-border/50">
-                <h4 className="text-sm font-semibold mb-5 text-muted-foreground uppercase tracking-wider">Ações Administrativas</h4>
+              <div className="pt-8 mt-4">
+                <Button 
+                  variant={selectedUser.is_banned ? "outline" : "destructive"}
+                  size="lg"
+                  className={cn(
+                    "w-full justify-center text-base font-semibold h-14 rounded-xl transition-all duration-300 shadow-lg", 
+                    selectedUser.is_banned 
+                      ? "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                      : "hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:-translate-y-0.5"
+                  )}
+                  disabled={isBlocking === selectedUser.id || selectedUser.email === 'contato@leandroaraujo.com'}
+                  onClick={async () => {
+                    const success = await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
+                    if (success) {
+                      setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
+                    }
+                  }}
+                >
+                  {isBlocking === selectedUser.id ? (
+                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                  ) : selectedUser.is_banned ? (
+                    <CheckCircle2 className="w-5 h-5 mr-3" />
+                  ) : (
+                    <Ban className="w-5 h-5 mr-3" />
+                  )}
+                  
+                  {selectedUser.is_banned ? 'Restaurar Acesso do Inquilino' : 'Suspender Inquilino Imediatamente'}
+                </Button>
                 
-                <div className="space-y-4">
-                  <Button 
-                    variant={selectedUser.is_banned ? "outline" : "destructive"}
-                    size="lg"
-                    className={cn("w-full justify-start text-base font-medium h-12", selectedUser.is_banned && "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10")}
-                    disabled={isBlocking === selectedUser.id || selectedUser.email === 'contato@leandroaraujo.com'}
-                    onClick={async () => {
-                      const success = await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
-                      if (success) {
-                        setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
-                      }
-                    }}
-                  >
-                    {isBlocking === selectedUser.id ? (
-                      <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                    ) : selectedUser.is_banned ? (
-                      <CheckCircle2 className="w-5 h-5 mr-3" />
-                    ) : (
-                      <Ban className="w-5 h-5 mr-3" />
-                    )}
-                    
-                    {selectedUser.is_banned ? 'Desbloquear Acesso do Inquilino' : 'Suspender Acesso Imediatamente'}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-4 text-center">
+                <p className="text-xs text-muted-foreground mt-4 text-center px-4 leading-relaxed opacity-70">
                   {selectedUser.is_banned 
-                    ? "O inquilino poderá voltar a fazer login no sistema e usar suas instâncias." 
-                    : "Isso derrubará a sessão do inquilino em tempo real e impedirá novos acessos."}
+                    ? "Ao restaurar, o inquilino poderá voltar a fazer login no sistema e todas as automações voltarão a rodar normalmente." 
+                    : "Ação Imediata: Isso derrubará a sessão atual do inquilino e impedirá qualquer novo login até que você o desbloqueie."}
                 </p>
               </div>
 

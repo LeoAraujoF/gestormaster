@@ -324,89 +324,7 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      {/* Dashboard de Métricas */}
-      <div className="space-y-6">
-        {isMetricsLoading ? (
-          <div className="flex flex-col items-center justify-center h-48 bg-card rounded-xl border border-border/50">
-            <Loader2 className="w-8 h-8 text-rose-500 animate-spin mb-4" />
-            <span className="text-muted-foreground animate-pulse">Calculando métricas avançadas...</span>
-          </div>
-        ) : metrics ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* MRR Card */}
-              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10" />
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-500/10 rounded-xl">
-                    <DollarSign className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <h3 className="font-medium text-muted-foreground">MRR (Ativos)</h3>
-                </div>
-                <p className="text-3xl font-bold mt-2 text-emerald-500">{formatCurrency(metrics.metrics.mrr)}</p>
-                <p className="text-xs text-muted-foreground">Receita mensal garantida</p>
-              </div>
-              
-              {/* Ticket Médio */}
-              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-32 h-32 bg-sky-500/5 rounded-bl-full -z-10" />
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-sky-500/10 rounded-xl">
-                    <DollarSign className="w-5 h-5 text-sky-500" />
-                  </div>
-                  <h3 className="font-medium text-muted-foreground">Ticket Médio</h3>
-                </div>
-                <p className="text-3xl font-bold mt-2">{formatCurrency(metrics.metrics.ticketMedio)}</p>
-                <p className="text-xs text-muted-foreground">Por cliente ativo</p>
-              </div>
 
-              {/* Vencimentos / Inativos */}
-              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-32 h-32 bg-amber-500/5 rounded-bl-full -z-10" />
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-amber-500/10 rounded-xl">
-                    <CalendarIcon className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <h3 className="font-medium text-muted-foreground">Vencimentos</h3>
-                </div>
-                <p className="text-3xl font-bold mt-2 text-amber-500">{metrics.metrics.expiringSoon}</p>
-                <p className="text-xs text-muted-foreground">Vencem nos próximos 7 dias</p>
-              </div>
-
-              {/* Churn Rate */}
-              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-32 h-32 bg-red-500/5 rounded-bl-full -z-10" />
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-red-500/10 rounded-xl">
-                    <Users className="w-5 h-5 text-red-500" />
-                  </div>
-                  <h3 className="font-medium text-muted-foreground">Taxa de Churn</h3>
-                </div>
-                <p className="text-3xl font-bold mt-2 text-red-500">{metrics.metrics.churnRate}%</p>
-                <p className="text-xs text-muted-foreground">{metrics.metrics.totalInactive} inativos ({formatCurrency(metrics.metrics.lostRevenue)} perdidos)</p>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-card border shadow-sm">
-              <h3 className="font-bold text-lg mb-6">Retenção vs Ativação (Últimos 6 meses)</h3>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#888'}} />
-                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px'}} />
-                    <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
-                    <Bar dataKey="Ativações" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    <Bar dataKey="Renovações" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    <Bar dataKey="Vencidos" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </div>
 
       <div>
         <div className="glass-card rounded-xl overflow-hidden p-4">
@@ -620,6 +538,90 @@ export default function ClientesPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Dashboard de Métricas movido para baixo da tabela */}
+      <div className="space-y-6">
+        {isMetricsLoading ? (
+          <div className="flex flex-col items-center justify-center h-48 bg-card rounded-xl border border-border/50">
+            <Loader2 className="w-8 h-8 text-rose-500 animate-spin mb-4" />
+            <span className="text-muted-foreground animate-pulse">Calculando métricas avançadas...</span>
+          </div>
+        ) : metrics ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* MRR Card */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl">
+                    <DollarSign className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">MRR (Ativos)</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2 text-emerald-500">{formatCurrency(metrics.metrics.mrr)}</p>
+                <p className="text-xs text-muted-foreground">Receita mensal garantida</p>
+              </div>
+              
+              {/* Ticket Médio */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-sky-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-sky-500/10 rounded-xl">
+                    <DollarSign className="w-5 h-5 text-sky-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">Ticket Médio</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2">{formatCurrency(metrics.metrics.ticketMedio)}</p>
+                <p className="text-xs text-muted-foreground">Por cliente ativo</p>
+              </div>
+
+              {/* Vencimentos / Inativos */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-amber-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-amber-500/10 rounded-xl">
+                    <CalendarIcon className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">Vencimentos</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2 text-amber-500">{metrics.metrics.expiringSoon}</p>
+                <p className="text-xs text-muted-foreground">Vencem nos próximos 7 dias</p>
+              </div>
+
+              {/* Churn Rate */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-red-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-red-500/10 rounded-xl">
+                    <Users className="w-5 h-5 text-red-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">Taxa de Churn</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2 text-red-500">{metrics.metrics.churnRate}%</p>
+                <p className="text-xs text-muted-foreground">{metrics.metrics.totalInactive} inativos ({formatCurrency(metrics.metrics.lostRevenue)} perdidos)</p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-card border shadow-sm">
+              <h3 className="font-bold text-lg mb-6">Retenção vs Ativação (Últimos 6 meses)</h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={metrics.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#888'}} />
+                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px'}} />
+                    <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
+                    <Bar dataKey="Ativações" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Renovações" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Vencidos" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/* Create/Edit Dialog using the unified component */}

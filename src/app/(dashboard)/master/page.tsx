@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ export default function MasterAdminPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isBlocking, setIsBlocking] = useState<string | null>(null)
   const [systemHealth, setSystemHealth] = useState<any>(null)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
 
   const supabase = createClient()
 
@@ -325,12 +327,15 @@ export default function MasterAdminPage() {
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Último Acesso</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((u) => (
-                    <TableRow key={u.id} className="hover:bg-muted/30">
+                    <TableRow 
+                      key={u.id} 
+                      className="hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedUser(u)}
+                    >
                       <TableCell>
                         <div className="font-semibold">{u.name}</div>
                         <div className="text-xs text-muted-foreground">{u.email}</div>
@@ -372,18 +377,6 @@ export default function MasterAdminPage() {
                         ) : (
                           <Badge className="bg-emerald-500/10 text-emerald-500 border-0">Ativo</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          disabled={isBlocking === u.id || u.email === 'contato@leandroaraujo.com'}
-                          onClick={() => toggleUserBlock(u.id, u.is_banned)}
-                          className={u.is_banned ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10" : "text-red-500 hover:text-red-600 hover:bg-red-500/10"}
-                        >
-                          {isBlocking === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : u.is_banned ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
-                          {u.is_banned ? 'Desbloquear' : 'Bloquear'}
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -454,6 +447,129 @@ export default function MasterAdminPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Tenant Profile Modal (Sheet) */}
+      <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <SheetContent className="sm:max-w-md overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl">
+          <SheetHeader className="text-left mb-6">
+            <SheetTitle className="text-2xl font-bold">Perfil do Inquilino</SheetTitle>
+            <SheetDescription>Visão detalhada e ações de administração.</SheetDescription>
+          </SheetHeader>
+
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* Header Profile */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">{selectedUser.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cadastrado em: {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge variant="outline" className="bg-primary/5">{selectedUser.plan}</Badge>
+                  {selectedUser.is_banned ? (
+                    <Badge className="bg-red-500/10 text-red-500 border-0">Acesso Bloqueado</Badge>
+                  ) : (
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0">Acesso Ativo</Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Saúde / Disparos */}
+              <div className="glass-card p-4 rounded-xl border bg-muted/20">
+                <p className="text-sm font-semibold mb-2">Classificação de Saúde (SPAM)</p>
+                {selectedUser.stats.messagesMonth < 500 ? (
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                    <div>
+                      <p className="text-emerald-500 font-bold">Uso Saudável</p>
+                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                    </div>
+                  </div>
+                ) : selectedUser.stats.messagesMonth <= 2000 ? (
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-3 w-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                    <div>
+                      <p className="text-amber-500 font-bold">Alto Volume (Alerta)</p>
+                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-3 w-3 rounded-full bg-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)]" />
+                    <div>
+                      <p className="text-red-500 font-bold">Risco de SPAM</p>
+                      <p className="text-xs text-muted-foreground">{selectedUser.stats.messagesMonth} disparos neste mês.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Grid Metrics */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass-card p-4 rounded-xl border text-center">
+                  <DollarSign className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
+                  <p className="text-xs text-muted-foreground">MRR Total</p>
+                  <p className="text-lg font-bold text-emerald-500">{formatCurrency(selectedUser.stats.mrr)}</p>
+                </div>
+                <div className="glass-card p-4 rounded-xl border text-center">
+                  <Users className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                  <p className="text-xs text-muted-foreground">Clientes Ativos</p>
+                  <p className="text-lg font-bold">{selectedUser.stats.activeClients}</p>
+                </div>
+                <div className="glass-card p-4 rounded-xl border text-center">
+                  <Smartphone className="w-5 h-5 mx-auto mb-1 text-sky-500" />
+                  <p className="text-xs text-muted-foreground">Instâncias Conectadas</p>
+                  <p className="text-lg font-bold">{selectedUser.stats.connectedInstances} / {selectedUser.stats.instancesCount}</p>
+                </div>
+                <div className="glass-card p-4 rounded-xl border text-center">
+                  <MessageCircle className="w-5 h-5 mx-auto mb-1 text-indigo-500" />
+                  <p className="text-xs text-muted-foreground">Último Login</p>
+                  <p className="text-sm font-semibold mt-1">
+                    {selectedUser.last_sign_in ? new Date(selectedUser.last_sign_in).toLocaleDateString('pt-BR') : 'Nunca'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-6 border-t mt-6">
+                <h4 className="text-sm font-semibold mb-4 text-muted-foreground">Ações Administrativas</h4>
+                
+                <div className="space-y-3">
+                  <Button 
+                    variant={selectedUser.is_banned ? "outline" : "destructive"}
+                    className={cn("w-full justify-start", selectedUser.is_banned && "border-emerald-500/50 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10")}
+                    disabled={isBlocking === selectedUser.id || selectedUser.email === 'contato@leandroaraujo.com'}
+                    onClick={async () => {
+                      await toggleUserBlock(selectedUser.id, selectedUser.is_banned)
+                      // Atualiza o modal internamente se der sucesso
+                      setSelectedUser({...selectedUser, is_banned: !selectedUser.is_banned})
+                    }}
+                  >
+                    {isBlocking === selectedUser.id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : selectedUser.is_banned ? (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Ban className="w-4 h-4 mr-2" />
+                    )}
+                    
+                    {selectedUser.is_banned ? 'Desbloquear Inquilino' : 'Bloquear / Suspender Acesso'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  {selectedUser.is_banned 
+                    ? "O inquilino poderá voltar a fazer login no sistema." 
+                    : "Isso derrubará a sessão do inquilino e o impedirá de acessar o painel imediatamente."}
+                </p>
+              </div>
+
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

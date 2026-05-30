@@ -32,6 +32,52 @@ services:
       - gestor-network
 
   # -----------------------------------------------------
+  # 1.1 GESTOR WORKER (Filas em background)
+  # -----------------------------------------------------
+  gestor-worker:
+    image: gestor-app:latest
+    container_name: gestor_worker
+    restart: unless-stopped
+    command: npm run worker:start
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis-queue
+      - gestor-app
+    networks:
+      - gestor-network
+
+  # -----------------------------------------------------
+  # 1.2 GESTOR SCHEDULER (Cron Jobs)
+  # -----------------------------------------------------
+  gestor-scheduler:
+    image: gestor-app:latest
+    container_name: gestor_scheduler
+    restart: unless-stopped
+    command: npm run scheduler:start
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis-queue
+      - gestor-app
+    networks:
+      - gestor-network
+
+  # -----------------------------------------------------
   # 2. REDIS (Para filas BullMQ do Gestor)
   # -----------------------------------------------------
   redis-queue:
@@ -50,7 +96,7 @@ services:
   # 3. EVOLUTION API (Motor do WhatsApp)
   # -----------------------------------------------------
   evolution-api:
-    image: atendai/evolution-api:v2.2.1
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution_api
     restart: always
     ports:
@@ -58,12 +104,12 @@ services:
     environment:
       - SERVER_URL=${EVOLUTION_EXTERNAL_URL:-http://localhost:8080}
       - AUTH_TYPE=apikey
-      - AUTH_API_KEY=${EVOLUTION_API_KEY}
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://postgres:${EVOLUTION_DB_PASS}@evolution-db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://:${REDIS_PASSWORD}@redis-queue:6379/1 # Usa o DB 1 do Redis
+      - CACHE_REDIS_URI=redis://:${REDIS_PASSWORD}@redis-queue:6379/1 
       - CACHE_REDIS_PREFIX_KEY=evocache
       - RABBITMQ_ENABLED=false
       - WEBSOCKET_ENABLED=true

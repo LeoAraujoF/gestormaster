@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { redisConnection } from '@/lib/redis'
 
 export async function POST(request: Request) {
   try {
@@ -8,6 +9,12 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    // --- KILL SWITCH CHECK ---
+    const isBanned = await redisConnection.sismember('global:banned_users', user.id)
+    if (isBanned) {
+      return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte para recuperar o acesso.' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -64,12 +71,14 @@ export async function POST(request: Request) {
 
     if (!isAdmin && !existingInstance) {
       const instancesCount = currentInstances || 0
-      if (userPlan === 'Lite') {
-        return NextResponse.json({ error: 'O plano Lite não permite automação. Faça upgrade para o Pro ou Plus.' }, { status: 403 })
-      } else if (userPlan === 'Pro' && instancesCount >= 3) {
-        return NextResponse.json({ error: 'Limite do plano Pro atingido (3 instâncias). Faça upgrade para o Plus.' }, { status: 403 })
-      } else if (userPlan === 'Plus' && instancesCount >= 5) {
-        return NextResponse.json({ error: 'Limite máximo de instâncias atingido (5 instâncias).' }, { status: 403 })
+      const plan = userPlan.toLowerCase()
+      
+      let instanceLimit = 1 // Lite
+      if (plan.includes('pro')) instanceLimit = 3
+      else if (plan.includes('plus') || plan.includes('max')) instanceLimit = 10
+
+      if (instancesCount >= instanceLimit) {
+        return NextResponse.json({ error: `Limite atingido! Seu plano atual permite até ${instanceLimit} instâncias. Faça upgrade para conectar mais.` }, { status: 403 })
       }
     }
     // --------------------------

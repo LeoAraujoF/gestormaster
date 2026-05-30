@@ -26,6 +26,24 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('CIRCUIT_BREAKER_OPEN');
     }
 
+    // 2. Kill Switch (Verifica se o usuário foi banido/suspenso)
+    const isBanned = await redisConnection.sismember('global:banned_users', userId);
+    if (isBanned) {
+      logger.error(`[Job ${job.id}] 🛑 KILL SWITCH: Usuário ${userId} está banido. Interrompendo envio definitivamente.`);
+      
+      await supabaseAdmin.from('alert_history').insert({
+        user_id: userId,
+        organization_id: organizationId,
+        client_id: clientId,
+        automation_id: ruleId,
+        status: 'failed',
+        error_message: 'USER_BANNED',
+        scheduled_at: new Date().toISOString()
+      });
+      
+      throw new Error('USER_BANNED');
+    }
+
     if (organizationId) {
       // Limite: 60 mensagens por minuto por cliente (Pode virar dinâmico pelo DB futuramente)
       const { allowed, resetIn } = await RateLimiter.checkLimit(organizationId, 60, 60);
@@ -65,6 +83,12 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     else {
       logger.info(`[Job ${job.id}] ✅ Enviado com sucesso!`);
       await CircuitBreaker.recordSuccess(); // Requisição limpa, reseta falhas
+      
+      // Incrementa a Quota do Mês no Redis (Limites de Plano)
+      const currentMonth = new Date().toISOString().slice(0, 7); // ex: '2026-05'
+      const quotaKey = `usage:messages:${userId}:${currentMonth}`;
+      await redisConnection.incr(quotaKey);
+      await redisConnection.expire(quotaKey, 60 * 60 * 24 * 32); // Expira em ~32 dias
     }
 
   } catch (err: any) {

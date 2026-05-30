@@ -1,12 +1,19 @@
 import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { redisConnection } from '@/lib/redis'
 
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // --- KILL SWITCH CHECK ---
+    const isBanned = await redisConnection.sismember('global:banned_users', user.id)
+    if (isBanned) {
+      return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte.' }, { status: 403 })
+    }
 
     const { instanceName, phone, message, mediaBase64, mediaMimeType } = await req.json()
 

@@ -1,6 +1,7 @@
 import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { redisConnection } from '@/lib/redis'
 
 function parseMessageTemplate(template: string, client: any) {
   let msg = template
@@ -23,6 +24,33 @@ export async function POST(req: Request) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // --- KILL SWITCH CHECK ---
+    const isBanned = await redisConnection.sismember('global:banned_users', user.id)
+    if (isBanned) {
+      return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte.' }, { status: 403 })
+    }
+
+    // --- PLAN QUOTAS CHECK ---
+    const { data: userData } = await supabase.from('users').select('plan_name').eq('id', user.id).single()
+    const userPlan = (userData?.plan_name || user.user_metadata?.plan_name || 'Lite').toLowerCase()
+    
+    let messageLimit = 0
+    if (userPlan.includes('pro')) messageLimit = 2000
+    else if (userPlan.includes('plus') || userPlan.includes('max')) messageLimit = 10000
+
+    if (messageLimit === 0) {
+      return NextResponse.json({ error: 'O plano Lite não permite automação. Faça upgrade para o Pro ou Plus.' }, { status: 403 })
+    }
+
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    const quotaKey = `usage:messages:${user.id}:${currentMonth}`
+    const currentUsageStr = await redisConnection.get(quotaKey)
+    const currentUsage = parseInt(currentUsageStr || '0', 10)
+
+    if (currentUsage >= messageLimit) {
+      return NextResponse.json({ error: `Limite do plano excedido (${messageLimit} mensais). Faça upgrade.` }, { status: 403 })
+    }
 
     const { clientId, ruleId } = await req.json()
 

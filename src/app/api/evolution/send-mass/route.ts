@@ -2,6 +2,7 @@ import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient, getActiveOrganization } from '@/lib/supabase/server'
 import { messageQueue } from '@/lib/queue'
+import { redisConnection } from '@/lib/redis'
 
 // Formats the template with the client data
 function parseMessageTemplate(template: string, client: any, userMeta: any = {}) {
@@ -40,6 +41,24 @@ export async function POST(req: Request) {
 
     if (!messageTemplate) {
       return NextResponse.json({ error: 'Mensagem é obrigatória' }, { status: 400 })
+    }
+
+    // --- KILL SWITCH CHECK ---
+    const isBanned = await redisConnection.sismember('global:banned_users', user.id)
+    if (isBanned) {
+      return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte para recuperar o acesso.' }, { status: 403 })
+    }
+
+    // --- PLAN QUOTAS CHECK (Lite: 0, Pro: 2000, Plus: 10000) ---
+    const { data: userData } = await supabase.from('users').select('plan_name').eq('id', user.id).single()
+    const userPlan = (userData?.plan_name || user.user_metadata?.plan_name || 'Lite').toLowerCase()
+    
+    let messageLimit = 0
+    if (userPlan.includes('pro')) messageLimit = 2000
+    else if (userPlan.includes('plus') || userPlan.includes('max')) messageLimit = 10000
+
+    if (messageLimit === 0) {
+      return NextResponse.json({ error: 'O plano Lite não permite disparos em massa automáticos. Faça upgrade para o Pro ou Plus.' }, { status: 403 })
     }
 
     // Calcula o delay inicial se houver agendamento
@@ -101,6 +120,18 @@ export async function POST(req: Request) {
     
     if (validClients.length === 0) {
       return NextResponse.json({ error: 'Nenhum cliente com telefone válido encontrado para o filtro selecionado' }, { status: 400 })
+    }
+
+    // --- ENFORCE QUOTA LIMIT ---
+    const currentMonth = new Date().toISOString().slice(0, 7) // '2026-05'
+    const quotaKey = `usage:messages:${user.id}:${currentMonth}`
+    const currentUsageStr = await redisConnection.get(quotaKey)
+    const currentUsage = parseInt(currentUsageStr || '0', 10)
+
+    if (currentUsage + validClients.length > messageLimit) {
+      return NextResponse.json({ 
+        error: `Atenção: Limite do plano excedido! Seu plano atual permite ${messageLimit} disparos mensais. Você já enviou ${currentUsage} e tentou enviar mais ${validClients.length}. Por favor, faça um upgrade para continuar.` 
+      }, { status: 403 })
     }
 
     // 3. Process send loop asynchronously

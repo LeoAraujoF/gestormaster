@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { redisConnection } from '@/lib/redis'
 
 export async function POST(req: Request) {
   try {
@@ -24,6 +25,13 @@ export async function POST(req: Request) {
     })
 
     if (error) throw error
+
+    // Sincroniza com o Redis (Kill Switch ultra rápido para o Backend/Worker)
+    if (isBlocked) {
+      await redisConnection.sadd('global:banned_users', userId)
+    } else {
+      await redisConnection.srem('global:banned_users', userId)
+    }
 
     return NextResponse.json({ success: true, message: isBlocked ? 'Usuário bloqueado' : 'Usuário desbloqueado' })
   } catch (error: any) {

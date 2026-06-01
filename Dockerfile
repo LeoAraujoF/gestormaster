@@ -24,6 +24,7 @@ ENV NEXT_PUBLIC_IGNORE_BUILD_ERRORS true
 ENV NEXT_IGNORE_ESLINT true
 ENV NEXT_IGNORE_TYPE_CHECK true
 
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 RUN npm run build
 
 # Production image, copy all the files and run next

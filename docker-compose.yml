@@ -5,10 +5,7 @@ services:
   # 1. GESTOR APP (SaaS Principal)
   # -----------------------------------------------------
   gestor-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: gestor-app:latest
+    image: ghcr.io/leoaraujof/gestormaster:latest
     container_name: gestor_app
     restart: unless-stopped
     ports:
@@ -35,7 +32,7 @@ services:
   # 1.1 GESTOR WORKER (Filas em background)
   # -----------------------------------------------------
   gestor-worker:
-    image: gestor-app:latest
+    image: ghcr.io/leoaraujof/gestormaster:latest
     container_name: gestor_worker
     restart: unless-stopped
     command: npm run worker:start
@@ -59,7 +56,7 @@ services:
   # 1.2 GESTOR SCHEDULER (Cron Jobs)
   # -----------------------------------------------------
   gestor-scheduler:
-    image: gestor-app:latest
+    image: ghcr.io/leoaraujof/gestormaster:latest
     container_name: gestor_scheduler
     restart: unless-stopped
     command: npm run scheduler:start

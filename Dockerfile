@@ -25,6 +25,16 @@ ENV NEXT_IGNORE_ESLINT true
 ENV NEXT_IGNORE_TYPE_CHECK true
 
 ENV NODE_OPTIONS="--max-old-space-size=1536"
+
+# Variáveis necessárias para compilar as páginas estáticas no Next.js App Router
+ENV NEXT_PUBLIC_SUPABASE_URL="https://rkxfwwooivqjukjhbhgg.supabase.co"
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJreGZ3d29vaXZxanVramhiaGdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MDA5MzksImV4cCI6MjA5NDk3NjkzOX0.DaVpNzIeS9gpzC9m8Xw71STxFUUhM0Lf8QSSczJ0o-I"
+ENV SUPABASE_SERVICE_ROLE_KEY="dummy_key_to_bypass_build_error_will_be_overridden"
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51TaLSKDhR1gtdDDjweocrTNrPdt0LXbpOA5VOEVIzdt5Bvdr4zkBpRAYrTMNX4AzDKXDQjSR88lheLdcuj3olDgb009ukgQtzE"
+ENV NEXT_PUBLIC_STRIPE_PRICE_BASIC="price_1TccW4DhR1gtdDDjzVSriErd"
+ENV NEXT_PUBLIC_STRIPE_PRICE_PRO="price_1TccWbDhR1gtdDDjrrmye5nH"
+ENV NEXT_PUBLIC_STRIPE_PRICE_PREMIUM="price_1TccWlDhR1gtdDDjXdQnfKm4"
+
 RUN npm run build
 
 # Production image, copy all the files and run next

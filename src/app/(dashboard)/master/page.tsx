@@ -160,7 +160,7 @@ export default function MasterAdminPage() {
           className="bg-amber-500 hover:bg-amber-600 text-white gap-2 shrink-0"
         >
           <Activity className="w-4 h-4" />
-          Ver Filas do Sistema
+          Abrir Painel de Filas
         </Button>
       </div>
 

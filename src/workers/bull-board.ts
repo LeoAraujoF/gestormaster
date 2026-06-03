@@ -7,6 +7,22 @@ import { messageQueue, webhookQueue, healthQueue, warmupQueue } from '../lib/que
 
 const app = express();
 
+// Middleware de Basic Auth para proteger a rota /admin/queues
+app.use('/admin/queues', (req, res, next) => {
+  const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+  const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin';
+  const adminPass = process.env.BULL_BOARD_PASSWORD || 'admin';
+
+  if (login && password && login === adminEmail && password === adminPass) {
+    return next();
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="GestorAdmin"');
+  res.status(401).send('Acesso Negado: Credenciais Invalidas.');
+});
+
 // Configura o adapter do Express
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');

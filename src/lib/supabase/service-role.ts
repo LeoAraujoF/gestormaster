@@ -12,19 +12,5 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
-  },
-  // Desabilita o auto-connect do Realtime (Workers não precisam de WebSocket)
-  // Isso evita o crash "Node.js 20 detected without native WebSocket support"
-  realtime: {
-    params: {
-      eventsPerSecond: 0
-    }
   }
 });
-
-// Previne a tentativa de conexão WebSocket no Node 20
-try {
-  supabaseAdmin.realtime.disconnect();
-} catch (_) {
-  // Ignora se já estiver desconectado
-}

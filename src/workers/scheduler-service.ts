@@ -6,29 +6,167 @@ import { logger, runWithCorrelationId } from '../lib/logger';
 
 logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
-// --- Health Monitor Cron (A cada 5 min) ---
+// --- Scheduler Principal (A cada 5 min) ---
 cron.schedule('*/5 * * * *', async () => {
   return runWithCorrelationId(undefined, undefined, async () => {
-    logger.info(`[Scheduler] 🤖 Iniciando varredura de instâncias (Health Monitor)... (${new Date().toISOString()})`);
+    logger.info(`[Scheduler] 🤖 Iniciando varredura principal (Automações & Health Monitor)... (${new Date().toISOString()})`);
   
   try {
-    // 1. Busca automações que precisam disparar
-    // (Por enquanto, apenas um mock estrutural)
-    // const { data: rules } = await supabaseAdmin.from('automations').select('*').eq('is_active', true);
-    
-    // Se achar clientes que caem na regra (Ex: Vencimento hoje):
-    // const jobs = [...];
-    // await messageQueue.addBulk(jobs);
+    const now = new Date();
+    // Converter a hora local do Node para minutos (0 a 1439)
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // 2. Dispara o Health Monitor para checar instâncias do WhatsApp
+    // 1. Busca automações ativas
+    const { data: automations, error: autoErr } = await supabaseAdmin
+      .from('automations')
+      .select('*')
+      .eq('is_active', true);
+      
+    if (autoErr) throw new Error(`Erro ao buscar automações: ${autoErr.message}`);
+
+    for (const rule of automations || []) {
+      if (!rule.send_time) continue;
+      
+      const [h, m] = rule.send_time.split(':').map(Number);
+      const ruleMins = h * 60 + m;
+      
+      // Checa se o horário de envio caiu na janela dos últimos 5 minutos
+      // Ex: se agora é 10:05 (605 mins), vai rodar regras de 10:01 a 10:05.
+      if (ruleMins <= (nowMins - 5) || ruleMins > nowMins) {
+        continue;
+      }
+
+      // Calcula a Data Alvo (targetDate) baseada na regra
+      let targetDateObj = new Date(now);
+      if (rule.alert_type === 'before_due') {
+        targetDateObj.setDate(targetDateObj.getDate() + (rule.days_offset || 0));
+      } else if (rule.alert_type === 'after_due') {
+        targetDateObj.setDate(targetDateObj.getDate() - (rule.days_offset || 0));
+      }
+      // Se for 'on_due', a targetDateObj continua sendo 'now'
+      
+      const targetDateStr = targetDateObj.toISOString().split('T')[0];
+
+      // Busca os clientes ativos que possuem esse vencimento
+      let query = supabaseAdmin.from('clients')
+        .select('*')
+        .eq('status', 'active')
+        .eq('due_date', targetDateStr);
+        
+      if (rule.organization_id) {
+        query = query.eq('organization_id', rule.organization_id);
+      } else {
+        query = query.eq('user_id', rule.user_id);
+      }
+      
+      const { data: clients, error: clientErr } = await query;
+      if (clientErr || !clients || clients.length === 0) continue;
+
+      // Busca uma instância da Evolution conectada para disparar
+      let instanceQuery = supabaseAdmin.from('evolution_instances')
+        .select('*')
+        .eq('status', 'connected');
+        
+      if (rule.organization_id) {
+        instanceQuery = instanceQuery.eq('organization_id', rule.organization_id);
+      } else {
+        instanceQuery = instanceQuery.eq('user_id', rule.user_id);
+      }
+      
+      const { data: instances } = await instanceQuery.limit(1);
+      if (!instances || instances.length === 0) {
+        logger.warn(`[Scheduler] ⚠️ Regra ${rule.id}: Nenhuma instância WhatsApp conectada para disparar.`);
+        continue;
+      }
+      const instance = instances[0];
+
+      const jobsToQueue = [];
+
+      for (const client of clients) {
+        if (!client.phone) continue;
+
+        // Proteção contra envios duplicados no mesmo dia para a mesma automação
+        const { data: historyCheck } = await supabaseAdmin.from('alert_history')
+          .select('id')
+          .eq('client_id', client.id)
+          .eq('automation_id', rule.id)
+          .gte('created_at', `${todayStr}T00:00:00Z`)
+          .limit(1);
+          
+        if (historyCheck && historyCheck.length > 0) continue;
+
+        // Construir a mensagem dinâmica
+        let finalMsg = rule.message_template || '';
+        finalMsg = finalMsg.replace(/{nome}/g, client.name || '');
+        
+        // Formata YYYY-MM-DD para DD/MM/YYYY
+        const dueBR = client.due_date ? client.due_date.split('-').reverse().join('/') : '';
+        finalMsg = finalMsg.replace(/{vencimento}/g, dueBR);
+        
+        const val = client.plan_value ? `R$ ${Number(client.plan_value).toFixed(2).replace('.', ',')}` : '';
+        finalMsg = finalMsg.replace(/{valor}/g, val);
+
+        // Registra o Histórico como Pending
+        const historyData: any = {
+          client_id: client.id,
+          automation_id: rule.id,
+          status: 'pending',
+          message_content: finalMsg,
+          scheduled_at: now.toISOString(),
+          user_id: rule.user_id
+        };
+        if (rule.organization_id) historyData.organization_id = rule.organization_id;
+
+        const { data: insertedAlert, error: insertErr } = await supabaseAdmin
+          .from('alert_history')
+          .insert(historyData)
+          .select()
+          .single();
+
+        if (insertErr) {
+          logger.error(`[Scheduler] ❌ Erro ao criar histórico de alerta para ${client.id}: ${insertErr.message}`);
+          continue;
+        }
+
+        if (insertedAlert) {
+          jobsToQueue.push({
+            name: 'send-automated-message',
+            data: {
+              clientId: client.id,
+              phone: client.phone,
+              finalMessage: finalMsg,
+              instanceUrl: instance.base_url,
+              apiKey: instance.api_key,
+              ruleId: rule.id,
+              userId: rule.user_id,
+              organizationId: rule.organization_id,
+              correlationId: logger.bindings()?.correlationId
+            },
+            opts: {
+              removeOnComplete: true,
+              jobId: `auto-${rule.id}-${client.id}-${todayStr}`
+            }
+          });
+        }
+      }
+
+      // Envia em lote para o Redis
+      if (jobsToQueue.length > 0) {
+        await messageQueue.addBulk(jobsToQueue as any);
+        logger.info(`[Scheduler] 🚀 ${jobsToQueue.length} mensagens injetadas na Fila para a regra ${rule.id}`);
+      }
+    }
+
+    // 2. Dispara o Health Monitor
     await healthQueue.add('sync-instances', { timestamp: Date.now(), correlationId: logger.bindings()?.correlationId }, {
       removeOnComplete: true,
     });
-
-    logger.info('[Scheduler] ✅ Varredura concluída sem novos jobs de mensagem na fila. Job de sync-instances disparado.');
+    
+    logger.info('[Scheduler] ✅ Varredura principal (Automações e Health) concluída.');
 
   } catch (error: any) {
-    logger.error(`[Scheduler] ❌ Erro na rotina de agendamento do Health Monitor: ${error.message}`);
+    logger.error(`[Scheduler] ❌ Erro na rotina de agendamento principal: ${error.message}`);
   }
   });
 });

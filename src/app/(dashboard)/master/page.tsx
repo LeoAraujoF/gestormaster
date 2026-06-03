@@ -156,7 +156,7 @@ export default function MasterAdminPage() {
           </p>
         </div>
         <Button 
-          onClick={() => window.open('http://localhost:3001/admin/queues', '_blank')} 
+          onClick={() => window.open('/admin/queues', '_blank')} 
           className="bg-amber-500 hover:bg-amber-600 text-white gap-2 shrink-0"
         >
           <Activity className="w-4 h-4" />

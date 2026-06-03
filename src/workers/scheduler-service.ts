@@ -39,13 +39,17 @@ cron.schedule('*/5 * * * *', async () => {
       }
 
       // Calcula a Data Alvo (targetDate) baseada na regra
+      // Usa Math.abs() porque o banco pode salvar days_offset como negativo
+      const offset = Math.abs(rule.days_offset || 0);
       let targetDateObj = new Date(now);
       if (rule.alert_type === 'before_due') {
-        targetDateObj.setDate(targetDateObj.getDate() + (rule.days_offset || 0));
+        // "Aviso prévio": buscar clientes que vencem DAQUI A N dias
+        targetDateObj.setDate(targetDateObj.getDate() + offset);
       } else if (rule.alert_type === 'after_due') {
-        targetDateObj.setDate(targetDateObj.getDate() - (rule.days_offset || 0));
+        // "Cobrança atrasado": buscar clientes que venceram HÁ N dias
+        targetDateObj.setDate(targetDateObj.getDate() - offset);
       }
-      // Se for 'on_due', a targetDateObj continua sendo 'now'
+      // Se for 'on_due', 'renewal', 'promotion' ou 'quick_message', a targetDateObj continua sendo 'hoje'
       
       const targetDateStr = targetDateObj.toISOString().split('T')[0];
 

@@ -39,5 +39,11 @@ export function parseMessageTemplate(template: string, client: any, userMeta: an
   msg = msg.replace(/\{\{pix\}\}/g, userMeta.pix_key || '');
   msg = msg.replace(/\{\{titular_pix\}\}/g, userMeta.pix_name || '');
 
+  // 4. Converter \\n literais (salvo pelo banco como texto) em quebras de linha reais
+  msg = msg.replace(/\\n/g, '\n');
+
+  // 5. Limpar quebras de linha excessivas (máximo 2 seguidas)
+  msg = msg.replace(/\n{3,}/g, '\n\n');
+
   return msg;
 }

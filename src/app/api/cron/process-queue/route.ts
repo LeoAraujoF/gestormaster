@@ -7,27 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function parseMessageTemplate(template: string, client: any, userMeta: any = {}) {
-  let msg = template
-  msg = msg.replace(/{{client_name}}/g, client.name || '')
-  
-  const firstName = client.name ? client.name.split(' ')[0] : ''
-  msg = msg.replace(/{{primeiro_nome}}/g, firstName)
-  
-  msg = msg.replace(/{{plan_value}}/g, client.plan_value?.toString() || '0')
-  
-  if (client.due_date) {
-    const [y, m, d] = client.due_date.split('-')
-    msg = msg.replace(/{{due_date}}/g, `${d}/${m}/${y}`)
-  }
-
-  msg = msg.replace(/{{empresa}}/g, userMeta.company_name || '')
-  msg = msg.replace(/{{telefone_suporte}}/g, userMeta.support_phone || '')
-  msg = msg.replace(/{{pix}}/g, userMeta.pix_key || '')
-  msg = msg.replace(/{{titular_pix}}/g, userMeta.pix_name || '')
-
-  return msg
-}
+import { parseMessageTemplate } from "@/lib/message-parser";
 
 export async function GET(req: Request) {
   try {

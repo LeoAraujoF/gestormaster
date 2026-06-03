@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import { messageQueue, healthQueue, warmupQueue } from '../lib/queue';
 import { logger, runWithCorrelationId } from '../lib/logger';
+import { parseMessageTemplate } from '../lib/message-parser';
 
 logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
@@ -81,6 +82,17 @@ cron.schedule('*/5 * * * *', async () => {
       }
       const instance = instances[0];
 
+      // Busca os metadados do usuário para preencher variáveis como {{pix}}, {{empresa}}, etc
+      let userMeta = {};
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(rule.user_id);
+        if (user && user.user_metadata) {
+          userMeta = user.user_metadata;
+        }
+      } catch (err: any) {
+        logger.warn(`[Scheduler] Não foi possível buscar metadados do usuário ${rule.user_id}: ${err.message}`);
+      }
+
       const jobsToQueue = [];
 
       for (const client of clients) {
@@ -96,16 +108,8 @@ cron.schedule('*/5 * * * *', async () => {
           
         if (historyCheck && historyCheck.length > 0) continue;
 
-        // Construir a mensagem dinâmica
-        let finalMsg = rule.message_template || '';
-        finalMsg = finalMsg.replace(/{nome}/g, client.name || '');
-        
-        // Formata YYYY-MM-DD para DD/MM/YYYY
-        const dueBR = client.due_date ? client.due_date.split('-').reverse().join('/') : '';
-        finalMsg = finalMsg.replace(/{vencimento}/g, dueBR);
-        
-        const val = client.plan_value ? `R$ ${Number(client.plan_value).toFixed(2).replace('.', ',')}` : '';
-        finalMsg = finalMsg.replace(/{valor}/g, val);
+        // Construir a mensagem dinâmica com Spintax e Variáveis Duplas
+        const finalMsg = parseMessageTemplate(rule.message_template || '', client, userMeta);
 
         // Registra o Histórico como Pending
         const historyData: any = {

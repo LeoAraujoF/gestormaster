@@ -17,15 +17,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Acesso restrito ao Administrador.' }, { status: 403 })
     }
 
-    const host = request.headers.get('host') || 'localhost'
-    const isLocal = host.includes('localhost') || host.includes('127.0.0.1')
-    
-    // Monta a URL dinamicamente: se estiver local, usa porta 3001. Na nuvem, usa o subdomínio queue.
-    const domain = host.split(':')[0].replace('www.', '') // remove porta e www se houver
-    const protocol = request.headers.get('x-forwarded-proto') || 'http'
-    
-    const queuesUrl = process.env.NEXT_PUBLIC_QUEUES_URL || 
-      (isLocal ? `http://localhost:3001/admin/queues` : `${protocol}://queue.${domain}/admin/queues`)
+    // Variáveis sem o prefixo NEXT_PUBLIC_ são lidas em TEMPO REAL pelo servidor
+    const queuesUrl = process.env.QUEUES_URL || 'https://queue.roboajuda.site/admin/queues'
     
     return NextResponse.redirect(queuesUrl)
   } catch (error) {

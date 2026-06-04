@@ -164,7 +164,7 @@ cron.schedule('*/5 * * * *', async () => {
               correlationId: logger.bindings()?.correlationId
             },
             opts: {
-              removeOnComplete: true,
+              removeOnComplete: { age: 86400, count: 1000 },
               jobId: `auto-${rule.id}-${client.id}-${localTodayStr}`
             }
           });

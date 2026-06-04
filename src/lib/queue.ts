@@ -8,7 +8,7 @@ export const messageQueue = new Queue(MESSAGE_QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: true, 
+    removeOnComplete: { age: 86400, count: 1000 }, // Manter por 24h ou até 1000 jobs
     removeOnFail: { age: 604800, count: 5000 }, // 7 dias ou 5000 jobs
   },
 });

@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 /**
  * Gera uma nova mensagem de WhatsApp que pareça extremamente humana.
@@ -38,6 +38,8 @@ Regras:
     } else {
       messages.push({ role: 'user', content: 'Inicie uma conversa curta aleatória.' });
     }
+
+    if (!openai) throw new Error('OpenAI client is null');
 
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',

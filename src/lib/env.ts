@@ -6,3 +6,6 @@ if (fs.existsSync('.env.local')) {
 } else {
   dotenv.config();
 }
+
+// Força o fuso horário do Brasil para o Node.js no Docker
+process.env.TZ = 'America/Sao_Paulo';

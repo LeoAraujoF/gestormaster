@@ -522,15 +522,28 @@ export default function AutomacaoPage() {
   const handleBulkAction = async (action: 'resend_failed' | 'cancel_pending' | 'clear_all') => {
     setIsBulkActioning(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
       if (action === 'resend_failed') {
-        await supabase.from('alert_history').update({ status: 'pending', error_message: null, scheduled_at: new Date().toISOString() }).eq('status', 'failed')
+        const { error } = await supabase.from('alert_history')
+          .update({ status: 'pending', error_message: null, scheduled_at: new Date().toISOString() })
+          .eq('status', 'failed')
+          .eq('user_id', user.id)
+        if (error) throw error
         toast.success("Falhas reativadas para fila!")
       } else if (action === 'cancel_pending') {
-        await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado em lote' }).eq('status', 'pending')
+        const { error } = await supabase.from('alert_history')
+          .update({ status: 'failed', error_message: 'Cancelado em lote' })
+          .eq('status', 'pending')
+          .eq('user_id', user.id)
+        if (error) throw error
         toast.success("Envios pendentes cancelados!")
       } else if (action === 'clear_all') {
-        // RLS will only delete the user's logs
-        await supabase.from('alert_history').delete().neq('status', 'nonexistent_status')
+        const { error } = await supabase.from('alert_history')
+          .delete()
+          .eq('user_id', user.id)
+        if (error) throw error
         toast.success("Histórico limpo!")
       }
       loadLogs()

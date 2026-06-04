@@ -13,7 +13,7 @@ logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
 const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   const { 
-    clientId, phone, finalMessage, instanceUrl, apiKey, 
+    clientId, phone, finalMessage, instanceUrl, apiKey, instanceName, connectionMode,
     ruleId, userId, organizationId, correlationId 
   } = job.data;
 
@@ -56,13 +56,37 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     }
 
   try {
-    const rawApiKey = SecretsManager.decrypt(apiKey);
-    const provider = new EvolutionWhatsAppProvider(instanceUrl.replace(/\/message\/sendText\/.*$/, ''), rawApiKey);
-    
-    // Opcional: extrair o instanceName da instanceUrl (ex: http://api/message/sendText/Mylena -> Mylena)
-    const instanceName = instanceUrl.split('/').pop() || '';
+    let finalUrl = '';
+    let finalApiKey = '';
 
-    await provider.sendMessage(instanceName, phone, finalMessage, {
+    if (connectionMode === 'integrated' || (!instanceUrl && !apiKey)) {
+      finalUrl = process.env.EVOLUTION_API_URL || 'http://evolution-api:8080';
+      finalApiKey = process.env.EVOLUTION_API_KEY || '';
+    } else {
+      finalUrl = instanceUrl.replace(/\/message\/sendText\/.*$/, '');
+      finalApiKey = apiKey ? SecretsManager.decrypt(apiKey) : '';
+    }
+
+    const provider = new EvolutionWhatsAppProvider(finalUrl, finalApiKey);
+    
+    // Fallback: se não veio instanceName no job, tenta extrair da url antiga
+    let targetInstanceName = instanceName || (instanceUrl ? instanceUrl.split('/').pop() : '');
+
+    // Fallback Extremo para jobs antigos presos na fila
+    if (!targetInstanceName) {
+      let instanceQuery = supabaseAdmin.from('evolution_instances').select('instance_name').eq('status', 'connected');
+      if (organizationId) instanceQuery = instanceQuery.eq('organization_id', organizationId);
+      else instanceQuery = instanceQuery.eq('user_id', userId);
+      
+      const { data: insts } = await instanceQuery.limit(1);
+      if (insts && insts.length > 0) targetInstanceName = insts[0].instance_name;
+    }
+
+    if (!targetInstanceName) {
+      throw new Error("Não foi possível determinar a Instância do WhatsApp para o disparo.");
+    }
+
+    await provider.sendMessage(targetInstanceName, phone, finalMessage, {
       delay: 1200,
       presence: 'composing'
     });

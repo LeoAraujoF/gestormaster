@@ -157,6 +157,7 @@ cron.schedule('*/5 * * * *', async () => {
               apiKey: instance.api_key,
               instanceName: instance.instance_name,
               connectionMode: instance.connection_mode,
+              alertHistoryId: insertedAlert.id,
               ruleId: rule.id,
               userId: rule.user_id,
               organizationId: rule.organization_id,

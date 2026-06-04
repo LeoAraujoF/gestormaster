@@ -83,6 +83,7 @@ export async function POST(request: Request) {
           },
           body: JSON.stringify({
             number: gestorNumber,
+            text: message,
             options: { delay: 1200, presence: "composing" },
             textMessage: { text: message }
           })
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
           },
           body: JSON.stringify({
             number: resellerNumber,
+            text: message,
             options: { delay: 1200, presence: "composing" },
             textMessage: { text: message }
           })

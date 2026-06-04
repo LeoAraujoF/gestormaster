@@ -32,11 +32,33 @@ export function formatPhone(phone: string): string {
 }
 
 export function phoneMask(value: string): string {
-  const cleaned = value.replace(/\D/g, '').slice(0, 11)
-  if (cleaned.length <= 2) return `(${cleaned}`
-  if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-  if (cleaned.length <= 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`
-  return value
+  if (!value) return '';
+
+  // Se começar com +, permite formato internacional
+  if (value.startsWith('+')) {
+    const cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Se for +55, aplica a máscara do Brasil após o DDI
+    if (cleaned.startsWith('+55') && cleaned.length > 3) {
+      const brNumber = cleaned.slice(3);
+      const brMasked = formatBRPhone(brNumber);
+      return `+55 ${brMasked}`;
+    }
+    
+    // Para outros países, permite digitação livre (apenas números) com limite de 15 dígitos
+    return cleaned.slice(0, 16); 
+  }
+
+  // Comportamento padrão (sem +), assume Brasil
+  return formatBRPhone(value);
+}
+
+function formatBRPhone(value: string): string {
+  const cleaned = value.replace(/\D/g, '').slice(0, 11);
+  if (cleaned.length === 0) return '';
+  if (cleaned.length <= 2) return `(${cleaned}`;
+  if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
 }
 
 export function getMonthName(monthStr: string): string {

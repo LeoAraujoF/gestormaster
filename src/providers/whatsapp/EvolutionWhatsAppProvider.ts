@@ -35,7 +35,9 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
         delay: options?.delay || 1200,
         presence: options?.presence || 'composing'
       },
-      text
+      textMessage: {
+        text
+      }
     });
   }
 

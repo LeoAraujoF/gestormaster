@@ -14,9 +14,6 @@ cron.schedule('*/5 * * * *', async () => {
   
   try {
     const now = new Date();
-    // Converter a hora local do Node para minutos (0 a 1439)
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // 1. Busca automações ativas
     const { data: automations, error: autoErr } = await supabaseAdmin
@@ -28,28 +25,51 @@ cron.schedule('*/5 * * * *', async () => {
 
     for (const rule of automations || []) {
       if (!rule.send_time) continue;
+
+      // 1.1 Busca metadados do usuário para obter o fuso horário (timezone)
+      let userMeta: any = {};
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(rule.user_id);
+        if (user && user.user_metadata) {
+          userMeta = user.user_metadata;
+        }
+      } catch (err: any) {
+        logger.warn(`[Scheduler] Não foi possível buscar metadados do usuário ${rule.user_id}: ${err.message}`);
+      }
+
+      // 1.2 Calcula a Hora e Data Local do Usuário
+      const tzString = userMeta.timezone || '-03:00';
+      const sign = tzString[0] === '-' ? -1 : 1;
+      const tzHours = parseInt(tzString.slice(1, 3)) || 3;
+      const tzMins = parseInt(tzString.slice(4, 6)) || 0;
+      const offsetMs = sign * (tzHours * 60 + tzMins) * 60000;
+      
+      // Cria um Date "falso" onde a hora UTC dele é na verdade a hora local do usuário
+      const localDate = new Date(now.getTime() + offsetMs);
+      
+      const localNowMins = localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
+      const localTodayStr = localDate.toISOString().split('T')[0];
       
       const [h, m] = rule.send_time.split(':').map(Number);
       const ruleMins = h * 60 + m;
       
-      // Checa se o horário de envio caiu na janela dos últimos 5 minutos
-      // Ex: se agora é 10:05 (605 mins), vai rodar regras de 10:01 a 10:05.
-      if (ruleMins <= (nowMins - 5) || ruleMins > nowMins) {
+      // Checa se o horário de envio caiu na janela dos últimos 5 minutos locais
+      if (ruleMins <= (localNowMins - 5) || ruleMins > localNowMins) {
         continue;
       }
 
       // Calcula a Data Alvo (targetDate) baseada na regra
       // Usa Math.abs() porque o banco pode salvar days_offset como negativo
       const offset = Math.abs(rule.days_offset || 0);
-      let targetDateObj = new Date(now);
+      let targetDateObj = new Date(localDate);
       if (rule.alert_type === 'before_due') {
         // "Aviso prévio": buscar clientes que vencem DAQUI A N dias
-        targetDateObj.setDate(targetDateObj.getDate() + offset);
+        targetDateObj.setUTCDate(targetDateObj.getUTCDate() + offset);
       } else if (rule.alert_type === 'after_due') {
         // "Cobrança atrasado": buscar clientes que venceram HÁ N dias
-        targetDateObj.setDate(targetDateObj.getDate() - offset);
+        targetDateObj.setUTCDate(targetDateObj.getUTCDate() - offset);
       }
-      // Se for 'on_due', 'renewal', 'promotion' ou 'quick_message', a targetDateObj continua sendo 'hoje'
+      // Se for 'on_due', 'renewal', 'promotion' ou 'quick_message', a targetDateObj continua sendo 'hoje local'
       
       const targetDateStr = targetDateObj.toISOString().split('T')[0];
 
@@ -86,17 +106,6 @@ cron.schedule('*/5 * * * *', async () => {
       }
       const instance = instances[0];
 
-      // Busca os metadados do usuário para preencher variáveis como {{pix}}, {{empresa}}, etc
-      let userMeta = {};
-      try {
-        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(rule.user_id);
-        if (user && user.user_metadata) {
-          userMeta = user.user_metadata;
-        }
-      } catch (err: any) {
-        logger.warn(`[Scheduler] Não foi possível buscar metadados do usuário ${rule.user_id}: ${err.message}`);
-      }
-
       const jobsToQueue = [];
 
       for (const client of clients) {
@@ -107,7 +116,7 @@ cron.schedule('*/5 * * * *', async () => {
           .select('id')
           .eq('client_id', client.id)
           .eq('automation_id', rule.id)
-          .gte('created_at', `${todayStr}T00:00:00Z`)
+          .gte('created_at', `${localTodayStr}T00:00:00Z`)
           .limit(1);
           
         if (historyCheck && historyCheck.length > 0) continue;
@@ -153,7 +162,7 @@ cron.schedule('*/5 * * * *', async () => {
             },
             opts: {
               removeOnComplete: true,
-              jobId: `auto-${rule.id}-${client.id}-${todayStr}`
+              jobId: `auto-${rule.id}-${client.id}-${localTodayStr}`
             }
           });
         }

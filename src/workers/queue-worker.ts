@@ -111,8 +111,14 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     logger.info(`[Job ${job.id}] Enviando para instância "${targetInstanceName}" → ${phone}`);
 
     try {
-      // 6. Envia a mensagem
-      await provider.sendMessage(targetInstanceName, phone, finalMessage, {
+      // 6. Normaliza o número de telefone (Adiciona 55 se for BR e estiver sem DDI)
+      let normalizedPhone = phone.replace(/\D/g, '');
+      if (normalizedPhone.length === 10 || normalizedPhone.length === 11) {
+        normalizedPhone = `55${normalizedPhone}`;
+      }
+
+      // 7. Envia a mensagem
+      await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
         delay: 1200,
         presence: 'composing'
       });

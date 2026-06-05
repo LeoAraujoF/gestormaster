@@ -15,6 +15,21 @@ cron.schedule('*/5 * * * *', async () => {
   try {
     const now = new Date();
 
+    // 0. Varredura Global: Atualiza TODOS os clientes vencidos da base
+    // Utiliza o fuso horário padrão do Brasil (-03:00) como linha de corte
+    const brazilDate = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const brTodayStr = brazilDate.toISOString().split('T')[0];
+    
+    const { error: updateGlobalErr } = await supabaseAdmin
+      .from('clients')
+      .update({ status: 'vencido' })
+      .eq('status', 'active')
+      .lt('due_date', brTodayStr);
+      
+    if (updateGlobalErr) {
+      logger.error(`[Scheduler] Erro na varredura global de clientes vencidos: ${updateGlobalErr.message}`);
+    }
+
     // 1. Busca automações ativas
     const { data: automations, error: autoErr } = await supabaseAdmin
       .from('automations')
@@ -54,24 +69,6 @@ cron.schedule('*/5 * * * *', async () => {
       
       const [h, m] = rule.send_time.split(':').map(Number);
       const ruleMins = h * 60 + m;
-
-      // Rotina: Atualiza clientes atrasados para o status "vencido"
-      // Respeita o fuso horário (localTodayStr) do dono da regra
-      if (!processedUsersForOverdue.has(rule.user_id)) {
-        processedUsersForOverdue.add(rule.user_id);
-        const { error: updateErr } = await supabaseAdmin
-          .from('clients')
-          .update({ status: 'vencido' })
-          .eq('status', 'active')
-          .lt('due_date', localTodayStr)
-          .eq('user_id', rule.user_id);
-        
-        if (updateErr) {
-          logger.warn(`[Scheduler] Erro ao atualizar status para vencido do user ${rule.user_id}: ${updateErr.message}`);
-        } else {
-          logger.info(`[Scheduler] Verificação de clientes vencidos executada para o usuário ${rule.user_id}`);
-        }
-      }
 
       // Checa se o horário de envio caiu na janela dos últimos 5 minutos locais
       if (ruleMins <= (localNowMins - 5) || ruleMins > localNowMins) {

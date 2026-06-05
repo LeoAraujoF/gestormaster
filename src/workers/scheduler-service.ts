@@ -54,11 +54,6 @@ cron.schedule('*/5 * * * *', async () => {
       
       const [h, m] = rule.send_time.split(':').map(Number);
       const ruleMins = h * 60 + m;
-      
-      // Checa se o horário de envio caiu na janela dos últimos 5 minutos locais
-      if (ruleMins <= (localNowMins - 5) || ruleMins > localNowMins) {
-        continue;
-      }
 
       // Rotina: Atualiza clientes atrasados para o status "vencido"
       // Respeita o fuso horário (localTodayStr) do dono da regra
@@ -76,6 +71,11 @@ cron.schedule('*/5 * * * *', async () => {
         } else {
           logger.info(`[Scheduler] Verificação de clientes vencidos executada para o usuário ${rule.user_id}`);
         }
+      }
+
+      // Checa se o horário de envio caiu na janela dos últimos 5 minutos locais
+      if (ruleMins <= (localNowMins - 5) || ruleMins > localNowMins) {
+        continue;
       }
 
       // Calcula a Data Alvo (targetDate) baseada na regra

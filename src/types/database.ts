@@ -1,4 +1,4 @@
-export type ClientStatus = 'active' | 'inactive' | 'pending'
+export type ClientStatus = 'active' | 'inactive' | 'pending' | 'vencido'
 export type AlertType = 'before_due' | 'on_due' | 'after_due' | 'renewal' | 'promotion' | 'quick_message'
 export type AlertSendStatus = 'sent' | 'failed' | 'pending'
 export type InstanceStatus = 'connected' | 'disconnected'
@@ -134,6 +134,7 @@ export interface DashboardMetrics {
   total_active_clients: number
   total_inactive_clients: number
   total_pending_clients: number
+  total_vencido_clients: number
   total_clients: number
   monthly_revenue: number
   monthly_costs: number

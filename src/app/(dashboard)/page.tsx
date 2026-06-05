@@ -292,7 +292,7 @@ export default function DashboardPage() {
               value={currentMetrics.total_active_clients.toString()}
               icon={Users}
               colorVariant="blue"
-              description={`${currentMetrics.total_inactive_clients} inativos | ${currentMetrics.total_pending_clients} pendentes`}
+              description={`${currentMetrics.total_inactive_clients} inativos | ${currentMetrics.total_pending_clients} pendentes | ${currentMetrics.total_vencido_clients || 0} vencidos`}
             />
             <MetricCard
               title="Receita Mensal Bruta"

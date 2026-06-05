@@ -62,12 +62,12 @@ export async function GET(req: Request) {
       targetDate.setDate(todayLocalObj.getDate() + offset)
       const targetDateStr = targetDate.toISOString().split('T')[0]
 
-      // Fetch all active clients for this user whose due_date matches the target date
+      // Fetch all active/vencido clients for this user whose due_date matches the target date
       const { data: clients } = await supabase
         .from('clients')
         .select('id')
         .eq('user_id', rule.user_id)
-        .eq('status', 'active')
+        .in('status', ['active', 'vencido'])
         .eq('due_date', targetDateStr)
 
       if (!clients || clients.length === 0) continue

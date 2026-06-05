@@ -34,7 +34,8 @@ cron.schedule('*/5 * * * *', async () => {
     const { data: automations, error: autoErr } = await supabaseAdmin
       .from('automations')
       .select('*')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .in('alert_type', ['before_due', 'on_due', 'after_due']);
       
     if (autoErr) throw new Error(`Erro ao buscar automações: ${autoErr.message}`);
 

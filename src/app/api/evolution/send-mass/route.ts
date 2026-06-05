@@ -72,9 +72,7 @@ export async function POST(req: Request) {
     } else if (audience === 'inactive') {
       query = query.eq('status', 'inactive')
     } else if (audience === 'expired') {
-      // due_date < today
-      const today = new Date().toISOString().split('T')[0]
-      query = query.lt('due_date', today)
+      query = query.eq('status', 'vencido')
     } else if (audience === 'service' && serviceId) {
       // Requires joining with client_services
       const { data: serviceClients, error: svcErr } = await supabase

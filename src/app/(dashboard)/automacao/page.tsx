@@ -134,8 +134,7 @@ export default function AutomacaoPage() {
       if (massAudience === 'active') query = query.eq('status', 'active')
       if (massAudience === 'inactive') query = query.eq('status', 'inactive')
       if (massAudience === 'expired') {
-        const today = new Date().toISOString().split('T')[0]
-        query = query.lt('due_date', today).eq('status', 'active')
+        query = query.eq('status', 'vencido')
       }
       if (massAudience === 'service' && massServiceId) {
         const { data } = await supabase.from('client_services').select('id').eq('service_id', massServiceId)
@@ -412,7 +411,7 @@ export default function AutomacaoPage() {
     if (rules) {
       setAutomations(rules)
       
-      const { data: clients } = await supabase.from('clients').select('status, due_date').eq('user_id', user.id).eq('status', 'active')
+      const { data: clients } = await supabase.from('clients').select('status, due_date').eq('user_id', user.id).in('status', ['active', 'vencido'])
       if (clients) {
         const estimates: Record<string, number | string> = {}
         const tzOffsetStr = user.user_metadata?.timezone || "-03:00"

@@ -28,7 +28,7 @@ const clientSchema = z.object({
   plan_value: z.number().min(0, "O valor não pode ser negativo"),
   screens: z.number().min(1, "Mínimo de 1 tela").max(10, "Máximo de 10 telas"),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
-  status: z.enum(['active', 'inactive', 'pending']),
+  status: z.enum(['active', 'inactive', 'pending', 'vencido']),
   observation: z.string().optional(),
   description: z.string().optional(),
   selected_services: z.array(z.string()).min(1, "É obrigatório selecionar pelo menos um serviço"),
@@ -388,7 +388,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                         <SelectContent>
                           <SelectItem value="active">🟢 Ativo</SelectItem>
                           <SelectItem value="pending">🟡 Pendente</SelectItem>
-                          <SelectItem value="inactive">🔴 Inativo</SelectItem>
+                          <SelectItem value="vencido">🔴 Vencido</SelectItem>
+                          <SelectItem value="inactive">⚫ Inativo</SelectItem>
                         </SelectContent>
                       </Select>
                     )}

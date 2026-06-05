@@ -138,6 +138,7 @@ export default function FinanceiroPage() {
         if (allClientsForMetrics) {
            const active = allClientsForMetrics.filter(c => c.status === 'active')
            const inactive = allClientsForMetrics.filter(c => c.status === 'inactive')
+           const vencido = allClientsForMetrics.filter(c => c.status === 'vencido')
            
            let currentMrr = 0
            let currentOverdue = 0
@@ -146,15 +147,26 @@ export default function FinanceiroPage() {
 
            const costsMap: Record<string, {name: string, total: number, qty: number}> = {}
 
+           // MRR apenas de ativos
            active.forEach(c => {
              currentMrr += (c.plan_value || 0)
+             // Um cliente 'active' pode estar com data de ontem (se o robô não rodou ainda)
              if (c.due_date) {
                const dueDate = new Date(c.due_date + "T00:00:00")
                if (dueDate < startOfToday) {
                  currentOverdue += c.plan_value || 0
                }
              }
+           })
 
+           // Inadimplência soma todos os vencidos
+           vencido.forEach(c => {
+             currentOverdue += (c.plan_value || 0)
+           })
+
+           // Custos operacionais: ativos + vencidos (ainda não foram desativados)
+           const activeOrVencido = [...active, ...vencido]
+           activeOrVencido.forEach(c => {
              const screens = c.screens || 1
              c.client_services?.forEach((cs: any) => {
                if (cs.services) {
@@ -171,7 +183,8 @@ export default function FinanceiroPage() {
            setOverdueAmount(currentOverdue)
            setDetailedCosts(Object.values(costsMap).sort((a,b) => b.total - a.total))
 
-           const total = active.length + inactive.length
+           // Taxa de Churn: Inativos / Total da Carteira (Ativos + Vencidos + Inativos)
+           const total = active.length + inactive.length + vencido.length
            setChurnRate(total > 0 ? (inactive.length / total) * 100 : 0)
         }
 

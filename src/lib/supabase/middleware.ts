@@ -53,13 +53,22 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/cadastro') || 
       request.nextUrl.pathname.startsWith('/api') || 
-      request.nextUrl.pathname.startsWith('/auth')
+      request.nextUrl.pathname.startsWith('/auth') ||
+      request.nextUrl.pathname.startsWith('/onboarding')
 
     const hasSubscription = user.user_metadata?.has_active_subscription === true
+    const hasOnboarding = user.user_metadata?.onboarding_completed === true
     const isAdmin = user.email === process.env.ADMIN_EMAIL
 
-    // Se o cliente não pagou e não é o administrador, e tentou acessar uma rota privada (ex: painel, financeiro)
-    if (!isPublicRoute && !hasSubscription && !isAdmin) {
+    // Regra 1: Se não fez o onboarding e não é rota pública (e não está no próprio onboarding)
+    if (!hasOnboarding && !isPublicRoute && !isAdmin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+
+    // Regra 2: Se o cliente não pagou, e tentou acessar rota privada (que não seja planos, nem onboarding)
+    if (!isPublicRoute && !hasSubscription && !isAdmin && request.nextUrl.pathname !== '/onboarding') {
       const url = request.nextUrl.clone()
       url.pathname = '/planos'
       return NextResponse.redirect(url)

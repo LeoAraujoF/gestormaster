@@ -56,7 +56,7 @@ export default function RegisterPage() {
       }
 
       toast.success("Conta criada com sucesso! Redirecionando...")
-      router.push("/planos") // Redireciona para o pedágio de planos
+      router.push("/onboarding") // Redireciona para o pedágio de onboarding
       router.refresh()
     } catch (err) {
       toast.error("Ocorreu um erro inesperado.")

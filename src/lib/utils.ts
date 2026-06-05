@@ -61,6 +61,28 @@ function formatBRPhone(value: string): string {
   return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
 }
 
+export function cpfCnpjMask(value: string): string {
+  if (!value) return '';
+  const cleaned = value.replace(/\D/g, '');
+  
+  if (cleaned.length <= 11) {
+    // CPF Mask
+    return cleaned
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  } else {
+    // CNPJ Mask
+    return cleaned
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  }
+}
+
 export function getMonthName(monthStr: string): string {
   const [year, month] = monthStr.split('-')
   const date = new Date(parseInt(year), parseInt(month) - 1, 1)

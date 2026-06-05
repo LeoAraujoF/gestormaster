@@ -23,6 +23,8 @@ cron.schedule('*/5 * * * *', async () => {
       
     if (autoErr) throw new Error(`Erro ao buscar automações: ${autoErr.message}`);
 
+    const processedUsersForOverdue = new Set<string>();
+
     for (const rule of automations || []) {
       if (!rule.send_time) continue;
 
@@ -58,6 +60,24 @@ cron.schedule('*/5 * * * *', async () => {
         continue;
       }
 
+      // Rotina: Atualiza clientes atrasados para o status "vencido"
+      // Respeita o fuso horário (localTodayStr) do dono da regra
+      if (!processedUsersForOverdue.has(rule.user_id)) {
+        processedUsersForOverdue.add(rule.user_id);
+        const { error: updateErr } = await supabaseAdmin
+          .from('clients')
+          .update({ status: 'vencido' })
+          .eq('status', 'active')
+          .lt('due_date', localTodayStr)
+          .eq('user_id', rule.user_id);
+        
+        if (updateErr) {
+          logger.warn(`[Scheduler] Erro ao atualizar status para vencido do user ${rule.user_id}: ${updateErr.message}`);
+        } else {
+          logger.info(`[Scheduler] Verificação de clientes vencidos executada para o usuário ${rule.user_id}`);
+        }
+      }
+
       // Calcula a Data Alvo (targetDate) baseada na regra
       // Usa Math.abs() porque o banco pode salvar days_offset como negativo
       const offset = Math.abs(rule.days_offset || 0);
@@ -73,11 +93,16 @@ cron.schedule('*/5 * * * *', async () => {
       
       const targetDateStr = targetDateObj.toISOString().split('T')[0];
 
-      // Busca os clientes ativos que possuem esse vencimento
+      // Busca os clientes que possuem esse vencimento
       let query = supabaseAdmin.from('clients')
         .select('*')
-        .eq('status', 'active')
         .eq('due_date', targetDateStr);
+        
+      if (rule.alert_type === 'after_due') {
+        query = query.in('status', ['active', 'vencido']);
+      } else {
+        query = query.eq('status', 'active');
+      }
         
       if (rule.organization_id) {
         query = query.eq('organization_id', rule.organization_id);

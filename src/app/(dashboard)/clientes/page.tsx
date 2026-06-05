@@ -285,6 +285,7 @@ export default function ClientesPage() {
       case 'active': return <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-0">Ativo</Badge>
       case 'inactive': return <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">Inativo</Badge>
       case 'pending': return <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-0">Pendente</Badge>
+      case 'vencido': return <Badge variant="destructive" className="border-0">Vencido</Badge>
       default: return <Badge>{status}</Badge>
     }
   }
@@ -346,14 +347,16 @@ export default function ClientesPage() {
                   <SelectValue placeholder="Status">
                     {filterStatus === 'all' ? 'Todos Status' : 
                      filterStatus === 'active' ? 'Ativo' : 
-                     filterStatus === 'pending' ? 'Pendente' : 'Inativo'}
+                     filterStatus === 'pending' ? 'Pendente' : 
+                     filterStatus === 'vencido' ? 'Vencido' : 'Inativo'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos Status</SelectItem>
                   <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="vencido">Vencido</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterService} onValueChange={(v) => setFilterService(v ?? "all")}>

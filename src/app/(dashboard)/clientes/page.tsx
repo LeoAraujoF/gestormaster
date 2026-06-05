@@ -94,6 +94,13 @@ export default function ClientesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      // Varredura de vencidos: atualiza status no banco ANTES de carregar a lista
+      try {
+        await fetch('/api/clients/update-overdue', { method: 'POST' })
+      } catch (e) {
+        // Silencia erro — não impede carregamento da página
+      }
       
       setUserPlan(user.user_metadata?.plan_name || "Desconhecido")
 

@@ -108,6 +108,25 @@ function AtualizacoesContent() {
       })
     }
 
+    // Vencidos Alert
+    const { count: vencidosCount } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'vencido')
+
+    if (vencidosCount && vencidosCount > 0) {
+      newAlerts.push({
+        id: 'vencidos',
+        type: 'critical',
+        title: `${vencidosCount} Cliente(s) Vencidos`,
+        desc: 'Existem clientes com a mensalidade atrasada (Status Vencido). Recomendamos enviar uma cobrança ou suspender o serviço.',
+        icon: ShieldAlert,
+        action: 'Cobrar Agora',
+        path: '/automacao'
+      })
+    }
+
     setAlerts(newAlerts)
     setIsLoading(false)
   }

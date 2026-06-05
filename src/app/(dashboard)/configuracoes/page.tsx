@@ -110,7 +110,7 @@ export default function ConfiguracoesPage() {
         "Valor do Plano": c.plan_value || 0,
         "Telas": c.screens || 1,
         "Vencimento": c.due_date ? c.due_date.split('T')[0] : "",
-        "Status": c.status || "active",
+        "Status": c.status === 'active' ? 'Ativo' : c.status === 'vencido' ? 'Vencido' : c.status === 'inactive' ? 'Inativo' : c.status,
         "Observacao": c.observation || "",
         "Descricao": c.description || ""
       }))

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Lock, CreditCard, Shield, UserCircle, Loader2, KeyRound, ExternalLink, Zap, Users, Smartphone, Palette, CheckCircle2, AlertTriangle, Monitor, Moon, Sun, MonitorSmartphone, Building2, Save } from "lucide-react"
+import { Lock, CreditCard, Shield, UserCircle, Loader2, KeyRound, ExternalLink, Zap, Users, Smartphone, Palette, CheckCircle2, AlertTriangle, Monitor, Moon, Sun, MonitorSmartphone, Building2, Save, Settings2 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -31,6 +31,7 @@ export default function MinhaContaPage() {
 
   // Stripe Checkout
   const [isCheckoutLoading, setIsCheckoutLoading] = useState<string | null>(null) // Guarda o priceId que está carregando
+  const [isPortalLoading, setIsPortalLoading] = useState(false)
 
   // User Data
   const [userEmail, setUserEmail] = useState("")
@@ -159,7 +160,6 @@ export default function MinhaContaPage() {
     }
   }
 
-  // Handlers - Company Profile
   const handleSaveProfile = async () => {
     setIsSavingProfile(true)
     try {
@@ -178,6 +178,30 @@ export default function MinhaContaPage() {
       toast.error(e.message || "Erro ao salvar dados da empresa.")
     } finally {
       setIsSavingProfile(false)
+    }
+  }
+
+  // Handle Stripe Portal
+  const handleManageSubscription = async () => {
+    setIsPortalLoading(true)
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+      })
+      
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text)
+      }
+
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao abrir o portal de faturamento.")
+    } finally {
+      setIsPortalLoading(false)
     }
   }
 
@@ -423,6 +447,17 @@ export default function MinhaContaPage() {
               <CardFooter className="pt-4 flex flex-col items-start gap-4 border-t border-border/50 mt-4">
                 <Button variant="default" className="w-full bg-foreground text-background hover:bg-foreground/90 shadow-xl" onClick={() => setIsPricingModalOpen(true)}>
                   Fazer Upgrade de Plano <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+                
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full border-border/50 bg-background/50 text-muted-foreground hover:bg-secondary/80 transition-all" 
+                  onClick={handleManageSubscription}
+                  disabled={isPortalLoading}
+                >
+                  {isPortalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Settings2 className="w-4 h-4 mr-2" />}
+                  Gerenciar Assinatura (Portal)
                 </Button>
               </CardFooter>
             </Card>

@@ -61,7 +61,7 @@ export async function updateSession(request: NextRequest) {
     const isAdmin = user.email === process.env.ADMIN_EMAIL
 
     // Regra 1: Se não fez o onboarding e não é rota pública (e não está no próprio onboarding)
-    if (!hasOnboarding && !isPublicRoute && !isAdmin) {
+    if (!hasOnboarding && !isPublicRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)

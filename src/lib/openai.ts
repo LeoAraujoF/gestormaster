@@ -1,7 +1,10 @@
 import OpenAI from 'openai';
 
 const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || undefined,
+    })
   : null;
 
 /**
@@ -15,7 +18,23 @@ export async function generateWarmupMessage(previousContext?: string): Promise<s
       "Tudo certo por aqui, e contigo?",
       "Acabei de ver, haha",
       "Pode me mandar aquele arquivo depois?",
-      "Tranquilo, te aviso."
+      "Tranquilo, te aviso.",
+      "Blz, qualquer coisa me chama.",
+      "Cara, não acredito nisso kkkk",
+      "Nossa, que doideira.",
+      "Vai fazer o que hoje mais tarde?",
+      "Tô enrolado aqui no trabalho, já te respondo.",
+      "Sério? Não tava sabendo.",
+      "Me manda o link disso aí depois.",
+      "Fechado!",
+      "Acho que sim, vou confirmar e te falo.",
+      "Bom dia! Tudo na paz?",
+      "Opa, e aí mano, beleza?",
+      "Tô indo almoçar agora, te ligo mais tarde.",
+      "Vixe, pior que eu esqueci de ver isso.",
+      "Mano, cê não tem ideia do que rolou.",
+      "Aham, pode deixar.",
+      "Top, gostei da ideia."
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
@@ -41,8 +60,10 @@ Regras:
 
     if (!openai) throw new Error('OpenAI client is null');
 
+    const modelName = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: modelName,
       messages,
       temperature: 0.8,
       max_tokens: 50,

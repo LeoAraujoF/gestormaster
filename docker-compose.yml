@@ -26,6 +26,9 @@ services:
       - REDIS_HOST=redis-queue
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
     depends_on:
       - redis-queue
     networks:
@@ -51,6 +54,9 @@ services:
       - REDIS_HOST=redis-queue
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
     depends_on:
       - redis-queue
       - gestor-app
@@ -73,6 +79,9 @@ services:
       - REDIS_HOST=redis-queue
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
     depends_on:
       - redis-queue
       - gestor-app

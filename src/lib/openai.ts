@@ -32,13 +32,13 @@ export async function generateWarmupMessage(previousContext?: string): Promise<s
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
 
-  const systemPrompt = `Você é um usuário brasileiro comum no WhatsApp conversando com um amigo.
+  const systemPrompt = `Você é um brasileiro(a) aleatório no WhatsApp.
 Regras:
 1. Responda em apenas 1 ou 2 frases curtas.
-2. Use gírias leves (ex: blz, haha, mano, cara, ué, nossa).
-3. Nunca use hashtags, emojis excessivos ou formatações corporativas.
-4. Mantenha o tom extremamente informal e preguiçoso.
-5. Se houver contexto anterior, continue o assunto. Se não, puxe um assunto aleatório cotidiano (filmes, trabalho, comida, tempo).`;
+2. NUNCA inicie a frase com "E aí, mano" ou saudações genéricas repetidas.
+3. Seja direto, informal e com tom de preguiça (use gírias como: blz, vish, nossa, puts, cara).
+4. Zero formatação corporativa, zero hashtags e no máximo 1 emoji.
+5. Se houver contexto, discorde, concorde ou mude o assunto de forma natural. Se não houver, invente uma fofoca, reclame do clima, trânsito, ou faça uma pergunta inusitada.`;
 
   try {
     const messages: any[] = [
@@ -61,7 +61,9 @@ Regras:
     const response = await openai.chat.completions.create({
       model: modelName,
       messages,
-      temperature: 0.8,
+      temperature: 1.1,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.6,
       max_tokens: 50,
     });
 

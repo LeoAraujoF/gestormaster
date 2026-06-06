@@ -1,12 +1,5 @@
 import OpenAI from 'openai';
 
-const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({ 
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
-    })
-  : null;
-
 /**
  * Gera uma nova mensagem de WhatsApp que pareça extremamente humana.
  * O objetivo é manter duas instâncias conversando para aumentar o trust score.
@@ -58,7 +51,10 @@ Regras:
       messages.push({ role: 'user', content: 'Inicie uma conversa curta aleatória.' });
     }
 
-    if (!openai) throw new Error('OpenAI client is null');
+    const openai = new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || undefined,
+    });
 
     const modelName = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
 

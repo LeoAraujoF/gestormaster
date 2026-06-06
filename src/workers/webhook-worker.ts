@@ -26,21 +26,28 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
     logger.info(`[Job ${job.id}] 📥 Processando webhook: ${payload.event}`);
 
   try {
-    if (payload.event === 'CONNECTION_UPDATE') {
+    if (payload.event === 'CONNECTION_UPDATE' || payload.event === 'connection.update') {
       const instanceName = payload.instance;
       const state = payload.data?.state;
+      const sender = payload.sender || payload.data?.sender;
       
       if (instanceName && state) {
+         const updateData: any = { 
+           status: state === 'open' ? 'connected' : 'disconnected',
+           updated_at: new Date().toISOString()
+         };
+
+         if (state === 'open' && sender) {
+           updateData.phone_number = sender.split('@')[0];
+         }
+
          const { error } = await supabaseAdmin.from('evolution_instances')
-           .update({ 
-             status: state === 'open' ? 'connected' : 'disconnected',
-             updated_at: new Date().toISOString()
-           })
+           .update(updateData)
            .eq('instance_name', instanceName);
            
          if (error) throw error;
       }
-    } 
+    }
     else if (payload.event === 'MESSAGES_UPSERT') {
       const msg = payload.data?.messages?.[0];
       if (msg && !msg.key.fromMe) {

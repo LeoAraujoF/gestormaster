@@ -30,6 +30,20 @@ cron.schedule('*/5 * * * *', async () => {
       logger.error(`[Scheduler] Erro na varredura global de clientes vencidos: ${updateGlobalErr.message}`);
     }
 
+    // 0.1 Varredura Global: Atualiza para Inativo clientes vencidos há mais de 30 dias (Churn Definitivo)
+    const past30DaysDate = new Date(brazilDate.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const brPast30DaysStr = past30DaysDate.toISOString().split('T')[0];
+
+    const { error: updateInactiveErr } = await supabaseAdmin
+      .from('clients')
+      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .in('status', ['active', 'vencido'])
+      .lt('due_date', brPast30DaysStr);
+
+    if (updateInactiveErr) {
+      logger.error(`[Scheduler] Erro na varredura global de clientes inativos: ${updateInactiveErr.message}`);
+    }
+
     // 1. Busca automações ativas
     const { data: automations, error: autoErr } = await supabaseAdmin
       .from('automations')

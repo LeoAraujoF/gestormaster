@@ -130,9 +130,11 @@ export default function FinanceiroPage() {
         }
 
         // --- ADDED CFO METRICS START ---
+        // TODO (Opção C): Criar uma View ou RPC no Supabase (ex: get_cfo_metrics) no futuro 
+        // para processar isso direto no banco quando o número de clientes crescer, evitando sobrecarga no navegador.
         const { data: allClientsForMetrics } = await supabase
           .from('clients')
-          .select(`plan_value, screens, due_date, status, created_at, client_services( services( id, name, cost ) )`)
+          .select(`plan_value, screens, due_date, status, created_at, updated_at, client_services( services( id, name, cost ) )`)
           .eq('user_id', user.id)
 
         if (allClientsForMetrics) {
@@ -183,9 +185,17 @@ export default function FinanceiroPage() {
            setOverdueAmount(currentOverdue)
            setDetailedCosts(Object.values(costsMap).sort((a,b) => b.total - a.total))
 
-           // Taxa de Churn: Inativos / Total da Carteira (Ativos + Vencidos + Inativos)
-           const total = active.length + inactive.length + vencido.length
-           setChurnRate(total > 0 ? (inactive.length / total) * 100 : 0)
+           // Taxa de Churn 30 Dias: Inativos nos últimos 30 dias / Total Ativos
+           const thirtyDaysAgo = new Date()
+           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+           const recentChurns = inactive.filter(c => {
+             const dateToCheck = c.updated_at ? new Date(c.updated_at) : new Date(c.created_at)
+             return dateToCheck >= thirtyDaysAgo
+           })
+
+           const totalActive = active.length
+           setChurnRate(totalActive > 0 ? (recentChurns.length / totalActive) * 100 : 0)
         }
 
         const firstDayOfYear = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0]

@@ -32,7 +32,8 @@ export async function getActiveOrganization(supabase: any, userId: string) {
     .from('organization_members')
     .select('organization_id, role, organizations(*)')
     .eq('user_id', userId)
-    .single()
+    .limit(1)
+    .maybeSingle()
   
   if (error || !data) return null
   return data

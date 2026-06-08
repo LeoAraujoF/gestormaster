@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const user = session.user
+
     const { audience, serviceId, messageTemplate, delaySeconds = 5, scheduledAt } = await req.json()
 
     if (!messageTemplate) {

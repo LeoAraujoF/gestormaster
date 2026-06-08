@@ -15,11 +15,14 @@ export async function POST(req: Request) {
     const secretsEnv = process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '';
     const validSecrets = secretsEnv.split(',').map(s => s.trim()).filter(Boolean);
 
-    if (validSecrets.length > 0) {
-      if (!token || !validSecrets.includes(token)) {
-        console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    if (validSecrets.length === 0) {
+      console.warn('Bloqueado: Variável WEBHOOK_SECRETS não configurada no servidor.');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    if (!token || !validSecrets.includes(token)) {
+      console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await req.json();

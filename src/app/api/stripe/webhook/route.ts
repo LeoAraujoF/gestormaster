@@ -71,9 +71,11 @@ export async function POST(request: Request) {
         // Cliente pagou! Vamos colocar a tag de "has_active_subscription: true", gravar o nome do plano e atualizar o vencimento
         const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
           user_metadata: {
+            ...user.user_metadata,
             has_active_subscription: true,
             plan_name: planName,
-            plan_expires_at: newExpiresAt.toISOString()
+            plan_expires_at: newExpiresAt.toISOString(),
+            stripe_customer_id: session.customer as string
           }
         })
 
@@ -88,11 +90,34 @@ export async function POST(request: Request) {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription
-        // Para cancelar, precisaremos do ID do cliente no nosso banco.
-        // Como o webhook de delete de subscription não traz o client_reference_id facilmente,
-        // o ideal em cenários avançados é mapear o stripe_customer_id no banco.
-        // Por enquanto, faremos o log para que você seja avisado.
-        console.log("Assinatura cancelada na Stripe:", subscription.id)
+        const customerId = subscription.customer as string
+
+        if (!customerId) {
+          console.error("No customer ID found in subscription")
+          break
+        }
+
+        // Encontrar o usuário que possui esse stripe_customer_id
+        const { data: usersData, error: searchError } = await supabaseAdmin.auth.admin.listUsers()
+        if (searchError) {
+           console.error("Erro ao buscar usuários para cancelamento:", searchError)
+           break
+        }
+        
+        const user = usersData.users.find(u => u.user_metadata?.stripe_customer_id === customerId)
+
+        if (user) {
+          // Atualiza o usuário para remover o plano ativo
+          await supabaseAdmin.auth.admin.updateUserById(user.id, {
+            user_metadata: {
+              ...user.user_metadata,
+              has_active_subscription: false
+            }
+          })
+          console.log(`[Webhook] Assinatura cancelada processada para o usuário: ${user.id}`)
+        } else {
+          console.log("Assinatura cancelada, mas customer_id não foi encontrado nos metadados:", customerId)
+        }
         break
       }
 

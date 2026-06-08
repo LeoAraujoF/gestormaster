@@ -12,8 +12,12 @@ app.use('/admin/queues', (req, res, next) => {
   const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
   const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin';
-  const adminPass = process.env.BULL_BOARD_PASSWORD || 'admin';
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPass = process.env.BULL_BOARD_PASSWORD;
+
+  if (!adminEmail || !adminPass) {
+    return res.status(500).send('Acesso Negado: Configuração de segurança ausente no servidor.');
+  }
 
   if (login && password && login === adminEmail && password === adminPass) {
     return next();

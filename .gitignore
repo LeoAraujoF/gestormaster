@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local debug and ad-hoc scripts
+debug*.js
+debug_*.txt
+clean_orphaned.js
+npm_audit.txt

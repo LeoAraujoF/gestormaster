@@ -166,9 +166,13 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-zinc-700 dark:text-zinc-300">Senha</Label>
-                <Link href="/forgot-password" className="text-xs font-medium text-sky-500 hover:underline" tabIndex={-1}>
+                <button 
+                  type="button"
+                  onClick={() => router.push('/forgot-password')}
+                  className="text-xs font-medium text-sky-500 hover:underline cursor-pointer relative z-10"
+                >
                   Esqueceu a senha?
-                </Link>
+                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

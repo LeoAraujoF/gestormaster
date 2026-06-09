@@ -42,3 +42,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_STRIPE_PRICE_BASIC=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_BASIC }}
+            NEXT_PUBLIC_STRIPE_PRICE_PRO=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_PRO }}
+            NEXT_PUBLIC_STRIPE_PRICE_PREMIUM=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}

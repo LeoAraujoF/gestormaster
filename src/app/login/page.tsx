@@ -168,7 +168,7 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="text-zinc-700 dark:text-zinc-300">Senha</Label>
                 <button 
                   type="button"
-                  onClick={() => router.push('/forgot-password')}
+                  onClick={() => window.location.href = '/forgot-password'}
                   className="text-xs font-medium text-sky-500 hover:underline cursor-pointer relative z-10"
                 >
                   Esqueceu a senha?

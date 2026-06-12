@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const userId = session.user.id
+    const userId = user.id
 
     // 1. Busca Clientes
     const { data: clients, error: clientsError } = await supabase

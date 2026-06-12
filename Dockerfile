@@ -16,41 +16,64 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Environment variables must be present at build time for Next.js if they are public
-# Usually, it's better to pass them in docker-compose, but we disable telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Disable Type Checking and Linting during Docker Build (we already do it locally)
-ENV NEXT_PUBLIC_IGNORE_BUILD_ERRORS true
-ENV NEXT_IGNORE_ESLINT true
-ENV NEXT_IGNORE_TYPE_CHECK true
+ENV NEXT_PUBLIC_IGNORE_BUILD_ERRORS=true
+ENV NEXT_IGNORE_ESLINT=true
+ENV NEXT_IGNORE_TYPE_CHECK=true
 
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 
-# Variáveis necessárias para compilar as páginas estáticas no Next.js App Router
-# Devem ser injetadas como Build Args pelo sistema de deploy (Coolify/Portainer)
-ARG NEXT_PUBLIC_SUPABASE_URL
+# ============================================================
+# Variáveis PÚBLICAS (NEXT_PUBLIC_) - São "assadas" no JS final
+# Devem ser injetadas como Build Args pelo GitHub Actions
+# ============================================================
+ARG NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder_anon_key"
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-ARG SUPABASE_SERVICE_ROLE_KEY
-ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
-
-ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_placeholder"
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
-ARG NEXT_PUBLIC_STRIPE_PRICE_BASIC
+ARG NEXT_PUBLIC_STRIPE_PRICE_BASIC="price_placeholder"
 ENV NEXT_PUBLIC_STRIPE_PRICE_BASIC=$NEXT_PUBLIC_STRIPE_PRICE_BASIC
 
-ARG NEXT_PUBLIC_STRIPE_PRICE_PRO
+ARG NEXT_PUBLIC_STRIPE_PRICE_PRO="price_placeholder"
 ENV NEXT_PUBLIC_STRIPE_PRICE_PRO=$NEXT_PUBLIC_STRIPE_PRICE_PRO
 
-ARG NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+ARG NEXT_PUBLIC_STRIPE_PRICE_PREMIUM="price_placeholder"
 ENV NEXT_PUBLIC_STRIPE_PRICE_PREMIUM=$NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
 
-ARG OPENAI_API_KEY
+# ============================================================
+# Variáveis PRIVADAS - Usadas apenas no servidor em runtime
+# Defaults de build para não travar a compilação estática
+# Os valores REAIS são injetados pelo docker-compose em runtime
+# ============================================================
+ARG SUPABASE_SERVICE_ROLE_KEY="placeholder_service_key"
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+
+ARG OPENAI_API_KEY="placeholder_openai_key"
 ENV OPENAI_API_KEY=$OPENAI_API_KEY
+
+# Variáveis que o env.ts valida e que precisam existir no momento do build
+# Serão sobrescritas em runtime pelo docker-compose
+ENV STRIPE_SECRET_KEY="sk_placeholder"
+ENV STRIPE_WEBHOOK_SECRET="whsec_placeholder"
+ENV EVOLUTION_API_URL="http://placeholder:8080"
+ENV EVOLUTION_API_KEY="placeholder"
+ENV REDIS_URL="redis://placeholder:6379"
+ENV REDIS_HOST="placeholder"
+ENV JWT_SECRET="placeholder_jwt"
+ENV NEXTAUTH_SECRET="placeholder_nextauth"
+ENV EMAIL_SERVER="smtp://placeholder:587"
+ENV EMAIL_FROM="noreply@placeholder.com"
+ENV ADMIN_EMAIL="admin@placeholder.com"
+
+# Sinalizar que estamos no Docker Build (para pular validações)
+ENV DOCKER_BUILD=1
 
 RUN npm run build
 
@@ -58,8 +81,8 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -81,8 +104,8 @@ COPY --from=builder /app/tsconfig.json ./tsconfig.json
 USER nextjs
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # O comando padrão será iniciar o Next.js. Os workers terão o comando sobrescrito no docker-compose
 CMD ["node", "server.js"]

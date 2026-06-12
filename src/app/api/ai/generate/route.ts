@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-})
-
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
@@ -21,6 +17,11 @@ export async function POST(req: Request) {
         { status: 500 }
       )
     }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || undefined,
+    })
 
     // --- LÓGICA DE LIMITE (3 por dia) ---
     const today = new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD

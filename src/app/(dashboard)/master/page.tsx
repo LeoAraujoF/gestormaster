@@ -612,41 +612,48 @@ export default function MasterAdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border/50 border rounded-md">
-                  {tickets.filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase())).map(ticket => (
-                    <div key={ticket.id} className="p-4 hover:bg-muted/30 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-lg">{ticket.subject}</span>
-                          {getTicketStatusBadge(ticket.status)}
-                          {ticket.priority === 'critical' && <Badge variant="destructive" className="animate-pulse">Urgente</Badge>}
+                  {tickets.filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase())).map(ticket => {
+                    const ticketUser = users.find(u => u.id === ticket.user_id)
+                    const userName = ticketUser ? ticketUser.name : `ID: ${ticket.user_id.substring(0,8)}`
+                    const shortTicketId = ticket.id.substring(0, 6).toUpperCase()
+
+                    return (
+                      <div key={ticket.id} className="p-4 hover:bg-muted/30 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="text-muted-foreground font-mono">#{shortTicketId}</Badge>
+                            <span className="font-semibold text-lg">{ticket.subject}</span>
+                            {getTicketStatusBadge(ticket.status)}
+                            {ticket.priority === 'critical' && <Badge variant="destructive" className="animate-pulse">Urgente</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Atualizado: {new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
+                            <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> Cliente: <span className="font-medium text-foreground">{userName}</span></span>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Atualizado: {new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
-                          <span>Cliente ID: {ticket.user_id.substring(0,8)}...</span>
+                        
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          <Button variant="outline" size="sm" onClick={() => handleOpenTicket(ticket)}>
+                            <Eye className="w-4 h-4 mr-2" /> Responder
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'in_progress')}>Marcar Em Análise</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'resolved')}>Marcar Resolvido</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'closed')}>Encerrar Chamado</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteTicket(ticket.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">Excluir Chamado</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenTicket(ticket)}>
-                          <Eye className="w-4 h-4 mr-2" /> Responder
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'in_progress')}>Marcar Em Análise</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'resolved')}>Marcar Resolvido</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'closed')}>Encerrar Chamado</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteTicket(ticket.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">Excluir Chamado</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -830,35 +837,41 @@ export default function MasterAdminPage() {
       {/* Ticket Details Modal (Sheet) */}
       <Sheet open={!!selectedTicket} onOpenChange={(open) => !open && handleCloseTicketSheet()}>
         <SheetContent className="sm:max-w-xl w-full overflow-hidden border-l border-white/10 bg-background/95 backdrop-blur-xl p-0 flex flex-col">
-          {selectedTicket && (
-            <>
-              <SheetHeader className="text-left px-6 py-6 border-b border-border/40 bg-muted/5">
-                <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <Ticket className="w-5 h-5 text-primary" />
-                      <SheetTitle className="text-xl leading-tight pr-6">{selectedTicket.subject}</SheetTitle>
+          {selectedTicket && (() => {
+            const ticketUser = users.find(u => u.id === selectedTicket.user_id)
+            const userName = ticketUser ? ticketUser.name : `ID: ${selectedTicket.user_id.substring(0,8)}`
+            const shortTicketId = selectedTicket.id.substring(0, 6).toUpperCase()
+
+            return (
+              <>
+                <SheetHeader className="text-left px-6 py-6 border-b border-border/40 bg-muted/5">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <Ticket className="w-5 h-5 text-primary" />
+                        <SheetTitle className="text-xl leading-tight pr-6">{selectedTicket.subject}</SheetTitle>
+                      </div>
+                      <SheetDescription className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                        <Badge variant="outline" className="font-mono bg-background">#{shortTicketId}</Badge>
+                        <span className="flex items-center gap-1 font-medium text-foreground ml-1"><User className="w-3 h-3" /> {userName}</span>
+                        <span className="mx-1 text-muted-foreground">•</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(selectedTicket.created_at).toLocaleString('pt-BR')}</span>
+                      </SheetDescription>
                     </div>
-                    <SheetDescription className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                      <span className="flex items-center gap-1"><User className="w-3 h-3" /> {selectedTicket.user_id.substring(0,8)}</span>
-                      <span className="mx-1">•</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(selectedTicket.created_at).toLocaleString('pt-BR')}</span>
-                    </SheetDescription>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  {selectedTicket.priority === 'critical' && <Badge variant="destructive">Urgente</Badge>}
-                  {getTicketStatusBadge(selectedTicket.status)}
-                  {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
-                    <Button variant="outline" size="sm" className="h-6 text-xs ml-auto text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10" onClick={() => handleStatusChange(selectedTicket.id, 'resolved')}>
-                      <CheckCircle2 className="w-3 h-3 mr-1" /> Resolver
+                  <div className="flex items-center gap-2 mt-4">
+                    {selectedTicket.priority === 'critical' && <Badge variant="destructive">Urgente</Badge>}
+                    {getTicketStatusBadge(selectedTicket.status)}
+                    {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
+                      <Button variant="outline" size="sm" className="h-6 text-xs ml-auto text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10" onClick={() => handleStatusChange(selectedTicket.id, 'resolved')}>
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Resolver
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteTicket(selectedTicket.id)}>
+                      <Trash2 className="w-3 h-3 mr-1" /> Excluir
                     </Button>
-                  )}
-                  <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteTicket(selectedTicket.id)}>
-                    <Trash2 className="w-3 h-3 mr-1" /> Excluir
-                  </Button>
-                </div>
-              </SheetHeader>
+                  </div>
+                </SheetHeader>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col bg-background/50">
                 {messages.map((msg, i) => {
@@ -911,7 +924,7 @@ export default function MasterAdminPage() {
                 )}
               </div>
             </>
-          )}
+          )})()}
         </SheetContent>
       </Sheet>
     </div>

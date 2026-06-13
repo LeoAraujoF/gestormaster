@@ -51,7 +51,6 @@ export default function MasterAdminPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
-  const messagesEndRef = useRef<HTMLDivElement>(null) // Needed for scroll
 
   useEffect(() => {
     checkAdminAndLoadData()

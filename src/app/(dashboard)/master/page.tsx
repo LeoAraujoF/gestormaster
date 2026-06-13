@@ -5,13 +5,15 @@ import { createClient } from "@/lib/supabase/client"
 import { 
   Users, DollarSign, Activity, MessageCircle, ShieldAlert,
   Loader2, RefreshCw, Ban, CheckCircle2, Server, Power,
-  Smartphone
+  Smartphone, Ticket, Clock, User, Shield, Send, Trash2, Eye, MoreVertical
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -38,12 +40,150 @@ export default function MasterAdminPage() {
   const [isBlocking, setIsBlocking] = useState<string | null>(null)
   const [systemHealth, setSystemHealth] = useState<any>(null)
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [adminUser, setAdminUser] = useState<any>(null)
+
+  // Tickets states
+  const [tickets, setTickets] = useState<any[]>([])
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  const [messages, setMessages] = useState<any[]>([])
+  const [newMessage, setNewMessage] = useState("")
+  const [isSending, setIsSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
+  const messagesEndRef = useRef<HTMLDivElement>(null) // Needed for scroll
 
   useEffect(() => {
     checkAdminAndLoadData()
+    loadTickets()
   }, [])
+
+  useEffect(() => {
+    if (selectedTicket) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, selectedTicket])
+
+  const loadTickets = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setAdminUser(user)
+
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (data) setTickets(data)
+  }
+
+  const handleOpenTicket = async (ticket: any) => {
+    setSelectedTicket(ticket)
+    setMessages([])
+    
+    // Load messages
+    const { data: msgData } = await supabase
+      .from('ticket_messages')
+      .select('*')
+      .eq('ticket_id', ticket.id)
+      .order('created_at', { ascending: true })
+
+    if (msgData) setMessages(msgData)
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel(`master_ticket_${ticket.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ticket_messages', filter: `ticket_id=eq.${ticket.id}` }, payload => {
+        setMessages(prev => [...prev, payload.new])
+      })
+      .subscribe()
+
+    // Store channel in state or attach to ticket to unsubscribe later, but for simplicity we rely on unmount or re-selection
+    ticket._channel = channel
+  }
+
+  const handleCloseTicketSheet = () => {
+    if (selectedTicket && selectedTicket._channel) {
+      supabase.removeChannel(selectedTicket._channel)
+    }
+    setSelectedTicket(null)
+    setNewMessage("")
+  }
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !adminUser || !selectedTicket) return
+
+    setIsSending(true)
+    try {
+      const { error } = await supabase.from('ticket_messages').insert({
+        ticket_id: selectedTicket.id,
+        user_id: adminUser.id,
+        content: newMessage,
+        is_from_admin: true
+      })
+
+      if (error) throw error
+      setNewMessage("")
+      
+      const newStatus = selectedTicket.status === 'open' ? 'in_progress' : selectedTicket.status
+      await supabase.from('tickets').update({ 
+        updated_at: new Date().toISOString(),
+        status: newStatus
+      }).eq('id', selectedTicket.id)
+
+      if (selectedTicket.status === 'open') {
+        setSelectedTicket({...selectedTicket, status: 'in_progress'})
+        setTickets(tickets.map(t => t.id === selectedTicket.id ? { ...t, status: 'in_progress' } : t))
+      }
+    } catch (e: any) {
+      toast.error("Erro ao enviar mensagem.")
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase.from('tickets').update({ status: newStatus }).eq('id', ticketId)
+      if (error) throw error
+      toast.success("Status atualizado.")
+      setTickets(tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t))
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        setSelectedTicket({...selectedTicket, status: newStatus})
+      }
+    } catch {
+      toast.error("Erro ao atualizar status.")
+    }
+  }
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este chamado e todo seu histórico de mensagens? Esta ação não pode ser desfeita.")) return
+
+    try {
+      // Exclui as mensagens primeiro para evitar erros de restrição de chave estrangeira caso não haja cascade
+      await supabase.from('ticket_messages').delete().eq('ticket_id', ticketId)
+      // Exclui o ticket
+      const { error } = await supabase.from('tickets').delete().eq('id', ticketId)
+      if (error) throw error
+      
+      toast.success("Chamado excluído com sucesso.")
+      setTickets(tickets.filter(t => t.id !== ticketId))
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        handleCloseTicketSheet()
+      }
+    } catch (e) {
+      toast.error("Erro ao excluir o chamado.")
+    }
+  }
+
+  const getTicketStatusBadge = (status: string) => {
+    switch(status) {
+      case 'open': return <Badge className="bg-sky-500">Aberto</Badge>
+      case 'in_progress': return <Badge className="bg-amber-500">Em Análise</Badge>
+      case 'resolved': return <Badge className="bg-emerald-500">Resolvido</Badge>
+      case 'closed': return <Badge variant="outline">Encerrado</Badge>
+      default: return <Badge>{status}</Badge>
+    }
+  }
 
   const checkAdminAndLoadData = async () => {
     setIsLoading(true)
@@ -165,7 +305,7 @@ export default function MasterAdminPage() {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-6 bg-background/50 border border-border/50">
+        <TabsList className="grid w-full max-w-3xl grid-cols-4 mb-6 bg-background/50 border border-border/50">
           <TabsTrigger value="overview" className="data-[state=active]:bg-rose-500/20 data-[state=active]:text-rose-500">
             Visão Geral
           </TabsTrigger>
@@ -174,6 +314,9 @@ export default function MasterAdminPage() {
           </TabsTrigger>
           <TabsTrigger value="instances" className="data-[state=active]:bg-rose-500/20 data-[state=active]:text-rose-500">
             Monitor WhatsApp
+          </TabsTrigger>
+          <TabsTrigger value="tickets" className="data-[state=active]:bg-rose-500/20 data-[state=active]:text-rose-500">
+            Chamados
           </TabsTrigger>
         </TabsList>
 
@@ -448,6 +591,68 @@ export default function MasterAdminPage() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="tickets" className="mt-0">
+          <div className="glass-card rounded-xl overflow-hidden p-4">
+             <div className="mb-4 flex justify-between gap-4">
+              <Input
+                placeholder="Buscar chamado por assunto..."
+                className="max-w-md bg-background/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Button variant="outline" size="icon" onClick={loadTickets} title="Recarregar Chamados">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              {tickets.filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                  <CheckCircle2 className="w-12 h-12 mb-4 text-muted-foreground/50" />
+                  <p>Nenhum chamado encontrado.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/50 border rounded-md">
+                  {tickets.filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase())).map(ticket => (
+                    <div key={ticket.id} className="p-4 hover:bg-muted/30 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-lg">{ticket.subject}</span>
+                          {getTicketStatusBadge(ticket.status)}
+                          {ticket.priority === 'critical' && <Badge variant="destructive" className="animate-pulse">Urgente</Badge>}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Atualizado: {new Date(ticket.updated_at).toLocaleString('pt-BR')}</span>
+                          <span>Cliente ID: {ticket.user_id.substring(0,8)}...</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenTicket(ticket)}>
+                          <Eye className="w-4 h-4 mr-2" /> Responder
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'in_progress')}>Marcar Em Análise</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'resolved')}>Marcar Resolvido</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, 'closed')}>Encerrar Chamado</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteTicket(ticket.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">Excluir Chamado</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Tenant Profile Modal (Sheet) */}
@@ -619,6 +824,94 @@ export default function MasterAdminPage() {
               </div>
 
             </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Ticket Details Modal (Sheet) */}
+      <Sheet open={!!selectedTicket} onOpenChange={(open) => !open && handleCloseTicketSheet()}>
+        <SheetContent className="sm:max-w-xl w-full overflow-hidden border-l border-white/10 bg-background/95 backdrop-blur-xl p-0 flex flex-col">
+          {selectedTicket && (
+            <>
+              <SheetHeader className="text-left px-6 py-6 border-b border-border/40 bg-muted/5">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <Ticket className="w-5 h-5 text-primary" />
+                      <SheetTitle className="text-xl leading-tight pr-6">{selectedTicket.subject}</SheetTitle>
+                    </div>
+                    <SheetDescription className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                      <span className="flex items-center gap-1"><User className="w-3 h-3" /> {selectedTicket.user_id.substring(0,8)}</span>
+                      <span className="mx-1">•</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(selectedTicket.created_at).toLocaleString('pt-BR')}</span>
+                    </SheetDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  {selectedTicket.priority === 'critical' && <Badge variant="destructive">Urgente</Badge>}
+                  {getTicketStatusBadge(selectedTicket.status)}
+                  {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
+                    <Button variant="outline" size="sm" className="h-6 text-xs ml-auto text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10" onClick={() => handleStatusChange(selectedTicket.id, 'resolved')}>
+                      <CheckCircle2 className="w-3 h-3 mr-1" /> Resolver
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteTicket(selectedTicket.id)}>
+                    <Trash2 className="w-3 h-3 mr-1" /> Excluir
+                  </Button>
+                </div>
+              </SheetHeader>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col bg-background/50">
+                {messages.map((msg, i) => {
+                  const isMe = msg.is_from_admin
+                  return (
+                    <div key={i} className={`flex flex-col w-full max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
+                      <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                        {isMe ? 'Você (Admin)' : 'Cliente'}
+                        {isMe && <Shield className="w-3 h-3 text-emerald-500" />}
+                      </div>
+                      <div className={`p-4 rounded-2xl ${isMe ? 'bg-primary text-primary-foreground rounded-tr-sm shadow-md' : 'bg-background border border-border/50 rounded-tl-sm shadow-sm'}`}>
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-1 opacity-70">
+                        {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )
+                })}
+                <div ref={messagesEndRef} className="h-1" />
+              </div>
+
+              <div className="p-4 bg-background border-t border-border/50 z-10">
+                {selectedTicket.status === 'closed' || selectedTicket.status === 'resolved' ? (
+                  <div className="text-center py-4 text-sm text-muted-foreground bg-muted/20 rounded-lg">
+                    Este chamado foi encerrado ou resolvido.
+                  </div>
+                ) : (
+                  <div className="flex items-end gap-3">
+                    <Textarea 
+                      placeholder="Digite sua resposta para o cliente..." 
+                      className="min-h-[60px] max-h-[150px] resize-none"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
+                    />
+                    <Button 
+                      onClick={handleSendMessage} 
+                      disabled={isSending || !newMessage.trim()} 
+                      className="h-[60px] px-6 shrink-0"
+                    >
+                      {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </SheetContent>
       </Sheet>

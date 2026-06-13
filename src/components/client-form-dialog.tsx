@@ -367,6 +367,17 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                             mode="single"
                             selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
                             onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                            onMonthChange={(newMonth) => {
+                              if (field.value) {
+                                const currentDate = new Date(field.value + "T00:00:00");
+                                const currentDay = currentDate.getDate();
+                                
+                                // Cria nova data no mês selecionado, mantendo o dia original
+                                // Se o dia original for 31 e o novo mês tiver 30 dias, o JS ajusta sozinho
+                                const nextDate = new Date(newMonth.getFullYear(), newMonth.getMonth(), currentDay);
+                                field.onChange(format(nextDate, "yyyy-MM-dd"));
+                              }
+                            }}
                           />
                         </PopoverContent>
                       </Popover>

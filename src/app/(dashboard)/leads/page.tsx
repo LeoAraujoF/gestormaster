@@ -5,6 +5,7 @@ import { Upload, Download, Search, FileText, Phone, Trash2, UserPlus, Lock, Zap,
 import Papa from "papaparse"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { phoneMask } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import {
   autoMapColumns,
@@ -1564,6 +1565,11 @@ export default function LeadsPage() {
                                     {inst.instance_name} 
                                     {inst.is_primary && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
                                   </span>
+                                  {inst.phone_number && (
+                                    <span className="text-xs text-muted-foreground font-normal mb-0.5">
+                                      {phoneMask(inst.phone_number)}
+                                    </span>
+                                  )}
                                   {isUnavailable && (
                                     <span className="text-[10px] text-amber-500 font-medium">
                                       Em uso: {assignedCampaign}

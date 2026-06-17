@@ -67,7 +67,7 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
   });
 
 }, { 
-  connection: redisConnection,
+  connection: redisConnection as any,
   concurrency: 10, // Maior concorrência pois só insere/atualiza no BD local
 });
 

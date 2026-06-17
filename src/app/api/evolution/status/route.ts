@@ -41,13 +41,19 @@ export async function GET(request: Request) {
         const isConnected = stateData?.instance?.state === 'open'
         const newStatus = isConnected ? 'connected' : 'disconnected'
 
-        // Update DB if status changed
-        if (instance.status !== newStatus) {
+        let ownerPhone = instance.phone_number
+        if (isConnected && stateData?.instance?.owner) {
+          ownerPhone = stateData.instance.owner.replace('@s.whatsapp.net', '')
+        }
+
+        // Update DB if status changed or phone_number was discovered
+        if (instance.status !== newStatus || (!instance.phone_number && ownerPhone)) {
           await supabase
             .from('evolution_instances')
             .update({ 
               status: newStatus,
-              qr_code: isConnected ? null : instance.qr_code
+              qr_code: isConnected ? null : instance.qr_code,
+              ...(ownerPhone ? { phone_number: ownerPhone } : {})
             })
             .eq('id', instance.id)
         }
@@ -56,6 +62,7 @@ export async function GET(request: Request) {
           ...instance,
           status: newStatus,
           qr_code: isConnected ? null : instance.qr_code,
+          phone_number: ownerPhone || instance.phone_number,
           instanceData: stateData
         })
       } catch (e) {

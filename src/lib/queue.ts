@@ -28,7 +28,7 @@ export const webhookQueue = new Queue(WEBHOOK_QUEUE_NAME, {
 export const HEALTH_QUEUE_NAME = 'health-queue';
 
 export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {
-  connection: redisConnection,
+  connection: redisConnection as any,
   defaultJobOptions: {
     attempts: 2,
     backoff: { type: 'fixed', delay: 5000 },
@@ -39,7 +39,7 @@ export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {
 export const WARMUP_QUEUE_NAME = 'warmup-queue';
 
 export const warmupQueue = new Queue(WARMUP_QUEUE_NAME, {
-  connection: redisConnection,
+  connection: redisConnection as any,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 5000 },

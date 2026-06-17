@@ -97,7 +97,7 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
     throw error;
   }
   });
-}, { connection: redisConnection });
+}, { connection: redisConnection as any, concurrency: 1 });
 
 healthWorker.on('failed', (job, err) => {
   logger.error(`Job ${job?.id} (HealthMonitor) falhou: ${err.message}`);

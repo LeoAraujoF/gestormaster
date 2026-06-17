@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Edit2, Trash2, Loader2, Users, Search, RefreshCw, Calendar as CalendarIcon, Gift, Download, MessageCircle, DollarSign } from "lucide-react"
+import { Plus, Edit2, Trash2, Loader2, Users, Search, RefreshCw, Calendar as CalendarIcon, Gift, Download, MessageCircle, DollarSign, TrendingDown, CheckCircle2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask } from "@/lib/utils"
 import { format } from "date-fns"
@@ -559,7 +559,7 @@ export default function ClientesPage() {
           </div>
         ) : metrics ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* MRR Card */}
               <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10" />
@@ -599,17 +599,43 @@ export default function ClientesPage() {
                 <p className="text-xs text-muted-foreground">Vencem nos próximos 7 dias</p>
               </div>
 
-              {/* Churn Rate */}
+              {/* Taxa de Churn */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-rose-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-rose-500/10 rounded-xl">
+                    <TrendingDown className="w-5 h-5 text-rose-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">Taxa de Churn</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2 text-rose-500">{metrics.metrics.churnRate}%</p>
+                <p className="text-xs text-muted-foreground">{metrics.metrics.totalInactive} inativos ({formatCurrency(metrics.metrics.lostRevenue)} perdidos)</p>
+              </div>
+
+              {/* Total Ativos */}
+              <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10" />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground">Clientes Ativos</h3>
+                </div>
+                <p className="text-3xl font-bold mt-2 text-emerald-500">{metrics.metrics.totalActive}</p>
+                <p className="text-xs text-muted-foreground">Com pagamento em dia</p>
+              </div>
+
+              {/* Total Vencidos */}
               <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-32 h-32 bg-red-500/5 rounded-bl-full -z-10" />
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-red-500/10 rounded-xl">
-                    <Users className="w-5 h-5 text-red-500" />
+                    <AlertCircle className="w-5 h-5 text-red-500" />
                   </div>
-                  <h3 className="font-medium text-muted-foreground">Taxa de Churn</h3>
+                  <h3 className="font-medium text-muted-foreground">Status Vencidos</h3>
                 </div>
-                <p className="text-3xl font-bold mt-2 text-red-500">{metrics.metrics.churnRate}%</p>
-                <p className="text-xs text-muted-foreground">{metrics.metrics.totalInactive} inativos ({formatCurrency(metrics.metrics.lostRevenue)} perdidos)</p>
+                <p className="text-3xl font-bold mt-2 text-red-500">{metrics.metrics.totalOverdue}</p>
+                <p className="text-xs text-muted-foreground">Inadimplentes</p>
               </div>
             </div>
 

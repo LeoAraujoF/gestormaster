@@ -257,7 +257,7 @@ export default function SuportePage() {
                 <CardDescription>Acompanhe o status das suas solicitações ou abra um novo chamado.</CardDescription>
               </div>
               <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-                <DialogTrigger asChild>
+                <DialogTrigger>
                   <Button className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20">
                     <Plus className="w-4 h-4 mr-2" />
                     Abrir Chamado
@@ -280,7 +280,7 @@ export default function SuportePage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Prioridade</Label>
-                        <Select value={newTicket.priority} onValueChange={(val) => setNewTicket({...newTicket, priority: val})}>
+                        <Select value={newTicket.priority} onValueChange={(val) => setNewTicket({...newTicket, priority: val || 'medium'})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>

@@ -68,7 +68,7 @@ const warmupWorker = new Worker(WARMUP_QUEUE_NAME, async (job: Job) => {
       throw err;
     }
   });
-}, { connection: redisConnection });
+}, { connection: redisConnection as any });
 
 warmupWorker.on('failed', (job, err) => {
   logger.error(`Job ${job?.id} (Warmup) falhou: ${err.message}`);

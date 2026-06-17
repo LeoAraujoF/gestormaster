@@ -34,10 +34,10 @@ export function formatPhone(phone: string): string {
 export function phoneMask(value: string): string {
   if (!value) return '';
 
+  const cleaned = value.replace(/[^\d+]/g, '');
+
   // Se começar com +, permite formato internacional
-  if (value.startsWith('+')) {
-    const cleaned = value.replace(/[^\d+]/g, '');
-    
+  if (cleaned.startsWith('+')) {
     // Se for +55, aplica a máscara do Brasil após o DDI
     if (cleaned.startsWith('+55') && cleaned.length > 3) {
       const brNumber = cleaned.slice(3);
@@ -49,15 +49,21 @@ export function phoneMask(value: string): string {
     return cleaned.slice(0, 16); 
   }
 
-  // Comportamento padrão (sem +), assume Brasil
-  return formatBRPhone(value);
+  // Identifica números que vieram com o DDI 55 mas sem o +, comuns em integrações de API
+  if (cleaned.startsWith('55') && (cleaned.length === 12 || cleaned.length === 13)) {
+    return `+55 ${formatBRPhone(cleaned.slice(2))}`;
+  }
+
+  // Comportamento padrão (sem + e sem 55 com 12/13 digitos), assume Brasil
+  return formatBRPhone(cleaned);
 }
 
 function formatBRPhone(value: string): string {
   const cleaned = value.replace(/\D/g, '').slice(0, 11);
   if (cleaned.length === 0) return '';
   if (cleaned.length <= 2) return `(${cleaned}`;
-  if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
   return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
 }
 

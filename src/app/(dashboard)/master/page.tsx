@@ -638,7 +638,7 @@ export default function MasterAdminPage() {
                             <Eye className="w-4 h-4 mr-2" /> Responder
                           </Button>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="w-4 h-4" />
                               </Button>

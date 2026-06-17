@@ -151,7 +151,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     }
   });
 }, { 
-  connection: redisConnection,
+  connection: redisConnection as any,
   concurrency: 5,
   limiter: {
     max: 1,

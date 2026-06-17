@@ -180,6 +180,7 @@ export default function DashboardPage() {
     monthly_revenue: 0,
     monthly_costs: 0,
     monthly_net_revenue: 0,
+    total_vencido_clients: 0,
   }
 
   const currentMetrics = metrics || defaultMetrics

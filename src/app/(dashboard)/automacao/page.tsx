@@ -1043,13 +1043,22 @@ export default function AutomacaoPage() {
                   <CardHeader className="pb-4 relative z-10 border-b border-border/50">
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-lg">
-                        <Smartphone className="w-5 h-5 text-sky-500" />
-                        {instance.instance_name}
-                        {instance.is_primary && (
-                          <div className="flex items-center ml-2 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-xs font-medium border border-amber-500/20" title="Número Principal (Suporte)">
-                            <Star className="w-3 h-3 fill-amber-500 mr-1" /> Principal
+                        <Smartphone className="w-5 h-5 text-sky-500 flex-shrink-0" />
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span>{instance.instance_name}</span>
+                            {instance.is_primary && (
+                              <div className="flex items-center px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-xs font-medium border border-amber-500/20" title="Número Principal (Suporte)">
+                                <Star className="w-3 h-3 fill-amber-500 mr-1" /> Principal
+                              </div>
+                            )}
                           </div>
-                        )}
+                          {instance.phone_number && (
+                            <span className="text-sm text-muted-foreground font-normal">
+                              {phoneMask(instance.phone_number)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {instance.status === 'connected' && !instance.is_primary && (

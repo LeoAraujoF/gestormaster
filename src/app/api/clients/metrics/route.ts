@@ -43,6 +43,7 @@ export async function GET() {
     let expiringSoon = 0
     let churnedThisMonth = 0
     let activeStartOfMonth = 0
+    let totalOverdue = 0
 
     clients?.forEach(c => {
       const value = c.plan_value || 0
@@ -61,6 +62,10 @@ export async function GET() {
       } else {
         lostRevenue += value
         totalInactive++
+        
+        if (c.status === 'vencido') {
+          totalOverdue++
+        }
         
         // Churn do Mês Atual (Desativados recentemente ou vencidos recentemente e inativos)
         const updated = new Date(c.updated_at)
@@ -121,7 +126,9 @@ export async function GET() {
         expiringSoon,
         totalInactive,
         lostRevenue,
-        churnRate: parseFloat(churnRate.toFixed(2))
+        churnRate: parseFloat(churnRate.toFixed(2)),
+        totalActive,
+        totalOverdue
       },
       chartData
     })

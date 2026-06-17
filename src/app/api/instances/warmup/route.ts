@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       .from('evolution_instances')
       .update({ is_warming_up })
       .eq('id', instance_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .select()
       .single()
 

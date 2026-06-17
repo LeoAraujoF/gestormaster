@@ -16,7 +16,7 @@ import { phoneMask, cpfCnpjMask } from "@/lib/utils"
 
 const onboardingSchema = z.object({
   whatsapp: z.string().min(10, { message: "WhatsApp inválido" }),
-  document: z.string().min(11, { message: "CPF ou CNPJ inválido" }),
+  document: z.string().optional(),
   company_name: z.string().min(2, { message: "O nome da empresa deve ter pelo menos 2 caracteres" }),
 })
 
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
       const { error } = await supabase.auth.updateUser({
         data: {
           whatsapp: data.whatsapp.replace(/\D/g, ''), // Salva apenas números
-          document: data.document.replace(/\D/g, ''),
+          document: data.document ? data.document.replace(/\D/g, '') : null,
           company_name: data.company_name,
           onboarding_completed: true
         }
@@ -125,7 +125,7 @@ export default function OnboardingPage() {
 
             <div className="space-y-2">
               <Label htmlFor="document" className="text-zinc-700 dark:text-zinc-300">
-                CPF ou CNPJ
+                CPF ou CNPJ (Opcional)
               </Label>
               <div className="relative">
                 <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

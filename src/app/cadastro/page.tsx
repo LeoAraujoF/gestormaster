@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Mail, Lock, Zap, User } from "lucide-react"
+import { Loader2, Mail, Lock, Zap, User, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
@@ -18,6 +19,9 @@ const registerSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "Você precisa aceitar os termos de uso",
+  }),
 })
 
 type RegisterForm = z.infer<typeof registerSchema>
@@ -25,14 +29,20 @@ type RegisterForm = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const supabase = createClient()
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      terms: false
+    }
   })
 
   const onSubmit = async (data: RegisterForm) => {
@@ -65,21 +75,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        }
-      })
-      if (error) throw error
-    } catch (err) {
-      toast.error("Erro ao redirecionar para o Google.")
-      setIsLoading(false)
-    }
-  }
+
 
   return (
     <div className="min-h-screen flex lg:flex-row-reverse bg-background animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
@@ -139,7 +135,7 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="name">Nome completo</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="name"
                     placeholder="Seu nome"
@@ -155,7 +151,7 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
@@ -172,17 +168,50 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-9 bg-background/50"
+                    className="pl-9 pr-10 bg-background/50"
                     {...register("password")}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex items-start space-x-2">
+                  <Checkbox 
+                    id="terms" 
+                    checked={watch("terms")}
+                    onCheckedChange={(checked) => setValue("terms", checked as boolean, { shouldValidate: true })}
+                    className="mt-1"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor="terms" 
+                      className="text-sm text-muted-foreground font-normal leading-snug cursor-pointer"
+                    >
+                      Li e concordo com os{" "}
+                      <Link href="/termos" target="_blank" className="text-primary hover:underline font-medium">Termos de Uso</Link>
+                      {" "}e a{" "}
+                      <Link href="/privacidade" target="_blank" className="text-primary hover:underline font-medium">Política de Privacidade</Link>.
+                    </Label>
+                  </div>
+                </div>
+                {errors.terms && (
+                  <p className="text-xs text-destructive">{errors.terms.message}</p>
                 )}
               </div>
             </div>
@@ -198,25 +227,7 @@ export default function RegisterPage() {
               Cadastrar
             </Button>
             
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Ou cadastre-se com</span>
-              </div>
-            </div>
 
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-            >
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path></svg>
-              Google
-            </Button>
 
             <div className="text-center text-sm text-muted-foreground mt-4">
               Já tem uma conta? <Link href="/login" className="text-sky-500 hover:underline">Faça login</Link>

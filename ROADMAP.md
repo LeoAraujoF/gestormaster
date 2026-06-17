@@ -40,5 +40,10 @@ Este documento guarda as ideias, melhorias arquiteturais e funcionalidades estra
 - **Como funciona:** O cliente abre chamados na bolinha do canto da tela. O atendente (Admin) atende pelo aplicativo do próprio celular (do Crisp/Tawk.to), podendo mandar áudios e ver em qual página o cliente está navegando em tempo real.
 - **Status Atual:** Optamos por construir um Helpdesk Nativo (Tickets) primeiro, deixando esta integração como uma alternativa futura super premium.
 
+## 💳 7. Integração de Cobrança (Gateway Mercado Pago)
+- **O que é:** Adicionar a opção do Mercado Pago como gateway de pagamento alternativo/secundário ao Stripe.
+- **Por que:** No momento, o sistema exibe "PIX / MercadoPago" e emite QR Codes estáticos via Pix, ou atua com Stripe. Uma integração direta (APIs Checkout / Split) com Mercado Pago atrai clientes acostumados ao ecossistema da América Latina com taxas melhores para pagamentos locais.
+- **Como:** Desenvolver as rotas de callback (webhooks) em `/api/mercadopago/webhook` e configurar as credentials no `.env`.
+
 ---
 *Este arquivo serve como um backlog. Quando for iniciar uma nova fase de desenvolvimento, basta apontar para cá e solicitar a execução do item desejado!*

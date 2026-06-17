@@ -1439,9 +1439,24 @@ export default function AutomacaoPage() {
                   onChange={(e) => setMassMessage(e.target.value)}
                   placeholder="Escreva sua mensagem aqui..."
                 />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Variáveis suportadas: <code className="bg-muted px-1 rounded text-primary">{"{{"}primeiro_nome{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}client_name{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}plan_value{"}}"}</code>, <code className="bg-muted px-1 rounded text-primary">{"{{"}due_date{"}}"}</code>
-                </p>
+                <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
+                  <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}"].map((variable) => (
+                      <Badge 
+                        key={variable}
+                        variant="outline" 
+                        className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors border-primary/20 text-primary"
+                        onClick={() => {
+                          setMassMessage(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + variable)
+                          toast.success(`Variável ${variable} inserida!`, { duration: 1500 })
+                        }}
+                      >
+                        {variable}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2 mt-4 p-4 border rounded-xl bg-muted/20">
@@ -1575,12 +1590,24 @@ export default function AutomacaoPage() {
                 placeholder="Escreva sua mensagem aqui..."
               />
               <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
-                <p className="text-xs text-primary/80 font-medium mb-2">Variáveis Inteligentes (Copie e Cole):</p>
+                <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors select-all border-primary/20 text-primary">{"{{primeiro_nome}}"}</Badge>
-                  <Badge variant="outline" className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors select-all border-primary/20 text-primary">{"{{client_name}}"}</Badge>
-                  <Badge variant="outline" className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors select-all border-primary/20 text-primary">{"{{plan_value}}"}</Badge>
-                  <Badge variant="outline" className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors select-all border-primary/20 text-primary">{"{{due_date}}"}</Badge>
+                  {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}"].map((variable) => (
+                    <Badge 
+                      key={variable}
+                      variant="outline" 
+                      className="bg-background cursor-pointer hover:bg-primary hover:text-white transition-colors border-primary/20 text-primary"
+                      onClick={() => {
+                        setRuleForm(prev => ({
+                          ...prev, 
+                          message_template: prev.message_template + (prev.message_template.endsWith(" ") || prev.message_template === "" ? "" : " ") + variable
+                        }))
+                        toast.success(`Variável ${variable} inserida!`, { duration: 1500 })
+                      }}
+                    >
+                      {variable}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </div>

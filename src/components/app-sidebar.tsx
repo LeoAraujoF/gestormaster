@@ -40,7 +40,7 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/",
+      url: "/painel",
       icon: LayoutDashboard,
       color: "text-sky-500",
     },

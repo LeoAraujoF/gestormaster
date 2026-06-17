@@ -45,3 +45,4 @@ debug*.js
 debug_*.txt
 clean_orphaned.js
 npm_audit.txt
+.aider*

@@ -42,7 +42,9 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/api') &&
     !request.nextUrl.pathname.startsWith('/forgot-password') &&
     !request.nextUrl.pathname.startsWith('/reset-password') &&
-    !request.nextUrl.pathname.startsWith('/privacidade')
+    !request.nextUrl.pathname.startsWith('/privacidade') &&
+    !request.nextUrl.pathname.startsWith('/termos') &&
+    request.nextUrl.pathname !== '/'
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -57,7 +59,10 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/cadastro') || 
       request.nextUrl.pathname.startsWith('/api') || 
       request.nextUrl.pathname.startsWith('/auth') ||
-      request.nextUrl.pathname.startsWith('/onboarding')
+      request.nextUrl.pathname.startsWith('/termos') ||
+      request.nextUrl.pathname.startsWith('/privacidade') ||
+      request.nextUrl.pathname.startsWith('/onboarding') ||
+      request.nextUrl.pathname === '/'
 
     const hasSubscription = user.user_metadata?.has_active_subscription === true
     const hasOnboarding = user.user_metadata?.onboarding_completed === true

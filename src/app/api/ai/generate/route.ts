@@ -64,7 +64,7 @@ Gere as mensagens agora no formato JSON:
 `
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Ou gpt-3.5-turbo se preferir
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
     })

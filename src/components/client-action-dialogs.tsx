@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Loader2, RefreshCw, Gift, Trash2, Plus, Minus } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import confetti from "canvas-confetti"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,15 +69,33 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
         
       if (rules && rules.length > 0) {
         for (const rule of rules) {
-          fetch('/api/evolution/send-instant', {
+          // Fire and forget: roda em background para não travar a tela
+          fetch(window.location.origin + '/api/evolution/send-instant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
-          }).catch(err => console.error("Erro no envio instantâneo:", err))
+          })
+          .then(async (res) => {
+            if (!res.ok) {
+              const errData = await res.json()
+              toast.warning(`WhatsApp falhou em background: ${errData.error || 'Erro desconhecido'}`)
+            }
+          })
+          .catch((err: any) => {
+            toast.warning(`O WhatsApp foi bloqueado pelo seu navegador (Failed to fetch).`)
+          })
         }
       }
 
       toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${currentDueDate.toLocaleDateString('pt-BR')}`)
+      
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6']
+      })
+      
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -231,15 +250,33 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
         
       if (rules && rules.length > 0) {
         for (const rule of rules) {
-          fetch('/api/evolution/send-instant', {
+          // Fire and forget
+          fetch(window.location.origin + '/api/evolution/send-instant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
-          }).catch(err => console.error("Erro no envio instantâneo:", err))
+          })
+          .then(async (res) => {
+            if (!res.ok) {
+              const errData = await res.json()
+              toast.warning(`WhatsApp (Promoção) falhou em background: ${errData.error || 'Erro desconhecido'}`)
+            }
+          })
+          .catch((err: any) => {
+            toast.warning(`O WhatsApp foi bloqueado pelo seu navegador (Failed to fetch).`)
+          })
         }
       }
 
       toast.success(`Promoção ativada! Vencimento estendido por ${renewMonths} mês(es).`)
+      
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6']
+      })
+      
       onSuccess()
       onOpenChange(false)
     } catch (error) {

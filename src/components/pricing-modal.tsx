@@ -109,135 +109,61 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-6 py-4">
+          <div className="flex justify-center items-center w-full max-w-md mx-auto mt-6 py-4">
             
-            {/* PLANO LITE */}
-            <Card className="glass-card flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-slate-500/30">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold">Plano Lite</CardTitle>
-                <CardDescription className="h-10 mt-2">
-                  Apenas gerencia os clientes sem automação.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-4">
-                <div className="text-4xl font-bold">R$ 15<span className="text-lg font-normal text-muted-foreground">/mês</span></div>
-                <div className="space-y-3 mt-6 text-sm">
-                  <div className="flex justify-between py-2 border-b border-border/40">
-                    <span className="text-muted-foreground">Gestão de Clientes</span>
-                    <span className="font-medium text-foreground">Acesso Total</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border/40">
-                    <span className="text-muted-foreground">Integração WPP</span>
-                    <span className="font-medium text-muted-foreground">Sem Acesso</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-6 mt-auto flex gap-2">
-                <Button 
-                  className="flex-1 h-12 bg-slate-800 hover:bg-slate-700 text-white" 
-                  onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC || "", "Lite")}
-                  disabled={isCheckoutLoading !== null || isPixLoading !== null}
-                >
-                  {isCheckoutLoading === process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-4 h-4 mr-1 sm:mr-2" />}
-                  Cartão
-                </Button>
-                <Button 
-                  className="flex-1 h-12 bg-emerald-500 hover:bg-emerald-600 text-white" 
-                  onClick={() => handlePixCheckout(15, "Lite")}
-                  disabled={isCheckoutLoading !== null || isPixLoading !== null}
-                >
-                  {isPixLoading === "Lite" ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-4 h-4 mr-1 sm:mr-2" />}
-                  PIX
-                </Button>
-              </CardFooter>
-            </Card>
-
-            {/* PLANO PRO (DESTAQUE) */}
-            <Card className="glass-card flex flex-col relative overflow-hidden border-sky-500/40 shadow-2xl shadow-sky-500/20 scale-100 md:scale-105 z-10 transition-all duration-300 bg-background">
+            {/* PLANO ÚNICO (PRO) */}
+            <Card className="glass-card flex flex-col relative overflow-hidden border-sky-500/40 shadow-2xl shadow-sky-500/20 scale-100 z-10 transition-all duration-300 w-full bg-background">
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-sky-500/20 rounded-full blur-3xl" />
-              <div className="absolute top-0 w-full text-center py-1.5 bg-sky-500 text-white text-xs font-bold uppercase tracking-widest">
-                Mais Popular
+              <div className="absolute top-0 w-full text-center py-1.5 bg-rose-500 text-white text-xs font-bold uppercase tracking-widest">
+                🔥 Oferta por Tempo Limitado
               </div>
               <CardHeader className="pt-10 pb-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-3xl font-bold text-sky-500">Plano Pro</CardTitle>
+                    <CardTitle className="text-3xl font-bold text-sky-500">Gestor Pro</CardTitle>
                     <CardDescription className="h-10 mt-2">
-                      Tudo do Lite + Automação WPP.
+                      Todos os recursos liberados para o seu negócio crescer.
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow space-y-4">
-                <div className="text-5xl font-bold text-foreground">R$ 30<span className="text-xl font-normal text-muted-foreground">/mês</span></div>
+                <div className="text-5xl font-bold text-foreground">R$ 20<span className="text-xl font-normal text-muted-foreground">/mês</span></div>
                 <div className="space-y-3 mt-6 text-sm">
                   <div className="flex justify-between py-2 border-b border-border/40">
                     <span className="text-muted-foreground">Gestão de Clientes</span>
-                    <span className="font-medium text-foreground">Acesso Total</span>
+                    <span className="font-bold text-foreground">Ilimitado</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-border/40">
-                    <span className="text-muted-foreground">Integração WPP</span>
-                    <span className="font-bold text-sky-500">3 Números</span>
+                    <span className="text-muted-foreground">Conexões WhatsApp</span>
+                    <span className="font-bold text-sky-500">Até 3 Números</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border/40">
+                    <span className="text-muted-foreground">Automação de Cobrança</span>
+                    <span className="font-bold text-foreground">Ilimitado</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border/40">
+                    <span className="text-muted-foreground">Anti-Ban / Aquecimento</span>
+                    <span className="font-bold text-emerald-500">Incluso</span>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="pt-6 mt-auto flex flex-col gap-3">
                 <Button 
                   className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20" 
-                  onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "", "Pro")}
+                  onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT", "Gestor Pro")}
                   disabled={isCheckoutLoading !== null || isPixLoading !== null}
                 >
-                  {isCheckoutLoading === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
+                  {isCheckoutLoading === (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT") ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
                   Pagar com Cartão
                 </Button>
                 <Button 
                   className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" 
-                  onClick={() => handlePixCheckout(30, "Pro")}
+                  onClick={() => handlePixCheckout(20, "Gestor Pro")}
                   disabled={isCheckoutLoading !== null || isPixLoading !== null}
                 >
-                  {isPixLoading === "Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
+                  {isPixLoading === "Gestor Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
                   Pagar com PIX
-                </Button>
-              </CardFooter>
-            </Card>
-
-            {/* PLANO PLUS */}
-            <Card className="glass-card flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-amber-500/30">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold text-amber-500">Plano Plus</CardTitle>
-                <CardDescription className="h-10 mt-2">
-                  Tudo do Pro + Gestão de revendas do produto.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-4">
-                <div className="text-4xl font-bold">R$ 45<span className="text-lg font-normal text-muted-foreground">/mês</span></div>
-                <div className="space-y-3 mt-6 text-sm">
-                  <div className="flex justify-between py-2 border-b border-border/40">
-                    <span className="text-muted-foreground">Integração WPP</span>
-                    <span className="font-medium text-green-500">5 Números</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border/40">
-                    <span className="text-muted-foreground">Gestão de Revendas</span>
-                    <span className="font-medium text-amber-500">Em Breve</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-6 mt-auto flex gap-2">
-                <Button 
-                  className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white" 
-                  onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || "", "Plus")}
-                  disabled={isCheckoutLoading !== null || isPixLoading !== null}
-                >
-                  {isCheckoutLoading === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-4 h-4 mr-1 sm:mr-2" />}
-                  Cartão
-                </Button>
-                <Button 
-                  className="flex-1 h-12 bg-emerald-500 hover:bg-emerald-600 text-white" 
-                  onClick={() => handlePixCheckout(45, "Plus")}
-                  disabled={isCheckoutLoading !== null || isPixLoading !== null}
-                >
-                  {isPixLoading === "Plus" ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-4 h-4 mr-1 sm:mr-2" />}
-                  PIX
                 </Button>
               </CardFooter>
             </Card>

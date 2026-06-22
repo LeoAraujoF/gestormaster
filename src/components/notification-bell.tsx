@@ -119,11 +119,18 @@ export function NotificationBell() {
       }
     }
 
-    // Filter dismissed notifications
+    // Filter dismissed notifications (for alerts)
     const dismissed = JSON.parse(localStorage.getItem('dismissed_notifications') || '[]')
-    
     const filteredAlerts = newAlerts.filter(a => !dismissed.includes(a.id))
-    const filteredUpdates = (updatesData || []).filter(u => !dismissed.includes(`update-${u.id}`))
+    
+    // Fetch user reads from DB for updates
+    const { data: readsData } = await supabase
+      .from('user_update_reads')
+      .select('update_id')
+      .eq('user_id', user.id)
+      
+    const readIds = readsData ? readsData.map(r => r.update_id) : []
+    const filteredUpdates = (updatesData || []).filter(u => !readIds.includes(u.id))
 
     setAlerts(filteredAlerts)
     setUpdates(filteredUpdates)
@@ -136,14 +143,23 @@ export function NotificationBell() {
     }, 100)
   }
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     const dismissed = JSON.parse(localStorage.getItem('dismissed_notifications') || '[]')
     const newDismissed = [
       ...dismissed,
-      ...alerts.map(a => a.id),
-      ...updates.map(u => `update-${u.id}`)
+      ...alerts.map(a => a.id)
     ]
     localStorage.setItem('dismissed_notifications', JSON.stringify(newDismissed))
+    
+    // Mark updates as read in DB
+    if (updates.length > 0) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const reads = updates.map(u => ({ user_id: user.id, update_id: u.id }))
+        await supabase.from('user_update_reads').upsert(reads, { onConflict: 'user_id,update_id' })
+      }
+    }
+
     setAlerts([])
     setUpdates([])
   }

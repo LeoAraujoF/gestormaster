@@ -3,21 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
 
-function parseMessageTemplate(template: string, client: any) {
-  let msg = template
-  msg = msg.replace(/{{client_name}}/g, client.name || '')
-  
-  const firstName = client.name ? client.name.split(' ')[0] : ''
-  msg = msg.replace(/{{primeiro_nome}}/g, firstName)
-  
-  msg = msg.replace(/{{plan_value}}/g, client.plan_value?.toString() || '0')
-  
-  if (client.due_date) {
-    const [y, m, d] = client.due_date.split('-')
-    msg = msg.replace(/{{due_date}}/g, `${d}/${m}/${y}`)
-  }
-  return msg
-}
+import { parseMessageTemplate } from "@/lib/message-parser";
 
 export async function POST(req: Request) {
   try {
@@ -111,22 +97,32 @@ export async function POST(req: Request) {
       }
     }
 
-    const finalMessage = parseMessageTemplate(templateToUse, client)
+    const finalMessage = parseMessageTemplate(templateToUse, client, user.user_metadata || {})
 
-    // 4. Send Instantly
+    // 4. Send Instantly with Timeout (prevent UI hanging)
     const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`
-    const apiReq = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': finalApiKey
-      },
-      body: JSON.stringify({
-        number: phone,
-        options: { delay: 1200, presence: 'composing' },
-        text: finalMessage
+    
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 seconds timeout
+    
+    let apiReq;
+    try {
+      apiReq = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': finalApiKey
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          number: phone,
+          options: { delay: 1200, presence: 'composing' },
+          text: finalMessage
+        })
       })
-    })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (!apiReq.ok) {
       const errData = await apiReq.text()

@@ -25,6 +25,18 @@ export const webhookQueue = new Queue(WEBHOOK_QUEUE_NAME, {
   },
 });
 
+export const AI_QUEUE_NAME = 'ai-queue';
+
+export const aiQueue = new Queue(AI_QUEUE_NAME, {
+  connection: redisConnection as any,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 3000 },
+    removeOnComplete: true,
+    removeOnFail: { age: 604800, count: 1000 },
+  },
+});
+
 export const HEALTH_QUEUE_NAME = 'health-queue';
 
 export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {

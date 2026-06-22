@@ -64,7 +64,8 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/onboarding') ||
       request.nextUrl.pathname === '/'
 
-    const hasSubscription = user.user_metadata?.has_active_subscription === true
+    const isManualActive = user.user_metadata?.payment_status === 'Ativo' || user.user_metadata?.payment_status === 'Pago'
+    const hasSubscription = user.user_metadata?.has_active_subscription === true || isManualActive
     const hasOnboarding = user.user_metadata?.onboarding_completed === true
     const isAdmin = user.email === process.env.ADMIN_EMAIL
 
@@ -79,6 +80,13 @@ export async function updateSession(request: NextRequest) {
     if (!isPublicRoute && !hasSubscription && !isAdmin && request.nextUrl.pathname !== '/onboarding') {
       const url = request.nextUrl.clone()
       url.pathname = '/planos'
+      return NextResponse.redirect(url)
+    }
+
+    // Regra 3: Bloqueio do painel Master Admin
+    if (request.nextUrl.pathname.startsWith('/admin') && !isAdmin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/painel'
       return NextResponse.redirect(url)
     }
   }

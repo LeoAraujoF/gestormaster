@@ -1,0 +1,2484 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="light">
+<head>
+    <base href="https://pg.tvdc.site/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="4ac63fe856bcbb72b2056af3b5fd0bf44a03134d4502178fe997f8c3f00c6065">
+    <title>Clientes - TVdeCASA</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- Custom CSS Premium -->
+    <style>
+        :root {
+            --primary-gradient-start: #930b44;
+            --primary-gradient-end: #176793;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-bg: #0f172a;
+            --dark-sidebar: #1e293b;
+            --dark-card: #1e293b;
+            --sidebar-width: 230px;
+            --topbar-height: 70px;
+            --app-bg: #f1f5f9;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-border: rgba(15, 23, 42, 0.08);
+            --heading-color: #0f172a;
+            --muted-color: #64748b;
+            --sidebar-bg: rgba(255, 255, 255, 0.95);
+            --sidebar-border: rgba(15, 23, 42, 0.08);
+            --sidebar-text: #64748b;
+            --table-bg: rgba(255, 255, 255, 0.98);
+            --table-head-bg: rgba(102, 126, 234, 0.05);
+        }
+
+        [data-bs-theme="dark"] {
+            --bs-body-bg: var(--dark-bg);
+            --bs-body-color: #e2e8f0;
+            --app-bg: #0b1220;
+            --card-bg: rgba(30, 41, 59, 0.92);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --heading-color: #e2e8f0;
+            --muted-color: #94a3b8;
+            --sidebar-bg: rgba(15, 23, 42, 0.88);
+            --sidebar-border: rgba(255, 255, 255, 0.06);
+            --sidebar-text: #cbd5e1;
+            --table-bg: rgba(30, 41, 59, 0.92);
+            --table-head-bg: rgba(255, 255, 255, 0.04);
+        }
+
+        [data-bs-theme="dark"] .page-header {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+        }
+
+        [data-bs-theme="dark"] .table-premium tbody tr {
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        [data-bs-theme="dark"] .bg-light {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        [data-bs-theme="dark"] .bg-white {
+            background-color: rgba(30, 41, 59, 0.92) !important;
+        }
+
+        [data-bs-theme="dark"] .text-dark {
+            color: var(--bs-body-color) !important;
+        }
+
+        [data-bs-theme="dark"] .border {
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        [data-bs-theme="dark"] .input-group-text {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: var(--bs-body-color);
+        }
+
+        [data-bs-theme="dark"] .modal-footer.bg-light {
+            background-color: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        [data-bs-theme="dark"] .dropdown-menu {
+            background: rgba(30, 41, 59, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        [data-bs-theme="dark"] .dropdown-item {
+            color: var(--bs-body-color);
+        }
+
+        [data-bs-theme="dark"] .btn-outline-dark {
+            color: #fff !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        [data-bs-theme="dark"] .btn-outline-dark:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            color: #fff !important;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--app-bg);
+            color: var(--bs-body-color);
+            overflow-x: hidden;
+        }
+        
+        [data-bs-theme="dark"] body {
+             background: var(--app-bg);
+             color: var(--bs-body-color);
+        }
+
+        /* Topbar Premium */
+        .navbar-premium {
+            height: var(--topbar-height);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0 2rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            transition: all 0.3s ease;
+        }
+        
+        [data-bs-theme="dark"] .navbar-premium {
+            background: rgba(30, 41, 59, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .navbar-premium .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Logo Image Support */
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .navbar-premium .navbar-brand i {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Sidebar Premium */
+        .sidebar-premium {
+            position: fixed;
+            top: var(--topbar-height);
+            left: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--topbar-height));
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1040;
+            padding: 1.5rem 0;
+            border-right: 1px solid var(--sidebar-border);
+        }
+
+        .sidebar-premium::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-premium::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-premium::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 10px;
+        }
+
+        .sidebar-premium::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+
+        .sidebar-premium .nav-link {
+            color: var(--sidebar-text);
+            padding: 0.875rem 1.5rem;
+            margin: 0.25rem 1rem;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-premium .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-premium .nav-link:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            color: var(--primary-gradient-start);
+            transform: translateX(5px);
+        }
+
+        .sidebar-premium .nav-link.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            color: var(--primary-gradient-start);
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .sidebar-premium .nav-link.active::before {
+            transform: scaleY(1);
+        }
+
+        .sidebar-premium .nav-link i {
+            font-size: 1.25rem;
+            width: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-heading {
+            padding: 1rem 1.5rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted-color);
+        }
+
+        /* Main Content */
+        main {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            padding: 2rem;
+            min-height: calc(100vh - var(--topbar-height));
+            width: auto;
+            max-width: 100%;
+            position: relative;
+        }
+
+        /* Cards Premium */
+        .card-premium {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .card-premium:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.25);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            color: var(--primary-gradient-start);
+        }
+
+        .stat-card.success .stat-icon {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+            color: var(--success-color);
+        }
+
+        .stat-card.warning .stat-icon {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
+            color: var(--warning-color);
+        }
+
+        .stat-card.danger .stat-icon {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            color: var(--danger-color);
+        }
+
+        .stat-card.info .stat-icon {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+            color: var(--info-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--heading-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--muted-color);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* User Info Badge */
+        .user-badge {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            padding: 0.5rem 1.25rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: var(--primary-gradient-start);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .credits-badge {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            padding: 0.375rem 1rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Buttons Premium */
+        .btn-premium {
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* Tables Premium */
+        .table-premium {
+            background: var(--table-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-premium thead {
+            background: var(--table-head-bg);
+        }
+
+        .table-premium thead th {
+            border: none;
+            padding: 1rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted-color);
+        }
+
+        .table-premium tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .table-premium tbody tr:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.03), rgba(118, 75, 162, 0.03));
+            transform: scale(1.01);
+        }
+
+        .table-premium tbody td {
+            padding: 1.25rem 1.5rem;
+            vertical-align: middle;
+            border: none;
+        }
+
+        /* Badges Premium */
+        .badge-premium {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+            color: var(--success-color);
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+            color: var(--danger-color);
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15));
+            color: var(--warning-color);
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15));
+            color: var(--info-color);
+        }
+
+        /* Page Header */
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Animations */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1030;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(2px);
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            :root {
+                --topbar-height: 60px;
+            }
+
+            .sidebar-premium {
+                transform: translateX(-100%);
+            }
+            
+            .navbar-premium .navbar-brand {
+                font-size: 1.1rem;
+                white-space: nowrap;
+                max-width: 60%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .navbar-premium .navbar-brand img {
+                height: 28px;
+            }
+            
+            /* Ensure toggle and brand stay on same line if possible */
+            .navbar-premium .container-fluid {
+                gap: 0.5rem;
+            }
+
+            .sidebar-premium.show {
+                transform: translateX(0);
+            }
+
+            main {
+                margin-left: 0;
+                padding: 0.5rem; /* Reduced padding */
+            }
+
+            .page-header {
+                padding: 1rem; /* Reduced padding */
+                margin-bottom: 1rem; /* Reduced margin */
+            }
+
+            .page-header h1 {
+                font-size: 1.25rem; /* Smaller font */
+            }
+
+            .stat-card {
+                padding: 1rem; /* Reduced padding */
+            }
+
+            .stat-icon {
+                width: 40px; /* Smaller icon */
+                height: 40px;
+                font-size: 1.2rem;
+                margin-bottom: 0.5rem;
+                border-radius: 10px;
+            }
+
+            .stat-value {
+                font-size: 1.25rem; /* Smaller value */
+            }
+            
+            .stat-label {
+                font-size: 0.75rem; /* Smaller label */
+            }
+
+            .card-premium {
+                padding: 0.75rem; /* Reduced padding */
+            }
+            
+            .btn-premium {
+                padding: 0.4rem 0.8rem; /* Smaller buttons */
+                font-size: 0.9rem;
+            }
+
+            .table-premium tbody td, 
+            .table-premium thead th {
+                padding: 0.5rem 0.25rem; /* Compact table cells */
+                font-size: 0.75rem;
+            }
+
+            .user-badge {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
+            }
+            
+            .user-badge .user-avatar {
+                width: 28px; /* Smaller avatar */
+                height: 28px;
+                font-size: 0.75rem;
+            }
+            
+            .navbar-premium {
+                padding: 0 1rem; /* Compact navbar */
+            }
+        }
+
+        /* Dropdown Premium */
+        .dropdown-menu {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .dropdown-item {
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            color: var(--primary-gradient-start);
+            transform: translateX(5px);
+        }
+
+        /* --- Bottom Navigation iOS/Android Style (Mobile) --- */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.08);
+            border-top: 1px solid rgba(230, 230, 230, 0.5);
+            z-index: 1050;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        [data-bs-theme="dark"] .bottom-nav {
+            background: rgba(30, 41, 59, 0.98);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .bottom-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 65px;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #64748b;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            width: 100%;
+            height: 100%;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .bottom-nav-item i {
+            font-size: 1.35rem;
+            margin-bottom: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav-item.active {
+            color: var(--primary-gradient-start);
+        }
+
+        .bottom-nav-item.active i {
+            background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transform: translateY(-2px);
+        }
+        
+        .bottom-nav-item:active {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: block;
+            }
+            body {
+                padding-bottom: 80px !important; /* Libera espaço pro navbar no final da rolagem */
+            }
+            /* Ocultar hambúrguer topo e melhorar topo Mobile */
+            #sidebarToggle {
+                display: none !important;
+            }
+            .navbar-premium .container-fluid {
+                justify-content: space-between !important;
+            }
+            .navbar-premium .navbar-brand {
+                margin-left: 0 !important;
+                flex-grow: 1;
+            }
+            /* Aumentar Tap Targets de todos os botões no site p/ celular */
+            .btn {
+                min-height: 48px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .btn-sm, .table-premium .btn {
+                min-height: 38px;
+            }
+            .btn-close {
+                min-height: auto;
+            }
+        }
+    </style>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#930b44">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Notification & PWA Script -->
+    <script>
+        // 1. PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW registrado!', reg))
+                    .catch(err => console.log('SW falhou:', err));
+            });
+        }
+
+        // 2. Browser Notifications
+        document.addEventListener('DOMContentLoaded', () => {
+            // Pedir permissão ao carregar
+            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
+            // Polling de Notificações (a cada 30s)
+            setInterval(checkNotifications, 30000);
+            checkNotifications(); // Check inicial
+        });
+
+        function checkNotifications() {
+            fetch('api_notifications.php?action=check')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        data.data.forEach(notif => {
+                            // Mostrar Notificação Nativa
+                            if (Notification.permission === "granted") {
+                                const n = new Notification(notif.titulo, {
+                                    body: notif.mensagem,
+                                    icon: 'gerador_banner/logo1.png' // Ícone placeholder
+                                });
+                                n.onclick = () => {
+                                    window.focus();
+                                    if(notif.link) window.location.href = notif.link;
+                                };
+                            }
+
+                            // Mostrar Toast no Painel (SweetAlert2)
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                                }
+                            });
+
+                            Toast.fire({
+                                icon: 'info',
+                                title: notif.titulo,
+                                text: notif.mensagem
+                            });
+
+                            // Marcar como lida
+                            markAsRead(notif.id);
+                        });
+                    }
+                })
+                .catch(err => console.error('Erro notif:', err));
+        }
+
+        function markAsRead(id) {
+            const formData = new FormData();
+            formData.append('id', id);
+            fetch('api_notifications.php?action=mark_read', {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        function applyUiTheme(mode) {
+            const m = (mode === 'dark') ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', m);
+            const btn = document.getElementById('themeToggle');
+            const icon = document.getElementById('themeToggleIcon');
+            if (btn && icon) {
+                const isDark = m === 'dark';
+                icon.className = isDark ? 'bi bi-sun' : 'bi bi-moon-stars';
+                btn.setAttribute('title', isDark ? 'Modo claro' : 'Modo escuro');
+            }
+        }
+
+        function saveUiTheme(mode) {
+            try { localStorage.setItem('ui_theme', mode); } catch (e) {}
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const fd = new FormData();
+            fd.append('csrf_token', csrf);
+            fd.append('acao', 'salvar_tema_ui');
+            fd.append('ui_dark', mode === 'dark' ? '1' : '0');
+            fetch('perfil', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' } }).catch(() => {});
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            applyUiTheme(document.documentElement.getAttribute('data-bs-theme') || 'light');
+            const btn = document.getElementById('themeToggle');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    const current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    applyUiTheme(next);
+                    saveUiTheme(next);
+                });
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- Navbar Premium -->
+    <nav class="navbar navbar-premium navbar-expand-lg">
+        <div class="container-fluid">
+            <!-- Sidebar Toggle (Mobile) -->
+            <button class="btn btn-link d-lg-none me-2 p-0 border-0" id="sidebarToggle" type="button">
+                <i class="bi bi-list" style="font-size: 2rem; background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+            </button>
+
+            <a class="navbar-brand d-none d-md-flex" href="dashboard">
+                                    <img src="https://bloghelper.com.br/logo1.png" alt="TVdeCASA">
+                                <span class="d-none d-md-inline">TVdeCASA</span>
+            </a>
+
+            <!-- Right Side Actions (Always Visible) -->
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <!-- Botão Teste Rápido Global -->
+                <button class="btn btn-premium d-flex align-items-center gap-2 me-1" id="btnTesteRapidoGlobal">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span class="d-none d-md-inline">Teste Rápido</span>
+                </button>
+
+                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center border-0" type="button" id="themeToggle" style="width: 44px; height: 44px; border-radius: 14px;">
+                    <i id="themeToggleIcon" class="bi bi-moon-stars"></i>
+                </button>
+
+                <!-- Mobile Credits -->
+                                    <div class="credits-badge d-md-none" title="Seus Créditos Disponíveis">
+                        <i class="bi bi-wallet2"></i> 
+                        <span class="ms-1">2</span>
+                    </div>
+                
+                <!-- Profile Dropdown (Avatar as Trigger) -->
+                <div class="dropdown">
+                    <button class="btn btn-link p-0 text-decoration-none border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="user-badge m-0 cursor-pointer">
+                            <div class="user-avatar">
+                                TH                            </div>
+                            <span class="d-none d-md-inline fw-semibold text-body ps-2">
+                                thamyresluz                                                                    <span class="badge bg-success ms-2 rounded-pill shadow-sm" style="font-size: 0.75rem; vertical-align: middle;">
+                                        <i class="bi bi-wallet2 me-1"></i>2                                    </span>
+                                                            </span>
+                        </div>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="perfil"><i class="bi bi-person me-2"></i> Perfil</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="logout"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alertas de Saldo Baixo (Global) -->
+    
+<nav class="sidebar-premium">    
+
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li class="sidebar-heading">Gestão de Clientes</li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/criar_teste">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Criar Teste</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link active" href="https://pg.tvdc.site/clientes">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Clientes</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/papa_teste">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Papa Teste</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/pagamentos.php">
+                    <i class="bi bi-currency-dollar"></i>
+                    <span>Pagamentos</span>
+                                    </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/online">
+                    <i class="bi bi-broadcast-pin"></i>
+                    <span>Online Agora</span>
+                </a>
+            </li>
+
+                        <li class="sidebar-heading">Revendedores</li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/criar_revendedor">
+                    <i class="bi bi-shop"></i>
+                    <span>Criar Revenda</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/revendedores">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Revendas</span>
+                </a>
+            </li>
+		            
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/relatorios">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/relatorio_geografico">
+                    <i class="bi bi-map"></i>
+                    <span>Mapa Geográfico</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/backup_clientes">
+                    <i class="bi bi-cloud-arrow-down-fill"></i>
+                    <span>Backup Clientes</span>
+                </a>
+            </li>
+
+            
+            
+            <li class="sidebar-heading">Ferramentas</li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/bot_regras.php">
+                    <i class="bi bi-robot"></i>
+                    <span>Bot de Atendimento</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/bot_fluxos.php">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>Fluxos do Bot</span>
+                </a>
+            </li>
+          <!--  <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/atendimento.php">
+                    <i class="bi bi-whatsapp"></i>
+                    <span>Atendimento ao Vivo</span>
+                    <span class="badge bg-success ms-2 small" style="font-size: 0.6rem;">LIVE</span>
+                </a>
+            </li> -->
+
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/bot_logs.php">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Logs do Bot</span>
+                </a>
+            </li>
+
+          <!--  <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/bot_testador.php">
+                    <i class="bi bi-cpu-fill"></i>
+                    <span>Laboratório (Testar Bot)</span>
+                </a>
+            </li>-->
+
+            
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/mensagens_whatsapp">
+                    <i class="bi bi-send"></i>
+                    <span>Campanhas WhatsApp</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/meus_links">
+                    <i class="bi bi-link-45deg"></i>
+                    <span>Encurtador</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/tickets">
+                    <i class="bi bi-ticket-perforated-fill"></i>
+                    <span>Suporte</span>
+                                    </a>
+            </li>
+
+            
+           <!-- <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/jogos">
+                    <i class="bi bi-trophy-fill"></i>
+                    <span>Jogos</span>
+                </a>
+            </li> -->
+            
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/gerador_banner">
+                    <i class="bi bi-card-image"></i>
+                    <span>Gerador de Banner</span>
+                </a>
+            </li>
+
+            <!-- <li class="sidebar-heading">Aplicativos</li> -->
+
+        <!--    <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/aplicativos">
+                    <i class="bi bi-phone-fill"></i>
+                    <span>Apps</span>
+                </a>
+            </li> -->
+
+            
+            <li class="nav-item mt-4">
+                <a class="nav-link " href="https://pg.tvdc.site/perfil">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Meu Perfil</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/atualizacoes.php">
+                    <i class="bi bi-patch-check-fill text-success"></i>
+                    <span>Atualizações e Correções</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="https://pg.tvdc.site/ajuda">
+                    <i class="bi bi-question-circle-fill"></i>
+                    <span>Ajuda e Tutoriais</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link text-danger" href="https://pg.tvdc.site/logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Sair</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<main>
+        <!-- Page Header -->
+        <div class="page-header animate__animated animate__fadeInDown">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="bi bi-people-fill me-3"></i>Clientes</h1>
+                    <p class="text-muted mb-0">Gerencie todos os seus clientes e testes diretamente.</p>
+                </div>
+                <div>
+                    <a href="criar_teste" class="btn btn-premium">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Novo Teste
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        
+        
+        <!-- Filtros -->
+        <div class="card-premium animate__animated animate__fadeInUp mb-4">
+            <form method="GET" action="" class="row g-3 align-items-end">
+                <div class="col-12 col-lg-5">
+                    <label class="form-label fw-semibold">Pesquisar</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="filtro" 
+                               value="1805268763"
+                               placeholder="Nome, login, obs ou data (23/01)...">
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <label class="form-label fw-semibold">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">Todos os status</option>
+                        <option value="ativo" >Ativo</option>
+                        <option value="teste" >Teste</option>
+                        <option value="suspenso" >Suspenso</option>
+                        <option value="expirado" >Expirado</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-2">
+                    <label class="form-label fw-semibold">Itens por página</label>
+                    <select class="form-select" name="itens" onchange="this.form.submit()">
+                                                    <option value="20" selected>
+                                20 itens
+                            </option>
+                                                    <option value="25" >
+                                25 itens
+                            </option>
+                                                    <option value="50" >
+                                50 itens
+                            </option>
+                                                    <option value="100" >
+                                100 itens
+                            </option>
+                                            </select>
+                </div>
+                
+                <div class="col-12 col-lg-2">
+                    <button type="submit" class="btn btn-premium w-100">
+                        <i class="bi bi-funnel me-2"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabela de Clientes -->
+        <div class="card-premium animate__animated animate__fadeInUp">
+            <div class="table-responsive" style="min-height: 400px;">
+                <table class="table table-premium">
+                    <thead>
+                        <tr>
+                            <th>Login</th>
+                            <th class="d-none d-md-table-cell">Senha</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                                                        <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                                <tr id="cliente-35296">
+                            <td>
+                                <div class="d-flex flex-column" style="max-width: 120px;">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-circle-fill me-2 flex-shrink-0" style="font-size: 8px; color: #adb5bd;" title="Offline" data-bs-toggle="tooltip"></i>
+                                        <span class="fw-bold text-truncate" title="1805268763">
+                                            1805268763                                        </span>
+                                                                            </div>
+                                                                            <small class="text-muted text-truncate" title="Teste Rápido via Dashboard">Teste Rápido via Dashboard</small>
+                                                                    </div>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <div class="input-group input-group-sm" style="min-width: 100px;">
+                                    <input type="password" class="form-control border-0 bg-transparent" value="648811" readonly>
+                                    <button class="btn btn-link text-muted" type="button" onclick="togglePassword(this)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="min-width: 100px;">
+                                    21/07/2026 15:38                                                                            <br><small class="text-success">29 dias rest.</small>
+                                                                    </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Ativo</span>                                <br>
+                                <small class="text-muted" title="Conexões Simultâneas">
+                                    <i class="bi bi-display me-1"></i>1 tela(s)
+                                </small>
+                            </td>
+                                                        <td class="text-center">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary d-inline-flex d-md-none align-items-center gap-2"
+                                    onclick="abrirModalAcoesCliente(this)"
+                                    data-cliente-id="35296"
+                                    data-username="1805268763"
+                                    data-password="648811"
+                                    data-vencimento="21/07/2026 15:38"
+                                    data-token="ocoWQoUA4aiQlMCu51m4hcO0-0V52tm5VrqWhtLaNdV4Xa2dZxvJtURMIZec599EgZNX-FaDqtGzD8JFRVcU3A"
+                                    data-code="9699564879"
+                                    data-is-trial="0"
+                                    data-max-connections="1"
+                                    data-enabled="1"
+                                    data-admin-enabled="1"
+                                    data-phone=""
+                                >
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                    Ações
+                                </button>
+                                <div class="d-none d-md-flex flex-wrap gap-1 justify-content-center">
+                                    <button type="button" class="btn btn-sm btn-outline-success border-0" onclick="enviarWhatsapp('1805268763', '648811', '21/07/2026 15:38', 'ocoWQoUA4aiQlMCu51m4hcO0-0V52tm5VrqWhtLaNdV4Xa2dZxvJtURMIZec599EgZNX-FaDqtGzD8JFRVcU3A', '9699564879', '')" title="Visualizar/Enviar WhatsApp" data-bs-toggle="tooltip">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark border-0" onclick="copiarLinkSSIPTV('ocoWQoUA4aiQlMCu51m4hcO0-0V52tm5VrqWhtLaNdV4Xa2dZxvJtURMIZec599EgZNX-FaDqtGzD8JFRVcU3A', '1805268763', '648811')" title="Link SSIPTV" data-bs-toggle="tooltip">
+                                        <i class="bi bi-link-45deg"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning border-0" onclick="mostrarLinkParaCliente('ocoWQoUA4aiQlMCu51m4hcO0-0V52tm5VrqWhtLaNdV4Xa2dZxvJtURMIZec599EgZNX-FaDqtGzD8JFRVcU3A', '', 0)" title="Link Renovação/Ativação" data-bs-toggle="tooltip">
+                                        <i class="bi bi-cash-coin"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary border-0" onclick="abrirModalRenovar(35296, '1805268763', 0)" title="Renovar" data-bs-toggle="tooltip">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info border-0" onclick="abrirModalTelas(35296, '1805268763', 1)" title="Alterar Telas" data-bs-toggle="tooltip">
+                                        <i class="bi bi-display"></i>
+                                    </button>
+                                    <a href="editar_cliente/35296" class="btn btn-sm btn-outline-secondary border-0" title="Editar" data-bs-toggle="tooltip">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    
+                                                                            <a href="clientes?acao=suspender&id=35296" class="btn btn-sm btn-outline-warning border-0" title="Suspender" data-bs-toggle="tooltip">
+                                            <i class="bi bi-pause-circle"></i>
+                                        </a>
+                                                                        
+                                    <a href="clientes?acao=excluir&id=35296" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Tem certeza que deseja excluir este cliente?')" title="Excluir" data-bs-toggle="tooltip">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                                            </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+                    </div>
+
+</main>
+
+<div class="modal fade" id="modalAcoesCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-lines-fill me-2"></i>
+                    Ações: <span data-role="cliente-nome"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" data-role="whatsapp">
+                        <i class="bi bi-eye me-2"></i>Visualizar/Enviar WhatsApp
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" data-role="cobranca">
+                        <i class="bi bi-cash-coin me-2"></i>Link de Cobrança
+                    </button>
+                    <button type="button" class="btn btn-outline-dark" data-role="ssiptv">
+                        <i class="bi bi-link-45deg me-2"></i>Copiar Link SSIPTV
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-role="renovar">
+                        <i class="bi bi-arrow-repeat me-2"></i>Renovar
+                    </button>
+                    <button type="button" class="btn btn-outline-info" data-role="telas">
+                        <i class="bi bi-display me-2"></i>Alterar Telas
+                    </button>
+                    <a class="btn btn-outline-secondary" data-role="editar" href="#">
+                        <i class="bi bi-pencil me-2"></i>Editar
+                    </a>
+                    <a class="btn btn-outline-warning" data-role="toggle-status" href="#"></a>
+                    <button type="button" class="btn btn-outline-danger" data-role="excluir">
+                        <i class="bi bi-trash me-2"></i>Excluir
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Renovar -->
+<div class="modal fade" id="modalRenovar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Renovar Cliente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="formRenovar">
+                <input type="hidden" name="csrf_token" value="4ac63fe856bcbb72b2056af3b5fd0bf44a03134d4502178fe997f8c3f00c6065">                <input type="hidden" name="action_nonce" value="4016c4306925d93dc08c95d98436dcee">                <input type="hidden" name="acao" value="renovar">
+                <input type="hidden" name="cliente_id" id="renovar_cliente_id">
+                
+                <div class="modal-body">
+                    <p class="mb-4">Renovando cliente: <strong id="renovar_cliente_nome" class="text-primary"></strong></p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Opções de Renovação</label>
+                        
+                        <div class="form-check card-radio mb-2">
+                            <input class="form-check-input" type="radio" name="renovacao_temp" id="renov_normal" value="0" checked onchange="toggleRenovacaoOpts()">
+                            <label class="form-check-label d-flex align-items-center" for="renov_normal">
+                                <span class="ms-2">Renovação Mensal</span>
+                            </label>
+                        </div>
+
+                        <div id="opts_mensal" class="ms-4 mb-3">
+                            <select class="form-select" name="meses">
+                                <option value="1">1 Mês</option>
+                                <option value="3">3 Meses</option>
+                                <option value="6">6 Meses</option>
+                                <option value="12">12 Meses</option>
+                            </select>
+                        </div>
+
+                        <div class="form-check card-radio">
+                            <input class="form-check-input" type="radio" name="renovacao_temp" id="renov_temp" value="1" onchange="toggleRenovacaoOpts()">
+                            <label class="form-check-label d-flex align-items-center" for="renov_temp">
+                                <span class="ms-2">Renovação Temporária (3 dias)</span>
+                                <span class="badge bg-warning ms-auto">Socorro</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-premium">
+                        <i class="bi bi-check-circle me-2"></i>Confirmar Renovação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Telas -->
+<div class="modal fade" id="modalTelas" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-display me-2"></i>Alterar Telas</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="4ac63fe856bcbb72b2056af3b5fd0bf44a03134d4502178fe997f8c3f00c6065">                <input type="hidden" name="acao" value="telas">
+                <input type="hidden" name="cliente_id" id="telas_cliente_id">
+                
+                <div class="modal-body text-center">
+                    <p class="mb-2">Cliente: <strong id="telas_cliente_nome" class="text-primary"></strong></p>
+                    <p class="text-muted small mb-4">Defina o limite de conexões simultâneas.</p>
+
+                    <div class="d-flex justify-content-center align-items-center mb-3">
+                        <button type="button" class="btn btn-outline-secondary rounded-circle" onclick="ajustarTelas(-1)" style="width: 38px; height: 38px;">-</button>
+                        <input type="number" class="form-control mx-3 text-center fw-bold" name="telas" id="input_telas" value="1" min="1" max="50" style="width: 80px; font-size: 1.2rem;">
+                        <button type="button" class="btn btn-outline-secondary rounded-circle" onclick="ajustarTelas(1)" style="width: 38px; height: 38px;">+</button>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="submit" class="btn btn-premium w-100">
+                        <i class="bi bi-save me-2"></i>Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal WhatsApp -->
+<div class="modal fade" id="modalWhatsapp" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #25D366, #128C7E); color: white; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-whatsapp me-2"></i>Enviar Mensagem</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="whatsappDestino">
+                <div class="mb-3">
+                    <label for="msgWhatsapp" class="form-label fw-semibold">Mensagem gerada:</label>
+                    <textarea class="form-control" id="msgWhatsapp" rows="8" style="font-family: monospace; font-size: 0.9rem;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="copiarMsgModal()">
+                    <i class="bi bi-clipboard me-2"></i>Copiar Texto
+                </button>
+                <button type="button" class="btn text-white" style="background-color: #25D366;" onclick="enviarMsgModal(this)">
+                    <i class="bi bi-send me-2"></i>Enviar para WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const hasEvolutionApi = false;
+
+function togglePassword(btn) {
+    const input = btn.previousElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+    } else {
+        input.type = 'password';
+        btn.innerHTML = '<i class="bi bi-eye"></i>';
+    }
+}
+const formRenovar = document.getElementById('formRenovar');
+if (formRenovar) {
+    formRenovar.addEventListener('submit', function(e) {
+        const isTemp = document.getElementById('renov_temp').checked;
+        const mesesSel = document.querySelector('select[name="meses"]');
+        const meses = mesesSel ? parseInt(mesesSel.value, 10) : 1;
+        const msg = isTemp ? 'Confirmar renovação temporária por 3 dias?' : `Confirmar renovação por ${meses} mês(es)?`;
+        if (!confirm(msg)) {
+            e.preventDefault();
+        }
+    });
+}
+
+function abrirModalAcoesCliente(btn) {
+    const d = btn.dataset;
+    const id = Number(d.clienteId || 0);
+    if (!id) return;
+
+    const username = d.username || '';
+    const password = d.password || '';
+    const vencimento = d.vencimento || '';
+    const token = d.token || '';
+    const code = d.code || '';
+    const isTrial = d.isTrial === '1' ? 1 : 0;
+    const maxConnections = Number(d.maxConnections || 1);
+    const enabled = d.enabled === '1';
+    const adminEnabled = d.adminEnabled === '1';
+    const phone = d.phone || '';
+
+    const modalEl = document.getElementById('modalAcoesCliente');
+    modalEl.querySelector('[data-role="cliente-nome"]').textContent = username;
+
+    const btnWhatsapp = modalEl.querySelector('[data-role="whatsapp"]');
+    btnWhatsapp.onclick = function () {
+        enviarWhatsapp(username, password, vencimento, token, code, phone);
+    };
+
+    const btnCobranca = modalEl.querySelector('[data-role="cobranca"]');
+    btnCobranca.onclick = function () {
+        mostrarLinkParaCliente(token, phone, isTrial);
+    };
+
+    const btnSsiptv = modalEl.querySelector('[data-role="ssiptv"]');
+    btnSsiptv.onclick = function () {
+        copiarLinkSSIPTV(token, username, password);
+    };
+
+    const btnRenovar = modalEl.querySelector('[data-role="renovar"]');
+    btnRenovar.onclick = function () {
+        abrirModalRenovar(id, username, isTrial);
+    };
+
+    const btnTelas = modalEl.querySelector('[data-role="telas"]');
+    btnTelas.onclick = function () {
+        abrirModalTelas(id, username, maxConnections);
+    };
+
+    const linkEditar = modalEl.querySelector('[data-role="editar"]');
+    linkEditar.href = 'editar_cliente/' + id;
+
+    const linkToggle = modalEl.querySelector('[data-role="toggle-status"]');
+    if (enabled && adminEnabled) {
+        linkToggle.href = 'clientes?acao=suspender&id=' + id;
+        linkToggle.className = 'btn btn-outline-warning';
+        linkToggle.innerHTML = '<i class="bi bi-pause-circle me-2"></i>Suspender';
+    } else {
+        linkToggle.href = 'clientes?acao=ativar&id=' + id;
+        linkToggle.className = 'btn btn-outline-success';
+        linkToggle.innerHTML = '<i class="bi bi-play-circle me-2"></i>Ativar';
+    }
+
+    const btnExcluir = modalEl.querySelector('[data-role="excluir"]');
+    btnExcluir.onclick = function () {
+        if (confirm('Tem certeza que deseja excluir este cliente?')) {
+            window.location.href = 'clientes?acao=excluir&id=' + id;
+        }
+    };
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+function copiarDadosAcesso(login, senha, dns) {
+    const texto = `🔐 DADOS DE ACESSO\n\n` +
+                  `👤 Usuário: ${login}\n` +
+                  `🔑 Senha: ${senha}\n` +
+                  `🌐 DNS/URL: ${dns}\n\n` +
+                  `📱 Cole estes dados no seu aplicativo IPTV`;
+
+    navigator.clipboard.writeText(texto).then(function() {
+        alert('Dados copiados para a área de transferência!');
+    }, function(err) {
+        prompt("Copie os dados abaixo:", texto);
+    });
+}
+
+function abrirModalRenovar(id, nome, isTrial) {
+    document.getElementById('renovar_cliente_id').value = id;
+    document.getElementById('renovar_cliente_nome').textContent = nome;
+    
+    // Reset form
+    document.getElementById('renov_normal').checked = true;
+    toggleRenovacaoOpts();
+    
+    // Configurar opção de 3 dias
+    const radioTemp = document.getElementById('renov_temp');
+    const divRenovTemp = radioTemp.closest('.card-radio');
+    
+    if (isTrial) {
+        radioTemp.disabled = true;
+        if (divRenovTemp) divRenovTemp.style.display = 'none';
+    } else {
+        radioTemp.disabled = false;
+        if (divRenovTemp) divRenovTemp.style.display = 'block';
+    }
+    
+    new bootstrap.Modal(document.getElementById('modalRenovar')).show();
+}
+
+function toggleRenovacaoOpts() {
+    const isTemp = document.getElementById('renov_temp').checked;
+    const optsMensal = document.getElementById('opts_mensal');
+    
+    if (isTemp) {
+        optsMensal.style.opacity = '0.5';
+        optsMensal.style.pointerEvents = 'none';
+    } else {
+        optsMensal.style.opacity = '1';
+        optsMensal.style.pointerEvents = 'auto';
+    }
+}
+
+function abrirModalTelas(id, nome, telasAtuais) {
+    document.getElementById('telas_cliente_id').value = id;
+    document.getElementById('telas_cliente_nome').textContent = nome;
+    document.getElementById('input_telas').value = telasAtuais;
+    
+    new bootstrap.Modal(document.getElementById('modalTelas')).show();
+}
+
+function ajustarTelas(delta) {
+    const input = document.getElementById('input_telas');
+    let val = parseInt(input.value) || 1;
+    val += delta;
+    if (val < 1) val = 1;
+    if (val > 50) val = 50; // Limite de segurança visual
+    input.value = val;
+}
+
+// Inicializar Tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl)
+})
+
+function copiarLinkSSIPTV(token, login = '', senha = '') {
+    const baseUrl = 'https://pg.tvdc.site/';
+    const link = (login && senha) 
+        ? `${baseUrl}ssiptv/get/${login}/${senha}/download_m3u/`
+        : `https://pg.tvdc.site/s.php?token=${token}`;
+    
+    navigator.clipboard.writeText(link).then(function() {
+        alert('Link SSIPTV copiado para a área de transferência!');
+    }, function(err) {
+        // Fallback se falhar a cópia automática
+        prompt('Copie o link abaixo:', link);
+    });
+}
+
+function copiarLinkRenovacao(token) {
+    const dominio = 'https://pg.tvdc.site';
+    const link = `${dominio}/s.php?token=${token}&auto_pix=1`;
+    
+    navigator.clipboard.writeText(link).then(function() {
+        alert('Link de Renovação/Ativação copiado!\nAo abrir, o QR Code PIX já aparecerá pronto.');
+    }, function(err) {
+        prompt('Copie o link abaixo:', link);
+    });
+}
+
+function enviarWhatsapp(login, password, vencimento, token, code = '', phone = '') {
+    const dns = "tvdc.online";
+    const appName = "TVdeCASA";
+    const msgTemplate = "Bem vindo a TVdeCASA\r\n\r\nUrl: http:\/\/tvdcpro.site\r\nUsu\u00e1rio: %user%\r\nSenha: %pass%\r\n\r\nLista M3U HLS: http:\/\/tvdcpro.site\/get.php?username=%user%&password=%pass%&type=m3u_plus&output=hls\r\n\r\n\r\nLista SSIPTV: %link%\r\n\r\nValido at\u00e9: %val%\r\n\r\nAtt: TVdeCASA";
+    
+    const baseUrl = 'https://pg.tvdc.site/';
+    const linkSSIPTV = `${baseUrl}ssiptv/get/${login}/${password}/download_m3u/`;
+    const dominio = 'https://pg.tvdc.site';
+    const linkLimpo = `${dominio}/s.php?token=${token}`;
+    const linkRenovacao = `${linkLimpo}&auto_pix=1`;
+    
+    let msg = msgTemplate
+        .replace(/%user%/g, login)
+        .replace(/%pass%/g, password)
+        .replace(/%dns%/g, dns)
+        .replace(/%name%/g, appName)
+        .replace(/%val%/g, vencimento)
+        .replace(/%link%/g, linkSSIPTV);
+    
+    // Remover referências à lista MPEGTS e seu respectivo marcador
+    msg = msg.replace(/(?:\r?\n)?(?:Lista\s+M3U\s+MPEGTS:\s*)?#m3u_link_mpegts#/ig, '');
+    msg = msg.replace(/#m3u_link_mpegts#/g, '');
+    msg = msg.replace(/(?:\r?\n)?(?:Lista\s+M3U\s+MPEGTS:\s*)?https?:\/\/[^\s]+output=mpegts/ig, '');
+    
+    // Adicionar link de acesso direto com pagamento
+    msg += "\n\n🔗 *Acesso e Pagamento:*\n" + linkRenovacao;
+    msg += "\nAo abrir o link, o QR Code PIX já aparecerá!";
+    
+    // NÃO incluir código de ativação conforme solicitado
+    // if (code && code.trim() !== '') {
+    //     msg += "\n\nCódigo de ativação: *" + code + "*";
+    // }
+    
+    // Preencher o modal
+    document.getElementById('msgWhatsapp').value = msg;
+    document.getElementById('whatsappDestino').value = phone;
+    
+    // Abrir o modal
+    new bootstrap.Modal(document.getElementById('modalWhatsapp')).show();
+}
+
+function copiarMsgModal() {
+    const textarea = document.getElementById('msgWhatsapp');
+    textarea.select();
+    textarea.setSelectionRange(0, 99999); // Mobile
+    
+    navigator.clipboard.writeText(textarea.value).then(function() {
+        // Feedback visual
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2 me-2"></i>Copiado!';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 2000);
+    });
+}
+
+function enviarMsgModal(btnElement) {
+    const msg = document.getElementById('msgWhatsapp').value;
+    const phone = document.getElementById('whatsappDestino').value;
+    const btn = btnElement || document.querySelector('#modalWhatsapp button[onclick*="enviarMsgModal"]');
+
+    // Função auxiliar para abrir nativo
+    const abrirNativo = () => {
+        let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        if (phone && phone.trim() !== '') {
+             const cleanPhone = phone.replace(/\D/g, '');
+             url += `&phone=${cleanPhone}`;
+        }
+        window.open(url, '_blank');
+    };
+
+    if (hasEvolutionApi && phone && phone.trim() !== '') {
+        const originalHtml = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enviando...';
+
+        const formData = new FormData();
+        formData.append('acao', 'enviar_mensagem_api');
+        formData.append('phone', phone);
+        formData.append('message', msg);
+        
+        // Adicionar CSRF Token
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+        formData.append('csrf_token', csrfToken);
+
+        fetch('clientes.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Enviado!';
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalWhatsapp'));
+                    if (modal) modal.hide();
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }, 1500);
+            } else {
+                // Se falhar a API, avisa e abre o nativo
+                if (confirm('Falha no envio via API: ' + (data.message || 'Erro desconhecido') + '\n\nDeseja tentar via WhatsApp Web/App?')) {
+                    abrirNativo();
+                }
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (confirm('Erro de comunicação com o servidor.\n\nDeseja tentar via WhatsApp Web/App?')) {
+                abrirNativo();
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    } else {
+        abrirNativo();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const actionId = urlParams.get('id');
+    const action = urlParams.get('acao');
+    
+    if (actionId && (action === 'suspender' || action === 'ativar')) {
+        const element = document.getElementById('cliente-' + actionId);
+        if (element) {
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('table-active');
+                setTimeout(() => element.classList.remove('table-active'), 2000);
+            }, 100);
+        }
+    }
+
+    // Prevent duplicate renewal submissions
+    const formRenovar = document.getElementById('formRenovar');
+    if (formRenovar) {
+        formRenovar.addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                if (btn.disabled) {
+                    e.preventDefault();
+                    return;
+                }
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
+            }
+        });
+    }
+});
+
+</script>
+
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Custom Scripts -->
+    <script>
+        // Configuração de tema do SweetAlert2
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Inicializar DataTables com design moderno
+        $(document).ready(function() {
+            if ($.fn.DataTable) {
+                $('.datatable').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
+                    },
+                    pageLength: 25,
+                    responsive: true,
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+                    drawCallback: function() {
+                        $('.dataTables_paginate > .pagination').addClass('pagination-rounded');
+                    }
+                });
+            }
+
+            // Adicionar animações aos cards
+            $('.card-premium, .stat-card').addClass('animate__animated animate__fadeInUp');
+
+            // Animação de contagem para números grandes
+            $('.stat-value').each(function() {
+                const $this = $(this);
+                const countTo = parseInt($this.text().replace(/\D/g, ''));
+
+                if (countTo > 0) {
+                    $({ countNum: 0 }).animate({
+                        countNum: countTo
+                    }, {
+                        duration: 1500,
+                        easing: 'swing',
+                        step: function() {
+                            $this.text(Math.floor(this.countNum).toLocaleString('pt-BR'));
+                        },
+                        complete: function() {
+                            $this.text(countTo.toLocaleString('pt-BR'));
+                        }
+                    });
+                }
+            });
+        });
+
+        // Função para confirmar exclusão com estilo moderno
+        function confirmarExclusao(url, mensagem = 'Esta ação não pode ser desfeita!') {
+            Swal.fire({
+                title: 'Tem certeza?',
+                text: mensagem,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="bi bi-trash me-2"></i>Sim, excluir!',
+                cancelButtonText: '<i class="bi bi-x-lg me-2"></i>Cancelar',
+                background: '#fff',
+                backdrop: 'rgba(0,0,0,0.4)',
+                customClass: {
+                    confirmButton: 'btn btn-danger',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+
+        // Função para mostrar toast de sucesso
+        function mostrarSucesso(mensagem) {
+            Toast.fire({
+                icon: 'success',
+                title: mensagem,
+                background: '#fff',
+                iconColor: '#10b981'
+            });
+        }
+
+        // Função para mostrar toast de erro
+        function mostrarErro(mensagem) {
+            Toast.fire({
+                icon: 'error',
+                title: mensagem,
+                background: '#fff',
+                iconColor: '#ef4444'
+            });
+        }
+
+        // Função para mostrar toast de info
+        function mostrarInfo(mensagem) {
+            Toast.fire({
+                icon: 'info',
+                title: mensagem,
+                background: '#fff',
+                iconColor: '#3b82f6'
+            });
+        }
+
+        // Função para mostrar toast de aviso
+        function mostrarAviso(mensagem) {
+            Toast.fire({
+                icon: 'warning',
+                title: mensagem,
+                background: '#fff',
+                iconColor: '#f59e0b'
+            });
+        }
+
+        // Auto-hide alerts após 5 segundos com fade
+        setTimeout(function() {
+            $('.alert').fadeOut('slow', function() {
+                $(this).remove();
+            });
+        }, 5000);
+
+        // Toggle sidebar em mobile (Topo e Bottom Nav) corrigido com Event Delegation
+        $(document).on('click', '#sidebarToggle, #bottomSidebarToggle', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Evita fechamento imediato
+            $('.sidebar-premium').toggleClass('show');
+            $('#sidebarOverlay').toggleClass('show');
+        });
+
+        // Fechar sidebar ao clicar fora (mobile) ou no overlay
+        $(document).on('click', '#sidebarOverlay', function() {
+            $('.sidebar-premium').removeClass('show');
+            $('#sidebarOverlay').removeClass('show');
+        });
+
+        $(document).on('click', function(e) {
+            if ($(window).width() < 992) {
+                // Se clicar fora do sidebar e fora do botão toggle
+                if (!$(e.target).closest('.sidebar-premium').length && !$(e.target).closest('#sidebarToggle').length) {
+                    // Verifica se está aberto
+                    if ($('.sidebar-premium').hasClass('show')) {
+                        $('.sidebar-premium').removeClass('show');
+                        $('#sidebarOverlay').removeClass('show');
+                    }
+                }
+            }
+        });
+
+        // Copiar para clipboard com feedback
+        function copiarTexto(texto) {
+            navigator.clipboard.writeText(texto).then(function() {
+                mostrarSucesso('Copiado para a área de transferência!');
+            }, function(err) {
+                mostrarErro('Erro ao copiar: ' + err);
+            });
+        }
+
+        // Adicionar efeito de ripple aos botões
+        $('.btn').on('click', function(e) {
+            const ripple = $('<span class="ripple"></span>');
+            $(this).append(ripple);
+
+            const x = e.pageX - $(this).offset().left;
+            const y = e.pageY - $(this).offset().top;
+
+            ripple.css({
+                left: x,
+                top: y
+            }).addClass('ripple-effect');
+
+            setTimeout(() => ripple.remove(), 600);
+        });
+    </script>
+
+    <!-- Bottom Mobile Nav -->
+    <nav class="bottom-nav d-md-none">
+        <div class="bottom-nav-inner">
+            <a href="dashboard" class="bottom-nav-item ">
+                <i class="bi bi-house-door-fill"></i>
+                <span>Início</span>
+            </a>
+
+            <a href="clientes" class="bottom-nav-item active">
+                <i class="bi bi-people-fill"></i>
+                <span>Clientes</span>
+            </a>
+            <a href="relatorios" class="bottom-nav-item ">
+                <i class="bi bi-graph-up"></i>
+                <span>Resumo</span>
+            </a>
+            <a href="javascript:void(0)" class="bottom-nav-item" id="bottomSidebarToggle">
+                <i class="bi bi-list"></i>
+                <span>Mais</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Modais Globais (Teste Rápido) -->
+    
+<!-- Modal Configuração Teste Rápido -->
+<div class="modal fade" id="modalConfigTeste" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2"></i>Configurar Teste</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4">Selecione o pacote desejado para o teste rápido.</p>
+                
+                <div class="d-grid gap-3">
+                    <!-- Opção 1 -->
+                    <div class="position-relative">
+                        <input type="radio" class="btn-check" name="pacoteTeste" id="pkg1" value="1" checked>
+                        <label class="btn btn-outline-primary w-100 p-3 text-start d-flex align-items-center" for="pkg1">
+                            <i class="bi bi-box-seam fs-3 me-3"></i>
+                            <div>
+                                <div class="fw-bold">Completo com Adulto</div>
+                                <small class="text-muted">Pacote Padrão</small>
+                            </div>
+                            <i class="bi bi-check-circle-fill ms-auto fs-4 text-primary check-icon"></i>
+                        </label>
+                    </div>
+
+                    <!-- Opção 2 -->
+                    <div class="position-relative">
+                        <input type="radio" class="btn-check" name="pacoteTeste" id="pkg2" value="2">
+                        <label class="btn btn-outline-primary w-100 p-3 text-start d-flex align-items-center" for="pkg2">
+                            <i class="bi bi-shield-check fs-3 me-3"></i>
+                            <div>
+                                <div class="fw-bold">Completo sem Adulto</div>
+                                <small class="text-muted">Pacote Alternativo</small>
+                            </div>
+                            <i class="bi bi-check-circle-fill ms-auto fs-4 text-primary check-icon"></i>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="btnGerarTesteFinal">
+                    <i class="bi bi-lightning-fill me-2"></i>Gerar Teste
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyXCIPTV() {
+    const userEl = document.getElementById('modalUser');
+    const passEl = document.getElementById('modalPass');
+    const dnsEl = document.getElementById('modalDns');
+
+    const user = userEl ? userEl.value.trim() : '';
+    const pass = passEl ? passEl.value.trim() : '';
+    let dns = dnsEl ? (dnsEl.innerText || dnsEl.textContent || '').trim() : '';
+
+    if (!user || !pass) {
+        alert('Erro: Usuário ou senha não encontrados.');
+        return;
+    }
+    
+    const combined = `DNS: ${dns}\nUsuário: ${user}\nSenha: ${pass}`;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(combined).then(() => {
+            if (typeof mostrarSucesso === 'function') mostrarSucesso('Dados XCIPTV copiados!');
+            else alert('Dados XCIPTV copiados!');
+        }).catch(err => fallbackCopy(combined));
+    } else {
+        fallbackCopy(combined);
+    }
+}
+
+function fallbackCopy(text) {
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = text;
+    tempTextArea.style.position = 'fixed';
+    tempTextArea.style.left = '-9999px';
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    try {
+        document.execCommand('copy');
+        if (typeof mostrarSucesso === 'function') mostrarSucesso('Dados XCIPTV copiados!');
+        else alert('Dados XCIPTV copiados!');
+    } catch (err) {
+        alert('Erro ao copiar dados. Tente manualmente.');
+    }
+    document.body.removeChild(tempTextArea);
+}
+</script>
+
+<style>
+.btn-check:not(:checked) + label .check-icon {
+    display: none;
+}
+</style>
+
+<!-- Modal Teste Rápido Resultado -->
+<div class="modal fade" id="modalTesteRapido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-lightning-charge-fill me-2"></i>Teste Rápido Gerado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="text-center mb-4">
+                    <div class="avatar-circle bg-success text-white mx-auto mb-3" style="width: 60px; height: 60px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <h5 class="fw-bold text-success">Teste Criado com Sucesso!</h5>
+                    <p class="text-muted small" id="pkgName">Pacote Padrão</p>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <label class="small text-muted fw-bold text-uppercase mb-1">Usuário</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control bg-white" id="modalUser" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyToClipboard('modalUser')"><i class="bi bi-clipboard"></i></button>
+                        </div>
+
+                        <label class="small text-muted fw-bold text-uppercase mb-1">Senha</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control bg-white" id="modalPass" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyToClipboard('modalPass')"><i class="bi bi-clipboard"></i></button>
+                        </div>
+                        <div class="d-flex justify-content-end mb-3 gap-2">
+                            <button class="btn btn-sm btn-outline-info" onclick="copyXCIPTV()">
+                                <i class="bi bi-phone me-1"></i>Copiar XCIPTV
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyCodeApp()">
+                                <i class="bi bi-clipboard-check me-1"></i>Copiar Código TVDC
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyUserPass()">
+                                <i class="bi bi-files me-1"></i>Copiar Usuário + Senha
+                            </button>
+                        </div>
+                        
+                        <div class="row">
+                             <div class="col-12">
+                                <label class="small text-muted fw-bold text-uppercase mb-1">DNS</label>
+                                <p class="fw-bold mb-0 text-truncate" id="modalDns"></p>
+                             </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Código App TVDECASA</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-white" id="modalCodigoApp" readonly>
+                                <button class="btn btn-outline-primary" type="button" onclick="copyToClipboard('modalCodigoApp')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <!--
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Link do Portal do Cliente (Acesso/Pagamento)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-white" id="modalLinkPagamento" readonly>
+                                <button class="btn btn-outline-success" onclick="copyToClipboard('modalLinkPagamento')"><i class="bi bi-clipboard-check"></i></button>
+                            </div>
+                            
+                            <small class="text-muted extra-small" style="font-size: 0.7rem;">Use este link para enviar ao cliente para pagamento PIX e acesso ao painel.</small>
+                            -->
+                        </div>
+                       <!--
+                        <div class="mt-3">
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Link (M3U MPEGTS)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-white" id="modalLink" readonly>
+                                <button class="btn btn-outline-primary" onclick="copyToClipboard('modalLink')"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </div>
+                        -->
+                        <div class="mt-3">
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Link (M3U HLS)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-white" id="modalLinkHls" readonly>
+                                <button class="btn btn-outline-primary" onclick="copyToClipboard('modalLinkHls')"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Link (SSIPTV)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-white" id="modalLinkSsiptv" readonly>
+                                <button class="btn btn-outline-primary" onclick="copyToClipboard('modalLinkSsiptv')"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success fw-bold py-2" onclick="copyMessage()">
+                        <i class="bi bi-whatsapp me-2"></i>Copiar Mensagem WhatsApp
+                    </button>
+                </div>
+                
+                <textarea id="fullMessage" class="d-none"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- JS Teste Rápido Global -->
+    <script src="js/teste_rapido.js?v=4"></script>
+</body>
+</html>
+
+<!-- Modal para Exibir Link de Renovação/Ativação -->
+<div class="modal fade" id="modalExibirLink" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-white border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-cash-coin me-2"></i>Link para Cliente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-3">Copie o link abaixo e envie ao cliente via WhatsApp:</p>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Ao clicar neste link, o cliente será logado automaticamente e o QR Code PIX aparecerá pronto para pagamento.
+                </div>
+                
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="inputExibirLink" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copiarLinkExibido()">
+                            <i class="bi bi-clipboard"></i> Link
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mb-3">
+                    <button type="button" class="btn btn-outline-primary" onclick="copiarTextoCobranca()">
+                        <i class="bi bi-clipboard-check me-2"></i>Copiar Mensagem
+                    </button>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" id="btnEnviarCobranca" onclick="enviarWhatsAppLinkCliente()">
+                        <i class="bi bi-whatsapp me-2"></i>Enviar via WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>// Função para mostrar o modal com o link
+function mostrarLinkParaCliente(token, phone = '', isTrial = 0) {
+    // Montar o link completo com auto_pix=1
+    const dominio = 'https://pg.tvdc.site';
+    const linkCompleto = `${dominio}/s.php?token=${token}&auto_pix=1`;
+    
+    // Usar encurtador via AJAX
+    fetch('api_encurtar.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            url: linkCompleto,
+            token: token
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const linkFinal = data.success ? data.short_url : linkCompleto;
+        
+        // Preencher o input
+        document.getElementById('inputExibirLink').value = linkFinal;
+        
+        // Guardar dados no dataset do modal
+        const modal = document.getElementById('modalExibirLink');
+        modal.dataset.phone = phone || '';
+        modal.dataset.token = token || '';
+        modal.dataset.isTrial = isTrial;
+        
+        // Abrir modal
+        new bootstrap.Modal(modal).show();
+    })
+    .catch(error => {
+        // Fallback para link original
+        document.getElementById('inputExibirLink').value = linkCompleto;
+        const modal = document.getElementById('modalExibirLink');
+        modal.dataset.phone = phone || '';
+        modal.dataset.isTrial = isTrial;
+        new bootstrap.Modal(modal).show();
+    });
+}
+
+// Função para copiar o link do modal
+function copiarLinkExibido() {
+    const input = document.getElementById('inputExibirLink');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    
+    navigator.clipboard.writeText(input.value).then(function() {
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Copiado!';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 2000);
+    }, function() {
+        // Fallback
+        document.execCommand('copy');
+        alert('Link copiado!');
+    });
+}
+
+// Função para copiar o texto completo da cobrança
+function copiarTextoCobranca() {
+    const modal = document.getElementById('modalExibirLink');
+    const link = document.getElementById('inputExibirLink').value;
+    const isTrial = modal.dataset.isTrial === '1';
+    
+    let msg = "";
+    if (isTrial) {
+        msg = "Para ver os planos e preços, acesse o link abaixo. Ativação automática na hora e sem complicação.\n\n" + link;
+    } else {
+        msg = "🔗 *Acesso e Pagamento:*\n" + link;
+    }
+    
+    navigator.clipboard.writeText(msg).then(function() {
+        alert('Mensagem completa copiada!');
+    }, function() {
+        prompt('Copie a mensagem abaixo:', msg);
+    });
+}
+
+// Função para enviar via WhatsApp
+function enviarWhatsAppLinkCliente() {
+    const modal = document.getElementById('modalExibirLink');
+    const link = document.getElementById('inputExibirLink').value;
+    const phone = modal.dataset.phone || '';
+    const isTrial = modal.dataset.isTrial === '1';
+    const btn = document.getElementById('btnEnviarCobranca');
+    
+    let msg = "";
+    if (isTrial) {
+        msg = "Para ver os planos e preços, acesse o link abaixo. Ativação automática na hora e sem complicação.\n\n" + link;
+    } else {
+        msg = "🔗 *Acesso e Pagamento:*\n" + link;
+    }
+    
+    const abrirNativo = () => {
+        if (phone && phone.length >= 10) {
+            const phoneClean = phone.replace(/\D/g, '');
+            const whatsappUrl = `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`;
+            window.open(whatsappUrl, '_blank');
+        } else {
+            navigator.clipboard.writeText(msg).then(function() {
+                alert('Telefone não cadastrado. Mensagem copiada! Cole no WhatsApp do cliente.');
+            });
+        }
+    };
+
+    if (hasEvolutionApi && phone && phone.trim() !== '') {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enviando...';
+
+        const formData = new FormData();
+        formData.append('acao', 'enviar_mensagem_api');
+        formData.append('phone', phone);
+        formData.append('message', msg);
+        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+
+        fetch('clientes.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Enviado!';
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }, 1500);
+            } else {
+                if (confirm('Falha no envio via API: ' + (data.message || 'Erro') + '\n\nDeseja abrir o WhatsApp manual?')) {
+                    abrirNativo();
+                }
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            abrirNativo();
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    } else {
+        abrirNativo();
+    }
+}
+</script>

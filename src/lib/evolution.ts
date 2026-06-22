@@ -88,6 +88,19 @@ export class EvolutionAPI {
       body: JSON.stringify(settings),
     })
   }
+
+  async setTypebot(instanceName: string, typebotData: any) {
+    return this.request(`/typebot/create/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(typebotData),
+    })
+  }
+
+  async removeTypebot(instanceName: string) {
+    return this.request(`/typebot/delete/${instanceName}`, {
+      method: 'DELETE',
+    })
+  }
 }
 
 export function createEvolutionClient() {

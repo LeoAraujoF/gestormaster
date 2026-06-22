@@ -54,6 +54,7 @@ export default function MinhaContaPage() {
   const [supportPhone, setSupportPhone] = useState("")
   const [pixKey, setPixKey] = useState("")
   const [pixName, setPixName] = useState("")
+  const [whatsappChannelLink, setWhatsappChannelLink] = useState("")
   const [timezone, setTimezone] = useState("-03:00")
   const [isSavingProfile, setIsSavingProfile] = useState(false)
 
@@ -80,6 +81,7 @@ export default function MinhaContaPage() {
         setSupportPhone(user.user_metadata.support_phone || "")
         setPixKey(user.user_metadata.pix_key || "")
         setPixName(user.user_metadata.pix_name || "")
+        setWhatsappChannelLink(user.user_metadata.whatsapp_channel_link || "")
         setTimezone(user.user_metadata.timezone || "-03:00")
       }
 
@@ -169,6 +171,7 @@ export default function MinhaContaPage() {
           support_phone: supportPhone,
           pix_key: pixKey,
           pix_name: pixName,
+          whatsapp_channel_link: whatsappChannelLink,
           timezone: timezone
         }
       })
@@ -335,6 +338,18 @@ export default function MinhaContaPage() {
                   />
                   <p className="text-[10px] text-muted-foreground">Variável: {'{{telefone_suporte}}'}</p>
                 </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="whatsappChannelLink">Link do Canal VIP / Grupo de Avisos</Label>
+                <Input 
+                  id="whatsappChannelLink"
+                  value={whatsappChannelLink}
+                  onChange={(e) => setWhatsappChannelLink(e.target.value)}
+                  placeholder="Ex: https://chat.whatsapp.com/..."
+                  className="bg-background/50 h-11"
+                />
+                <p className="text-[10px] text-muted-foreground">Variável automática: {'{{link_canal}}'}</p>
               </div>
 
               <div className="pt-4 border-t border-border/50">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Edit2, Trash2, Loader2, Users, Search, RefreshCw, Calendar as CalendarIcon, Gift, Download, MessageCircle, DollarSign, TrendingDown, CheckCircle2, AlertCircle } from "lucide-react"
+import { Plus, Edit2, Trash2, Loader2, Users, Search, RefreshCw, Calendar as CalendarIcon, Gift, Download, MessageCircle, DollarSign, TrendingDown, CheckCircle2, AlertCircle, Tv, Filter } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask } from "@/lib/utils"
 import { format } from "date-fns"
@@ -13,7 +13,7 @@ import { RenewDialog, PromoDialog, DeleteDialog } from "@/components/client-acti
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -65,9 +65,12 @@ export default function ClientesPage() {
   const [renewingClient, setRenewingClient] = useState<any | null>(null)
   const [promoClient, setPromoClient] = useState<any | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [userPlan, setUserPlan] = useState<string>("Desconhecido")
   const [isAdmin, setIsAdmin] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
   
   // Client Profile 360 state
   const [profileClient, setProfileClient] = useState<any | null>(null)
@@ -84,6 +87,9 @@ export default function ClientesPage() {
   const [filterService, setFilterService] = useState<string>("all")
   const [filterMinPrice, setFilterMinPrice] = useState<string>("")
   const [filterMaxPrice, setFilterMaxPrice] = useState<string>("")
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("")
+  const [filterDateTo, setFilterDateTo] = useState<string>("")
+  const [quickFilter, setQuickFilter] = useState<string>("all")
 
 
   
@@ -196,6 +202,27 @@ export default function ClientesPage() {
     setIsDialogOpen(true)
   }
 
+  /*
+  const handleSyncIPTV = async () => {
+    setIsSyncing(true)
+    toast.loading("Sincronizando clientes do painel IPTV...", { id: "sync-iptv" })
+    try {
+      const res = await fetch('/api/iptv/sync', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(data.message || "Sincronização concluída com sucesso!", { id: "sync-iptv" })
+        loadData()
+      } else {
+        toast.error(data.error || "Erro ao sincronizar. Verifique se configurou a integração TVdeCasa.", { id: "sync-iptv" })
+      }
+    } catch (error) {
+      toast.error("Erro interno ao sincronizar IPTV.", { id: "sync-iptv" })
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+  */
+
 
 
 
@@ -205,24 +232,131 @@ export default function ClientesPage() {
       (c.username && c.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.phone && c.phone.includes(searchTerm));
       
-    const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
-    
-    const matchesService = filterService === 'all' || 
+    // Filter by Status including "expiring" (next 3 days)
+    let matchesStatus = true;
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'expiring') {
+        if (!c.due_date) {
+          matchesStatus = false;
+        } else {
+          const dueDate = new Date(c.due_date + "T00:00:00");
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          const diffTime = dueDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          // Vencendo em até 3 dias (e não vencido)
+          matchesStatus = diffDays >= 0 && diffDays <= 3;
+        }
+      } else {
+        matchesStatus = c.status === filterStatus;
+      }
+    }
+        const matchesService = filterService === 'all' || 
       (c.client_services && c.client_services.some((cs: any) => cs.service_id === filterService));
       
     const price = c.plan_value || 0;
     const matchesMin = !filterMinPrice ? true : price >= parseFloat(filterMinPrice);
     const matchesMax = !filterMaxPrice ? true : price <= parseFloat(filterMaxPrice);
     
-    return matchesSearch && matchesStatus && matchesService && matchesMin && matchesMax;
-  })
+    // Date Filter
+    let matchesDate = true;
+    if (filterDateFrom || filterDateTo) {
+      if (!c.due_date) {
+        matchesDate = false;
+      } else {
+        if (filterDateFrom && c.due_date < filterDateFrom) matchesDate = false;
+        if (filterDateTo && c.due_date > filterDateTo) matchesDate = false;
+      }
+    }
+    
+    // Quick Filters
+    let matchesQuick = true;
+    if (quickFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      
+      if (quickFilter === 'today') {
+        if (!c.due_date) matchesQuick = false;
+        else {
+          const dueDate = new Date(c.due_date + "T00:00:00");
+          matchesQuick = dueDate.getTime() === today.getTime();
+        }
+      } 
+      else if (quickFilter === 'overdue_10') {
+        if (!c.due_date) matchesQuick = false;
+        else {
+          const dueDate = new Date(c.due_date + "T00:00:00");
+          const diffDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          matchesQuick = diffDays >= 10;
+        }
+      }
+      else if (quickFilter === 'new_week') {
+        if (!c.registration_date) matchesQuick = false;
+        else {
+          const regDate = new Date(c.registration_date + "T00:00:00");
+          const diffDays = Math.floor((today.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+          matchesQuick = diffDays <= 7;
+        }
+      }
+      else if (quickFilter === 'no_phone') {
+        matchesQuick = !c.phone || c.phone.trim() === '';
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesService && matchesMin && matchesMax && matchesDate && matchesQuick;
+  });
+
+  // Smart Sorting: Prioritize upcoming and recent renewals
+  const sortedClients = [...filteredClients].sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayTime = today.getTime();
+    
+    const dateA = new Date(a.due_date + "T00:00:00").getTime();
+    const dateB = new Date(b.due_date + "T00:00:00").getTime();
+    
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    
+    // Group 1: Vencendo em breve (0 a 3 dias)
+    const isExpiringA = (dateA - todayTime) >= 0 && (dateA - todayTime) <= 3 * MS_PER_DAY;
+    const isExpiringB = (dateB - todayTime) >= 0 && (dateB - todayTime) <= 3 * MS_PER_DAY;
+    if (isExpiringA && !isExpiringB) return -1;
+    if (!isExpiringA && isExpiringB) return 1;
+    
+    // Group 2: Vencidos Recentes (1 a 15 dias atrás)
+    const isRecentA = (dateA - todayTime) < 0 && (todayTime - dateA) <= 15 * MS_PER_DAY;
+    const isRecentB = (dateB - todayTime) < 0 && (todayTime - dateB) <= 15 * MS_PER_DAY;
+    if (isRecentA && !isRecentB) return -1;
+    if (!isRecentA && isRecentB) return 1;
+
+    // Group 3: Ativos Regulares (mais de 3 dias no futuro)
+    const isActiveA = (dateA - todayTime) > 3 * MS_PER_DAY;
+    const isActiveB = (dateB - todayTime) > 3 * MS_PER_DAY;
+    if (isActiveA && !isActiveB) return -1;
+    if (!isActiveA && isActiveB) return 1;
+    
+    // Se estiverem no mesmo grupo, quem estiver mais perto de hoje fica no topo
+    return Math.abs(dateA - todayTime) - Math.abs(dateB - todayTime);
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedClients.length / ITEMS_PER_PAGE) || 1;
+  const paginatedClients = sortedClients.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterService, filterMinPrice, filterMaxPrice, filterDateFrom, filterDateTo, quickFilter]);
 
   const handleExportCSV = () => {
-    if (filteredClients.length === 0) return
+    if (sortedClients.length === 0) return
 
     const headers = ["Nome", "Usuario", "Telefone", "Vencimento", "Cadastro", "Valor_Plano", "Status"]
     
-    const rows = filteredClients.map(c => {
+    const rows = sortedClients.map(c => {
       return [
         `"${c.name}"`,
         `"${c.username || ''}"`,
@@ -297,7 +431,7 @@ export default function ClientesPage() {
     }
   }
 
-  const renderDueDate = (dateString: string) => {
+  const renderDueDate = (dateString: string, timeString?: string | null) => {
     if (!dateString) return <div className="font-medium text-muted-foreground">Sem venc.</div>
     const dueDate = new Date(dateString + "T00:00:00")
     const today = new Date()
@@ -310,7 +444,10 @@ export default function ClientesPage() {
     if (isOverdue) textColor = "text-red-500 font-bold dark:text-red-400"
     else if (isToday) textColor = "text-amber-500 font-bold dark:text-amber-400"
 
-    return <div className={`font-medium ${textColor}`}>Venc: {dueDate.toLocaleDateString('pt-BR')}</div>
+    const formattedDate = dueDate.toLocaleDateString('pt-BR')
+    const timeDisplay = timeString ? ` às ${timeString}` : ''
+
+    return <div className={`font-medium ${textColor}`}>Venc: {formattedDate}{timeDisplay}</div>
   }
 
   return (
@@ -321,6 +458,12 @@ export default function ClientesPage() {
           <p className="text-zinc-500 dark:text-zinc-400">Gerencie seus clientes, planos e vencimentos.</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Integração IPTV - Salva para o futuro
+          <Button onClick={handleSyncIPTV} disabled={isSyncing} variant="outline" className="gap-2 border-purple-500/30 text-purple-600 hover:bg-purple-500/10">
+            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tv className="w-4 h-4" />}
+            <span className="hidden sm:inline">Sincronizar IPTV</span>
+          </Button>
+          */}
           <Button onClick={handleExportCSV} variant="secondary" className="gap-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20">
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Exportar CSV</span>
@@ -337,77 +480,168 @@ export default function ClientesPage() {
       <div>
         <div className="glass-card rounded-xl overflow-hidden p-4">
           
-          {/* Toolbar */}
+          {/* Toolbar Mágica */}
           <div className="flex flex-col gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
+            
+            {/* Quick Filters (Chips) */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Filtros Rápidos:</span>
+              <Badge 
+                variant={quickFilter === 'all' ? 'default' : 'outline'} 
+                className={`cursor-pointer transition-colors ${quickFilter === 'all' ? 'bg-primary/90 hover:bg-primary' : 'hover:bg-muted/50'}`}
+                onClick={() => setQuickFilter('all')}
+              >
+                Todos
+              </Badge>
+              <Badge 
+                variant={quickFilter === 'today' ? 'default' : 'outline'} 
+                className={`cursor-pointer transition-colors ${quickFilter === 'today' ? 'bg-amber-500 hover:bg-amber-600 border-0' : 'hover:bg-muted/50 text-amber-600 dark:text-amber-500 border-amber-500/30'}`}
+                onClick={() => setQuickFilter('today')}
+              >
+                ⚡ Vencem Hoje
+              </Badge>
+              <Badge 
+                variant={quickFilter === 'overdue_10' ? 'default' : 'outline'} 
+                className={`cursor-pointer transition-colors ${quickFilter === 'overdue_10' ? 'bg-rose-500 hover:bg-rose-600 border-0' : 'hover:bg-muted/50 text-rose-600 dark:text-rose-500 border-rose-500/30'}`}
+                onClick={() => setQuickFilter('overdue_10')}
+              >
+                🚨 Vencidos (+10 dias)
+              </Badge>
+              <Badge 
+                variant={quickFilter === 'new_week' ? 'default' : 'outline'} 
+                className={`cursor-pointer transition-colors ${quickFilter === 'new_week' ? 'bg-emerald-500 hover:bg-emerald-600 border-0' : 'hover:bg-muted/50 text-emerald-600 dark:text-emerald-500 border-emerald-500/30'}`}
+                onClick={() => setQuickFilter('new_week')}
+              >
+                🆕 Novos (7 dias)
+              </Badge>
+              <Badge 
+                variant={quickFilter === 'no_phone' ? 'default' : 'outline'} 
+                className={`cursor-pointer transition-colors ${quickFilter === 'no_phone' ? 'bg-zinc-500 hover:bg-zinc-600 border-0' : 'hover:bg-muted/50 text-zinc-600 dark:text-zinc-400 border-zinc-500/30'}`}
+                onClick={() => setQuickFilter('no_phone')}
+              >
+                📱 Sem WhatsApp
+              </Badge>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome ou telefone..."
-                  className="pl-9 bg-background/50"
+                  placeholder="Pesquisa Mágica: Nome, Usuário ou Telefone..."
+                  className="pl-9 bg-background/50 border-primary/20 focus-visible:ring-primary/30 h-10 shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? "all")}>
-                <SelectTrigger className="w-full sm:w-[150px] bg-background/50">
-                  <SelectValue placeholder="Status">
-                    {filterStatus === 'all' ? 'Todos Status' : 
-                     filterStatus === 'active' ? 'Ativo' : 
-                     filterStatus === 'pending' ? 'Pendente' : 
-                     filterStatus === 'vencido' ? 'Vencido' : 'Inativo'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Status</SelectItem>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="vencido">Vencido</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterService} onValueChange={(v) => setFilterService(v ?? "all")}>
-                <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
-                  <SelectValue placeholder="Serviço">
-                    {filterService === 'all' ? 'Todos Serviços' : services.find(s => s.id === filterService)?.name}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Serviços</SelectItem>
-                  {services.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Faixa de Valor:</span>
-              <Input 
-                type="number" 
-                placeholder="Mín (R$)" 
-                className="w-24 bg-background/50 h-8 text-sm" 
-                value={filterMinPrice}
-                onChange={e => setFilterMinPrice(e.target.value)}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input 
-                type="number" 
-                placeholder="Máx (R$)" 
-                className="w-24 bg-background/50 h-8 text-sm"
-                value={filterMaxPrice}
-                onChange={e => setFilterMaxPrice(e.target.value)}
-              />
-              {(filterStatus !== 'all' || filterService !== 'all' || filterMinPrice || filterMaxPrice) && (
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => {
-                  setFilterStatus('all')
-                  setFilterService('all')
-                  setFilterMinPrice('')
-                  setFilterMaxPrice('')
-                }}>
-                  Limpar Filtros
-                </Button>
-              )}
+
+              <Popover>
+                <PopoverTrigger className={buttonVariants({ variant: "outline", className: "gap-2 h-10 border-primary/20 shadow-sm min-w-[140px] relative" })}>
+                  <Filter className="w-4 h-4 text-primary" />
+                  <span>Avançados</span>
+                  {(filterStatus !== 'all' || filterService !== 'all' || filterMinPrice || filterMaxPrice || filterDateFrom || filterDateTo) && (
+                    <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-primary animate-pulse" />
+                  )}
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4" align="end">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm leading-none">Filtros Avançados</h4>
+                      <p className="text-xs text-muted-foreground">Refine sua busca por critérios específicos.</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs">Status do Cliente</Label>
+                      <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? "all")}>
+                        <SelectTrigger className="w-full h-8 text-sm bg-background/50">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos Status</SelectItem>
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="expiring">Próx. Vencimento</SelectItem>
+                          <SelectItem value="vencido">Vencido</SelectItem>
+                          <SelectItem value="pending">Pendente</SelectItem>
+                          <SelectItem value="inactive">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Serviço Vinculado</Label>
+                      <Select value={filterService} onValueChange={(v) => setFilterService(v ?? "all")}>
+                        <SelectTrigger className="w-full h-8 text-sm bg-background/50">
+                          <SelectValue placeholder="Serviço">
+                            {filterService === 'all' ? 'Todos Serviços' : services.find(s => s.id === filterService)?.name}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos Serviços</SelectItem>
+                          {services.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs">Faixa de Preço (Plano)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number" 
+                          placeholder="Mín (R$)" 
+                          className="flex-1 bg-background/50 h-8 text-sm" 
+                          value={filterMinPrice}
+                          onChange={e => setFilterMinPrice(e.target.value)}
+                        />
+                        <span className="text-muted-foreground">-</span>
+                        <Input 
+                          type="number" 
+                          placeholder="Máx (R$)" 
+                          className="flex-1 bg-background/50 h-8 text-sm"
+                          value={filterMaxPrice}
+                          onChange={e => setFilterMaxPrice(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Data de Vencimento</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="date" 
+                          className="flex-1 bg-background/50 h-8 text-sm px-2" 
+                          value={filterDateFrom}
+                          onChange={e => setFilterDateFrom(e.target.value)}
+                        />
+                        <span className="text-muted-foreground">-</span>
+                        <Input 
+                          type="date" 
+                          className="flex-1 bg-background/50 h-8 text-sm px-2"
+                          value={filterDateTo}
+                          onChange={e => setFilterDateTo(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {(filterStatus !== 'all' || filterService !== 'all' || filterMinPrice || filterMaxPrice || filterDateFrom || filterDateTo) && (
+                      <Button 
+                        variant="ghost" 
+                        className="w-full h-8 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 mt-2" 
+                        onClick={() => {
+                          setFilterStatus('all')
+                          setFilterService('all')
+                          setFilterMinPrice('')
+                          setFilterMaxPrice('')
+                          setFilterDateFrom('')
+                          setFilterDateTo('')
+                        }}
+                      >
+                        Limpar Avançados
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -439,7 +673,7 @@ export default function ClientesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client) => (
+                  {paginatedClients.map((client) => (
                     <TableRow key={client.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell>
                         <div 
@@ -476,7 +710,7 @@ export default function ClientesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {renderDueDate(client.due_date)}
+                        {renderDueDate(client.due_date, client.due_time)}
                         <div className="text-xs text-muted-foreground">Cad: {new Date(client.registration_date + "T00:00:00").toLocaleDateString('pt-BR')}</div>
                       </TableCell>
                       <TableCell className="text-emerald-400 font-medium">
@@ -545,6 +779,36 @@ export default function ClientesPage() {
                   ))}
                 </TableBody>
               </Table>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-4 border-t border-border/50">
+                  <div className="text-sm text-muted-foreground">
+                    Mostrando <span className="font-medium text-foreground">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * ITEMS_PER_PAGE, sortedClients.length)}</span> de <span className="font-medium text-foreground">{sortedClients.length}</span> clientes
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <div className="text-sm font-medium">
+                      Página {currentPage} de {totalPages}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

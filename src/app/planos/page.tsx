@@ -166,18 +166,18 @@ export default function PlanosPage() {
             <CardFooter className="pt-6 mt-auto flex flex-col gap-3">
               <Button 
                 className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20" 
-                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "", "Pro")}
+                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT", "Gestor Pro")}
                 disabled={isCheckoutLoading !== null || isPixLoading !== null}
               >
-                {isCheckoutLoading === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
+                {isCheckoutLoading === (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT") ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
                 Pagar com Cartão
               </Button>
               <Button 
                 className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" 
-                onClick={() => handlePixCheckout(20, "Pro")}
+                onClick={() => handlePixCheckout(20, "Gestor Pro")}
                 disabled={isCheckoutLoading !== null || isPixLoading !== null}
               >
-                {isPixLoading === "Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
+                {isPixLoading === "Gestor Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
                 Pagar com PIX
               </Button>
             </CardFooter>

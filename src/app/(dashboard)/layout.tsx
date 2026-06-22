@@ -9,6 +9,8 @@ import { WhatsAppStatus } from "@/components/whatsapp-status"
 import { CampaignHeaderStatus } from "@/components/campaign-header-status"
 import { OrganizationProvider } from "@/components/providers/organization-provider"
 
+import { PageProtector } from "@/components/page-protector"
+
 export default function DashboardLayout({
   children,
 }: {
@@ -35,7 +37,9 @@ export default function DashboardLayout({
                 </div>
               </header>
               <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-                {children}
+                <PageProtector>
+                  {children}
+                </PageProtector>
               </div>
           </main>
         </SidebarProvider>

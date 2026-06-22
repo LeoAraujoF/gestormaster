@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { ChartCard, CustomTooltip } from "@/components/chart-card"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area } from "recharts"
 import type { ClientsByService } from "@/types/database"
@@ -48,6 +50,16 @@ export default function FinanceiroPage() {
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
   const [isReportLoading, setIsReportLoading] = useState(false)
+
+  // Pix Rápido states
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false)
+  const [pixValor, setPixValor] = useState("")
+  const [pixDescricao, setPixDescricao] = useState("")
+  const [pixTelefone, setPixTelefone] = useState("")
+  const [pixInstance, setPixInstance] = useState("")
+  const [pixInstances, setPixInstances] = useState<any[]>([])
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false)
+  const [generatedPix, setGeneratedPix] = useState<{copia_e_cola: string, qr_code_base64: string} | null>(null)
 
   const { displayValue } = usePrivacy()
   const supabase = createClient()
@@ -226,6 +238,13 @@ export default function FinanceiroPage() {
         setStartDate(firstDay.toISOString().split('T')[0])
         setEndDate(todayStr)
 
+        // 6. Fetch instances for Pix Rápido
+        const { data: instData } = await supabase.from('evolution_instances').select('instance_name')
+        if (instData) {
+          setPixInstances(instData)
+          if (instData.length > 0) setPixInstance(instData[0].instance_name)
+        }
+
       } catch (error) {
         console.error("Error loading financial data", error)
       } finally {
@@ -284,6 +303,48 @@ export default function FinanceiroPage() {
     setStartDate(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0])
     setEndDate(today.toISOString().split('T')[0])
     setTimeout(loadReport, 50)
+  }
+
+  const handleGeneratePix = async () => {
+    if (!pixValor || !pixTelefone || !pixInstance) {
+      toast.error("Preencha Valor, Telefone e Instância.")
+      return
+    }
+
+    setIsGeneratingPix(true)
+    setGeneratedPix(null)
+
+    try {
+      const res = await fetch('/api/pix/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valor: parseFloat(pixValor.replace(',', '.')),
+          descricao: pixDescricao,
+          telefone_pagador: pixTelefone,
+          instance_name: pixInstance
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setGeneratedPix({ copia_e_cola: data.copia_e_cola, qr_code_base64: data.qr_code_base64 })
+        toast.success("Pix gerado com sucesso!")
+      } else {
+        toast.error(data.error || "Erro ao gerar Pix.")
+      }
+    } catch (e) {
+      toast.error("Erro interno ao gerar Pix.")
+    } finally {
+      setIsGeneratingPix(false)
+    }
+  }
+
+  const handleCopyPix = () => {
+    if (generatedPix) {
+      navigator.clipboard.writeText(generatedPix.copia_e_cola)
+      toast.success("Copia e Cola copiado!")
+    }
   }
 
   // Effect to load report when default dates are set initially

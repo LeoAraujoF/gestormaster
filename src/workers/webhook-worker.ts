@@ -1,7 +1,7 @@
 import '../lib/env';
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
-import { WEBHOOK_QUEUE_NAME } from '../lib/queue';
+import { WEBHOOK_QUEUE_NAME, aiQueue } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import crypto from 'crypto';
 import { logger, runWithCorrelationId } from '../lib/logger';
@@ -41,18 +41,84 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
            updateData.phone_number = sender.split('@')[0];
          }
 
-         const { error } = await supabaseAdmin.from('evolution_instances')
+         const { error, data: updatedInstance } = await supabaseAdmin.from('evolution_instances')
            .update(updateData)
-           .eq('instance_name', instanceName);
+           .eq('instance_name', instanceName)
+           .select('organization_id')
+           .single();
            
          if (error) throw error;
+
+         // Se acabou de conectar com sucesso, vamos checar se a org tem Typebot ativo para plugar
+         if (state === 'open' && updatedInstance?.organization_id) {
+           const { data: typebotInt } = await supabaseAdmin
+             .from('integrations')
+             .select('credentials')
+             .eq('organization_id', updatedInstance.organization_id)
+             .eq('provider', 'typebot')
+             .eq('is_active', true)
+             .single();
+
+           if (typebotInt) {
+             try {
+               const { createEvolutionClient } = await import('../lib/evolution');
+               const evolution = createEvolutionClient();
+               await evolution.setTypebot(instanceName, {
+                 enabled: true,
+                 url: typebotInt.credentials.viewer_url,
+                 typebot: typebotInt.credentials.typebot_name,
+                 expire: 0,
+                 keywordFinish: "#SAIR",
+                 delayMessage: 1000,
+                 unknownMessage: "",
+                 listeningFromMe: false,
+                 stopBotFromMe: true,
+                 keepOpen: false,
+                 debounceTime: 10
+               });
+               logger.info(`🤖 Typebot plugado automaticamente na instância ${instanceName}`);
+             } catch (e) {
+               logger.error(`Falha ao plugar Typebot na instância ${instanceName}`, e);
+             }
+           }
+         }
       }
     }
     else if (payload.event === 'MESSAGES_UPSERT') {
       const msg = payload.data?.messages?.[0];
       if (msg && !msg.key.fromMe) {
-        logger.info(`Mensagem recebida de ${msg.key.remoteJid}: ${msg.message?.conversation}`);
-        // Futuro: Gravar no banco de dados quando a UI do Chat estiver pronta
+        const textMessage = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+        logger.info(`Mensagem recebida de ${msg.key.remoteJid}: ${textMessage}`);
+        
+        const instanceName = payload.instance;
+        if (instanceName && textMessage) {
+          const { data: instanceData } = await supabaseAdmin
+            .from('evolution_instances')
+            .select('organization_id')
+            .eq('instance_name', instanceName)
+            .single();
+
+          if (instanceData?.organization_id) {
+            const { data: aiData } = await supabaseAdmin
+              .from('integrations')
+              .select('credentials')
+              .eq('organization_id', instanceData.organization_id)
+              .eq('provider', 'ai_assistant')
+              .eq('is_active', true)
+              .single();
+
+            if (aiData) {
+              await aiQueue.add('process-ai', {
+                organization_id: instanceData.organization_id,
+                instance_name: instanceName,
+                remoteJid: msg.key.remoteJid,
+                messageText: textMessage,
+                credentials: aiData.credentials
+              });
+              logger.info(`🤖 [Job ${job.id}] Mensagem enviada para AI Worker (Org: ${instanceData.organization_id})`);
+            }
+          }
+        }
       }
     }
 

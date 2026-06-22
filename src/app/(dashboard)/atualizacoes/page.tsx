@@ -1,5 +1,6 @@
 "use client"
 
+import ReactMarkdown from 'react-markdown'
 import { useState, useEffect, Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { BellRing, Zap, ShieldAlert, Megaphone, Loader2, Calendar, FileText, CheckCircle2, Sparkles, Bug, ArrowUpCircle, Wrench, Plus, Save } from "lucide-react"
@@ -56,7 +57,11 @@ function AtualizacoesContent() {
       .eq('is_published', true)
       .order('created_at', { ascending: false })
       
-    if (updatesData) setUpdates(updatesData)
+    if (updatesData) {
+      setUpdates(updatesData)
+      // Call background API to mark all updates as read
+      fetch('/api/updates/read', { method: 'POST' }).catch(console.error)
+    }
 
     // 2. Alerts
     const newAlerts = []
@@ -345,8 +350,8 @@ function AtualizacoesContent() {
                         <CardTitle className="text-2xl font-bold tracking-tight">{update.title}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                          {update.content}
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
+                          <ReactMarkdown>{update.content}</ReactMarkdown>
                         </div>
                       </CardContent>
                     </Card>

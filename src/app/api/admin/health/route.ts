@@ -14,7 +14,7 @@ export async function GET() {
     const dbStartTime = Date.now()
     let dbStatus = 'offline'
     try {
-      const { data, error } = await supabaseAdmin.from('users').select('id').limit(1)
+      const { data, error } = await supabaseAdmin.from('clients').select('id').limit(1)
       if (!error) dbStatus = 'online'
     } catch (e) {}
     const dbLatency = Date.now() - dbStartTime
@@ -23,7 +23,9 @@ export async function GET() {
     const redisStartTime = Date.now()
     let redisStatus = 'offline'
     try {
-      const ping = await redisConnection.ping()
+      const pingPromise = redisConnection.ping()
+      const timeoutPromise = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+      const ping = await Promise.race([pingPromise, timeoutPromise])
       if (ping === 'PONG') redisStatus = 'online'
     } catch (e) {}
     const redisLatency = Date.now() - redisStartTime

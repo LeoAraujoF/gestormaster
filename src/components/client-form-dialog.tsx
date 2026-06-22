@@ -28,6 +28,7 @@ const clientSchema = z.object({
   plan_value: z.number().min(0, "O valor não pode ser negativo"),
   screens: z.number().min(1, "Mínimo de 1 tela").max(10, "Máximo de 10 telas"),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
+  due_time: z.string().optional(),
   status: z.enum(['active', 'inactive', 'pending', 'vencido']),
   observation: z.string().optional(),
   description: z.string().optional(),
@@ -57,6 +58,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       plan_value: 0,
       screens: 1,
       due_date: new Date().toISOString().split('T')[0],
+      due_time: "23:59",
       status: 'active',
       observation: "",
       description: "",
@@ -76,6 +78,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           plan_value: client.plan_value || 0,
           screens: client.screens || 1,
           due_date: client.due_date || new Date().toISOString().split('T')[0],
+          due_time: client.due_time || "23:59",
           status: client.status || 'active',
           observation: client.observation || "",
           description: client.description || "",
@@ -89,6 +92,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           plan_value: 0,
           screens: 1,
           due_date: new Date().toISOString().split('T')[0],
+          due_time: "23:59",
           status: 'active',
           observation: "",
           description: "",
@@ -124,6 +128,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             plan_value: data.plan_value,
             screens: data.screens,
             due_date: data.due_date,
+            due_time: data.due_time,
             status: data.status,
             observation: data.observation,
             description: data.description,
@@ -162,6 +167,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             plan_value: data.plan_value,
             screens: data.screens,
             due_date: data.due_date,
+            due_time: data.due_time,
             status: data.status,
             observation: data.observation,
             description: data.description,
@@ -203,6 +209,34 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .insert(servicesToInsert)
           
         if (serviceError) throw serviceError
+      }
+
+      // Disparo de Boas Vindas se for um novo cliente
+      if (!client && clientId) {
+        const { data: rules } = await supabase
+          .from('automations')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('alert_type', ['activation', 'welcome', 'quick_message'])
+          .eq('is_active', true)
+
+        if (rules && rules.length > 0) {
+          for (const rule of rules) {
+            // Fire and forget
+            fetch(window.location.origin + '/api/evolution/send-instant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientId: clientId, ruleId: rule.id })
+            }).then(async (res) => {
+              if (!res.ok) {
+                const errData = await res.json()
+                toast.warning(`WhatsApp (Boas Vindas) falhou: ${errData.error}`)
+              }
+            }).catch(() => {
+              toast.warning(`WhatsApp (Boas Vindas) bloqueado pelo navegador.`)
+            })
+          }
+        }
       }
 
       toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!")
@@ -384,6 +418,17 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                     )}
                   />
                   {errors.due_date && <p className="text-xs text-destructive">{errors.due_date.message}</p>}
+                </div>
+
+                <div className="space-y-2 lg:col-span-2">
+                  <Label htmlFor="due_time">Hora do Vencimento</Label>
+                  <Input 
+                    id="due_time" 
+                    type="time" 
+                    {...register("due_time")} 
+                    className="bg-background/80 h-10 border-border/50" 
+                  />
+                  {errors.due_time && <p className="text-xs text-destructive">{errors.due_time.message}</p>}
                 </div>
 
                 <div className="space-y-2 lg:col-span-4 border-t border-border/50 pt-4 mt-2">

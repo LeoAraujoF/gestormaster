@@ -257,12 +257,12 @@ export default function SuportePage() {
                 <CardDescription>Acompanhe o status das suas solicitações ou abra um novo chamado.</CardDescription>
               </div>
               <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-                <DialogTrigger>
+                <DialogTrigger render={
                   <Button className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20">
                     <Plus className="w-4 h-4 mr-2" />
                     Abrir Chamado
                   </Button>
-                </DialogTrigger>
+                } />
                 <DialogContent className="sm:max-w-[500px] glass-card border-sky-500/20">
                   <DialogHeader>
                     <DialogTitle>Abrir Novo Chamado</DialogTitle>

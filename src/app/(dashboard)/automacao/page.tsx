@@ -56,7 +56,8 @@ const getDefaultTemplate = (type: string) => {
     after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativá-lo?" + pixStr,
     renewal: "{Olá|Oi|Tudo ótimo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confiança é essencial!\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
     promotion: base + "Temos uma oferta imperdível para você! [Insira sua promoção aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
-    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso Rápido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
+    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso Rápido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    activation: "Olá {{primeiro_nome}}! Seja muito bem-vindo(a)! 🌟\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse número aqui, ele será o nosso canal oficial de suporte técnico e onde você receberá seus avisos de vencimento, ok? 🤝\\n\\n💰 Valor do Plano: R$ {{plan_value}}\\n📅 Seu Vencimento: {{due_date}}\\n\\n🎁 *PROMOÇÃO INDIQUE E GANHE*\\nSabia que você pode ganhar meses grátis? É muito simples: indicou um amigo e ele fechou com a gente, o seu próximo mês sai 100% DE GRAÇA! Sem sorteio, indicou, ganhou! 🚀\\n\\n📱 *NOSSO CANAL EXCLUSIVO*\\nNão fique de fora das novidades, manutenções programadas e promoções relâmpago! Entre agora no nosso canal oficial para clientes:\\n👉 {{link_canal}}\\n\\nQualquer dúvida, é só nos chamar por aqui. Aproveite!"
   }
   return defaults[type] || defaults.before_due
 }
@@ -425,7 +426,7 @@ export default function AutomacaoPage() {
         const today = new Date(`${todayStrLocal}T12:00:00Z`)
         
         rules.forEach(rule => {
-          if (['quick_message', 'renewal', 'promotion'].includes(rule.alert_type)) {
+          if (['quick_message', 'renewal', 'promotion', 'activation'].includes(rule.alert_type)) {
             estimates[rule.id] = 'Manual'
             return
           }
@@ -1212,11 +1213,12 @@ export default function AutomacaoPage() {
                              rule.alert_type === 'on_due' ? 'No Dia do Vencimento' : 
                              rule.alert_type === 'after_due' ? 'Aviso de Atraso' : 
                              rule.alert_type === 'renewal' ? 'Renovação' : 
+                             rule.alert_type === 'activation' ? 'Boas Vindas / Ativação' : 
                              rule.alert_type === 'quick_message' ? 'Mensagem Rápida (1 Clique)' : 'Promoção'}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {(rule.alert_type === 'renewal' || rule.alert_type === 'promotion') 
+                          {(rule.alert_type === 'renewal' || rule.alert_type === 'promotion' || rule.alert_type === 'activation') 
                             ? <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-0">Disparo Imediato</Badge>
                             : rule.alert_type === 'quick_message'
                             ? <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-0">Ação Manual (Botão)</Badge>
@@ -1334,7 +1336,8 @@ export default function AutomacaoPage() {
                               {log.automation?.alert_type === 'before_due' ? 'Aviso Prévio' : 
                                log.automation?.alert_type === 'on_due' ? 'No Vencimento' : 
                                log.automation?.alert_type === 'after_due' ? 'Atraso' : 
-                               log.automation?.alert_type === 'renewal' ? 'Renovação' : 'Promoção'}
+                               log.automation?.alert_type === 'renewal' ? 'Renovação' : 
+                               log.automation?.alert_type === 'activation' ? 'Boas Vindas' : 'Promoção'}
                             </TableCell>
                             <TableCell className="text-xs whitespace-nowrap">
                               {new Date(log.created_at).toLocaleString('pt-BR')}
@@ -1451,7 +1454,7 @@ export default function AutomacaoPage() {
                 <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
                   <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
                   <div className="flex flex-wrap gap-2">
-                    {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}"].map((variable) => (
+                    {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
                       <Badge 
                         key={variable}
                         variant="outline" 
@@ -1532,6 +1535,7 @@ export default function AutomacaoPage() {
                     {ruleForm.alert_type === 'on_due' && '⚠️ No Dia do Vencimento'}
                     {ruleForm.alert_type === 'after_due' && '❌ Após Vencimento (Atraso)'}
                     {ruleForm.alert_type === 'renewal' && '✅ Agradecimento de Renovação'}
+                    {ruleForm.alert_type === 'activation' && '🎉 Boas Vindas / Ativação'}
                     {ruleForm.alert_type === 'promotion' && '🚀 Disparo de Promoção'}
                     {ruleForm.alert_type === 'quick_message' && '⚡ Mensagem Rápida (Botão)'}
                   </SelectValue>
@@ -1541,6 +1545,7 @@ export default function AutomacaoPage() {
                   <SelectItem value="on_due">⚠️ No Dia do Vencimento</SelectItem>
                   <SelectItem value="after_due">❌ Após Vencimento (Atraso)</SelectItem>
                   <SelectItem value="renewal">✅ Agradecimento de Renovação</SelectItem>
+                  <SelectItem value="activation">🎉 Boas Vindas / Ativação</SelectItem>
                   <SelectItem value="promotion">🚀 Disparo de Promoção</SelectItem>
                   <SelectItem value="quick_message">⚡ Mensagem Rápida (Botão)</SelectItem>
                 </SelectContent>
@@ -1571,7 +1576,7 @@ export default function AutomacaoPage() {
                 </div>
               )}
               
-              {ruleForm.alert_type !== 'quick_message' && (
+              {(ruleForm.alert_type !== 'quick_message' && ruleForm.alert_type !== 'activation') && (
                 <div className="space-y-2">
                   <Label className="text-foreground font-medium">Horário Padrão</Label>
                   <div className="relative">
@@ -1601,7 +1606,7 @@ export default function AutomacaoPage() {
               <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
                 <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
                 <div className="flex flex-wrap gap-2">
-                  {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}"].map((variable) => (
+                  {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
                     <Badge 
                       key={variable}
                       variant="outline" 

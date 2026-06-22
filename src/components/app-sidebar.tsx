@@ -18,6 +18,9 @@ import {
   ShieldAlert,
   Flame,
   Activity,
+  Code,
+  Plug,
+  Tv,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -35,6 +38,7 @@ import {
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider"
 
 const data = {
   navMain: [
@@ -75,6 +79,18 @@ const data = {
       color: "text-indigo-500",
     },
     {
+      title: "Integrações",
+      url: "/integracoes",
+      icon: Plug,
+      color: "text-emerald-500",
+    },
+    {
+      title: "Painéis IPTV",
+      url: "/integracoes/paineis",
+      icon: Tv,
+      color: "text-purple-500",
+    },
+    {
       title: "Leads / CSV",
       url: "/leads",
       icon: Search,
@@ -85,6 +101,12 @@ const data = {
       url: "/aquecimento",
       icon: Flame,
       color: "text-orange-500",
+    },
+    {
+      title: "API / Devs",
+      url: "/desenvolvedor",
+      icon: Code,
+      color: "text-zinc-500",
     },
     {
       title: "Status de Envios",
@@ -129,11 +151,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { flags } = useFeatureFlags()
   
   const [userName, setUserName] = React.useState<string>("Carregando...")
   const [userEmail, setUserEmail] = React.useState<string>("")
   const [userPlan, setUserPlan] = React.useState<string>("Free")
   const [isAdmin, setIsAdmin] = React.useState<boolean>(false)
+  const [unreadUpdates, setUnreadUpdates] = React.useState<number>(0)
 
   React.useEffect(() => {
     async function loadUser() {
@@ -155,7 +179,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     }
     loadUser()
-  }, [])
+  }, [supabase])
+
+  React.useEffect(() => {
+    async function loadUpdatesCount() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const daysAgo = new Date()
+      daysAgo.setDate(daysAgo.getDate() - 14)
+
+      const { data: updatesData } = await supabase
+        .from('system_updates')
+        .select('id')
+        .gte('created_at', daysAgo.toISOString())
+        .eq('is_published', true)
+
+      if (updatesData && updatesData.length > 0) {
+        const { data: readsData } = await supabase
+          .from('user_update_reads')
+          .select('update_id')
+          .eq('user_id', user.id)
+
+        const readIds = readsData ? readsData.map(r => r.update_id) : []
+        const unread = updatesData.filter(u => !readIds.includes(u.id))
+        setUnreadUpdates(unread.length)
+      } else {
+        setUnreadUpdates(0)
+      }
+    }
+    loadUpdatesCount()
+    const interval = setInterval(loadUpdatesCount, 60000)
+    return () => clearInterval(interval)
+  }, [supabase])
 
   const handleLogout = async () => {
     try {
@@ -182,7 +238,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {data.navMain.map((item) => {
+            {data.navMain
+              .filter((item) => {
+                const flagKey = `page_${item.url.substring(1).replace(/\//g, '_')}`
+                return flags[flagKey] !== false
+              })
+              .map((item) => {
               const isActive = pathname === item.url || (item.url !== "/" && pathname?.startsWith(item.url))
               
               return (
@@ -194,7 +255,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className={isActive ? `bg-primary/10 text-primary border-r-2 border-primary` : `hover:bg-secondary/50`}
                   >
                     <item.icon className={isActive ? item.color : "text-muted-foreground"} />
-                    <span className={isActive ? "font-semibold" : ""}>{item.title}</span>
+                    <span className={isActive ? "font-semibold flex-1" : "flex-1"}>{item.title}</span>
+                    {item.url === '/atualizacoes' && unreadUpdates > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-5 text-center animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                        {unreadUpdates}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )
@@ -205,12 +271,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarSeparator className="my-2" />
                 <SidebarMenuItem>
                   <SidebarMenuButton 
-                    render={<Link href="/master" />} 
-                    isActive={pathname?.startsWith('/master')} 
+                    render={<Link href="/admin" />} 
+                    isActive={pathname?.startsWith('/admin')} 
                     tooltip="Master Admin"
-                    className={pathname?.startsWith('/master') ? `bg-rose-500/10 text-rose-500 border-r-2 border-rose-500` : `hover:bg-rose-500/5 text-rose-500/80`}
+                    className={pathname?.startsWith('/admin') ? `bg-rose-500/10 text-rose-500 border-r-2 border-rose-500` : `hover:bg-rose-500/5 text-rose-500/80`}
                   >
-                    <ShieldAlert className={pathname?.startsWith('/master') ? "text-rose-500" : "text-rose-500/80"} />
+                    <ShieldAlert className={pathname?.startsWith('/admin') ? "text-rose-500" : "text-rose-500/80"} />
                     <span className="font-bold text-rose-500">Master Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -69,8 +69,7 @@ export default function LoginPage() {
       }
 
       toast.success("Login realizado com sucesso!")
-      router.push("/painel")
-      router.refresh()
+      window.location.href = "/painel"
     } catch (err) {
       toast.error("Ocorreu um erro inesperado.")
     } finally {

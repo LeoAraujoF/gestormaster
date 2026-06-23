@@ -77,8 +77,7 @@ export default function OnboardingPage() {
       }
 
       toast.success("Tudo pronto! Bem-vindo ao Gestor Master.")
-      router.push("/planos")
-      router.refresh()
+      window.location.href = "/planos"
     } catch (err) {
       toast.error("Ocorreu um erro inesperado.")
     } finally {

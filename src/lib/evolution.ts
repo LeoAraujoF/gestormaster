@@ -60,6 +60,13 @@ export class EvolutionAPI {
     })
   }
 
+  async fetchInstances(instanceName?: string) {
+    const url = instanceName ? `/instance/fetchInstances?instanceName=${instanceName}` : '/instance/fetchInstances'
+    return this.request(url, {
+      method: 'GET',
+    })
+  }
+
   async sendText(instanceName: string, phone: string, text: string) {
     return this.request(`/message/sendText/${instanceName}`, {
       method: 'POST',

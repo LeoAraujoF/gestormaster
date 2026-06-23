@@ -42,8 +42,23 @@ export async function GET(request: Request) {
         const newStatus = isConnected ? 'connected' : 'disconnected'
 
         let ownerPhone = instance.phone_number
-        if (isConnected && stateData?.instance?.owner) {
-          ownerPhone = stateData.instance.owner.replace('@s.whatsapp.net', '')
+        if (isConnected) {
+          try {
+            const instancesList = await client.fetchInstances(instance.instance_name)
+            if (instancesList && instancesList.length > 0) {
+              const fullInstanceData = instancesList[0]
+              if (fullInstanceData.ownerJid) {
+                ownerPhone = fullInstanceData.ownerJid.replace('@s.whatsapp.net', '')
+              } else if (stateData?.instance?.owner) { // Fallback para versões antigas
+                ownerPhone = stateData.instance.owner.replace('@s.whatsapp.net', '')
+              }
+            }
+          } catch (fetchErr) {
+            console.error('Falha ao buscar ownerJid detalhado:', fetchErr)
+            if (stateData?.instance?.owner) {
+              ownerPhone = stateData.instance.owner.replace('@s.whatsapp.net', '')
+            }
+          }
         }
 
         // Update DB if status changed or phone_number was discovered

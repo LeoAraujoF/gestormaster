@@ -1,6 +1,7 @@
 import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +56,15 @@ export async function POST(request: Request) {
           qr_code: null
         })
         .eq('id', instance.id)
+
+      await logAudit({
+        user_id: user.id,
+        action: 'whatsapp.logout',
+        resource: 'evolution_instances',
+        resource_id: instance.id,
+        details: { instance_name: instance.instance_name },
+        ip_address: getIpFromRequest(request)
+      })
 
       return NextResponse.json({ success: true })
     } catch (e: any) {

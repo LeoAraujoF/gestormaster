@@ -2,6 +2,7 @@ import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 import { parseMessageTemplate } from "@/lib/message-parser";
 
@@ -140,6 +141,14 @@ export async function POST(req: Request) {
       user_id: user.id, client_id: client.id, automation_id: rule.id,
       status: 'sent', message_content: finalMessage,
       sent_at: new Date().toISOString(), scheduled_at: new Date().toISOString()
+    })
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.send_instant',
+      resource: 'evolution',
+      details: { instance_name: instance.instance_name, client_id: clientId, rule_id: ruleId, alert_type: rule.alert_type },
+      ip_address: getIpFromRequest(req)
     })
 
     return NextResponse.json({ success: true, message: "Enviado com sucesso!" })

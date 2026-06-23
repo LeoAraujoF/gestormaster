@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { ShieldAlert, Download, Upload, Loader2, Save, Trash2, KeyRound } from "lucide-react"
 import { toast } from "sonner"
 import Papa from "papaparse"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -198,6 +199,7 @@ export default function ConfiguracoesPage() {
 
           const { error } = await supabase.from('clients').insert(inserts)
           if (error) throw error
+          logAuditClient({ action: 'config.import_clients', resource: 'clients', details: { count: inserts.length } })
 
           toast.success(`${inserts.length} clientes importados com sucesso!`)
           if (fileInputRef.current) fileInputRef.current.value = ""
@@ -223,6 +225,7 @@ export default function ConfiguracoesPage() {
       // RLS only allows deleting own clients
       const { error } = await supabase.from('clients').delete().eq('user_id', user.id)
       if (error) throw error
+      logAuditClient({ action: 'config.delete_all_clients', resource: 'clients' })
 
       toast.success("Banco de dados completamente zerado.")
       setIsDangerDialogOpen(false)

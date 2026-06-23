@@ -9,6 +9,7 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { phoneMask } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -280,6 +281,7 @@ export default function AutomacaoPage() {
         .eq('user_id', user.id)
         
       if (error) throw error
+      logAuditClient({ action: 'antiban.update', resource: 'evolution_instances', details: { min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay } })
       toast.success("Configurações antibloqueio salvas!")
     } catch (error) {
       toast.error("Erro ao salvar configurações.")
@@ -492,6 +494,7 @@ export default function AutomacaoPage() {
   const handleResendLog = async (id: string) => {
     try {
       await supabase.from('alert_history').update({ status: 'pending', error_message: null }).eq('id', id)
+      logAuditClient({ action: 'alert.retry', resource: 'alert_history', resource_id: id })
       toast.success("Alerta reenviado para a fila!")
       loadLogs()
     } catch (e) {
@@ -502,6 +505,7 @@ export default function AutomacaoPage() {
   const handleCancelLog = async (id: string) => {
     try {
       await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuário' }).eq('id', id)
+      logAuditClient({ action: 'alert.cancel', resource: 'alert_history', resource_id: id })
       toast.success("Alerta cancelado!")
       loadLogs()
     } catch (e) {
@@ -512,6 +516,7 @@ export default function AutomacaoPage() {
   const handleDeleteLog = async (id: string) => {
     try {
       await supabase.from('alert_history').delete().eq('id', id)
+      logAuditClient({ action: 'alert.delete', resource: 'alert_history', resource_id: id })
       toast.success("Registro removido!")
       loadLogs()
     } catch (e) {
@@ -531,6 +536,7 @@ export default function AutomacaoPage() {
           .eq('status', 'failed')
           .eq('user_id', user.id)
         if (error) throw error
+        logAuditClient({ action: 'alert.batch_retry', resource: 'alert_history' })
         toast.success("Falhas reativadas para fila!")
       } else if (action === 'cancel_pending') {
         const { error } = await supabase.from('alert_history')
@@ -538,12 +544,14 @@ export default function AutomacaoPage() {
           .eq('status', 'pending')
           .eq('user_id', user.id)
         if (error) throw error
+        logAuditClient({ action: 'alert.batch_cancel', resource: 'alert_history' })
         toast.success("Envios pendentes cancelados!")
       } else if (action === 'clear_all') {
         const { error } = await supabase.from('alert_history')
           .delete()
           .eq('user_id', user.id)
         if (error) throw error
+        logAuditClient({ action: 'alert.clear_all', resource: 'alert_history' })
         toast.success("Histórico limpo!")
       }
       loadLogs()
@@ -592,10 +600,12 @@ export default function AutomacaoPage() {
       if (editingRule) {
         const { error } = await supabase.from('automations').update(payload).eq('id', editingRule.id)
         if (error) throw error
+        logAuditClient({ action: 'automation.update', resource: 'automations', resource_id: editingRule.id, details: { alert_type: ruleForm.alert_type } })
         toast.success("Regra atualizada!")
       } else {
         const { error } = await supabase.from('automations').insert(payload)
         if (error) throw error
+        logAuditClient({ action: 'automation.create', resource: 'automations', details: { alert_type: ruleForm.alert_type } })
         toast.success("Nova regra criada!")
       }
       setIsRuleDialogOpen(false)
@@ -627,6 +637,7 @@ export default function AutomacaoPage() {
 
   const deleteRule = async (id: string) => {
     await supabase.from('automations').delete().eq('id', id)
+    logAuditClient({ action: 'automation.delete', resource: 'automations', resource_id: id })
     toast.success("Regra removida!")
     loadAutomations()
   }

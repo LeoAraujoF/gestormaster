@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -109,6 +110,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Erro ao salvar credenciais do painel IPTV.' }, { status: 500 });
       }
       
+      await logAudit({
+        user_id: user.id,
+        action: 'integration.save',
+        resource: 'integrations',
+        resource_id: dbResult.data?.id,
+        details: { provider: 'tvdc_iptv' },
+        ip_address: getIpFromRequest(request)
+      })
+
       return NextResponse.json({ success: true, integration: dbResult.data });
     }
 
@@ -169,6 +179,15 @@ export async function POST(request: Request) {
       }
     }
 
+    await logAudit({
+      user_id: user.id,
+      action: 'integration.save',
+      resource: 'integrations',
+      resource_id: data?.id,
+      details: { provider },
+      ip_address: getIpFromRequest(request)
+    })
+
     return NextResponse.json({ success: true, integration: data })
 
   } catch (error: any) {
@@ -196,6 +215,13 @@ export async function DELETE(request: Request) {
     
     if (provider === 'tvdc_iptv') {
       await supabase.from('iptv_accounts').delete().eq('user_id', user.id).eq('provider', provider);
+      await logAudit({
+        user_id: user.id,
+        action: 'integration.delete',
+        resource: 'integrations',
+        details: { provider: 'tvdc_iptv' },
+        ip_address: getIpFromRequest(request)
+      })
       return NextResponse.json({ success: true })
     }
 

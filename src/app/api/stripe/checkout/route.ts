@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import Stripe from "stripe"
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   try {
@@ -47,6 +48,15 @@ export async function POST(request: Request) {
         userId: user.id, 
         planName: planName || "Desconhecido"
       }
+    })
+
+    await logAudit({
+      user_id: user.id,
+      action: 'stripe.checkout',
+      resource: 'payments',
+      resource_id: session.id,
+      details: { plan: planName || 'Desconhecido', priceId },
+      ip_address: getIpFromRequest(request)
     })
 
     return NextResponse.json({ url: session.url })

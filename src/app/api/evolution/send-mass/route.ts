@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient, getActiveOrganization } from '@/lib/supabase/server'
 import { messageQueue } from '@/lib/queue'
 import { redisConnection } from '@/lib/redis'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 import { parseMessageTemplate } from "@/lib/message-parser";
 
@@ -176,6 +177,14 @@ export async function POST(req: Request) {
 
     // Enfileira todos os clientes de uma vez (Super Rápido)
     await messageQueue.addBulk(jobs)
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.send_mass',
+      resource: 'evolution',
+      details: { instance_name: primaryInstance.instance_name, total_messages: validClients.length, audience },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ 
       success: true, 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Plus, Users, Search, DollarSign, CheckCircle2, XCircle, Clock, Loader2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +100,7 @@ export default function RevendasPage() {
         .single()
 
       if (error) throw error
+      logAuditClient({ action: 'reseller.create', resource: 'resellers', resource_id: data.id, details: { reseller_name: newName } })
 
       toast.success("Revendedor adicionado!")
       setResellers([data, ...resellers])
@@ -132,6 +134,7 @@ export default function RevendasPage() {
           .update({ status: newStatus })
           .eq("id", id)
         if (error) throw error
+        logAuditClient({ action: 'reseller.cancel_credit', resource: 'credit_requests', resource_id: id })
       }
 
       toast.success(`Solicitação atualizada para ${newStatus}`)

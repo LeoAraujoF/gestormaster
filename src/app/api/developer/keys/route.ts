@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import crypto from 'crypto'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -70,6 +71,15 @@ export async function POST(request: Request) {
       throw error
     }
 
+    await logAudit({
+      user_id: user.id,
+      action: 'developer.create_key',
+      resource: 'api_keys',
+      resource_id: data?.id,
+      details: { key_name: name || 'API Key Padrão' },
+      ip_address: getIpFromRequest(request)
+    })
+
     // Only return the plainToken ONCE
     return NextResponse.json({ 
       success: true, 
@@ -102,6 +112,15 @@ export async function DELETE(request: Request) {
       .eq('organization_id', orgId)
 
     if (error) throw error
+
+    await logAudit({
+      user_id: user.id,
+      action: 'developer.delete_key',
+      resource: 'api_keys',
+      resource_id: id,
+      details: { key_id: id },
+      ip_address: getIpFromRequest(request)
+    })
 
     return NextResponse.json({ success: true })
 

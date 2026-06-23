@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -32,6 +33,15 @@ export async function POST(req: Request) {
     } else {
       await redisConnection.srem('global:banned_users', userId)
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: isBlocked ? 'admin.block_user' : 'admin.unblock_user',
+      resource: 'users',
+      resource_id: userId,
+      details: { target_email: data.user?.email },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true, message: isBlocked ? 'Usuário bloqueado' : 'Usuário desbloqueado' })
   } catch (error: any) {

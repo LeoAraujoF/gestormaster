@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Plus, Trash2, Copy, ExternalLink, Loader2, Save } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -94,6 +95,7 @@ export default function ResellerDetailsPage() {
         .single()
 
       if (error) throw error
+      logAuditClient({ action: 'reseller.add_service', resource: 'reseller_services', resource_id: data.id, details: { service_name: newServiceName } })
 
       toast.success("Serviço vinculado com sucesso!")
       setServices([...services, data])
@@ -114,6 +116,7 @@ export default function ResellerDetailsPage() {
         .eq("id", serviceId)
 
       if (error) throw error
+      logAuditClient({ action: 'reseller.delete_service', resource: 'reseller_services', resource_id: serviceId })
       toast.success("Serviço removido")
       setServices(services.filter(s => s.id !== serviceId))
     } catch (error: any) {
@@ -148,6 +151,7 @@ export default function ResellerDetailsPage() {
         .eq("id", id)
 
       if (error) throw error
+      logAuditClient({ action: 'reseller.update_debt', resource: 'resellers', resource_id: id as string, details: { new_debt: newDebt } })
       
       setReseller({ ...reseller, current_debt: newDebt })
       setDebtAmount("")

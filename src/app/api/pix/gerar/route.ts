@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
+import { logAudit, getIpFromRequest } from '@/lib/audit';
 
 export async function POST(req: Request) {
   try {
@@ -92,7 +93,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Falha ao processar pagamento no Mercado Pago', details: mpData }, { status: 500 });
     }
 
-    // 6. Resposta Sucesso (Devolve Copia&Cola e QR Code)
+    // 6. Audit log
+    await logAudit({
+      user_id: orgId,
+      action: 'pix.generate',
+      resource: 'payments',
+      resource_id: String(mpData.id),
+      details: { valor, telefone_pagador, instance_name },
+      ip_address: getIpFromRequest(req)
+    });
+
+    // 7. Resposta Sucesso (Devolve Copia&Cola e QR Code)
     return NextResponse.json({
       success: true,
       pix_id: mpData.id,

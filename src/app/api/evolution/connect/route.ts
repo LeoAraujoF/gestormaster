@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   try {
@@ -156,6 +157,14 @@ export async function POST(request: Request) {
         .eq('user_id', user.id)
         .eq('instance_name', finalInstanceName)
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.connect',
+      resource: 'evolution_instances',
+      details: { instance_name: finalInstanceName, connection_mode: connectionMode },
+      ip_address: getIpFromRequest(request)
+    })
 
     return NextResponse.json({ 
       success: true, 

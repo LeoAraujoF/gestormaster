@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createEvolutionClient } from '@/lib/evolution'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +56,19 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.update_settings',
+      resource: 'evolution_instances',
+      details: {
+        instance_names: instances.map((i: any) => i.instance_name),
+        settings_changed: Object.keys(updateData),
+        reject_calls,
+        reject_calls_message
+      },
+      ip_address: getIpFromRequest(request)
+    })
 
     return NextResponse.json({ success: true })
 

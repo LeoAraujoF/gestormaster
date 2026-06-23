@@ -2,6 +2,7 @@ import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -97,6 +98,16 @@ export async function POST(req: Request) {
     }
 
     const responseData = await apiReq.json()
+
+    const maskedPhone = phone.length > 4 ? '***' + phone.slice(-4) : phone
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.send_single',
+      resource: 'evolution',
+      details: { instance_name: instanceName, phone: maskedPhone, has_media: !!(mediaBase64 && mediaMimeType) },
+      ip_address: getIpFromRequest(req)
+    })
+
     return NextResponse.json({ success: true, data: responseData })
 
   } catch (error: any) {

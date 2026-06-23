@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { ArrowLeft, Save, Shield, Smartphone, CreditCard, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -78,6 +79,7 @@ export default function RevendasConfigPage() {
         })
 
       if (error) throw error
+      logAuditClient({ action: 'reseller.update_config', resource: 'revenda_settings' })
 
       toast.success("Configurações salvas com sucesso!")
     } catch (error: any) {

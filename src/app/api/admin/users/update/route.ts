@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -47,6 +48,15 @@ export async function POST(req: Request) {
     if (authError) {
       return NextResponse.json({ error: authError.message }, { status: 400 })
     }
+
+    await logAudit({
+      user_id: null,
+      action: 'admin.update_user',
+      resource: 'users',
+      resource_id: userId,
+      details: { plan, paymentStatus, dueDate, phone },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true, user: authData.user })
   } catch (error: any) {

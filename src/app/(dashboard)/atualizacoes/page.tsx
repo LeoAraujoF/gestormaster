@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { logAuditClient } from "@/lib/audit-client"
 
 function AtualizacoesContent() {
   const [updates, setUpdates] = useState<any[]>([])
@@ -149,6 +150,7 @@ function AtualizacoesContent() {
         is_published: true
       })
       if (error) throw error
+      logAuditClient({ action: 'system.create_update', resource: 'system_updates', details: { title: newUpdate.title } })
       toast.success("Atualização publicada com sucesso!")
       setIsModalOpen(false)
       setNewUpdate({ title: '', content: '', type: 'feature' })

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@supabase/supabase-js"
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   const payload = await request.text()
@@ -85,6 +86,16 @@ export async function POST(request: Request) {
         }
         
         console.log(`[Webhook] Assinatura ativada com sucesso para o usuário: ${userId}`)
+
+        await logAudit({
+          user_id: userId,
+          action: 'stripe.payment_success',
+          resource: 'payments',
+          resource_id: session.id,
+          details: { event_type: 'checkout.session.completed', plan: planName },
+          ip_address: getIpFromRequest(request)
+        })
+
         break
       }
 
@@ -115,6 +126,15 @@ export async function POST(request: Request) {
             }
           })
           console.log(`[Webhook] Assinatura cancelada processada para o usuário: ${user.id}`)
+
+          await logAudit({
+            user_id: user.id,
+            action: 'stripe.subscription_cancelled',
+            resource: 'payments',
+            resource_id: subscription.id,
+            details: { event_type: 'customer.subscription.deleted', customer_id: customerId },
+            ip_address: getIpFromRequest(request)
+          })
         } else {
           console.log("Assinatura cancelada, mas customer_id não foi encontrado nos metadados:", customerId)
         }

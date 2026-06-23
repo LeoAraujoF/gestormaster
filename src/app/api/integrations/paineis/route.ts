@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 // GET all panels
 export async function GET(request: Request) {
@@ -53,6 +54,15 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
+    await logAudit({
+      user_id: user.id,
+      action: 'integration.create_painel',
+      resource: 'iptv_accounts',
+      resource_id: data?.id,
+      details: { provider, username },
+      ip_address: getIpFromRequest(request)
+    })
+
     return NextResponse.json({ success: true, panel: data })
   } catch (error: any) {
     console.error('Panels POST Error:', error)
@@ -89,6 +99,15 @@ export async function PUT(request: Request) {
 
     if (error) throw error
 
+    await logAudit({
+      user_id: user.id,
+      action: 'integration.update_painel',
+      resource: 'iptv_accounts',
+      resource_id: data?.id,
+      details: { provider, username },
+      ip_address: getIpFromRequest(request)
+    })
+
     return NextResponse.json({ success: true, panel: data })
   } catch (error: any) {
     console.error('Panels PUT Error:', error)
@@ -116,6 +135,15 @@ export async function DELETE(request: Request) {
       .eq('user_id', user.id)
 
     if (error) throw error
+
+    await logAudit({
+      user_id: user.id,
+      action: 'integration.delete_painel',
+      resource: 'iptv_accounts',
+      resource_id: id,
+      details: { panel_id: id },
+      ip_address: getIpFromRequest(request)
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

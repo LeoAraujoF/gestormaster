@@ -1,6 +1,7 @@
 import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(request: Request) {
   try {
@@ -42,6 +43,14 @@ export async function POST(request: Request) {
     if (!baseUrl || !apiKey) {
       // Sem credenciais, apagamos apenas localmente (fallback de segurança)
       await supabase.from('evolution_instances').delete().eq('id', instance.id)
+      await logAudit({
+        user_id: user.id,
+        action: 'whatsapp.delete_instance',
+        resource: 'evolution_instances',
+        resource_id: instance.id,
+        details: { instance_name: instanceName, local_only: true },
+        ip_address: getIpFromRequest(request)
+      })
       return NextResponse.json({ success: true, message: 'Removido apenas localmente (sem credenciais de API ativas)' })
     }
 
@@ -57,6 +66,15 @@ export async function POST(request: Request) {
 
     // Limpa do Banco de Dados
     await supabase.from('evolution_instances').delete().eq('id', instance.id)
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.delete_instance',
+      resource: 'evolution_instances',
+      resource_id: instance.id,
+      details: { instance_name: instanceName },
+      ip_address: getIpFromRequest(request)
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

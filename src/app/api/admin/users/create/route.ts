@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +61,15 @@ export async function POST(req: Request) {
         body: JSON.stringify({ userId: data.user.id, method: 'whatsapp', type: 'welcome', password })
       }).catch(err => console.error("Falha ao agendar boas-vindas:", err))
     }
+
+    await logAudit({
+      user_id: null,
+      action: 'admin.create_user',
+      resource: 'users',
+      resource_id: data.user.id,
+      details: { email, plan: plan || 'Free' },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true, user: data.user })
   } catch (error: any) {

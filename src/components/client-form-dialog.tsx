@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -240,6 +241,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       }
 
       toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!")
+      logAuditClient(client ? 'client.update' : 'client.create', 'clients', { client_name: data.name })
       onOpenChange(false)
       onSuccess?.()
     } catch (error: any) {

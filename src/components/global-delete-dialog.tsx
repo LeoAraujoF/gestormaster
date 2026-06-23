@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -62,6 +63,7 @@ export function GlobalDeleteDialog({
       const { error } = await supabase.from(table).delete().eq('id', item.id)
       if (error) throw error
       toast.success("Registro excluído com sucesso!")
+      logAuditClient('resource.delete', table, { item_name: item.name || item.id })
       onSuccess()
       onOpenChange(false)
     } catch (error) {

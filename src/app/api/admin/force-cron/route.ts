@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +20,14 @@ export async function POST(req: Request) {
     // Chama os robôs via HTTP passando a chave
     await fetch(`${baseUrl}/api/cron/generate-alerts?key=${cronSecret}`)
     await fetch(`${baseUrl}/api/cron/process-queue?key=${cronSecret}`)
+
+    await logAudit({
+      user_id: user.id,
+      action: 'admin.force_cron',
+      resource: 'system',
+      details: { crons_triggered: ['generate-alerts', 'process-queue'] },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true })
   } catch (e: any) {

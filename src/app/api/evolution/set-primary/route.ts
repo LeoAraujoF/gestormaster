@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,14 @@ export async function POST(req: Request) {
     if (error) {
       return NextResponse.json({ error: 'Erro ao definir instância primária' }, { status: 400 })
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.set_primary',
+      resource: 'evolution_instances',
+      details: { instance_name: instanceName },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true, message: `A instância ${instanceName} foi definida como Número Principal de Suporte.` })
   } catch (error: any) {

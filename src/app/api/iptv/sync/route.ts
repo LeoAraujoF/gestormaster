@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { TVdeCasaAdapter } from '@/services/iptv/TVdeCasaAdapter';
+import { logAudit, getIpFromRequest } from '@/lib/audit';
 
 export async function POST(req: Request) {
   try {
@@ -130,6 +131,14 @@ export async function POST(req: Request) {
         details: errors 
       }, { status: 500 });
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: 'iptv.sync',
+      resource: 'clients',
+      details: { total_synced: totalSynced, panels_synced: totalServicesSynced, errors_count: errors.length },
+      ip_address: getIpFromRequest(req)
+    });
 
     return NextResponse.json({ 
       success: true, 

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Loader2, MessageCircle, CheckCircle2, XCircle, AlertCircle, Box, Gift } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 
 const serviceSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
@@ -46,6 +47,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
         }).eq('id', service.id)
         if (error) throw error
         toast.success("Serviço atualizado!")
+        logAuditClient('service.update', 'services', { service_name: data.name })
       } else {
         const { error } = await supabase.from('services').insert({
           user_id: user.id,
@@ -54,6 +56,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
         })
         if (error) throw error
         toast.success("Serviço cadastrado!")
+        logAuditClient('service.create', 'services', { service_name: data.name })
       }
       
       onOpenChange(false)
@@ -297,6 +300,7 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
         const { error } = await supabase.from('promotions').update(payload).eq('id', promo.id)
         if (error) throw error
         toast.success("Promoção atualizada!")
+        logAuditClient('promotion.update', 'promotions', { promo_name: data.name })
       } else {
         const { error } = await supabase.from('promotions').insert({
           ...payload,
@@ -304,6 +308,7 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
         })
         if (error) throw error
         toast.success("Promoção criada!")
+        logAuditClient('promotion.create', 'promotions', { promo_name: data.name })
       }
 
       onOpenChange(false)

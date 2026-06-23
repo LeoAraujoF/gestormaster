@@ -6,6 +6,7 @@ import Papa from "papaparse"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { phoneMask } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 import { useRouter } from "next/navigation"
 import {
   autoMapColumns,
@@ -193,6 +194,7 @@ export default function LeadsPage() {
     const ids = Array.from(selectedLeads)
     const { error } = await supabase.from('leads').delete().in('id', ids)
     if (!error) {
+      logAuditClient({ action: 'lead.bulk_delete', resource: 'leads', details: { count: ids.length } })
       setLeads(prev => prev.filter(l => !selectedLeads.has(l.id)))
       setSelectedLeads(new Set())
       toast.success(`${ids.length} leads removidos.`)
@@ -331,6 +333,7 @@ export default function LeadsPage() {
           .eq('id', selectedCampaignId)
 
         if (error) throw error
+        logAuditClient({ action: 'lead.update', resource: 'leads', details: { lead_name: campaignName } })
         await loadCampaigns()
         toast.success("Campanha atualizada com sucesso!")
       } else {
@@ -342,6 +345,7 @@ export default function LeadsPage() {
           .single()
 
         if (error) throw error
+        logAuditClient({ action: 'lead.create', resource: 'leads', details: { lead_name: campaignName } })
         await loadCampaigns()
         setSelectedCampaignId(data.id)
         toast.success("Campanha criada e salva com sucesso!")
@@ -392,6 +396,7 @@ export default function LeadsPage() {
         .eq('id', selectedCampaignId)
 
       if (error) throw error
+      logAuditClient({ action: 'campaign.delete', resource: 'campaigns', resource_id: selectedCampaignId })
       toast.success("Campanha excluída!")
       setSelectedCampaignId("")
       setCampaignName("")
@@ -415,6 +420,7 @@ export default function LeadsPage() {
         .eq('id', lead.id)
 
       if (error) throw error
+      logAuditClient({ action: 'lead.status_change', resource: 'leads', resource_id: lead.id, details: { new_status: newStatus } })
 
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: newStatus } : l))
       toast.success(newStatus === 'concluido' ? "Lead marcado como Concluído!" : "Lead marcado como Novo!")
@@ -642,6 +648,7 @@ export default function LeadsPage() {
           console.error(error)
           toast.error("Erro ao salvar leads. A tabela 'leads' já foi criada no Supabase?")
         } else if (data) {
+          logAuditClient({ action: 'lead.bulk_import', resource: 'leads', details: { count: data.length } })
           setLeads(prev => [...data, ...prev])
           if (duplicatedCount > 0) {
             toast.success(`${data.length} leads importados. ${duplicatedCount} ignorados por já serem clientes.`)
@@ -701,6 +708,7 @@ export default function LeadsPage() {
     if (error) {
       toast.error("Erro ao remover lead.")
     } else {
+      logAuditClient({ action: 'lead.delete', resource: 'leads', resource_id: id })
       setLeads(prev => prev.filter(l => l.id !== id))
       toast.success("Lead removido.")
     }
@@ -714,6 +722,7 @@ export default function LeadsPage() {
     if (error) {
       toast.error("Erro ao limpar lista.")
     } else {
+      logAuditClient({ action: 'lead.delete_all', resource: 'leads' })
       setLeads([])
       toast.success("Todos os leads foram removidos.")
     }
@@ -729,6 +738,7 @@ export default function LeadsPage() {
     if (error) {
       toast.error("Erro ao atualizar lead.")
     } else {
+      logAuditClient({ action: 'lead.update', resource: 'leads', resource_id: id, details: { lead_name: editingLead.name } })
       setLeads(prev => prev.map(l => l.id === id ? editingLead : l))
       toast.success("Lead atualizado com sucesso!")
       setIsEditDialogOpen(false)

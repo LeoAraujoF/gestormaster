@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { logAuditClient } from "@/lib/audit-client"
 
 const faqs = [
   {
@@ -144,6 +145,7 @@ export default function SuportePage() {
       }).select().single()
 
       if (error) throw error
+      logAuditClient({ action: 'ticket.create', resource: 'tickets', resource_id: data.id, details: { subject: newTicket.subject } })
 
       // Add the initial message
       await supabase.from('ticket_messages').insert({

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
       console.error('Error toggling warmup:', instanceError)
       return NextResponse.json({ error: 'Falha ao atualizar o status de aquecimento.' }, { status: 500 })
     }
+
+    await logAudit({
+      user_id: user.id,
+      action: 'whatsapp.toggle_warmup',
+      resource: 'evolution_instances',
+      resource_id: instance_id,
+      details: { instance_name: instance.instance_name, is_warming_up: instance.is_warming_up },
+      ip_address: getIpFromRequest(req)
+    })
 
     return NextResponse.json({ success: true, is_warming_up: instance.is_warming_up })
 

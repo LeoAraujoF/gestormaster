@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, Gift, Trash2, Plus, Minus } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
+import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,6 +89,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       }
 
       toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${currentDueDate.toLocaleDateString('pt-BR')}`)
+      logAuditClient('client.renew', 'clients', { client_name: client.name, months: renewMonths })
       
       confetti({
         particleCount: 150,
@@ -269,6 +271,7 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
       }
 
       toast.success(`Promoção ativada! Vencimento estendido por ${renewMonths} mês(es).`)
+      logAuditClient('client.renew', 'clients', { client_name: client.name, months: renewMonths, promo_name: selectedPromo?.name || 'none' })
       
       confetti({
         particleCount: 150,
@@ -411,6 +414,7 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
       const { error } = await supabase.from('clients').delete().eq('id', client.id)
       if (error) throw error
       toast.success("Cliente excluído!")
+      logAuditClient('client.delete', 'clients', { client_name: client.name })
       onSuccess()
       onOpenChange(false)
     } catch (error) {

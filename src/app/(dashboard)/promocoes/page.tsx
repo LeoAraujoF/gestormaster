@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Plus, Edit2, Trash2, Loader2, Tags, CalendarIcon, Megaphone, Timer, ArrowDownToLine } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import { logAuditClient } from "@/lib/audit-client"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -122,6 +123,7 @@ export default function PromocoesPage() {
     try {
       const { error } = await supabase.from('promotions').update({ is_active: newStatus }).eq('id', promo.id)
       if (error) throw error
+      logAuditClient({ action: 'promotion.toggle', resource: 'promotions', resource_id: promo.id, details: { new_status: newStatus ? 'active' : 'inactive', promo_name: promo.name } })
       toast.success(`Promoção ${newStatus ? 'ativada' : 'desativada'}.`)
       loadPromotions()
     } catch (error) {

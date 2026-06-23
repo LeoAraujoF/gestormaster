@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/service-role';
 import { messageQueue } from '@/lib/queue';
+import { logAudit, getIpFromRequest } from '@/lib/audit';
 
 export async function POST(req: Request) {
   try {
@@ -84,6 +85,15 @@ export async function POST(req: Request) {
           });
           
           console.log(`[Webhook MP] Recibo enviado com sucesso para ${telefone} (Instância: ${instance_name})`);
+
+          await logAudit({
+            user_id: null,
+            action: 'mercadopago.payment',
+            resource: 'payments',
+            resource_id: String(paymentId),
+            details: { orgId, status: 'approved', amount: paymentData.transaction_amount, telefone, instance_name },
+            ip_address: getIpFromRequest(req)
+          });
         }
       }
     }

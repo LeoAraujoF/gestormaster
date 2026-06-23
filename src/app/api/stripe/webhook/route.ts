@@ -87,6 +87,28 @@ export async function POST(request: Request) {
         
         console.log(`[Webhook] Assinatura ativada com sucesso para o usuário: ${userId}`)
 
+        // --- Lógica de Afiliados ---
+        const referredBy = user.user_metadata?.referred_by;
+        if (referredBy) {
+          const amountTotal = session.amount_total ? session.amount_total / 100 : 0;
+          const commissionAmount = amountTotal * 0.30; // 30% de comissão fixa
+
+          if (commissionAmount > 0) {
+            const { error: affiliateError } = await supabaseAdmin.from('affiliate_earnings').insert({
+              referrer_id: referredBy,
+              referred_user_id: userId,
+              amount: commissionAmount,
+              status: 'pending' // Pendente para análise de reembolso/chargeback
+            });
+            
+            if (affiliateError) {
+               console.error("Erro ao inserir comissão de afiliado:", affiliateError)
+            } else {
+               console.log(`[Webhook] Comissão de R$ ${commissionAmount} gerada para o afiliado ${referredBy}`)
+            }
+          }
+        }
+
         await logAudit({
           user_id: userId,
           action: 'stripe.payment_success',

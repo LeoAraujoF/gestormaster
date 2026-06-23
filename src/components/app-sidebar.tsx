@@ -127,6 +127,12 @@ const data = {
       color: "text-teal-500",
     },
     {
+      title: "Indique e Ganhe",
+      url: "/afiliados",
+      icon: Users,
+      color: "text-sky-400",
+    },
+    {
       title: "Avisos & Updates",
       url: "/atualizacoes",
       icon: BellRing,

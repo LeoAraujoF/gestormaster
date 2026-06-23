@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Loader2, CreditCard, Zap, LayoutDashboard, LogOut, QrCode, Copy, Check } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Loader2, CreditCard, Zap, LayoutDashboard, LogOut, QrCode, Copy, Check, Coins } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -15,9 +15,28 @@ export default function PlanosPage() {
   const [isPixLoading, setIsPixLoading] = useState<string | null>(null)
   const [pixData, setPixData] = useState<{qr_code: string, qr_image_url: string} | null>(null)
   const [isCopied, setIsCopied] = useState(false)
+  const [isCreditLoading, setIsCreditLoading] = useState(false)
+  const [affiliateBalance, setAffiliateBalance] = useState<number | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('affiliate_earnings').select('amount, status').eq('referrer_id', user.id).then(({ data }) => {
+          if (data) {
+            let disponivel = 0
+            data.forEach(e => {
+              if (e.status === 'available') disponivel += Number(e.amount)
+              if (e.status === 'paid' && Number(e.amount) < 0) disponivel += Number(e.amount)
+            })
+            setAffiliateBalance(disponivel)
+          }
+        })
+      }
+    })
+  }, [supabase])
 
   // --- Pagamento via Stripe (Cartão) ---
   const handleCheckout = async (priceId: string, planName: string) => {
@@ -95,6 +114,23 @@ export default function PlanosPage() {
     router.push("/login")
   }
 
+  // --- Pagamento via Saldo de Afiliado ---
+  const handleCreditCheckout = async () => {
+    setIsCreditLoading(true)
+    try {
+      const res = await fetch('/api/afiliados/converter', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro ao converter saldo")
+      
+      toast.success("Plano ativado com sucesso usando R$ 20 do seu saldo!")
+      router.push("/")
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsCreditLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background/95 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Top Bar for Logout */}
@@ -167,7 +203,7 @@ export default function PlanosPage() {
               <Button 
                 className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20" 
                 onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT", "Gestor Pro")}
-                disabled={isCheckoutLoading !== null || isPixLoading !== null}
+                disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
               >
                 {isCheckoutLoading === (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT") ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
                 Pagar com Cartão
@@ -175,11 +211,27 @@ export default function PlanosPage() {
               <Button 
                 className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" 
                 onClick={() => handlePixCheckout(20, "Gestor Pro")}
-                disabled={isCheckoutLoading !== null || isPixLoading !== null}
+                disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
               >
                 {isPixLoading === "Gestor Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
                 Pagar com PIX
               </Button>
+              
+              {affiliateBalance !== null && affiliateBalance >= 20 && (
+                <div className="pt-4 border-t mt-2">
+                  <Button 
+                    className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20" 
+                    onClick={handleCreditCheckout}
+                    disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
+                  >
+                    {isCreditLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Coins className="w-5 h-5 mr-2" />}
+                    Ativar com Saldo Afiliado (R$ 20,00)
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    Seu saldo atual é de R$ {affiliateBalance.toFixed(2)}
+                  </p>
+                </div>
+              )}
             </CardFooter>
           </Card>
         </div>

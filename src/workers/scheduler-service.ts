@@ -241,3 +241,40 @@ cron.schedule('*/2 * * * *', async () => {
     }
   });
 });
+
+// --- Liberação de Comissões de Afiliados (Rodar 1x por dia, à meia-noite 00:00) ---
+cron.schedule('0 0 * * *', async () => {
+  return runWithCorrelationId(undefined, undefined, async () => {
+    logger.info(`[Scheduler] 💰 Iniciando liberação de comissões de afiliados... (${new Date().toISOString()})`);
+    try {
+      const HOLD_DAYS = 7;
+      const releaseDate = new Date();
+      releaseDate.setDate(releaseDate.getDate() - HOLD_DAYS);
+
+      // Busca comissões pendentes e antigas
+      const { data: pendingEarnings, error: searchError } = await supabaseAdmin
+        .from('affiliate_earnings')
+        .select('id')
+        .eq('status', 'pending')
+        .lte('created_at', releaseDate.toISOString());
+
+      if (searchError) throw searchError;
+
+      if (pendingEarnings && pendingEarnings.length > 0) {
+        const idsToRelease = pendingEarnings.map(e => e.id);
+
+        const { error: updateError } = await supabaseAdmin
+          .from('affiliate_earnings')
+          .update({ status: 'available' })
+          .in('id', idsToRelease);
+
+        if (updateError) throw updateError;
+        logger.info(`[Scheduler] ✅ ${idsToRelease.length} comissões foram liberadas com sucesso.`);
+      } else {
+        logger.info(`[Scheduler] Nenhuma comissão pendente para liberar hoje.`);
+      }
+    } catch (error: any) {
+      logger.error(`[Scheduler] ❌ Erro na liberação de comissões: ${error.message}`);
+    }
+  });
+});

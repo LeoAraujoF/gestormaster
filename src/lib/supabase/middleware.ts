@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const isPublicRoute = 
       request.nextUrl.pathname.startsWith('/planos') || 
+      request.nextUrl.pathname.startsWith('/afiliados') || 
       request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/cadastro') || 
       request.nextUrl.pathname.startsWith('/api') || 

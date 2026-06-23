@@ -365,7 +365,7 @@ export default function AuditPage() {
                       {log.details ? (
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
+                            <TooltipTrigger render={
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -375,7 +375,7 @@ export default function AuditPage() {
                                 <Eye className="w-3 h-3" />
                                 Ver
                               </Button>
-                            </TooltipTrigger>
+                            } />
                             <TooltipContent side="left" className="max-w-xs">
                               <pre className="text-xs whitespace-pre-wrap">
                                 {JSON.stringify(log.details, null, 2)}

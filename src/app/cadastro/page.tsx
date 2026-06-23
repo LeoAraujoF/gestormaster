@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -45,17 +45,33 @@ export default function RegisterPage() {
     }
   })
 
+  // Captura o link de afiliado da URL (ex: ?ref=UUID)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      if (ref) {
+        localStorage.setItem('gestor_ref_code', ref);
+      }
+    }
+  }, [])
+
+
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     
     try {
-      const { error } = await supabase.auth.signUp({
+      // Pega o código de indicação do LocalStorage (se existir)
+      const referredBy = typeof window !== 'undefined' ? localStorage.getItem('gestor_ref_code') : null;
+
+      const { error, data: authData } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             full_name: data.name,
-            has_active_subscription: false // Inicia sempre bloqueado
+            has_active_subscription: false, // Inicia sempre bloqueado
+            referred_by: referredBy
           }
         }
       })
@@ -63,6 +79,16 @@ export default function RegisterPage() {
       if (error) {
         toast.error(error.message)
         return
+      }
+
+      // Se der sucesso e houver padrinho, tentamos salvar na tabela pública tbm
+      if (authData?.user && referredBy) {
+        await supabase.from('users').update({ referred_by: referredBy }).eq('id', authData.user.id)
+      }
+
+      // Limpa o cookie/localstorage de indicação após sucesso
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('gestor_ref_code');
       }
 
       toast.success("Conta criada com sucesso!")

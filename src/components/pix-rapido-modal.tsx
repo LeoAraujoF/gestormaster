@@ -33,8 +33,6 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
   const [isGeneratingPix, setIsGeneratingPix] = useState(false)
   const [generatedPix, setGeneratedPix] = useState<{copia_e_cola: string, qr_code_base64: string} | null>(null)
   
-  if (flags['action_pix_rapido'] === false) return null
-
   const supabase = createClient()
 
   useEffect(() => {
@@ -90,6 +88,8 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
       toast.success("Copia e Cola copiado!")
     }
   }
+
+  if (flags['action_pix_rapido'] === false) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

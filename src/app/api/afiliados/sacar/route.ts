@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { getIpFromRequest } from "@/lib/audit"
-import { logAudit } from "@/lib/audit-server"
+import { logAudit } from "@/lib/audit"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

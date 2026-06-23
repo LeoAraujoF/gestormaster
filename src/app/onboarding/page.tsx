@@ -76,6 +76,13 @@ export default function OnboardingPage() {
         return
       }
 
+      // Dispara a mensagem de boas-vindas pelo WhatsApp de forma assíncrona
+      fetch('/api/admin/billing/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, method: 'whatsapp', type: 'welcome' })
+      }).catch(err => console.error("Falha ao enviar boas-vindas:", err))
+
       toast.success("Tudo pronto! Bem-vindo ao Gestor Master.")
       window.location.href = "/planos"
     } catch (err) {

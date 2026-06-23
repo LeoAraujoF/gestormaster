@@ -43,7 +43,11 @@ export async function POST(req: Request) {
 
     // 2. Lógica de Boas Vindas
     if (type === 'welcome') {
-      messageText = `*Olá ${user.user_metadata?.full_name || ''}!* 👋\n\nSua conta no nosso sistema acaba de ser criada com sucesso!\n\n🔗 *Acesso:* ${siteUrl}/login\n📧 *Email:* ${email}\n🔑 *Senha provisória:* ${password}\n\nAconselhamos que mude sua senha assim que fizer o primeiro login.\nSeja bem-vindo!`
+      messageText = `*Olá ${user.user_metadata?.full_name || ''}!* 👋\n\nSua conta no nosso sistema acaba de ser criada com sucesso!\n\n🔗 *Acesso:* ${siteUrl}/login\n📧 *Email:* ${email}`
+      if (password) {
+        messageText += `\n🔑 *Senha provisória:* ${password}\n\nAconselhamos que mude sua senha assim que fizer o primeiro login.`
+      }
+      messageText += `\n\nSeja muito bem-vindo!`
     } else {
       // LÓGICA DE COBRANÇA
       let checkoutUrl = ""

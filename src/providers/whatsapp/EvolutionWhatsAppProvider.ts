@@ -42,7 +42,9 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     });
   }
 
-  async sendMedia(instanceName: string, phone: string, mediaBase64: string, mediaType: string, options?: SendMessageOptions) {
+  async sendMedia(instanceName: string, phone: string, mediaBase64OrUrl: string, mediaType: string, caption?: string, options?: SendMessageOptions) {
+    const isUrl = mediaBase64OrUrl.startsWith('http');
+    
     return this.request(`/message/sendMedia/${instanceName}`, 'POST', {
       number: phone,
       options: {
@@ -51,7 +53,8 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
       },
       mediaMessage: {
         mediatype: mediaType,
-        media: mediaBase64
+        media: mediaBase64OrUrl,
+        caption: caption || undefined
       }
     });
   }

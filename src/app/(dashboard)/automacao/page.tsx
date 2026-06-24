@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { QrCode, Smartphone, Wifi, WifiOff, Loader2, Save, Plus, Edit2, Trash2, Bot, BellRing, Shield, ShieldAlert, ExternalLink, Lock, Zap, RefreshCcw, XCircle, List, LogOut, PhoneOff, CheckCircle2, Clock, Megaphone, Rocket, Mailbox, Send, Activity, Users, Target, Star, Play } from "lucide-react"
+import { QrCode, Smartphone, Wifi, WifiOff, Loader2, Save, Plus, Edit2, Trash2, Bot, BellRing, Shield, ShieldAlert, ExternalLink, Lock, Zap, RefreshCcw, XCircle, List, LogOut, PhoneOff, CheckCircle2, Clock, Megaphone, Rocket, Mailbox, Send, Activity, Users, Target, Star, Play, Image as ImageIcon, X } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import { z } from "zod"
@@ -122,6 +122,7 @@ export default function AutomacaoPage() {
   // Mass message state
   const [massAudience, setMassAudience] = useState<string>("all")
   const [massServiceId, setMassServiceId] = useState<string>("")
+  const [massImage, setMassImage] = useState<File | null>(null)
   const [massMessage, setMassMessage] = useState<string>("Olá {{primeiro_nome}}, temos uma oferta especial para você!")
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
   const [isSendingMass, setIsSendingMass] = useState(false)
@@ -170,6 +171,26 @@ export default function AutomacaoPage() {
     if (!confirm("Tem certeza que deseja iniciar o disparo em massa?")) return
     setIsSendingMass(true)
     try {
+      let mediaUrl = null
+      
+      // Upload do banner se houver
+      if (massImage) {
+        const fileExt = massImage.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+        
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('mass_media')
+          .upload(`banners/${fileName}`, massImage, {
+            cacheControl: '3600',
+            upsert: false
+          })
+          
+        if (uploadErr) throw new Error("Erro ao fazer upload da imagem: " + uploadErr.message)
+        
+        const { data: { publicUrl } } = supabase.storage.from('mass_media').getPublicUrl(`banners/${fileName}`)
+        mediaUrl = publicUrl
+      }
+
       const res = await fetch('/api/evolution/send-mass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,6 +198,7 @@ export default function AutomacaoPage() {
           audience: massAudience,
           serviceId: massServiceId,
           messageTemplate: massMessage,
+          mediaUrl: mediaUrl,
           delaySeconds: 5,
           scheduledAt: scheduledAt ? scheduledAt.toISOString() : null
         })
@@ -1477,7 +1499,46 @@ export default function AutomacaoPage() {
               )}
 
               <div className="space-y-2">
-                <Label>Mensagem</Label>
+                <Label>Banner / Imagem (Opcional)</Label>
+                <div className="flex flex-col gap-2">
+                  {!massImage ? (
+                    <Label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/20 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <ImageIcon className="w-8 h-8 text-primary/50 mb-2" />
+                        <p className="text-sm text-muted-foreground"><span className="font-semibold text-primary">Clique para anexar</span> ou arraste</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">PNG, JPG até 2MB</p>
+                      </div>
+                      <Input 
+                        type="file" 
+                        accept="image/png, image/jpeg, image/webp" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 2 * 1024 * 1024) {
+                            toast.error("A imagem deve ter no máximo 2MB.")
+                            return
+                          }
+                          setMassImage(file)
+                        }} 
+                      />
+                    </Label>
+                  ) : (
+                    <div className="relative w-full h-32 rounded-lg border overflow-hidden flex items-center justify-center bg-muted">
+                      <img src={URL.createObjectURL(massImage)} alt="Preview" className="h-full object-contain" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button variant="destructive" size="sm" onClick={() => setMassImage(null)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remover Banner
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mensagem {massImage && "(será enviada como legenda da imagem)"}</Label>
                 <Textarea 
                   className="min-h-[150px] bg-background/50 resize-y"
                   value={massMessage}

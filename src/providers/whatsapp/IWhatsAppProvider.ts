@@ -12,7 +12,7 @@ export interface IWhatsAppProvider {
   /**
    * Envia uma mídia (imagem, áudio, pdf)
    */
-  sendMedia(instanceName: string, phone: string, mediaBase64: string, mediaType: string, options?: SendMessageOptions): Promise<any>;
+  sendMedia(instanceName: string, phone: string, mediaBase64OrUrl: string, mediaType: string, caption?: string, options?: SendMessageOptions): Promise<any>;
 
   /**
    * Gera o QR Code para conectar a instância

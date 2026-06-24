@@ -117,13 +117,22 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         normalizedPhone = `55${normalizedPhone}`;
       }
 
-      // 7. Envia a mensagem
-      await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
-        delay: 1200,
-        presence: 'composing'
-      });
+      // 7. Envia a mensagem (Texto ou Mídia)
+      if (job.data.mediaUrl) {
+        // Se houver mediaUrl, envia como mídia e usa o texto como legenda (caption)
+        await provider.sendMedia(targetInstanceName, normalizedPhone, job.data.mediaUrl, 'image', finalMessage, {
+          delay: 1200,
+          presence: 'composing'
+        });
+      } else {
+        // Se não houver, envia apenas texto
+        await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+          delay: 1200,
+          presence: 'composing'
+        });
+      }
 
-      // 7. Sucesso — Atualiza o registro para "sent"
+      // 8. Sucesso — Atualiza o registro para "sent"
       await updateAlertStatus('sent', { 
         sent_at: new Date().toISOString(),
         message_content: finalMessage 

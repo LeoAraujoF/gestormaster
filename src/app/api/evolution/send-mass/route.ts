@@ -17,10 +17,10 @@ export async function POST(req: Request) {
     }
 
 
-    const { audience, serviceId, messageTemplate, delaySeconds = 5, scheduledAt } = await req.json()
+    const { audience, serviceId, messageTemplate, mediaUrl, delaySeconds = 5, scheduledAt } = await req.json()
 
-    if (!messageTemplate) {
-      return NextResponse.json({ error: 'Mensagem é obrigatória' }, { status: 400 })
+    if (!messageTemplate && !mediaUrl) {
+      return NextResponse.json({ error: 'Mensagem ou Banner é obrigatório' }, { status: 400 })
     }
 
     // --- KILL SWITCH CHECK ---
@@ -167,7 +167,8 @@ export async function POST(req: Request) {
           apiKey: finalApiKey,
           ruleId: tempRule.id,
           userId: user.id,
-          organizationId: organizationId
+          organizationId: organizationId,
+          mediaUrl: mediaUrl
         },
         opts: {
           delay: initialDelayMs

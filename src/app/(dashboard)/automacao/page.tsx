@@ -82,6 +82,7 @@ export default function AutomacaoPage() {
   
   // Dashboard & Radar state
   const [globalMetrics, setGlobalMetrics] = useState({ sent: 0, pending: 0, failed: 0 })
+  const [pendingBilling, setPendingBilling] = useState(0)
   const [estimatedAudience, setEstimatedAudience] = useState<number | null>(null)
 
   // Logs state
@@ -483,6 +484,15 @@ export default function AutomacaoPage() {
           pending: thisMonthLogs.filter((l: any) => l.status === 'pending').length,
           failed: thisMonthLogs.filter((l: any) => l.status === 'failed').length,
         })
+
+        // Count clients with upcoming due dates (next 3 days) that have no 'sent' alert this month
+        const { count: billingCount } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .lte('due_date', new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0])
+          .gte('due_date', new Date().toISOString().split('T')[0])
+          .eq('status', 'active')
+        setPendingBilling(billingCount ?? 0)
       }
     } catch (e) {
       console.error(e)
@@ -686,7 +696,7 @@ export default function AutomacaoPage() {
       </div>
 
       {/* Global Bot KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
         <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10" />
           <div className="flex items-center gap-3">
@@ -720,6 +730,18 @@ export default function AutomacaoPage() {
           </div>
           <p className="text-3xl font-bold mt-2 text-red-500">{globalMetrics.failed}</p>
           <p className="text-xs text-muted-foreground">Não entregues (bloqueio ou erro)</p>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-sky-500/5 rounded-bl-full -z-10" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-sky-500/10 rounded-xl">
+              <Mailbox className="w-5 h-5 text-sky-500" />
+            </div>
+            <h3 className="font-medium text-muted-foreground">Para Cobrar</h3>
+          </div>
+          <p className="text-3xl font-bold mt-2 text-sky-500">{pendingBilling}</p>
+          <p className="text-xs text-muted-foreground">Clientes vencendo nos próximos 3 dias</p>
         </div>
       </div>
 

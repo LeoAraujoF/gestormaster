@@ -21,6 +21,7 @@ import { RenewDialog, PromoDialog, DeleteDialog } from "@/components/client-acti
 import type { DashboardMetrics, MonthlyGrowth } from "@/types/database"
 import { usePrivacy } from "@/hooks/use-privacy"
 import { Skeleton } from "@/components/ui/skeleton"
+import { OnboardingProgress } from "@/components/onboarding-progress"
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
@@ -280,6 +281,9 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Onboarding Progress */}
+      <OnboardingProgress />
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">

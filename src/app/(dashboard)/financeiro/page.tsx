@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils"
 import { MetricCard } from "@/components/metric-card"
 import type { DashboardMetrics } from "@/types/database"
 import { usePrivacy } from "@/hooks/use-privacy"
+import { FixedCostsSection } from "@/components/fixed-costs-section"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -717,6 +718,9 @@ export default function FinanceiroPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fixed Monthly Costs */}
+      <FixedCostsSection />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         

@@ -97,8 +97,8 @@ export default function AfiliadosPage() {
       
       setEarnings(comissoes || [])
     } catch (error: any) {
-      toast.error("Erro ao carregar painel")
-      console.error(error)
+      toast.error("Erro ao carregar painel: " + (error?.message || JSON.stringify(error)))
+      console.error("ERRO COMPLETO AFILIADOS:", error)
     } finally {
       setIsLoading(false)
     }
@@ -106,8 +106,29 @@ export default function AfiliadosPage() {
 
   function copyAffiliateLink() {
     const url = `${window.location.origin}/cadastro?ref=${userId}`
-    navigator.clipboard.writeText(url)
-    toast.success("Link copiado! Compartilhe para ganhar comissões.")
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url)
+      toast.success("Link copiado! Compartilhe para ganhar comissões.")
+    } else {
+      // Fallback para quando acessado via IP na rede local (http não-seguro)
+      const textArea = document.createElement("textarea")
+      textArea.value = url
+      textArea.style.position = "fixed"
+      textArea.style.left = "-999999px"
+      textArea.style.top = "-999999px"
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        toast.success("Link copiado! Compartilhe para ganhar comissões.")
+      } catch (err) {
+        console.error('Falha ao copiar link', err)
+        toast.error("Não foi possível copiar automaticamente. Tente copiar manualmente.")
+      }
+      textArea.remove()
+    }
   }
 
   async function handleWithdraw(e: React.FormEvent) {

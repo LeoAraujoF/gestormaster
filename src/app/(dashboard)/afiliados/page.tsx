@@ -73,7 +73,7 @@ export default function AfiliadosPage() {
         .from('affiliate_earnings')
         .select(`
           *,
-          referred_user:users(full_name)
+          referred_user:users!referred_user_id(full_name)
         `)
         .eq('referrer_id', user.id)
         .order('created_at', { ascending: false })

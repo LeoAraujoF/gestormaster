@@ -7,6 +7,8 @@ import { Users, MessageCircle, Zap, Check, ChevronRight, X, Briefcase } from "lu
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
+
 interface OnboardingStep {
   id: string
   title: string
@@ -82,7 +84,7 @@ export function OnboardingProgress() {
         },
         {
           id: 'whatsapp',
-          title: 'Conectar WhatsApp (Principal)',
+          title: 'Conectar WhatsApp',
           description: 'Conecte e defina como número principal para cobranças',
           icon: MessageCircle,
           href: '/automacao',
@@ -127,96 +129,109 @@ export function OnboardingProgress() {
   if (allCompleted) return null
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-background p-5 md:p-6 shadow-sm">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-      
-      {/* Header */}
-      <div className="relative flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary">
-            <Zap className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              Configure sua conta
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                {completedCount}/{totalSteps}
-              </span>
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Complete os passos abaixo para aproveitar ao máximo o Gestor
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
-          onClick={handleDismiss}
-        >
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="relative h-2 bg-muted/50 rounded-full mb-5 overflow-hidden">
-        <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
-
-      {/* Steps */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {steps.map((step) => {
-          const Icon = step.icon
-          return (
-            <button
-              key={step.id}
-              onClick={() => !step.completed && router.push(step.href)}
-              disabled={step.completed}
-              className={cn(
-                "group relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200",
-                step.completed
-                  ? "border-emerald-500/20 bg-emerald-500/5 cursor-default"
-                  : "border-border/50 bg-background/50 hover:border-primary/30 hover:bg-primary/5 cursor-pointer hover:shadow-sm"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors",
-                  step.completed
-                    ? "bg-emerald-500/10 text-emerald-500"
-                    : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                )}
-              >
-                {step.completed ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Icon className="w-4 h-4" />
-                )}
+    <Dialog open={true} onOpenChange={() => {}}>
+      <DialogContent 
+        className="sm:max-w-[700px] p-0 overflow-hidden border-border/50 bg-background shadow-2xl" 
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        hideCloseButton
+      >
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-background p-6 md:p-8">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+          
+          <DialogHeader className="relative mb-6">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary">
+                <Zap className="w-6 h-6" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p
+              <div className="text-left">
+                <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+                  Configure sua conta
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                    {completedCount}/{totalSteps}
+                  </span>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
+                  Complete os passos abaixo para deixar seu sistema 100% pronto para faturar.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Progress bar */}
+          <div className="relative h-2.5 bg-muted/50 rounded-full mb-8 overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          {/* Steps */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {steps.map((step) => {
+              const Icon = step.icon
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => !step.completed && router.push(step.href)}
+                  disabled={step.completed}
                   className={cn(
-                    "text-sm font-semibold leading-tight",
-                    step.completed ? "text-emerald-600 dark:text-emerald-400 line-through decoration-emerald-500/30" : "text-foreground"
+                    "group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200",
+                    step.completed
+                      ? "border-emerald-500/20 bg-emerald-500/5 cursor-default"
+                      : "border-border/50 bg-background hover:border-primary/30 hover:bg-primary/5 cursor-pointer hover:shadow-md hover:-translate-y-0.5"
                   )}
                 >
-                  {step.title}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                  {step.description}
-                </p>
-              </div>
-              {!step.completed && (
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 mt-1 transition-transform group-hover:translate-x-0.5" />
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+                  <div
+                    className={cn(
+                      "flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-colors",
+                      step.completed
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                    )}
+                  >
+                    {step.completed ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Icon className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={cn(
+                        "text-sm font-semibold leading-tight",
+                        step.completed ? "text-emerald-600 dark:text-emerald-400 line-through decoration-emerald-500/30" : "text-foreground"
+                      )}
+                    >
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                      {step.description}
+                    </p>
+                  </div>
+                  {!step.completed && (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 mt-3 transition-transform group-hover:translate-x-1" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <DialogFooter className="mt-8 pt-4 border-t border-border/50 flex flex-row items-center justify-between sm:justify-between">
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">
+              Você pode pular e fazer isso depois se quiser.
+            </span>
+            <Button
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleDismiss}
+            >
+              Pular Tutorial
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

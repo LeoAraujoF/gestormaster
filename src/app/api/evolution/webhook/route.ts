@@ -8,20 +8,18 @@ export async function POST(req: Request) {
   try {
     const headersList = req.headers;
 
-    // 1. Proteção por Secret Token via Query ou Header
+    // 1. Proteção por Secret Token via Query ou Header (Legado / Opcional)
     const url = new URL(req.url);
     const token = url.searchParams.get('token') || headersList.get('authorization');
     const secretsEnv = process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '';
     const validSecrets = secretsEnv.split(',').map(s => s.trim()).filter(Boolean);
 
-    if (validSecrets.length === 0) {
-      console.warn('Bloqueado: Variável WEBHOOK_SECRETS não configurada no servidor.');
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!token || !validSecrets.includes(token)) {
-      console.warn('Bloqueado: Tentativa de webhook sem token ou token inválido');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Se o admin configurou a variável de ambiente WEBHOOK_SECRETS, exigimos ela.
+    if (validSecrets.length > 0) {
+      if (!token || !validSecrets.includes(token)) {
+        console.warn('Bloqueado: Tentativa de webhook sem token válido (WEBHOOK_SECRETS)');
+        return NextResponse.json({ error: 'Unauthorized token' }, { status: 401 });
+      }
     }
 
     // 2. Ler o body como texto bruto para HMAC e depois parsear

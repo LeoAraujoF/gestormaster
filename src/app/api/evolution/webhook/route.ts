@@ -39,32 +39,43 @@ export async function POST(req: Request) {
       if (secSettings?.require_signature) {
         const incomingSignature = headersList.get('x-hmac-signature') 
           || headersList.get('x-hub-signature-256')
-          || headersList.get('x-signature');
+          || headersList.get('x-signature')
+          || headersList.get('apikey')
+          || headersList.get('x-webhook-secret');
 
         if (incomingSignature) {
           // Descriptografar o secret armazenado no banco
           const secret = SecretsManager.decrypt(secSettings.hmac_secret);
           
-          // Computar HMAC esperado
+          // 1. Verificar se é apenas o secret estático (Evolution API envia puro no header)
+          const isStaticMatch = crypto.timingSafeEqual(
+            Buffer.from(incomingSignature.padEnd(secret.length, ' ')), 
+            Buffer.from(secret.padEnd(incomingSignature.length, ' '))
+          ) && incomingSignature === secret;
+
+          // 2. Computar HMAC esperado (caso a Evolution implemente assinatura real no futuro)
           const expectedSignature = crypto
             .createHmac('sha256', secret)
             .update(rawBody)
             .digest('hex');
 
-          // Comparação segura contra timing attacks
-          const sigBuffer = Buffer.from(incomingSignature.replace('sha256=', ''), 'utf8');
-          const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+          let isHmacMatch = false;
+          try {
+            const sigClean = incomingSignature.replace('sha256=', '');
+            const sigBuffer = Buffer.from(sigClean, 'utf8');
+            const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+            isHmacMatch = sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+          } catch (e) {}
 
-          if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
-            console.warn('Bloqueado: Assinatura HMAC inválida no webhook da Evolution');
-            return NextResponse.json({ error: 'Invalid HMAC signature' }, { status: 401 });
+          if (!isStaticMatch && !isHmacMatch) {
+            console.warn('Bloqueado: Assinatura ou Secret inválido no webhook da Evolution');
+            return NextResponse.json({ error: 'Invalid webhook secret/signature' }, { status: 401 });
           }
 
-          console.log('[WEBHOOK] Assinatura HMAC validada com sucesso ✓');
+          console.log('[WEBHOOK] Assinatura/Secret validado com sucesso ✓');
         } else {
-          // Se exige assinatura mas não veio nenhuma, loga mas permite
-          // (A Evolution pode não enviar HMAC dependendo da versão/config)
-          console.warn('[WEBHOOK] Assinatura HMAC exigida mas não recebida. Permitindo por compatibilidade.');
+          console.warn('[WEBHOOK] Validação exigida mas nenhum header (apikey, x-signature) foi recebido. Bloqueando.');
+          return NextResponse.json({ error: 'Missing webhook secret' }, { status: 401 });
         }
       }
     } catch (hmacError) {

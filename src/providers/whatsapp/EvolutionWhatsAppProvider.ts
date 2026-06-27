@@ -70,7 +70,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     };
   }
 
-  async createInstance(instanceName: string, webhookUrl?: string) {
+  async createInstance(instanceName: string, webhookUrl?: string, webhookSecret?: string) {
     const payload: any = {
       instanceName,
       qrcode: true,
@@ -79,14 +79,30 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     
     if (webhookUrl) {
       payload.webhook = {
+        enabled: true,
         url: webhookUrl,
         byEvents: false,
         base64: false,
-        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"]
+        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
+        ...(webhookSecret ? { headers: { "x-webhook-secret": webhookSecret } } : {})
       };
     }
     
     return this.request(`/instance/create`, 'POST', payload);
+  }
+
+  async setWebhook(instanceName: string, webhookUrl: string, webhookSecret?: string) {
+    const payload: any = {
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        byEvents: false,
+        base64: false,
+        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
+        ...(webhookSecret ? { headers: { "x-webhook-secret": webhookSecret } } : {})
+      }
+    };
+    return this.request(`/webhook/set/${instanceName}`, 'POST', payload);
   }
 
   async deleteInstance(instanceName: string) {

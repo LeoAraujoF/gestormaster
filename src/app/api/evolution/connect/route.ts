@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { supabaseAdmin } from '@/lib/supabase/service-role'
 
 export async function POST(request: Request) {
   try {
@@ -110,12 +111,26 @@ export async function POST(request: Request) {
       // Monta a URL do Webhook usando o Host da requisição
       const host = request.headers.get('host');
       const protocol = host?.includes('localhost') || host?.match(/^[0-9.]+:[0-9]+$/) ? 'http' : 'https';
-      const webhookSecret = process.env.WEBHOOK_SECRET || '';
-      const webhookUrl = `${protocol}://${host}/api/evolution/webhook${webhookSecret ? `?token=${webhookSecret}` : ''}`;
+      const webhookSecretToken = process.env.WEBHOOK_SECRET || '';
+      const webhookUrl = `${protocol}://${host}/api/evolution/webhook${webhookSecretToken ? `?token=${webhookSecretToken}` : ''}`;
+
+      // Busca a chave HMAC atual do sistema para enviar no header do webhook
+      const { data: secSettings } = await supabaseAdmin
+        .from('security_settings')
+        .select('hmac_secret, require_signature')
+        .limit(1)
+        .single();
+      
+      let hmacSecretToPass: string | undefined = undefined;
+      if (secSettings?.require_signature && secSettings?.hmac_secret) {
+        try {
+          hmacSecretToPass = SecretsManager.decrypt(secSettings.hmac_secret);
+        } catch (e) {}
+      }
 
       // 2. Create the instance in Evolution API
       // Evolution v2.2.1 retorna o QR Code AQUI na criação se passarmos qrcode: true
-      const createData = await client.createInstance(finalInstanceName, webhookUrl)
+      const createData = await client.createInstance(finalInstanceName, webhookUrl, hmacSecretToPass)
       if (createData?.qrcode?.base64) {
          qrCodeValue = createData.qrcode.base64;
       } else if (createData?.hash?.qrcode) {

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Lock, Key, Shield, RefreshCcw, Eye, EyeOff, Save, Webhook } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Lock, Key, Shield, RefreshCcw, Eye, EyeOff, Save, Webhook, CheckCircle2, Loader2, Copy, Check } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -9,28 +9,156 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
+import { useConfirm } from "@/components/providers/confirm-provider"
+
+interface SecuritySettings {
+  id: string
+  hmac_secret: string
+  require_signature: boolean
+  rotated_at: string
+  created_at: string
+  updated_at: string
+}
+
+const PROTECTED_ENDPOINTS = [
+  {
+    name: "Callbacks Evolution API",
+    path: "/api/evolution/webhook",
+    status: "protected" as const,
+    method: "Token + HMAC SHA-256"
+  },
+  {
+    name: "Stripe Webhooks",
+    path: "/api/stripe/webhook",
+    status: "protected" as const,
+    method: "Stripe Signature (nativa)"
+  },
+  {
+    name: "PIXGO Webhooks",
+    path: "/api/pixgo/webhook",
+    status: "protected" as const,
+    method: "HMAC SHA-256 (nativa)"
+  },
+  {
+    name: "MercadoPago Webhooks",
+    path: "/api/webhooks/mercadopago",
+    status: "partial" as const,
+    method: "orgId (sem HMAC)"
+  }
+]
 
 export default function SecurityPage() {
+  const confirm = useConfirm()
+  const [settings, setSettings] = useState<SecuritySettings | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [showSecret, setShowSecret] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
-  
-  // Mocks para a interface
-  const [hmacSecret, setHmacSecret] = useState("whsec_5f9a2b3c4d5e6f7g8h9i0j1k2l3m4n5o")
+  const [isSaving, setIsSaving] = useState(false)
   const [requireSignature, setRequireSignature] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
 
-  const handleRotateSecret = () => {
-    setIsRotating(true)
-    setTimeout(() => {
-      // Gera um mock simulado de secret
-      const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-      setHmacSecret(`whsec_${randomString}`)
-      setIsRotating(false)
-      toast.success("Novo secret HMAC gerado com sucesso!")
-    }, 1000)
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/admin/security')
+      if (res.ok) {
+        const data = await res.json()
+        setSettings(data)
+        setRequireSignature(data.require_signature)
+      } else {
+        toast.error("Erro ao carregar configurações de segurança")
+      }
+    } catch (e) {
+      toast.error("Erro ao conectar com o servidor")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleSaveSecurity = () => {
-    toast.success("Configurações de segurança salvas (Simulação).")
+  const handleRotateSecret = async () => {
+    if (!await confirm({
+      title: "Rotacionar Secret HMAC",
+      description: "Ao gerar um novo secret, todas as integrações que utilizam o secret anterior precisarão ser atualizadas. Deseja continuar?",
+      variant: "warning",
+      confirmText: "Sim, Rotacionar"
+    })) return
+
+    setIsRotating(true)
+    try {
+      const res = await fetch('/api/admin/security/rotate', { method: 'POST' })
+      const data = await res.json()
+      
+      if (res.ok && data.success) {
+        setSettings(prev => prev ? { ...prev, hmac_secret: data.hmac_secret, rotated_at: data.rotated_at } : prev)
+        setShowSecret(true)
+        toast.success("Novo secret HMAC gerado com sucesso! Copie-o agora.")
+      } else {
+        toast.error(data.error || "Erro ao rotacionar secret")
+      }
+    } catch (e) {
+      toast.error("Erro ao rotacionar secret")
+    } finally {
+      setIsRotating(false)
+    }
+  }
+
+  const handleSaveSecurity = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/admin/security', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ require_signature: requireSignature })
+      })
+      const data = await res.json()
+      
+      if (res.ok && data.success) {
+        setHasChanges(false)
+        toast.success("Configurações de segurança salvas com sucesso!")
+      } else {
+        toast.error(data.error || "Erro ao salvar configurações")
+      }
+    } catch (e) {
+      toast.error("Erro ao salvar configurações")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCopySecret = () => {
+    if (settings?.hmac_secret) {
+      navigator.clipboard.writeText(settings.hmac_secret)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast.success("Secret copiado para a área de transferência!")
+    }
+  }
+
+  const handleToggleSignature = (checked: boolean) => {
+    setRequireSignature(checked)
+    setHasChanges(checked !== settings?.require_signature)
+  }
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
+    } catch { return '—' }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -66,9 +194,9 @@ export default function SecurityPage() {
                 <div className="relative flex-1">
                   <Input 
                     type={showSecret ? "text" : "password"} 
-                    value={hmacSecret} 
+                    value={settings?.hmac_secret || ''} 
                     readOnly 
-                    className="font-mono bg-secondary/50"
+                    className="font-mono bg-secondary/50 pr-10"
                   />
                   <Button
                     type="button"
@@ -80,14 +208,19 @@ export default function SecurityPage() {
                     {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </Button>
                 </div>
+                <Button variant="outline" size="icon" onClick={handleCopySecret} title="Copiar secret">
+                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
                 <Button variant="outline" onClick={handleRotateSecret} disabled={isRotating}>
                   <RefreshCcw className={`w-4 h-4 mr-2 ${isRotating ? "animate-spin" : ""}`} />
                   Rotacionar
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Dica: Rotacione o secret a cada 90 dias ou caso suspeite de vazamento.
-              </p>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>Última rotação: {settings?.rotated_at ? formatDate(settings.rotated_at) : '—'}</span>
+                <span>•</span>
+                <span>Dica: Rotacione o secret a cada 90 dias ou caso suspeite de vazamento.</span>
+              </div>
             </div>
 
             <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-lg flex items-start gap-3">
@@ -101,7 +234,7 @@ export default function SecurityPage() {
                   <Switch 
                     id="require-signature" 
                     checked={requireSignature}
-                    onCheckedChange={setRequireSignature}
+                    onCheckedChange={handleToggleSignature}
                   />
                   <Label htmlFor="require-signature" className="font-medium">
                     Exigir validação criptográfica (Recomendado)
@@ -112,47 +245,44 @@ export default function SecurityPage() {
 
           </CardContent>
           <CardFooter className="border-t bg-secondary/10 px-6 py-4 flex justify-end">
-            <Button onClick={handleSaveSecurity}>
-              <Save className="w-4 h-4 mr-2" />
+            <Button onClick={handleSaveSecurity} disabled={isSaving || !hasChanges}>
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salvar Alterações
             </Button>
           </CardFooter>
         </Card>
 
-        {/* Resumo de Integrações */}
+        {/* Resumo de Endpoints Protegidos */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Webhook className="w-5 h-5 text-muted-foreground" />
               Endpoints Protegidos
             </CardTitle>
-            <CardDescription>Rotas ativas sob proteção HMAC</CardDescription>
+            <CardDescription>Rotas ativas e seu nível de proteção</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium text-sm">Callbacks Evolution API</div>
-                  <div className="text-xs text-muted-foreground">/api/webhooks/evolution</div>
+            <div className="space-y-3">
+              {PROTECTED_ENDPOINTS.map((endpoint) => (
+                <div key={endpoint.path} className={`flex items-center justify-between p-3 border rounded-lg ${
+                  endpoint.status === 'partial' ? 'border-dashed bg-secondary/20' : ''
+                }`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm">{endpoint.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{endpoint.path}</div>
+                    <div className="text-xs text-muted-foreground/70 mt-0.5">{endpoint.method}</div>
+                  </div>
+                  {endpoint.status === 'protected' ? (
+                    <Badge variant="default" className="bg-emerald-500 ml-2 flex-shrink-0">
+                      <CheckCircle2 className="w-3 h-3 mr-1" /> Protegido
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500 ml-2 flex-shrink-0">
+                      Parcial
+                    </Badge>
+                  )}
                 </div>
-                <Badge variant="default" className="bg-emerald-500">Protegido</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium text-sm">Integração Asaas/Stripe</div>
-                  <div className="text-xs text-muted-foreground">/api/webhooks/payments</div>
-                </div>
-                <Badge variant="default" className="bg-emerald-500">Protegido</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border border-dashed rounded-lg bg-secondary/20">
-                <div>
-                  <div className="font-medium text-sm text-muted-foreground">Endpoints de Clientes</div>
-                  <div className="text-xs text-muted-foreground">Envio Externo</div>
-                </div>
-                <Badge variant="outline" className="text-amber-500 border-amber-500">Em Breve</Badge>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Users, MessageCircle, Zap, Check, ChevronRight, X } from "lucide-react"
+import { Users, MessageCircle, Zap, Check, ChevronRight, X, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -39,17 +39,23 @@ export function OnboardingProgress() {
         return
       }
 
+      // Check 0: Has at least 1 service
+      const { count: serviceCount } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+
       // Check 1: Has at least 1 client
       const { count: clientCount } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
 
-      // Check 2: Has a connected WhatsApp instance
+      // Check 2: Has a connected WhatsApp instance set as primary
       const { data: instances } = await supabase
         .from('evolution_instances')
-        .select('id, status')
+        .select('id, status, is_primary')
+        .eq('is_primary', true)
         .limit(1)
-      const hasWhatsApp = instances && instances.length > 0
+      const hasWhatsAppPrimary = instances && instances.length > 0 && instances[0].status === 'connected'
 
       // Check 3: Has at least 1 active automation rule
       const { count: automationCount } = await supabase
@@ -59,8 +65,16 @@ export function OnboardingProgress() {
 
       const stepsData: OnboardingStep[] = [
         {
+          id: 'services',
+          title: 'Criar um serviço',
+          description: 'Cadastre os serviços que você oferece (IPTV, VPS, etc)',
+          icon: Briefcase,
+          href: '/servicos',
+          completed: (serviceCount ?? 0) > 0,
+        },
+        {
           id: 'clients',
-          title: 'Adicionar primeiro cliente',
+          title: 'Adicionar um cliente',
           description: 'Cadastre seu primeiro cliente para começar a gerenciar',
           icon: Users,
           href: '/clientes',
@@ -68,15 +82,15 @@ export function OnboardingProgress() {
         },
         {
           id: 'whatsapp',
-          title: 'Conectar WhatsApp',
-          description: 'Conecte seu número para automações e cobranças',
+          title: 'Conectar WhatsApp (Principal)',
+          description: 'Conecte e defina como número principal para cobranças',
           icon: MessageCircle,
           href: '/automacao',
-          completed: !!hasWhatsApp,
+          completed: !!hasWhatsAppPrimary,
         },
         {
           id: 'automation',
-          title: 'Ativar automação de cobrança',
+          title: 'Criar regra de automação',
           description: 'Configure alertas automáticos para seus clientes',
           icon: Zap,
           href: '/automacao',
@@ -154,7 +168,7 @@ export function OnboardingProgress() {
       </div>
 
       {/* Steps */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {steps.map((step) => {
           const Icon = step.icon
           return (

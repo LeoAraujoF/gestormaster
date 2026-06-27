@@ -29,17 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte para recuperar o acesso.' }, { status: 403 })
     }
 
-    // --- PLAN QUOTAS CHECK (Lite: 0, Pro: 2000, Plus: 10000) ---
-    const { data: userData } = await supabase.from('users').select('plan_name').eq('id', user.id).single()
-    const userPlan = (userData?.plan_name || user.user_metadata?.plan_name || 'Lite').toLowerCase()
-    
-    let messageLimit = 0
-    if (userPlan.includes('pro')) messageLimit = 2000
-    else if (userPlan.includes('plus') || userPlan.includes('max')) messageLimit = 10000
-
-    if (messageLimit === 0) {
-      return NextResponse.json({ error: 'O plano Lite não permite disparos em massa automáticos. Faça upgrade para o Pro ou Plus.' }, { status: 403 })
-    }
+    // --- PLAN QUOTAS CHECK REMOVED (Atualmente apenas 1 plano) ---
 
     // Calcula o delay inicial se houver agendamento
     let initialDelayMs = 0;

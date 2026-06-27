@@ -698,15 +698,7 @@ export default function AutomacaoPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
-      {userPlan === "Lite" && !isAdmin && (
-        <UpgradeModal 
-          open={true} 
-          onOpenChange={() => {}} 
-          featureName="Automação & WhatsApp API" 
-          description="Acesse o modo Nuvem, crie regras de cobrança 100% automáticas e envie mensagens em massa para sua base."
-          redirectOnClose={true}
-        />
-      )}
+
       <div>
         <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Automação WhatsApp</h1>
         <p className="text-zinc-500 dark:text-zinc-400">
@@ -959,38 +951,16 @@ export default function AutomacaoPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {userPlan === "Plus" || isAdmin ? (
-                      instances.length >= 5 && !isAdmin ? (
-                        <div className="p-4 bg-emerald-500/10 rounded-lg text-center border border-emerald-500/20">
-                          <Smartphone className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-                          <p className="text-sm font-medium text-emerald-600 mb-1">Limite Atingido</p>
-                          <p className="text-xs text-emerald-600/80">O Plano Plus permite no máximo 5 chips na Fazenda.</p>
-                        </div>
-                      ) : (
-                        <Button onClick={() => setIsAddingInstance(true)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg transition-all">
-                          <Plus className="w-4 h-4 mr-2" /> Adicionar Novo Chip
-                        </Button>
-                      )
-                    ) : userPlan === "Pro" ? (
-                      instances.length >= 3 ? (
-                        <div className="p-4 bg-sky-500/10 rounded-lg text-center border border-sky-500/20">
-                          <Smartphone className="w-6 h-6 text-sky-500 mx-auto mb-2" />
-                          <p className="text-sm font-medium text-sky-600 mb-1">Limite Atingido</p>
-                          <p className="text-xs text-sky-600/80">O Plano Pro permite no máximo 3 chips na Fazenda.</p>
-                          <Button onClick={() => setIsPricingModalOpen(true)} variant="outline" className="text-sky-600 border-sky-500/30 hover:bg-sky-500/20 w-full mt-3">Fazer Upgrade para Plus</Button>
-                        </div>
-                      ) : (
-                        <Button onClick={() => setIsAddingInstance(true)} className="w-full bg-sky-500 hover:bg-sky-600 text-white shadow-md hover:shadow-lg transition-all">
-                          <Plus className="w-4 h-4 mr-2" /> Adicionar Novo Chip
-                        </Button>
-                      )
-                    ) : (
-                      <div className="p-4 bg-amber-500/10 rounded-lg text-center border border-amber-500/20">
-                        <Lock className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-amber-600 mb-1">Integração Bloqueada</p>
-                        <p className="text-xs text-amber-600/80 mb-3">Seu plano atual não permite conectar chips.</p>
-                        <Button onClick={() => setIsPricingModalOpen(true)} variant="outline" className="text-amber-600 border-amber-500/30 hover:bg-amber-500/20 w-full">Fazer Upgrade</Button>
+                    {instances.length >= 5 && !isAdmin ? (
+                      <div className="p-4 bg-emerald-500/10 rounded-lg text-center border border-emerald-500/20">
+                        <Smartphone className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-emerald-600 mb-1">Limite Atingido</p>
+                        <p className="text-xs text-emerald-600/80">Você atingiu o limite máximo de 5 chips.</p>
                       </div>
+                    ) : (
+                      <Button onClick={() => setIsAddingInstance(true)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg transition-all">
+                        <Plus className="w-4 h-4 mr-2" /> Adicionar Novo Chip
+                      </Button>
                     )}
                   </CardContent>
                 </Card>

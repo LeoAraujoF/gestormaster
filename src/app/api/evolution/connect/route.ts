@@ -72,14 +72,11 @@ export async function POST(request: Request) {
 
     if (!isAdmin && !existingInstance) {
       const instancesCount = currentInstances || 0
-      const plan = userPlan.toLowerCase()
       
-      let instanceLimit = 1 // Lite
-      if (plan.includes('pro')) instanceLimit = 3
-      else if (plan.includes('plus') || plan.includes('max')) instanceLimit = 10
+      const instanceLimit = 5 // Limite global (Atualmente apenas 1 plano)
 
       if (instancesCount >= instanceLimit) {
-        return NextResponse.json({ error: `Limite atingido! Seu plano atual permite até ${instanceLimit} instâncias. Faça upgrade para conectar mais.` }, { status: 403 })
+        return NextResponse.json({ error: `Limite atingido! Você só pode conectar até ${instanceLimit} instâncias.` }, { status: 403 })
       }
     }
     // --------------------------

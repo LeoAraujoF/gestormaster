@@ -137,12 +137,6 @@ export default function PromocoesPage() {
         <div>
           <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Promoções</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Gerencie campanhas de descontos e renovações para disparos.</p>
-          {userPlan === "Lite" && !isAdmin && (
-            <div className="mt-2 text-sm text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-md inline-flex items-center gap-2">
-              <span className="text-lg">🔒</span>
-              O Plano Lite permite ativar o desconto no painel, mas <strong>o disparo via WhatsApp está bloqueado.</strong>
-            </div>
-          )}
         </div>
         <Button onClick={openCreateDialog} className="gap-2">
           <Plus className="w-4 h-4" />

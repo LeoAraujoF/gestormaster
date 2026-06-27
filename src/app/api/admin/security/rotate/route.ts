@@ -22,16 +22,25 @@ export async function POST(request: Request) {
   // Gerar secret criptograficamente seguro
   const rawSecret = `whsec_${crypto.randomBytes(32).toString('hex')}`
   
-  // Criptografar antes de salvar no banco
-  const encryptedSecret = SecretsManager.encrypt(rawSecret)
+  let encryptedSecret: string
+  try {
+    // Criptografar antes de salvar no banco
+    encryptedSecret = SecretsManager.encrypt(rawSecret)
+  } catch (err: any) {
+    console.error('Erro de criptografia:', err.message)
+    return NextResponse.json({ 
+      error: 'Erro de criptografia: Verifique se a variável ENCRYPTION_KEY está configurada no servidor (mínimo 32 caracteres).' 
+    }, { status: 500 })
+  }
 
-  const { data: settings } = await supabaseAdmin
+  const { data: settings, error: fetchError } = await supabaseAdmin
     .from('security_settings')
     .select('id')
     .limit(1)
     .single()
 
   if (!settings) {
+    console.error('Erro ao buscar configuração:', fetchError)
     return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 404 })
   }
 

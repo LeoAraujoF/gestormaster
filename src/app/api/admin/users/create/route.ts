@@ -4,8 +4,15 @@ import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
-    // 1. Validar Admin via Header/Token (Simplificado para o momento)
-    // Precisamos do Service Role Key para usar a API de Admin do Supabase
+    const { createClient: createServerClient } = require('@/lib/supabase/server');
+    const supabaseUser = await createServerClient();
+    const { data: { user } } = await supabaseUser.auth.getUser();
+
+    const isAdm = user && (user.user_metadata?.is_admin === true || user.email === process.env.ADMIN_EMAIL);
+    if (!isAdm) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

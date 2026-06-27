@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { useConfirm } from "@/components/providers/confirm-provider"
 
 export default function DesenvolvedorPage() {
+  const confirm = useConfirm()
   const [keys, setKeys] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [missingTable, setMissingTable] = useState(false)
@@ -73,7 +75,11 @@ export default function DesenvolvedorPage() {
   }
 
   const handleDeleteKey = async (id: string) => {
-    if (!confirm("Tem certeza que deseja revogar esta chave? Todas as integrações usando ela irão parar de funcionar imediatamente.")) return
+    if (!await confirm({
+      title: "Revogar Chave",
+      description: "Tem certeza que deseja revogar esta chave? Todas as integrações usando ela irão parar de funcionar imediatamente.",
+      variant: "destructive"
+    })) return
 
     try {
       const res = await fetch(`/api/developer/keys?id=${id}`, { method: 'DELETE' })

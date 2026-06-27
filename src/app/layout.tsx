@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { FeatureFlagsProvider } from "@/components/providers/feature-flags-provider";
+import { ConfirmProvider } from "@/components/providers/confirm-provider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -39,9 +40,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <FeatureFlagsProvider>
-            <TooltipProvider>
-              {children}
-            </TooltipProvider>
+            <ConfirmProvider>
+              <TooltipProvider>
+                {children}
+              </TooltipProvider>
+            </ConfirmProvider>
             <Toaster position="top-right" richColors />
           </FeatureFlagsProvider>
         </ThemeProvider>

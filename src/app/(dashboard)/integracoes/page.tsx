@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useFeatureFlags } from "@/components/providers/feature-flags-provider"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useConfirm } from "@/components/providers/confirm-provider"
 
 const AVAILABLE_INTEGRATIONS = [
   {
@@ -68,6 +69,7 @@ const AVAILABLE_INTEGRATIONS = [
 ]
 
 export default function IntegrationsPage() {
+  const confirm = useConfirm()
   const [integrations, setIntegrations] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [missingTable, setMissingTable] = useState(false)
@@ -187,7 +189,11 @@ export default function IntegrationsPage() {
   }
 
   const handleDisconnect = async (providerId: string) => {
-    if (!confirm("Tem certeza que deseja desconectar esta integração?")) return
+    if (!await confirm({
+      title: "Desconectar Integração",
+      description: "Tem certeza que deseja desconectar esta integração? Os recursos dependentes dela pararão de funcionar.",
+      variant: "warning"
+    })) return
 
     try {
       const res = await fetch(`/api/integrations?provider=${providerId}`, { method: 'DELETE' })

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useConfirm } from "@/components/providers/confirm-provider"
 import { QrCode, Smartphone, Wifi, WifiOff, Loader2, Save, Plus, Edit2, Trash2, Bot, BellRing, Shield, ShieldAlert, ExternalLink, Lock, Zap, RefreshCcw, XCircle, List, LogOut, PhoneOff, CheckCircle2, Clock, Megaphone, Rocket, Mailbox, Send, Activity, Users, Target, Star, Play, Image as ImageIcon, X } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
@@ -64,6 +65,7 @@ const getDefaultTemplate = (type: string) => {
 }
 
 export default function AutomacaoPage() {
+  const confirm = useConfirm()
   const [activeTab, setActiveTab] = useState("connection")
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'loading' | 'error'>('loading')
@@ -168,7 +170,11 @@ export default function AutomacaoPage() {
   }
 
   const handleSendMass = async () => {
-    if (!confirm("Tem certeza que deseja iniciar o disparo em massa?")) return
+    if (!await confirm({
+      title: "Disparo em Massa",
+      description: "Tem certeza que deseja iniciar o disparo em massa para os clientes selecionados? Esta ação enviará mensagens no WhatsApp para todos que se enquadram na regra.",
+      variant: "default"
+    })) return
     setIsSendingMass(true)
     try {
       let mediaUrl = null
@@ -361,7 +367,11 @@ export default function AutomacaoPage() {
 
   // Disconnect from instance
   const handleDisconnect = async (instanceName: string) => {
-    if (!confirm("Tem certeza que deseja desconectar este número?")) return
+    if (!await confirm({
+      title: "Desconectar WhatsApp",
+      description: "Tem certeza que deseja desconectar este número? Os disparos serão interrompidos até você conectar novamente.",
+      variant: "warning"
+    })) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/logout', { 
@@ -380,7 +390,11 @@ export default function AutomacaoPage() {
   }
 
   const handleDeleteInstance = async (id: string, instanceName: string) => {
-    if (!confirm(`Tem certeza que deseja remover permanentemente o chip "${instanceName}" do sistema e limpar o servidor?`)) return
+    if (!await confirm({
+      title: "Remover Chip",
+      description: `Tem certeza que deseja remover permanentemente o chip "${instanceName}" do sistema e limpar o servidor?`,
+      variant: "destructive"
+    })) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/delete', {

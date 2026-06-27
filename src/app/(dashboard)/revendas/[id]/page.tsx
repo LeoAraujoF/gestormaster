@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Trash2, Copy, ExternalLink, Loader2, Save } from "luci
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
+import { useConfirm } from "@/components/providers/confirm-provider"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/table"
 
 export default function ResellerDetailsPage() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const router = useRouter()
   const supabase = createClient()
@@ -108,7 +110,11 @@ export default function ResellerDetailsPage() {
   }
 
   async function handleDeleteService(serviceId: string) {
-    if (!confirm("Remover este serviço do revendedor?")) return
+    if (!await confirm({
+      title: "Remover Serviço",
+      description: "Tem certeza que deseja remover este serviço do revendedor?",
+      variant: "destructive"
+    })) return
     try {
       const { error } = await supabase
         .from("reseller_services")

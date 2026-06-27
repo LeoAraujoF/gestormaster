@@ -90,17 +90,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Nenhum cliente com telefone válido encontrado para o filtro selecionado' }, { status: 400 })
     }
 
-    // --- ENFORCE QUOTA LIMIT ---
-    const currentMonth = new Date().toISOString().slice(0, 7) // '2026-05'
-    const quotaKey = `usage:messages:${user.id}:${currentMonth}`
-    const currentUsageStr = await redisConnection.get(quotaKey)
-    const currentUsage = parseInt(currentUsageStr || '0', 10)
-
-    if (currentUsage + validClients.length > messageLimit) {
-      return NextResponse.json({ 
-        error: `Atenção: Limite do plano excedido! Seu plano atual permite ${messageLimit} disparos mensais. Você já enviou ${currentUsage} e tentou enviar mais ${validClients.length}. Por favor, faça um upgrade para continuar.` 
-      }, { status: 403 })
-    }
+    // Quota limits removed
 
     // 3. Process send loop asynchronously
     // We send a response back immediately and process the messages in the background

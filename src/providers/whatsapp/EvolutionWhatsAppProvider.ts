@@ -51,11 +51,9 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
         delay: options?.delay || 1200,
         presence: options?.presence || 'composing'
       },
-      mediaMessage: {
-        mediatype: mediaType,
-        media: mediaBase64OrUrl,
-        caption: caption || undefined
-      }
+      mediatype: mediaType,
+      media: mediaBase64OrUrl,
+      caption: caption || undefined
     });
   }
 

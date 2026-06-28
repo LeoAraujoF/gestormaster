@@ -122,25 +122,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, integration: dbResult.data });
     }
 
-    // Upsert integration
-    const { data, error } = await supabase
+    // Substitui upsert por select + update/insert para evitar erro de constraint unique
+    const { data: existingInt } = await supabase
       .from('integrations')
-      .upsert({
-        organization_id: orgId,
-        provider,
-        credentials,
-        is_active: is_active ?? true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'organization_id,provider' })
-      .select()
-      .single()
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('provider', provider)
+      .maybeSingle()
 
-    if (error) {
-      if (error.code === '42P01') {
+    const intPayload = {
+      credentials,
+      is_active: is_active ?? true,
+      updated_at: new Date().toISOString()
+    }
+
+    let dbResult;
+    if (existingInt) {
+      dbResult = await supabase
+        .from('integrations')
+        .update(intPayload)
+        .eq('id', existingInt.id)
+        .select()
+        .single()
+    } else {
+      dbResult = await supabase
+        .from('integrations')
+        .insert({ organization_id: orgId, provider, ...intPayload })
+        .select()
+        .single()
+    }
+
+    if (dbResult.error) {
+      if (dbResult.error.code === '42P01') {
         return NextResponse.json({ error: 'A tabela de integrações ainda não foi criada no banco.' }, { status: 400 })
       }
-      throw error
+      throw dbResult.error
     }
+
+    const data = dbResult.data;
 
     // Integração Nativa Typebot (Sincronização Evolution API)
     if (provider === 'typebot' && (is_active ?? true)) {
@@ -192,7 +211,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Integrations POST Error:', error)
-    return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno no servidor', details: error?.message || error }, { status: 500 })
   }
 }
 

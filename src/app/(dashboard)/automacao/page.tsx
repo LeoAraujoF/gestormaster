@@ -50,13 +50,13 @@ type ExternalConnectionForm = z.infer<typeof externalConnectionSchema>
 
 const getDefaultTemplate = (type: string) => {
   const base = "{Olá|Oi|Tudo bem} {{primeiro_nome}}?\\n"
-  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix é {{pix}}\\nTitular: {{titular_pix}}\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
+  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix: {{pix}}\\nTitular: {{titular_pix}}\\nBanco: {{banco_pix}}\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
   
   const defaults: Record<string, string> = {
     before_due: base + "Seu plano vence amanhã, deseja renovar lo?" + pixStr,
     on_due: base + "Lembrando que o vencimento do seu plano é hoje! Deseja renovar?" + pixStr,
     after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativá-lo?" + pixStr,
-    renewal: "{Olá|Oi|Tudo ótimo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confiança é essencial!\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    renewal: "{Olá|Oi|Tudo ótimo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confiança é essencial!\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}\\n\\nNão esqueça de seguir nosso canal para não ficar de fora de promoções e novidades!\\nLink: {{link_canal}}",
     promotion: base + "Temos uma oferta imperdível para você! [Insira sua promoção aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
     quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso Rápido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
     activation: "Olá {{primeiro_nome}}! Seja muito bem-vindo(a)! 🌟\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse número aqui, ele será o nosso canal oficial de suporte técnico e onde você receberá seus avisos de vencimento, ok? 🤝\\n\\n💰 Valor do Plano: R$ {{plan_value}}\\n📅 Seu Vencimento: {{due_date}}\\n\\n🎁 *PROMOÇÃO INDIQUE E GANHE*\\nSabia que você pode ganhar meses grátis? É muito simples: indicou um amigo e ele fechou com a gente, o seu próximo mês sai 100% DE GRAÇA! Sem sorteio, indicou, ganhou! 🚀\\n\\n📱 *NOSSO CANAL EXCLUSIVO*\\nNão fique de fora das novidades, manutenções programadas e promoções relâmpago! Entre agora no nosso canal oficial para clientes:\\n👉 {{link_canal}}\\n\\nQualquer dúvida, é só nos chamar por aqui. Aproveite!"
@@ -1532,7 +1532,7 @@ export default function AutomacaoPage() {
                 <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
                   <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
                   <div className="flex flex-wrap gap-2">
-                    {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
+                    {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{banco_pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
                       <Badge 
                         key={variable}
                         variant="outline" 
@@ -1684,7 +1684,7 @@ export default function AutomacaoPage() {
               <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mt-2">
                 <p className="text-xs text-primary/80 font-medium mb-2">Clique nas variáveis para adicionar ao texto:</p>
                 <div className="flex flex-wrap gap-2">
-                  {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
+                  {["{{primeiro_nome}}", "{{client_name}}", "{{plan_value}}", "{{due_date}}", "{{empresa}}", "{{pix}}", "{{banco_pix}}", "{{titular_pix}}", "{{telefone_suporte}}", "{{link_canal}}"].map((variable) => (
                     <Badge 
                       key={variable}
                       variant="outline" 

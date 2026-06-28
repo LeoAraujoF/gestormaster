@@ -54,6 +54,7 @@ export default function MinhaContaPage() {
   const [supportPhone, setSupportPhone] = useState("")
   const [pixKey, setPixKey] = useState("")
   const [pixName, setPixName] = useState("")
+  const [pixBank, setPixBank] = useState("")
   const [whatsappChannelLink, setWhatsappChannelLink] = useState("")
   const [timezone, setTimezone] = useState("-03:00")
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -81,6 +82,7 @@ export default function MinhaContaPage() {
         setSupportPhone(user.user_metadata.support_phone || "")
         setPixKey(user.user_metadata.pix_key || "")
         setPixName(user.user_metadata.pix_name || "")
+        setPixBank(user.user_metadata.pix_bank || "")
         setWhatsappChannelLink(user.user_metadata.whatsapp_channel_link || "")
         setTimezone(user.user_metadata.timezone || "-03:00")
       }
@@ -171,6 +173,7 @@ export default function MinhaContaPage() {
           support_phone: supportPhone,
           pix_key: pixKey,
           pix_name: pixName,
+          pix_bank: pixBank,
           whatsapp_channel_link: whatsappChannelLink,
           timezone: timezone
         }
@@ -357,7 +360,7 @@ export default function MinhaContaPage() {
                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">$$</Badge>
                   Dados para Recebimento (PIX)
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="pixKey">Chave PIX</Label>
                     <Input 
@@ -370,7 +373,7 @@ export default function MinhaContaPage() {
                     <p className="text-[10px] text-muted-foreground">Variável: {'{{pix}}'}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="pixName">Titular da Conta / Beneficiário</Label>
+                    <Label htmlFor="pixName">Titular / Beneficiário</Label>
                     <Input 
                       id="pixName"
                       value={pixName}
@@ -379,6 +382,17 @@ export default function MinhaContaPage() {
                       className="bg-background/50 h-11"
                     />
                     <p className="text-[10px] text-muted-foreground">Variável: {'{{titular_pix}}'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pixBank">Instituição / Banco</Label>
+                    <Input 
+                      id="pixBank"
+                      value={pixBank}
+                      onChange={(e) => setPixBank(e.target.value)}
+                      placeholder="Ex: Nubank, Inter, Itaú"
+                      className="bg-background/50 h-11"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Variável: {'{{banco_pix}}'}</p>
                   </div>
                 </div>
               </div>

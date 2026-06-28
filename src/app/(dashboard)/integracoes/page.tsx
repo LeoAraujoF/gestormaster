@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plug, Bot, Sparkles, CreditCard, ChevronRight, CheckCircle2, AlertCircle, Tv } from "lucide-react"
+import { Plug, Bot, Sparkles, CreditCard, ChevronRight, CheckCircle2, AlertCircle, Tv, Copy, Check } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -78,7 +78,9 @@ export default function IntegrationsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
   const [servicesList, setServicesList] = useState<any[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
   const { flags } = useFeatureFlags()
@@ -86,6 +88,7 @@ export default function IntegrationsPage() {
   const fetchServices = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    setUserId(user.id)
     const { data } = await supabase.from('services').select('id, name, cost').eq('user_id', user.id)
     if (data) setServicesList(data)
   }
@@ -417,6 +420,54 @@ export default function IntegrationsPage() {
                 )}
               </div>
             ))}
+            
+            {activeProviderDef?.id === 'mercadopago' && userId && (
+              <div className="mt-4 p-3 bg-muted/50 border border-border/50 rounded-lg space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Configuração no Mercado Pago</p>
+                <p className="text-[10px] text-muted-foreground">Copie a URL abaixo e cole no campo "Notificações Webhook" do Mercado Pago para que os pagamentos sejam dados baixa automaticamente.</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input 
+                    readOnly 
+                    className="h-8 text-xs bg-background/50 font-mono" 
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/mercadopago?orgId=${userId}`}
+                  />
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 shrink-0" 
+                    onClick={() => {
+                      const url = `${window.location.origin}/api/webhooks/mercadopago?orgId=${userId}`;
+                      
+                      if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(url);
+                      } else {
+                        // Fallback para HTTP não seguro (ex: IPs locais)
+                        const textArea = document.createElement("textarea");
+                        textArea.value = url;
+                        textArea.style.position = "absolute";
+                        textArea.style.left = "-999999px";
+                        document.body.prepend(textArea);
+                        textArea.select();
+                        try {
+                          document.execCommand('copy');
+                        } catch (error) {
+                          console.error(error);
+                        } finally {
+                          textArea.remove();
+                        }
+                      }
+                      
+                      setCopiedWebhook(true);
+                      setTimeout(() => setCopiedWebhook(false), 2000);
+                      toast.success("URL do Webhook copiada!");
+                    }}
+                  >
+                    {copiedWebhook ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>

@@ -13,18 +13,20 @@ export async function POST(req: Request) {
     }
 
     let paymentId: string | null = null;
-
-    // O MP pode enviar dados no body ou via query string
-    if (url.searchParams.get('topic') === 'payment' || url.searchParams.get('type') === 'payment') {
-      paymentId = url.searchParams.get('data.id') || url.searchParams.get('id');
-    } else {
+    
+    // Tenta primeiro no body (Webhooks oficiais)
+    try {
       const body = await req.json();
-      if (body.action === 'payment.created' || body.action === 'payment.updated') {
+      if (body.action === 'payment.created' || body.action === 'payment.updated' || body.type === 'payment') {
         paymentId = body.data?.id;
       }
-      if (body.type === 'payment') {
-        paymentId = body.data?.id;
-      }
+    } catch (e) {
+      // Falhou o JSON parse, ignora e tenta via Query String
+    }
+
+    // Tenta via query string (IPN antigo)
+    if (!paymentId) {
+      paymentId = url.searchParams.get('data.id') || url.searchParams.get('id');
     }
 
     if (!paymentId) {
@@ -63,16 +65,22 @@ export async function POST(req: Request) {
 
     // 3. Se estiver aprovado, vamos mandar o recibo
     if (paymentData.status === 'approved') {
-      const extRef = paymentData.external_reference; // "orgId|instance_name|telefone"
+      const extRef = paymentData.external_reference; // "orgId|instance_name|telefone[|RENEWAL|clientId|planName]"
 
       if (extRef && extRef.includes('|')) {
-        const [refOrgId, instance_name, telefone] = extRef.split('|');
+        const parts = extRef.split('|');
+        const refOrgId = parts[0];
+        const instance_name = parts[1];
+        const telefone = parts[2];
+        const isRenewal = parts[3] === 'RENEWAL';
+        const clientId = parts[4];
+        const planName = parts[5];
         
         // Verificação de segurança
         if (refOrgId === orgId) {
           const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paymentData.transaction_amount);
           
-          const mensagemRecibo = `✅ *Pagamento Confirmado!*\n\nRecebemos o seu pagamento de ${valorFormatado}.\nMuito obrigado!`;
+          let mensagemRecibo = `✅ *Pagamento Confirmado!*\n\nRecebemos o seu pagamento de ${valorFormatado}.\nMuito obrigado!`;
 
           // 4. Injetar a ordem de envio na fila do WhatsApp
           await messageQueue.add('send-message', {
@@ -86,12 +94,45 @@ export async function POST(req: Request) {
           
           console.log(`[Webhook MP] Recibo enviado com sucesso para ${telefone} (Instância: ${instance_name})`);
 
+          // 5. Se for renovação, notificar o admin
+          if (isRenewal) {
+            try {
+              // Buscar os dados do cliente
+              const { data: clientData } = await supabaseAdmin
+                .from('clients')
+                .select('name')
+                .eq('id', clientId)
+                .single();
+                
+              // Buscar telefone de suporte do administrador (dono da org)
+              const { data: orgUser } = await supabaseAdmin.auth.admin.getUserById(orgId);
+              let adminPhone = orgUser?.user?.user_metadata?.support_phone;
+              
+              if (adminPhone) {
+                adminPhone = adminPhone.replace(/\D/g, ''); // Limpa formatação
+                const adminMsg = `🔔 *NOVA RENOVAÇÃO PAGA!*\n\nO cliente acabou de pagar o Pix de renovação automático pelo robô.\n\n*Cliente:* ${clientData?.name || 'Desconhecido'}\n*Telefone:* ${telefone}\n*Plano Escolhido:* ${planName || 'N/A'}\n*Valor:* ${valorFormatado}\n*ID do Cliente:* ${clientId}\n\n_Acesse o painel para atualizar a data de vencimento do cliente._`;
+                
+                await messageQueue.add('send-message', {
+                  organization_id: orgId,
+                  instance_id: null,
+                  instance_name: instance_name,
+                  phone: adminPhone,
+                  message: adminMsg,
+                  source: 'mercadopago_webhook_admin'
+                });
+                console.log(`[Webhook MP] Notificação de renovação enviada para o admin (${adminPhone})`);
+              }
+            } catch (err) {
+              console.error('[Webhook MP] Erro ao notificar admin sobre renovação:', err);
+            }
+          }
+
           await logAudit({
             user_id: null,
             action: 'mercadopago.payment',
             resource: 'payments',
             resource_id: String(paymentId),
-            details: { orgId, status: 'approved', amount: paymentData.transaction_amount, telefone, instance_name },
+            details: { orgId, status: 'approved', amount: paymentData.transaction_amount, telefone, instance_name, isRenewal },
             ip_address: getIpFromRequest(req)
           });
         }

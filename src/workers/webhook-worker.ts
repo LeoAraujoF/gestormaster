@@ -1,7 +1,7 @@
 import '../lib/env';
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
-import { WEBHOOK_QUEUE_NAME, aiQueue } from '../lib/queue';
+import { WEBHOOK_QUEUE_NAME, aiQueue, messageQueue } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
 import crypto from 'crypto';
 import { logger, runWithCorrelationId } from '../lib/logger';
@@ -99,6 +99,138 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
             .single();
 
           if (instanceData?.organization_id) {
+            const orgId = instanceData.organization_id;
+            const phone = msg.key.remoteJid.split('@')[0];
+            const textLower = textMessage.toLowerCase();
+            const renewStateKey = `renew_flow:${orgId}:${phone}`;
+            
+            // 1. Checar se está no meio do fluxo de renovação
+            const currentState = await redisConnection.get(renewStateKey);
+            
+            if (currentState) {
+              const stateData = JSON.parse(currentState);
+              
+              if (stateData.step === 'choosing_plan') {
+                const choice = parseInt(textMessage.trim());
+                if (!isNaN(choice) && choice >= 1 && choice <= stateData.plans.length) {
+                  const chosenPlan = stateData.plans[choice - 1];
+                  
+                  // Gerar Pix via Mercado Pago
+                  const { data: mpInt } = await supabaseAdmin
+                    .from('integrations')
+                    .select('credentials')
+                    .eq('organization_id', orgId)
+                    .eq('provider', 'mercadopago')
+                    .eq('is_active', true)
+                    .single();
+
+                  if (mpInt?.credentials?.access_token) {
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+                    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${mpInt.credentials.access_token}`,
+                        'X-Idempotency-Key': crypto.randomUUID()
+                      },
+                      body: JSON.stringify({
+                        transaction_amount: Number(chosenPlan.price),
+                        description: `Renovação - Plano ${chosenPlan.name}`,
+                        payment_method_id: "pix",
+                        payer: { email: "pagamento@automacao.com" },
+                        external_reference: `${orgId}|${instanceName}|${phone}|RENEWAL|${stateData.clientId}|${chosenPlan.name}`,
+                        notification_url: `${appUrl}/api/webhooks/mercadopago?orgId=${orgId}`
+                      })
+                    });
+
+                    if (mpResponse.ok) {
+                      const mpData = await mpResponse.json();
+                      const copiaCola = mpData.point_of_interaction?.transaction_data?.qr_code;
+                      
+                      const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+                      const finalMessage = `Excelente! Você escolheu o plano *${chosenPlan.name}* (${formatter.format(chosenPlan.price)}).\n\nAqui está o seu Pix Copia e Cola para pagamento:\n\n${copiaCola}\n\n_Assim que o pagamento for confirmado, seu plano será renovado automaticamente!_`;
+                      
+                      await messageQueue.add('send-message', {
+                        organizationId: orgId,
+                        instanceName: instanceName,
+                        phone: phone,
+                        finalMessage: finalMessage,
+                        source: 'renewal_bot'
+                      });
+                      
+                      await redisConnection.del(renewStateKey);
+                      return; // Interrompe para não ir pra IA
+                    }
+                  }
+                  
+                  // Falha ao gerar Pix
+                  await messageQueue.add('send-message', {
+                    organizationId: orgId,
+                    instanceName: instanceName,
+                    phone: phone,
+                    finalMessage: "Desculpe, ocorreu um erro ao gerar o seu PIX. Por favor, tente novamente mais tarde ou contate o suporte.",
+                    source: 'renewal_bot'
+                  });
+                  await redisConnection.del(renewStateKey);
+                  return;
+                } else {
+                  await messageQueue.add('send-message', {
+                    organizationId: orgId,
+                    instanceName: instanceName,
+                    phone: phone,
+                    finalMessage: "Opção inválida. Por favor, digite o *número* correspondente ao plano desejado.",
+                    source: 'renewal_bot'
+                  });
+                  return;
+                }
+              }
+            } else if (textLower.includes('quero renovar') || textLower === 'renovar' || textLower === 'renovar plano') {
+              // Buscar o cliente pelo telefone
+              let normalizedPhone = phone;
+              if (phone.startsWith('55') && phone.length > 11) normalizedPhone = phone.substring(2); // Remove 55
+              
+              const { data: clients } = await supabaseAdmin
+                .from('clients')
+                .select('id, name, status, services(id, name, plans)')
+                .eq('organization_id', orgId)
+                .like('phone', `%${normalizedPhone}%`)
+                .limit(1);
+
+              if (clients && clients.length > 0) {
+                const client = clients[0];
+                const serviceWithPlans = client.services?.find((s: any) => s.plans && s.plans.length > 0);
+                
+                if (serviceWithPlans && serviceWithPlans.plans.length > 0) {
+                  const plans = serviceWithPlans.plans;
+                  
+                  let menuText = `Olá ${client.name.split(' ')[0]}! Para renovar o seu serviço *${serviceWithPlans.name}*, escolha um dos planos abaixo:\n\n`;
+                  const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+                  
+                  plans.forEach((plan: any, idx: number) => {
+                    menuText += `*${idx + 1}.* ${plan.name} - ${formatter.format(plan.price)}\n`;
+                  });
+                  menuText += `\n_Digite apenas o NÚMERO da opção desejada._`;
+                  
+                  await redisConnection.setex(renewStateKey, 1800, JSON.stringify({ // Expira em 30 min
+                    step: 'choosing_plan',
+                    plans: plans,
+                    clientId: client.id,
+                    serviceId: serviceWithPlans.id
+                  }));
+                  
+                  await messageQueue.add('send-message', {
+                    organizationId: orgId,
+                    instanceName: instanceName,
+                    phone: phone,
+                    finalMessage: menuText,
+                    source: 'renewal_bot'
+                  });
+                  return; // Impede que vá para a IA
+                }
+              }
+            }
+
+            // Se não caiu no fluxo de renovação, vai para a IA
             const { data: aiData } = await supabaseAdmin
               .from('integrations')
               .select('credentials')

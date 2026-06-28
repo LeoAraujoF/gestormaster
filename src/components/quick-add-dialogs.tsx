@@ -17,20 +17,32 @@ import { logAuditClient } from "@/lib/audit-client"
 const serviceSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
   cost: z.coerce.number().min(0, "O custo não pode ser negativo"),
+  plans: z.array(z.object({
+    name: z.string().min(1, "Nome obrigatório"),
+    price: z.coerce.number().min(0, "Valor não pode ser negativo")
+  })).default([]).optional()
 })
 
 export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service = null }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const supabase = createClient()
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(serviceSchema),
-    defaultValues: { name: "", cost: 0 }
+    defaultValues: { name: "", cost: 0, plans: [] as {name: string, price: number}[] }
+  })
+  
+  const { fields, append, remove } = require('react-hook-form').useFieldArray({
+    control,
+    name: "plans"
   })
 
   useEffect(() => { 
     if (open) {
-      if (service) reset({ name: service.name, cost: service.cost })
-      else reset({ name: "", cost: 0 })
+      if (service) {
+        reset({ name: service.name, cost: service.cost, plans: service.plans || [] })
+      } else {
+        reset({ name: "", cost: 0, plans: [] })
+      }
     }
   }, [open, service, reset])
 
@@ -40,19 +52,21 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Não autenticado")
       
+      const payload = {
+        name: data.name,
+        cost: data.cost,
+        plans: data.plans,
+      }
+      
       if (service) {
-        const { error } = await supabase.from('services').update({
-          name: data.name,
-          cost: data.cost,
-        }).eq('id', service.id)
+        const { error } = await supabase.from('services').update(payload).eq('id', service.id)
         if (error) throw error
         toast.success("Serviço atualizado!")
         logAuditClient('service.update', 'services', { service_name: data.name })
       } else {
         const { error } = await supabase.from('services').insert({
           user_id: user.id,
-          name: data.name,
-          cost: data.cost,
+          ...payload
         })
         if (error) throw error
         toast.success("Serviço cadastrado!")
@@ -70,7 +84,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] overflow-hidden border-sky-500/20">
+      <DialogContent className="glass-card sm:max-w-[480px] max-h-[90vh] overflow-y-auto border-sky-500/20">
         <DialogHeader className="relative">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
           <DialogTitle className="text-sky-500 flex items-center gap-3 text-xl">
@@ -98,10 +112,44 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
             <p className="text-[10px] text-muted-foreground">Valor pago ao seu fornecedor (usado para calcular o lucro líquido).</p>
             {errors.cost && <p className="text-xs text-destructive">{errors.cost?.message as string}</p>}
           </div>
-          <DialogFooter className="pt-6">
+          
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold">Planos de Renovação Automática</h4>
+                <p className="text-[10px] text-muted-foreground">Crie planos para usar no fluxo de renovação do WhatsApp.</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => append({name: "", price: 0})} className="h-8 gap-1">
+                + Plano
+              </Button>
+            </div>
+            
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-start bg-muted/30 p-2 rounded-lg border border-border/50">
+                  <div className="flex-1 space-y-1">
+                    <Input {...register(`plans.${index}.name`)} placeholder="Ex: Mensal" className="h-8 text-sm bg-background" />
+                    {errors.plans?.[index]?.name && <p className="text-[10px] text-destructive">{errors.plans[index]?.name?.message as string}</p>}
+                  </div>
+                  <div className="w-28 space-y-1">
+                    <Input type="number" step="0.01" {...register(`plans.${index}.price`)} placeholder="Valor (R$)" className="h-8 text-sm bg-background" />
+                    {errors.plans?.[index]?.price && <p className="text-[10px] text-destructive">{errors.plans[index]?.price?.message as string}</p>}
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {fields.length === 0 && (
+                <p className="text-xs text-center text-muted-foreground py-4 bg-muted/10 rounded-lg border border-dashed border-border/50">Nenhum plano cadastrado. O robô não oferecerá renovação automática para clientes deste serviço.</p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white">
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Cadastrar
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Salvar Serviço
             </Button>
           </DialogFooter>
         </form>

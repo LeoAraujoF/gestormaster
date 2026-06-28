@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 
 
@@ -127,7 +128,14 @@ export default function ServicosPage() {
         </Button>
       </div>
 
-      {/* KPI Cards */}
+      <Tabs defaultValue="servicos" className="w-full">
+        <TabsList className="mb-6 bg-muted/50 p-1">
+          <TabsTrigger value="servicos" className="data-[state=active]:bg-background">Visão Geral (Serviços)</TabsTrigger>
+          <TabsTrigger value="planos" className="data-[state=active]:bg-background">Planos de Renovação</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="servicos" className="space-y-6">
+          {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2">
           <div className="flex items-center gap-3">
@@ -252,6 +260,46 @@ export default function ServicosPage() {
           )}
         </div>
       </div>
+      </TabsContent>
+
+      <TabsContent value="planos" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {services.map(service => (
+            <div key={service.id} className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-sky-500/10 rounded-xl">
+                  {getServiceIcon(service.name)}
+                </div>
+                <h3 className="font-semibold text-lg">{service.name}</h3>
+              </div>
+              <div className="space-y-2 flex-1">
+                <h4 className="text-sm font-medium text-muted-foreground">Planos Configurados:</h4>
+                {(!service.plans || service.plans.length === 0) ? (
+                   <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg text-center">Nenhum plano configurado para o robô</p>
+                ) : (
+                   <ul className="space-y-2">
+                     {service.plans.map((p: any, i: number) => (
+                       <li key={i} className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/30 border border-border/50">
+                         <span>{p.name}</span>
+                         <span className="font-semibold">{formatCurrency(p.price)}</span>
+                       </li>
+                     ))}
+                   </ul>
+                )}
+              </div>
+              <Button variant="outline" className="mt-auto w-full" onClick={() => openEditDialog(service)}>
+                 Configurar Planos
+              </Button>
+            </div>
+          ))}
+          {services.length === 0 && (
+             <div className="col-span-full p-12 text-center text-muted-foreground bg-muted/10 rounded-2xl border border-dashed">
+               Nenhum serviço cadastrado ainda. Crie um serviço primeiro.
+             </div>
+          )}
+        </div>
+      </TabsContent>
+    </Tabs>
 
       <QuickAddServiceDialog 
         open={isDialogOpen} 

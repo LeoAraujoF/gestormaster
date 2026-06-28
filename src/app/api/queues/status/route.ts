@@ -44,7 +44,7 @@ export async function GET() {
     const { data: sentHistory, error: sentError } = await supabaseAdmin
       .from('alert_history')
       .select('id, phone, status, error_message, created_at')
-      .eq('organization_id', user.user_metadata?.organization_id || userId)
+      .eq('user_id', userId)
       .eq('status', 'sent')
       .order('created_at', { ascending: false })
       .limit(10)
@@ -53,8 +53,8 @@ export async function GET() {
     const { data: errorHistory, error: errHistError } = await supabaseAdmin
       .from('alert_history')
       .select('id, phone, status, error_message, created_at')
-      .eq('organization_id', user.user_metadata?.organization_id || userId)
-      .eq('status', 'error')
+      .eq('user_id', userId)
+      .eq('status', 'failed')
       .order('created_at', { ascending: false })
       .limit(10)
 

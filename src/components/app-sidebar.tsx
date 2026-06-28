@@ -108,12 +108,6 @@ const data = {
       icon: Code,
       color: "text-zinc-500",
     },
-    {
-      title: "Status de Envios",
-      url: "/fila",
-      icon: Activity,
-      color: "text-amber-500",
-    },
     /* {
       title: "Revendas (Créditos)",
       url: "/revendas",

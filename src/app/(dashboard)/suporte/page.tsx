@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     question: "Quais são as variáveis que posso usar nas mensagens?",
-    answer: "Você pode usar: {{primeiro_nome}}, {{client_name}}, {{plan_value}} e {{due_date}}. Além disso, se configurar a aba 'Perfil da Empresa' na página 'Minha Conta', você também poderá usar: {{empresa}}, {{telefone_suporte}}, {{pix}} e {{titular_pix}}."
+    answer: "Você pode usar: {{primeiro_nome}}, {{client_name}}, {{plan_value}} e {{due_date}}. Além disso, se configurar a aba 'Perfil da Empresa' na página 'Minha Conta', você também poderá usar: {{empresa}}, {{telefone_suporte}}, {{pix}}, {{banco_pix}} e {{titular_pix}}."
   },
   {
     question: "Posso enviar mensagens em massa manualmente?",

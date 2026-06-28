@@ -13,9 +13,14 @@ logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
 const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   const { 
-    clientId, phone, finalMessage, instanceUrl, apiKey, instanceName, connectionMode,
-    alertHistoryId, ruleId, userId, organizationId, correlationId 
+    clientId, phone, instanceUrl, apiKey, connectionMode,
+    alertHistoryId, ruleId, userId, correlationId 
   } = job.data;
+
+  // Compatibilidade com diferentes formatos de payload (CamelCase vs snake_case)
+  const finalMessage = job.data.finalMessage || job.data.message;
+  const organizationId = job.data.organizationId || job.data.organization_id;
+  const instanceName = job.data.instanceName || job.data.instance_name;
 
   return runWithCorrelationId(correlationId, organizationId, async () => {
     logger.info(`[Job ${job.id}] Processando disparo para ${phone}...`);

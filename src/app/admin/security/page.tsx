@@ -42,8 +42,8 @@ const PROTECTED_ENDPOINTS = [
   {
     name: "MercadoPago Webhooks",
     path: "/api/webhooks/mercadopago",
-    status: "partial" as const,
-    method: "orgId (sem HMAC)"
+    status: "protected" as const,
+    method: "Validação API MercadoPago (Seguro)"
   }
 ]
 

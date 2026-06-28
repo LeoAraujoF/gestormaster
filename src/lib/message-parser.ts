@@ -38,6 +38,7 @@ export function parseMessageTemplate(template: string, client: any, userMeta: an
   msg = msg.replace(/\{\{telefone_suporte\}\}/g, userMeta.support_phone || '');
   msg = msg.replace(/\{\{pix\}\}/g, userMeta.pix_key || '');
   msg = msg.replace(/\{\{titular_pix\}\}/g, userMeta.pix_name || '');
+  msg = msg.replace(/\{\{banco_pix\}\}/g, userMeta.pix_bank || '');
   msg = msg.replace(/\{\{link_canal\}\}/g, userMeta.whatsapp_channel_link || '');
 
   // 4. Converter \\n literais (salvo pelo banco como texto) em quebras de linha reais

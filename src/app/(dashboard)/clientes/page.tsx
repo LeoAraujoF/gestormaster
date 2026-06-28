@@ -9,7 +9,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { Client, Service } from "@/types/database"
 import { ClientFormDialog } from "@/components/client-form-dialog"
-import { RenewDialog, PromoDialog, DeleteDialog } from "@/components/client-action-dialogs"
+import { RenewDialog, PromoDialog, DeleteDialog, BulkDeleteDialog } from "@/components/client-action-dialogs"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
@@ -62,6 +63,8 @@ export default function ClientesPage() {
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<any | null>(null)
   const [deletingClient, setDeletingClient] = useState<any | null>(null)
+  const [selectedClients, setSelectedClients] = useState<string[]>([])
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
   const [renewingClient, setRenewingClient] = useState<any | null>(null)
   const [promoClient, setPromoClient] = useState<any | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -342,6 +345,22 @@ export default function ClientesPage() {
     return Math.abs(dateA - todayTime) - Math.abs(dateB - todayTime);
   });
 
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedClients(filteredClients.map((c: any) => c.id))
+    } else {
+      setSelectedClients([])
+    }
+  }
+
+  const toggleSelectClient = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedClients(prev => [...prev, id])
+    } else {
+      setSelectedClients(prev => prev.filter(clientId => clientId !== id))
+    }
+  }
+
   // Pagination logic
   const totalPages = Math.ceil(sortedClients.length / ITEMS_PER_PAGE) || 1;
   const paginatedClients = sortedClients.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -524,6 +543,16 @@ export default function ClientesPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
+              {selectedClients.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  className="h-10 px-4 shrink-0 shadow-sm animate-in fade-in slide-in-from-left-2 duration-300 gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir ({selectedClients.length})
+                </Button>
+              )}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -664,6 +693,13 @@ export default function ClientesPage() {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox 
+                        checked={selectedClients.length > 0 && selectedClients.length === filteredClients.length}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos os clientes da lista atual"
+                      />
+                    </TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Serviços</TableHead>
                     <TableHead>Vencimento</TableHead>
@@ -675,6 +711,13 @@ export default function ClientesPage() {
                 <TableBody>
                   {paginatedClients.map((client) => (
                     <TableRow key={client.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedClients.includes(client.id)}
+                          onCheckedChange={(c) => toggleSelectClient(client.id, !!c)}
+                          aria-label={`Selecionar cliente ${client.name}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div 
                           className="font-semibold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
@@ -935,7 +978,24 @@ export default function ClientesPage() {
 
       <RenewDialog open={isRenewDialogOpen} onOpenChange={setIsRenewDialogOpen} client={renewingClient} onSuccess={loadData} />
       <PromoDialog open={isPromoDialogOpen} onOpenChange={setIsPromoDialogOpen} client={promoClient} onSuccess={loadData} />
-      <DeleteDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} client={deletingClient} onSuccess={loadData} />
+      <DeleteDialog 
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        client={deletingClient}
+        onSuccess={loadData}
+      />
+      <BulkDeleteDialog 
+        open={isBulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsBulkDeleteDialogOpen(open)
+          if (!open) setSelectedClients([])
+        }}
+        clients={clients.filter(c => selectedClients.includes(c.id))}
+        onSuccess={() => {
+          loadData()
+          setSelectedClients([])
+        }}
+      />
 
       {/* Client Profile Sheet */}
       <Sheet open={!!profileClient} onOpenChange={(open) => !open && setProfileClient(null)}>

@@ -9,7 +9,6 @@ const pageFlags: Record<string, string> = {
   '/clientes': 'page_clientes',
   '/leads': 'page_leads',
   '/automacao': 'page_automacao',
-  '/fila': 'page_fila',
   '/financeiro': 'page_financeiro',
   '/promocoes': 'page_promocoes',
   '/servicos': 'page_servicos',

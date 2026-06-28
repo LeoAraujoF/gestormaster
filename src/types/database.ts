@@ -41,6 +41,7 @@ export interface Service {
   created_at: string
   updated_at: string
   client_count?: number
+  plans?: Array<{name: string, price: number}> | null
 }
 
 export interface Client {

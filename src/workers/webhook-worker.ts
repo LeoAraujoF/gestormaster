@@ -126,7 +126,7 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                     .single();
 
                   if (mpInt?.credentials?.access_token) {
-                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://roboajuda.site');
                     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
                       method: 'POST',
                       headers: {

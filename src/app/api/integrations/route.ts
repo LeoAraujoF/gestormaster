@@ -158,22 +158,16 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     }
 
-    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
-    const supabaseAdmin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
     let dbResult;
     if (existingInt) {
-      dbResult = await supabaseAdmin
+      dbResult = await supabase
         .from('integrations')
         .update(intPayload)
         .eq('id', existingInt.id)
         .select()
         .single()
     } else {
-      dbResult = await supabaseAdmin
+      dbResult = await supabase
         .from('integrations')
         .insert({ organization_id: orgId, provider, ...intPayload })
         .select()

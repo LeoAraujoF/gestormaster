@@ -1,6 +1,6 @@
-// src/lib/env.ts
-// Validação leve de variáveis de ambiente, sem dependência externa.
-// As variáveis de servidor são validadas apenas em runtime, não durante o build.
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 const isServer = typeof window === 'undefined';
 const isDockerBuild = process.env.DOCKER_BUILD === '1';

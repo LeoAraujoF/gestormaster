@@ -34,9 +34,36 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
           .eq('id', alertHistoryId);
         if (error) logger.error(`[Job ${job.id}] Erro ao atualizar alert_history ${alertHistoryId}: ${error.message}`);
       } else {
-        // Fallback para jobs antigos que não tinham alertHistoryId
+        // Fallback para jobs antigos que não tinham alertHistoryId e bots que não enviam userId
+        let actualUserId = userId;
+        
+        // Se for uma mensagem do sistema/bot sem userId, tenta buscar o dono da org
+        if (!actualUserId && organizationId) {
+          const { data: orgData } = await supabaseAdmin
+            .from('organizations')
+            .select('owner_id')
+            .eq('id', organizationId)
+            .single();
+          
+          if (orgData?.owner_id) {
+            actualUserId = orgData.owner_id;
+          } else {
+            // Se ainda não achar, busca qualquer usuário vinculado a essa organização
+            const { data: orgUserData } = await supabaseAdmin
+              .from('organization_users')
+              .select('user_id')
+              .eq('organization_id', organizationId)
+              .limit(1)
+              .single();
+              
+            if (orgUserData?.user_id) {
+              actualUserId = orgUserData.user_id;
+            }
+          }
+        }
+
         const { error } = await supabaseAdmin.from('alert_history').insert({
-          user_id: userId,
+          user_id: actualUserId,
           organization_id: organizationId,
           client_id: clientId,
           automation_id: ruleId,

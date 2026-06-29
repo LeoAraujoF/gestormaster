@@ -157,13 +157,31 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                       const copiaCola = mpData.point_of_interaction?.transaction_data?.qr_code;
                       
                       const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-                      const finalMessage = `Excelente! Você escolheu o plano *${chosenPlan.name}* (${formatter.format(chosenPlan.price)}).\n\nAqui está o seu Pix Copia e Cola para pagamento:\n\n${copiaCola}\n\n_Assim que o pagamento for confirmado, seu plano será renovado automaticamente!_`;
                       
+                      // Mensagem 1: Instruções
                       await messageQueue.add('send-message', {
                         organizationId: orgId,
                         instanceName: instanceName,
                         phone: phone,
-                        finalMessage: finalMessage,
+                        finalMessage: `Excelente! Você escolheu o plano *${chosenPlan.name}* (${formatter.format(chosenPlan.price)}).\n\nAqui está o seu Pix Copia e Cola para pagamento:`,
+                        source: 'renewal_bot'
+                      });
+
+                      // Mensagem 2: Apenas o código Pix (fácil de copiar)
+                      await messageQueue.add('send-message', {
+                        organizationId: orgId,
+                        instanceName: instanceName,
+                        phone: phone,
+                        finalMessage: copiaCola,
+                        source: 'renewal_bot'
+                      });
+
+                      // Mensagem 3: Confirmação
+                      await messageQueue.add('send-message', {
+                        organizationId: orgId,
+                        instanceName: instanceName,
+                        phone: phone,
+                        finalMessage: `_Assim que o pagamento for confirmado, seu plano será renovado automaticamente!_`,
                         source: 'renewal_bot'
                       });
                       

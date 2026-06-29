@@ -189,16 +189,23 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
               let normalizedPhone = phone;
               if (phone.startsWith('55') && phone.length > 11) normalizedPhone = phone.substring(2); // Remove 55
               
-              const { data: clients } = await supabaseAdmin
+              const { data: clients, error: clientErr } = await supabaseAdmin
                 .from('clients')
-                .select('id, name, status, services(id, name, plans)')
+                .select('id, name, status, client_services(services(id, name, plans))')
                 .eq('organization_id', orgId)
                 .like('phone', `%${normalizedPhone}%`)
                 .limit(1);
 
+              if (clientErr) {
+                logger.error(`[Job ${job.id}] Erro ao buscar cliente:`, clientErr);
+              }
+
               if (clients && clients.length > 0) {
                 const client = clients[0];
-                const serviceWithPlans = client.services?.find((s: any) => s.plans && s.plans.length > 0);
+                // client_services contains an array of objects { services: { id, name, plans } }
+                const serviceWithPlans = client.client_services
+                  ?.map((cs: any) => cs.services)
+                  ?.find((s: any) => s && s.plans && s.plans.length > 0);
                 
                 if (serviceWithPlans && serviceWithPlans.plans.length > 0) {
                   const plans = serviceWithPlans.plans;

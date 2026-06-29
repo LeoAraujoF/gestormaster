@@ -161,7 +161,12 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                       
                       await redisConnection.del(renewStateKey);
                       return; // Interrompe para não ir pra IA
+                    } else {
+                      const errorData = await mpResponse.text();
+                      logger.error(`[Job ${job.id}] ❌ Erro Mercado Pago (Status ${mpResponse.status}): ${errorData}`);
                     }
+                  } else {
+                    logger.warn(`[Job ${job.id}] ⚠️ Integração MercadoPago não encontrada ou token ausente para a Org ${orgId}`);
                   }
                   
                   // Falha ao gerar Pix

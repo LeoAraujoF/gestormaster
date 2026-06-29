@@ -84,10 +84,11 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
          }
       }
     }
-    else if (payload.event === 'MESSAGES_UPSERT') {
-      const msg = payload.data?.messages?.[0];
-      if (msg && !msg.key.fromMe) {
-        const textMessage = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+    else if (payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert') {
+      // Compatibilidade: Evolution v1 usa array (messages[0]), v2 às vezes manda o objeto direto
+      const msg = payload.data?.messages?.[0] || payload.data;
+      if (msg && msg.key && !msg.key.fromMe) {
+        const textMessage = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption;
         logger.info(`Mensagem recebida de ${msg.key.remoteJid}: ${textMessage}`);
         
         const instanceName = payload.instance;

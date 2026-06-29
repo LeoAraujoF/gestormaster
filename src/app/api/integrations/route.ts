@@ -11,7 +11,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const orgId = user.user_metadata?.organization_id || user.id;
+    let orgId = user.user_metadata?.organization_id;
+    if (!orgId) {
+      const { data: instanceData } = await supabase
+        .from('evolution_instances')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      
+      orgId = instanceData?.organization_id || user.id;
+    }
 
     const { data: integrations, error } = await supabase
       .from('integrations')
@@ -64,7 +74,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const orgId = user.user_metadata?.organization_id || user.id;
+    let orgId = user.user_metadata?.organization_id;
+    if (!orgId) {
+      // Tenta buscar a org_id da primeira instância do usuário como fallback para usuários legados
+      const { data: instanceData } = await supabase
+        .from('evolution_instances')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      
+      orgId = instanceData?.organization_id || user.id;
+    }
+    
     const body = await request.json()
     const { provider, credentials, is_active } = body
 

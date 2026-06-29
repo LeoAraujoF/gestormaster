@@ -189,11 +189,17 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
               let normalizedPhone = phone;
               if (phone.startsWith('55') && phone.length > 11) normalizedPhone = phone.substring(2); // Remove 55
               
+              // Cria um pattern para ignorar máscaras (ex: "11999999999" vira "%11%99999%9999%")
+              const phoneDdd = normalizedPhone.substring(0, 2);
+              const phonePart1 = normalizedPhone.substring(2, 7);
+              const phonePart2 = normalizedPhone.substring(7);
+              const likePattern = `%${phoneDdd}%${phonePart1}%${phonePart2}%`;
+
               const { data: clients, error: clientErr } = await supabaseAdmin
                 .from('clients')
                 .select('id, name, status, client_services(services(id, name, plans))')
                 .eq('organization_id', orgId)
-                .like('phone', `%${normalizedPhone}%`)
+                .like('phone', likePattern)
                 .limit(1);
 
               if (clientErr) {

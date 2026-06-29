@@ -138,7 +138,15 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                         transaction_amount: Number(chosenPlan.price),
                         description: `Renovação - Plano ${chosenPlan.name}`,
                         payment_method_id: "pix",
-                        payer: { email: "pagamento@automacao.com" },
+                        payer: { 
+                          email: "pagamento@automacao.com",
+                          first_name: "Cliente",
+                          last_name: "Gestor",
+                          identification: {
+                            type: "CPF",
+                            number: "19119119100" // CPF genérico para passar na validação do Mercado Pago
+                          }
+                        },
                         external_reference: `${orgId}|${instanceName}|${phone}|RENEWAL|${stateData.clientId}|${chosenPlan.name}`,
                         notification_url: `${appUrl}/api/webhooks/mercadopago?orgId=${orgId}`
                       })

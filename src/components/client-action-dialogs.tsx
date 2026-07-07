@@ -87,39 +87,33 @@ function VirtualKeypad({ pin, setPin, disabled }: { pin: string, setPin: (val: s
 
 export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, client: any, onSuccess: () => void }) {
   const [renewMonths, setRenewMonths] = useState(1)
+  const [renewAmount, setRenewAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'money' | 'card'>('pix')
   const supabase = createClient()
 
+  const planNameToMonths: Record<string, number> = {
+    'mensal': 1, 'bimestral': 2, 'trimestral': 3,
+    'semestral': 6, 'anual': 12,
+  }
+
   useEffect(() => {
     if (client && open) {
-      // Inicializa com o primeiro plano do serviço (ou 1 mês como padrão)
-      const plans = client?.client_services?.[0]?.services?.plans ?? []
-      const planNameToMonths: Record<string, number> = {
-        'mensal': 1, 'bimestral': 2, 'trimestral': 3,
-        'semestral': 6, 'anual': 12,
-      }
-      const defaultMonths = plans.length > 0
-        ? (planNameToMonths[plans[0].name.toLowerCase()] ?? 1)
-        : 1
-      setRenewMonths(defaultMonths)
+      // Inicializa o valor com o que o cliente paga atualmente (plan_value)
+      setRenewAmount(client.plan_value || 0)
+      setRenewMonths(1)
       setNotifyWhatsApp(true)
       setPaymentMethod('pix')
     }
   }, [client, open])
 
   const planValue = client?.plan_value || 0
+  const screens = client?.screens || 1
 
   // Pega os planos do serviço vinculado ao cliente (se existir)
   const servicePlans: { name: string; price: number }[] =
     client?.client_services?.[0]?.services?.plans ?? []
-
-  // Mapeamento de nome de plano → quantidade de meses
-  const planNameToMonths: Record<string, number> = {
-    'mensal': 1, 'bimestral': 2, 'trimestral': 3,
-    'semestral': 6, 'anual': 12,
-  }
 
   // Se o serviço tem planos definidos, usa eles; senão, usa os períodos padrão com plan_value
   const periods = servicePlans.length > 0
@@ -128,14 +122,14 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
         return { months, label: p.name, price: p.price }
       })
     : [
-        { months: 1, label: '1 mês', price: planValue * 1 },
+        { months: 1, label: '1 mês', price: planValue },
         { months: 3, label: '3 meses', price: planValue * 3 },
         { months: 6, label: '6 meses', price: planValue * 6 },
         { months: 12, label: '1 ano', price: planValue * 12 },
       ]
 
-  // Período selecionado
-  const selectedPeriod = periods.find(p => p.months === renewMonths) ?? periods[0]
+  // Chip ativo: plano cujo preço bate exatamente com o valor atual
+  const activePeriod = periods.find(p => p.price === renewAmount && p.months === renewMonths) ?? null
 
   const handleRenew = async () => {
     if (!client) return
@@ -144,7 +138,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
-      const renewAmount = selectedPeriod?.price ?? planValue * renewMonths
+      // Usa o valor editável definido pelo usuário (renewAmount)
 
       // Se o plano já está vencido, renova a partir de hoje; senão, a partir do vencimento atual
       const originalDueDate = new Date(client.due_date + "T12:00:00")
@@ -162,6 +156,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const clientScreensRenew = client.screens || 1
       const totalCostForRenewPeriod = renewingServicesCost * clientScreensRenew * renewMonths
       const netProfitForRenew = renewAmount - totalCostForRenewPeriod
+
 
       const { error: paymentError } = await supabase.from('payments').insert({
         user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: netProfitForRenew, months_renewed: renewMonths
@@ -248,18 +243,18 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
             
             <div className="p-[20px_22px]">
               {/* Period grid */}
-              <div className="grid grid-cols-2 gap-[8px] mb-[20px]">
+              <div className="grid grid-cols-2 gap-[8px] mb-[12px]">
                 {periods.map(p => {
-                  const isSelected = renewMonths === p.months
+                  const isActive = activePeriod?.months === p.months && activePeriod?.price === p.price
                   return (
                     <button
                       key={p.months}
-                      onClick={() => setRenewMonths(p.months)}
+                      onClick={() => { setRenewMonths(p.months); setRenewAmount(p.price) }}
                       className={cn(
                         "rounded-[8px] p-[10px] text-left transition-colors flex flex-col gap-[2px]",
-                        isSelected 
-                          ? "border-[1.5px] border-primary bg-muted" 
-                          : "border-[1px] border-input bg-card"
+                        isActive
+                          ? "border-[1.5px] border-primary bg-muted"
+                          : "border-[1px] border-input bg-card hover:border-primary/40"
                       )}
                     >
                       <span className="text-[12px] font-semibold text-foreground">{p.label}</span>
@@ -267,6 +262,37 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                     </button>
                   )
                 })}
+              </div>
+
+              {/* Campo de valor editável */}
+              <div className="mb-[16px]">
+                <div className="text-[10px] font-medium text-muted-foreground mb-[5px] uppercase tracking-wider">
+                  Valor cobrado · {screens} tela{screens > 1 ? 's' : ''} · editável
+                </div>
+                <div className="flex items-center border border-input rounded-[7px] bg-card transition-colors focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(64,85,200,0.12)]">
+                  <span className="pl-[11px] pr-[4px] text-muted-foreground text-[12px] font-mono select-none">R$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={renewAmount === 0 ? "" : String(renewAmount).replace('.', ',')}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(',', '.')
+                      const num = parseFloat(raw)
+                      setRenewAmount(isNaN(num) ? 0 : num)
+                    }}
+                    placeholder="0,00"
+                    className="flex-1 py-[9px] pr-[11px] font-mono text-[13px] font-semibold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                {planValue > 0 && renewAmount !== planValue && (
+                  <button
+                    type="button"
+                    onClick={() => setRenewAmount(planValue)}
+                    className="text-[10px] text-interactive mt-[4px] hover:underline"
+                  >
+                    Restaurar valor atual do cliente (R$ {planValue.toFixed(2).replace('.', ',')})
+                  </button>
+                )}
               </div>
 
               {/* Summary ruler */}
@@ -277,7 +303,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 </div>
                 <div className="flex-1 p-[12px]">
                   <div className="microlabel mb-[4px]">TOTAL</div>
-                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(selectedPeriod?.price ?? planValue * renewMonths)}</div>
+                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(renewAmount)}</div>
                 </div>
               </div>
 

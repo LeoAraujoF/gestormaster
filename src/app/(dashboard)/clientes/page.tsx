@@ -81,7 +81,7 @@ export default function ClientesPage() {
       // Traz username/password por serviço para a ficha de edição prefilar
       const { data: clientsData, error } = await supabase
         .from('clients')
-        .select(`*, client_services ( service_id, username, password, services (id, name, cost) )`)
+        .select(`*, client_services ( service_id, username, password, services (id, name, cost, plans) )`)
         .eq('user_id', user.id)
         .order('name')
       if (error) throw error

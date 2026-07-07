@@ -94,20 +94,48 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   useEffect(() => {
     if (client && open) {
-      setRenewMonths(1)
+      // Inicializa com o primeiro plano do serviço (ou 1 mês como padrão)
+      const plans = client?.client_services?.[0]?.services?.plans ?? []
+      const planNameToMonths: Record<string, number> = {
+        'mensal': 1, 'bimestral': 2, 'trimestral': 3,
+        'semestral': 6, 'anual': 12,
+      }
+      const defaultMonths = plans.length > 0
+        ? (planNameToMonths[plans[0].name.toLowerCase()] ?? 1)
+        : 1
+      setRenewMonths(defaultMonths)
       setNotifyWhatsApp(true)
       setPaymentMethod('pix')
     }
   }, [client, open])
 
   const planValue = client?.plan_value || 0
-  
-  const periods = [
-    { months: 1, label: '1 mês' },
-    { months: 3, label: '3 meses' },
-    { months: 6, label: '6 meses' },
-    { months: 12, label: '1 ano' }
-  ]
+
+  // Pega os planos do serviço vinculado ao cliente (se existir)
+  const servicePlans: { name: string; price: number }[] =
+    client?.client_services?.[0]?.services?.plans ?? []
+
+  // Mapeamento de nome de plano → quantidade de meses
+  const planNameToMonths: Record<string, number> = {
+    'mensal': 1, 'bimestral': 2, 'trimestral': 3,
+    'semestral': 6, 'anual': 12,
+  }
+
+  // Se o serviço tem planos definidos, usa eles; senão, usa os períodos padrão com plan_value
+  const periods = servicePlans.length > 0
+    ? servicePlans.map(p => {
+        const months = planNameToMonths[p.name.toLowerCase()] ?? 1
+        return { months, label: p.name, price: p.price }
+      })
+    : [
+        { months: 1, label: '1 mês', price: planValue * 1 },
+        { months: 3, label: '3 meses', price: planValue * 3 },
+        { months: 6, label: '6 meses', price: planValue * 6 },
+        { months: 12, label: '1 ano', price: planValue * 12 },
+      ]
+
+  // Período selecionado
+  const selectedPeriod = periods.find(p => p.months === renewMonths) ?? periods[0]
 
   const handleRenew = async () => {
     if (!client) return
@@ -116,7 +144,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
-      const renewAmount = planValue * renewMonths
+      const renewAmount = selectedPeriod?.price ?? planValue * renewMonths
 
       // Se o plano já está vencido, renova a partir de hoje; senão, a partir do vencimento atual
       const originalDueDate = new Date(client.due_date + "T12:00:00")
@@ -235,7 +263,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       )}
                     >
                       <span className="text-[12px] font-semibold text-foreground">{p.label}</span>
-                      <span className="font-mono text-[11px] text-secondary-foreground">{formatCurrency(planValue * p.months)}</span>
+                      <span className="font-mono text-[11px] text-secondary-foreground">{formatCurrency(p.price)}</span>
                     </button>
                   )
                 })}
@@ -249,7 +277,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 </div>
                 <div className="flex-1 p-[12px]">
                   <div className="microlabel mb-[4px]">TOTAL</div>
-                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(planValue * renewMonths)}</div>
+                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(selectedPeriod?.price ?? planValue * renewMonths)}</div>
                 </div>
               </div>
 

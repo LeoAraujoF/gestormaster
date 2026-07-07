@@ -440,8 +440,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   )}
 
                   {/* Input de valor — editável (clique para personalizar) */}
-                  <div className="relative">
-                    <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-muted-foreground text-[12px] font-mono pointer-events-none">R$</span>
+                  <div className="flex items-center border border-input rounded-[7px] bg-transparent transition-colors focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(64,85,200,0.12)]">
+                    <span className="pl-[11px] pr-[4px] text-muted-foreground text-[12px] font-mono select-none whitespace-nowrap">R$</span>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -452,7 +452,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                         const num = parseFloat(raw)
                         setValue("plan_value", isNaN(num) ? 0 : num, { shouldValidate: true })
                       }}
-                      className="input-2a pl-[32px] font-mono text-[12px]"
+                      className="flex-1 py-[9px] pr-[11px] font-mono text-[12px] bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                   {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}

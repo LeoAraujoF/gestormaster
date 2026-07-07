@@ -412,7 +412,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                       type="number" 
                       step="0.01" 
                       {...register("plan_value", { valueAsNumber: true })} 
-                      className="input-2a pl-[32px] font-mono text-[12px]"
+                      className="input-2a pl-[36px] font-mono text-[12px]"
                     />
                   </div>
                   {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}

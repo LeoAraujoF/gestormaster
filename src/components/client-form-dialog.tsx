@@ -60,6 +60,11 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   })
 
   const selectedServices = watch("selected_services") || []
+  const planValue = watch("plan_value")
+
+  // Planos do primeiro serviço selecionado (se houver)
+  const firstSelectedService = servicesList.find(s => selectedServices.includes(s.id))
+  const availablePlans: { name: string; price: number }[] = firstSelectedService?.plans ?? []
 
   useEffect(() => {
     if (open) {
@@ -107,6 +112,12 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       ? current.filter(id => id !== serviceId)
       : [...current, serviceId]
     setValue("selected_services", updated, { shouldValidate: true })
+
+    // Ao selecionar um serviço com planos, preenche automaticamente com o primeiro plano
+    const service = servicesList.find(s => s.id === serviceId)
+    if (!current.includes(serviceId) && service?.plans?.length > 0) {
+      setValue("plan_value", service.plans[0].price, { shouldValidate: true })
+    }
   }
 
   const toggleReveal = (id: string) => setRevealed((r) => ({ ...r, [id]: !r[id] }))
@@ -406,13 +417,42 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Valor cobrado <span className="text-danger">*</span>
                   </div>
+
+                  {/* Chips de planos do serviço selecionado */}
+                  {availablePlans.length > 0 && (
+                    <div className="flex flex-wrap gap-[6px] mb-[8px]">
+                      {availablePlans.map((plan) => (
+                        <button
+                          key={plan.name}
+                          type="button"
+                          onClick={() => setValue("plan_value", plan.price, { shouldValidate: true })}
+                          className={cn(
+                            "px-[10px] py-[4px] rounded-[6px] text-[11px] font-medium border transition-all",
+                            planValue === plan.price
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-card text-secondary-foreground border-input hover:border-primary/50 hover:bg-muted"
+                          )}
+                        >
+                          {plan.name} · R$ {plan.price.toFixed(2).replace('.', ',')}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Input de valor — editável (clique para personalizar) */}
                   <div className="relative">
-                    <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-muted-foreground text-[12px] font-mono">R$</span>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      {...register("plan_value", { valueAsNumber: true })} 
-                      className="input-2a pl-[36px] font-mono text-[12px]"
+                    <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-muted-foreground text-[12px] font-mono pointer-events-none">R$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={planValue === 0 ? "" : String(planValue).replace('.', ',')}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(',', '.')
+                        const num = parseFloat(raw)
+                        setValue("plan_value", isNaN(num) ? 0 : num, { shouldValidate: true })
+                      }}
+                      className="input-2a pl-[32px] font-mono text-[12px]"
                     />
                   </div>
                   {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}

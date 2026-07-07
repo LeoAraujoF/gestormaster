@@ -118,7 +118,12 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
       const renewAmount = planValue * renewMonths
 
-      const currentDueDate = new Date(client.due_date + "T12:00:00")
+      // Se o plano já está vencido, renova a partir de hoje; senão, a partir do vencimento atual
+      const originalDueDate = new Date(client.due_date + "T12:00:00")
+      const today = new Date()
+      today.setHours(12, 0, 0, 0)
+      const renewalBase = originalDueDate < today ? today : originalDueDate
+      const currentDueDate = new Date(renewalBase)
       currentDueDate.setMonth(currentDueDate.getMonth() + renewMonths)
       const newDueDateStr = currentDueDate.toISOString().split('T')[0]
 
@@ -171,7 +176,11 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   const currentDueDate = client ? new Date(client.due_date + "T12:00:00") : new Date()
   const displayDate = client ? currentDueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('. de ', '/') : ''
-  const newDueDate = new Date(currentDueDate)
+  // Preview: se o plano já está vencido, mostra novo vencimento a partir de hoje
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+  const renewalBase = currentDueDate < today ? new Date(today) : new Date(currentDueDate)
+  const newDueDate = new Date(renewalBase)
   newDueDate.setMonth(newDueDate.getMonth() + renewMonths)
   
   const paymentMethods = [

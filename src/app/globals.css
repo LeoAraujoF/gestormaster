@@ -39,6 +39,23 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Tokens semânticos — cor por significado (design_handoff README §4) */
+  --color-interactive: var(--interactive);
+  --color-interactive-bg: var(--interactive-bg);
+  --color-interactive-fg: var(--interactive-fg);
+  --color-money: var(--money);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-border: var(--danger-border);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,77 +65,96 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Premium Clean Zinc Theme */
+/* Direção "2a" — técnico premium, claro (design_handoff README §4) */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #fbfbfa;
+  --foreground: #26272b;
+  --card: #ffffff;
+  --card-foreground: #26272b;
+  --popover: #ffffff;
+  --popover-foreground: #26272b;
+  --primary: #191a1e;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f0ee;
+  --secondary-foreground: #55565c;
+  --muted: #f7f7f5;
+  --muted-foreground: #8a8983;
+  --accent: #e9e9ff;
+  --accent-foreground: #3140a8;
+  --destructive: #b23c3c;
+  --border: #ecebe7;
+  --input: #e2e1dd;
+  --ring: #4055c8;
   --radius: 0.5rem;
-  
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.600 0.118 184.704);
-  --chart-3: oklch(0.398 0.070 227.396);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.080);
+  --interactive: #4055c8;
+  --money: #2e7d54;
+  --warning: #c98a1e;
+  --danger: #b23c3c;
+  --success-bg: #e2efe6;  --success-fg: #256b45;
+  --warning-bg: #f2e8d4;  --warning-border: #e8d9b5;  --warning-fg: #8a6d1f;
+  --danger-bg:  #f6e4e4;  --danger-fg:  #a13636;  --danger-border: #f0d9d9;
+  --interactive-bg: #eef0ff;  --interactive-fg: #3140a8;
+
+  --sidebar: #f5f5f3;
+  --sidebar-foreground: #55565c;
+  --sidebar-primary: #191a1e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9e9ff;
+  --sidebar-accent-foreground: #3140a8;
+  --sidebar-border: #e7e6e2;
+  --sidebar-ring: #4055c8;
+
+  --chart-1: #2e7d54;
+  --chart-2: #4055c8;
+  --chart-3: #c98a1e;
+  --chart-4: #b23c3c;
+  --chart-5: #8a8983;
 }
+
 .dark {
-  --background: oklch(0.115 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.175 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.175 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  
-  --sidebar: oklch(0.145 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-  
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.170 162.480);
-  --chart-3: oklch(0.769 0.188 70.080);
-  --chart-4: oklch(0.627 0.265 303.900);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --background: #1b1c1f;
+  --foreground: #d6d7d9;
+  --card: #202124;
+  --card-foreground: #d6d7d9;
+  --popover: #202124;
+  --popover-foreground: #d6d7d9;
+  --primary: #e8e9ef;
+  --primary-foreground: #14161d;
+  --secondary: #212226;
+  --secondary-foreground: #a3a4a8;
+  --muted: #242528;
+  --muted-foreground: #6e6f75;
+  --accent: #2b2d3a;
+  --accent-foreground: #c3ccff;
+  --destructive: #e57373;
+  --border: #26272b;
+  --input: #34353a;
+  --ring: #8b9cf9;
+
+  --interactive: #8b9cf9;
+  --money: #3ecf8e;
+  --warning: #dfb35c;
+  --danger: #e57373;
+  --success-bg: #1e3328;  --success-fg: #7dd3a8;
+  --warning-bg: #332b1c;  --warning-border: #4a3f28;  --warning-fg: #dfb35c;
+  --danger-bg:  #3a2224;  --danger-fg:  #e57373;  --danger-border: #4a2c2e;
+  --interactive-bg: #262a3d;  --interactive-fg: #aab6ff;
+
+  --sidebar: #18191c;
+  --sidebar-foreground: #a3a4a8;
+  --sidebar-primary: #e8e9ef;
+  --sidebar-primary-foreground: #14161d;
+  --sidebar-accent: #2b2d3a;
+  --sidebar-accent-foreground: #c3ccff;
+  --sidebar-border: #2a2b2f;
+  --sidebar-ring: #8b9cf9;
+
+  --chart-1: #3ecf8e;
+  --chart-2: #8b9cf9;
+  --chart-3: #dfb35c;
+  --chart-4: #e57373;
+  --chart-5: #6e6f75;
 }
 
 @layer base {
@@ -136,25 +172,151 @@
   }
 }
 
-.glass-card {
-  @apply bg-card text-card-foreground border rounded-xl shadow-sm;
+@layer utilities {
+  /* Microlabel mono em caps (design_handoff §5) */
+  .microlabel {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* Números/valores em mono tabular */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Ponto de status 6px — sempre com palavra, nunca só cor (design_handoff §7) */
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
 }
 
-/* Recharts Dark Mode Contrast Fixes */
-.recharts-text {
-  fill: var(--foreground) !important;
+/* Preferência "Números em fonte tabular" desligada (Minha conta → Aparência, 11e) */
+html[data-tabular-nums="off"] .num {
+  font-variant-numeric: normal;
 }
-.recharts-cartesian-axis-tick text {
-  fill: var(--muted-foreground) !important;
+
+/* Compat: glass-card antigo → card flat (não usar em telas novas) */
+.glass-card {
+  @apply bg-card text-card-foreground border rounded-lg;
 }
-.recharts-legend-item-text {
-  color: var(--foreground) !important;
-  fill: var(--foreground) !important;
+
+/* Foco visível consistente (a11y — design_handoff §8) */
+:where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
-.recharts-default-legend {
-  color: var(--foreground) !important;
-  fill: var(--foreground) !important;
+
+/* Scrollbar fina (design_handoff §8) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d5d4ce transparent;
 }
-.recharts-label {
-  fill: var(--foreground) !important;
+.dark * {
+  scrollbar-color: #34353a transparent;
 }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #d5d4ce;
+  border-radius: 4px;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: #34353a;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Utilitárias dos protótipos .dc.html (modais 2a) — em uso pelos
+   client-form-dialog / client-action-dialogs. Não remover.
+   ═══════════════════════════════════════════════════════════════ */
+.modal-overlay-2a {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 22, 0.4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px;
+  z-index: 50;
+  overflow: auto;
+  animation: dcfade 0.18s ease-out;
+}
+.modal-2a {
+  width: 640px;
+  max-width: 100%;
+  max-height: 90vh;              /* garante o limite mesmo se a classe JSX falhar */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;             /* clipa o border-radius; o scroll fica no body */
+  background: var(--card);
+  border-radius: 13px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.24);
+  position: relative;
+  animation: dcpop 0.2s ease-out;
+}
+.modal-header-2a {
+  flex-shrink: 0;               /* fixo no topo (sem sticky — o flex-col já segura) */
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 17px 22px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.modal-footer-2a {
+  flex-shrink: 0;               /* fixo embaixo — sem sticky, para não flutuar */
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 14px 22px;
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+}
+.input-2a {
+  width: 100%;
+  border: 1px solid var(--input);
+  border-radius: 7px;
+  padding: 9px 11px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--foreground);
+  background: transparent;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-2a:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px rgba(64, 85, 200, 0.12);
+}
+.input-2a::placeholder {
+  color: var(--muted-foreground);
+}
+
+@keyframes dcfade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dcpop {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Recharts — contraste no dark mode */
+.recharts-text { fill: var(--foreground) !important; }
+.recharts-cartesian-axis-tick text { fill: var(--muted-foreground) !important; }
+.recharts-legend-item-text { color: var(--foreground) !important; fill: var(--foreground) !important; }
+.recharts-default-legend { color: var(--foreground) !important; fill: var(--foreground) !important; }
+.recharts-label { fill: var(--foreground) !important; }

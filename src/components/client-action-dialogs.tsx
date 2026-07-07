@@ -2,39 +2,112 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, RefreshCw, Gift, Trash2, Plus, Minus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
 import { logAuditClient } from "@/lib/audit-client"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+
+// Toggle Switch Component
+function CustomToggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <div className="flex items-center justify-between py-[12px]">
+      <span className="text-[12px] font-medium text-foreground">{label}</span>
+      <div 
+        onClick={onChange}
+        className={cn(
+          "w-[34px] h-[18px] rounded-full p-[2px] cursor-pointer transition-colors",
+          checked ? "bg-primary" : "bg-input"
+        )}
+      >
+        <div 
+          className={cn(
+            "w-[14px] h-[14px] bg-card rounded-full shadow-sm transition-transform",
+            checked ? "translate-x-[16px]" : "translate-x-0"
+          )}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Keypad Component
+function VirtualKeypad({ pin, setPin, disabled }: { pin: string, setPin: (val: string) => void, disabled?: boolean }) {
+  const handleKey = (key: string) => {
+    if (disabled) return
+    if (key === 'backspace') {
+      setPin(pin.slice(0, -1))
+    } else if (pin.length < 4 && key !== 'empty') {
+      setPin(pin + key)
+    }
+  }
+
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'empty', '0', 'backspace']
+
+  return (
+    <div className="mt-4">
+      {/* PIN display boxes */}
+      <div className="flex justify-center gap-2 mb-6">
+        {[0, 1, 2, 3].map(i => (
+          <div 
+            key={i}
+            className={cn(
+              "w-[44px] h-[46px] rounded-[7px] border bg-card flex items-center justify-center font-mono text-[18px]",
+              pin.length === i ? "border-interactive ring-1 ring-interactive/20" : "border-input"
+            )}
+          >
+            {pin[i] ? "•" : ""}
+          </div>
+        ))}
+      </div>
+      
+      {/* Numeric Keypad */}
+      <div className="grid grid-cols-3 gap-2 px-2">
+        {keys.map((k, i) => (
+          <button
+            key={i}
+            type="button"
+            disabled={disabled || k === 'empty'}
+            onClick={() => handleKey(k)}
+            className={cn(
+              "h-[38px] rounded-[7px] font-mono text-[14px] font-medium flex items-center justify-center transition-colors",
+              k === 'empty' ? "invisible" : "border border-input bg-card text-foreground hover:bg-muted active:bg-secondary"
+            )}
+          >
+            {k === 'backspace' ? '⌫' : k !== 'empty' ? k : ''}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, client: any, onSuccess: () => void }) {
   const [renewMonths, setRenewMonths] = useState(1)
-  const [renewAmount, setRenewAmount] = useState(client?.plan_value || 0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'money' | 'card'>('pix')
   const supabase = createClient()
 
   useEffect(() => {
     if (client && open) {
       setRenewMonths(1)
-      setRenewAmount(client.plan_value || 0)
+      setNotifyWhatsApp(true)
+      setPaymentMethod('pix')
     }
   }, [client, open])
 
-  const handleMonthsChange = (delta: number) => {
-    const newVal = Math.max(1, renewMonths + delta)
-    setRenewMonths(newVal)
-    if (client) {
-      setRenewAmount(client.plan_value * newVal)
-    }
-  }
+  const planValue = client?.plan_value || 0
+  
+  const periods = [
+    { months: 1, label: '1 mês' },
+    { months: 3, label: '3 meses' },
+    { months: 6, label: '6 meses' },
+    { months: 12, label: '1 ano' }
+  ]
 
   const handleRenew = async () => {
     if (!client) return
@@ -42,6 +115,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
+
+      const renewAmount = planValue * renewMonths
 
       const currentDueDate = new Date(client.due_date + "T12:00:00")
       currentDueDate.setMonth(currentDueDate.getMonth() + renewMonths)
@@ -61,42 +136,29 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
       if (paymentError) throw paymentError
 
-      const { data: rules } = await supabase
-        .from('automations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('alert_type', 'renewal')
-        .eq('is_active', true)
-        
-      if (rules && rules.length > 0) {
-        for (const rule of rules) {
-          // Fire and forget: roda em background para não travar a tela
-          fetch(window.location.origin + '/api/evolution/send-instant', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
-          })
-          .then(async (res) => {
-            if (!res.ok) {
-              const errData = await res.json()
-              toast.warning(`WhatsApp falhou em background: ${errData.error || 'Erro desconhecido'}`)
-            }
-          })
-          .catch((err: any) => {
-            toast.warning(`O WhatsApp foi bloqueado pelo seu navegador (Failed to fetch).`)
-          })
+      if (notifyWhatsApp) {
+        const { data: rules } = await supabase
+          .from('automations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('alert_type', 'renewal')
+          .eq('is_active', true)
+          
+        if (rules && rules.length > 0) {
+          for (const rule of rules) {
+            fetch(window.location.origin + '/api/evolution/send-instant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
+            }).catch(() => {})
+          }
         }
       }
 
       toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${currentDueDate.toLocaleDateString('pt-BR')}`)
-      logAuditClient('client.renew', 'clients', { client_name: client.name, months: renewMonths })
+      logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths } })
       
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6']
-      })
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#2e7d54', '#4055c8', '#191a1e'] })
       
       onSuccess()
       onOpenChange(false)
@@ -107,77 +169,144 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     }
   }
 
-  const renewingServicesCost = client?.client_services?.reduce((acc: number, cs: any) => acc + (cs.services?.cost || 0), 0) || 0
-  const clientScreensRenew = client?.screens || 1
-  const totalCostForRenewPeriod = renewingServicesCost * clientScreensRenew * renewMonths
-  const netProfitForRenew = renewAmount - totalCostForRenewPeriod
+  const currentDueDate = client ? new Date(client.due_date + "T12:00:00") : new Date()
+  const displayDate = client ? currentDueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('. de ', '/') : ''
+  const newDueDate = new Date(currentDueDate)
+  newDueDate.setMonth(newDueDate.getMonth() + renewMonths)
+  
+  const paymentMethods = [
+    { id: 'pix', label: 'PIX', desc: 'Transferência instantânea' },
+    { id: 'money', label: 'Dinheiro', desc: 'Pago em espécie' },
+    { id: 'card', label: 'Cartão', desc: 'Débito ou crédito' }
+  ] as const
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] overflow-hidden border-primary/20">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-primary flex items-center gap-3 text-xl">
-            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 text-primary" />
-            </div>
-            Renovar Assinatura
-          </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
-            Renovação de plano para <strong className="text-foreground">{client?.name}</strong>.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-5 pt-4">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label className="text-muted-foreground">Meses (Duração)</Label>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={() => handleMonthsChange(-1)}>
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <div className="h-10 flex-1 flex items-center justify-center font-bold text-lg bg-background/50 border border-border/50 rounded-md">
-                  {renewMonths}
+      <DialogContent
+          showCloseButton={false}
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[440px] max-w-[95vw] focus:outline-none"
+        >
+          <div className="modal-2a">
+            {/* HEADER */}
+            <div className="modal-header-2a">
+              <span className="w-[34px] h-[34px] rounded-[9px] bg-success-bg text-success-fg flex items-center justify-center text-[15px]">
+                ↻
+              </span>
+              <div className="flex-1">
+                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
+                  Renovar assinatura
                 </div>
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={() => handleMonthsChange(1)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <div className="text-muted-foreground text-[11px] mt-[1px] truncate">
+                  {client?.name} · vence {displayDate}
+                </div>
               </div>
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+              >
+                ✕
+              </button>
             </div>
-            <div className="space-y-3">
-              <Label className="text-muted-foreground">Valor Total (R$)</Label>
-              <Input type="number" step="0.01" value={renewAmount} onChange={(e) => setRenewAmount(parseFloat(e.target.value) || 0)} className="bg-background/50 h-10 text-lg font-semibold" />
-            </div>
-          </div>
-          
-          <div className="relative group rounded-xl bg-card border border-emerald-500/20 overflow-hidden shadow-sm">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-            <div className="p-4 relative z-10 space-y-3">
-              <div className="flex justify-between text-sm items-center">
-                <span className="text-muted-foreground">Custo dos serviços ({renewMonths}x):</span>
-                <span className="text-red-400 font-medium bg-red-400/10 px-2 py-0.5 rounded text-xs">{formatCurrency(totalCostForRenewPeriod)}</span>
+            
+            <div className="p-[20px_22px]">
+              {/* Period grid */}
+              <div className="grid grid-cols-2 gap-[8px] mb-[20px]">
+                {periods.map(p => {
+                  const isSelected = renewMonths === p.months
+                  return (
+                    <button
+                      key={p.months}
+                      onClick={() => setRenewMonths(p.months)}
+                      className={cn(
+                        "rounded-[8px] p-[10px] text-left transition-colors flex flex-col gap-[2px]",
+                        isSelected 
+                          ? "border-[1.5px] border-primary bg-muted" 
+                          : "border-[1px] border-input bg-card"
+                      )}
+                    >
+                      <span className="text-[12px] font-semibold text-foreground">{p.label}</span>
+                      <span className="font-mono text-[11px] text-secondary-foreground">{formatCurrency(planValue * p.months)}</span>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="flex justify-between items-center border-t border-border/50 pt-3">
-                <span className="font-semibold text-foreground text-sm uppercase tracking-wide">Lucro Líquido</span>
-                <span className="text-emerald-500 font-bold text-xl drop-shadow-sm">{formatCurrency(netProfitForRenew)}</span>
-              </div>
-            </div>
-          </div>
 
-          {client && (
-            <div className="text-xs text-center text-muted-foreground bg-muted/30 py-2 rounded-lg border border-border/30">
-              Vencimento: <strong className="text-foreground">{new Date(client.due_date + "T12:00:00").toLocaleDateString('pt-BR')}</strong> 
-              <span className="mx-2 opacity-50">➔</span> 
-              <strong className="text-primary">{(() => { const d = new Date(client.due_date + "T12:00:00"); d.setMonth(d.getMonth() + renewMonths); return d.toLocaleDateString('pt-BR'); })()}</strong>
+              {/* Summary ruler */}
+              <div className="flex rounded-[8px] border border-border bg-muted overflow-hidden mb-[20px]">
+                <div className="flex-1 p-[12px] border-r border-border">
+                  <div className="microlabel mb-[4px]">NOVO VENCIMENTO</div>
+                  <div className="font-mono text-[14px] font-bold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</div>
+                </div>
+                <div className="flex-1 p-[12px]">
+                  <div className="microlabel mb-[4px]">TOTAL</div>
+                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(planValue * renewMonths)}</div>
+                </div>
+              </div>
+
+              {/* Payment methods */}
+              <div className="space-y-[8px] mb-[20px]">
+                {paymentMethods.map(pm => (
+                  <div 
+                    key={pm.id}
+                    onClick={() => setPaymentMethod(pm.id)}
+                    className="flex items-center gap-[12px] p-[12px] rounded-[8px] border border-input cursor-pointer"
+                  >
+                    <div className={cn(
+                      "w-[15px] h-[15px] rounded-full border transition-all",
+                      paymentMethod === pm.id ? "border-[4.5px] border-primary" : "border-[1px] border-input"
+                    )} />
+                    <div>
+                      <div className="text-[13px] font-medium text-foreground leading-tight">{pm.label}</div>
+                      <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{pm.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {paymentMethod === 'pix' && (
+                <div className="flex items-center gap-[12px] p-[12px] bg-muted rounded-[8px] border border-border mb-[20px]">
+                  <div className="w-[66px] h-[66px] bg-card border border-input rounded-[4px] flex items-center justify-center text-[10px] text-muted-foreground">
+                    QR CODE
+                  </div>
+                  <div className="flex-1">
+                    <input readOnly value="00020126360014br.gov.bcb.pix..." className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px]" />
+                    <button className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Toggle */}
+              <div className="border-t border-border pt-[8px]">
+                <CustomToggle 
+                  checked={notifyWhatsApp} 
+                  onChange={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                  label="Avisar o cliente da renovação no WhatsApp"
+                />
+              </div>
+
             </div>
-          )}
-        </div>
-        <DialogFooter className="pt-6">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-          <Button type="button" onClick={handleRenew} disabled={isSubmitting} className="w-full sm:w-auto">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirmar Renovação
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+            
+            <div className="modal-footer-2a">
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                onClick={handleRenew}
+                disabled={isSubmitting}
+                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px]"
+              >
+                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                Confirmar renovação
+              </button>
+            </div>
+          </div>
+        </DialogContent>
     </Dialog>
   )
 }
@@ -185,43 +314,34 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, client: any, onSuccess: () => void }) {
   const [promotions, setPromotions] = useState<any[]>([])
   const [selectedPromoId, setSelectedPromoId] = useState<string>("")
-  const [renewMonths, setRenewMonths] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoadingPromos, setIsLoadingPromos] = useState(false)
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     if (open) {
-      setRenewMonths(1)
       setSelectedPromoId("")
+      setNotifyWhatsApp(true)
       fetchPromotions()
     }
   }, [open])
 
   const fetchPromotions = async () => {
-    setIsLoadingPromos(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data } = await supabase.from('promotions').select('*').eq('user_id', user.id).eq('is_active', true)
       if (data) setPromotions(data)
     }
-    setIsLoadingPromos(false)
-  }
-
-  const selectedPromo = promotions.find(p => p.id === selectedPromoId)
-
-  const handleMonthsChange = (delta: number) => {
-    const newVal = Math.max(1, renewMonths + delta)
-    setRenewMonths(newVal)
   }
 
   const handlePromo = async () => {
-    if (!client) return
+    if (!client || !selectedPromoId) return
     setIsSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
+      const renewMonths = 1 // Default to 1 month for simplicity in promo, or extract from promo if it has duration
       const currentDueDate = new Date(client.due_date + "T12:00:00")
       currentDueDate.setMonth(currentDueDate.getMonth() + renewMonths)
       const newDueDateStr = currentDueDate.toISOString().split('T')[0]
@@ -229,12 +349,11 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const { error } = await supabase.from('clients').update({ due_date: newDueDateStr, status: 'active' }).eq('id', client.id)
       if (error) throw error
 
+      const promo = promotions.find(p => p.id === selectedPromoId)
       const clientScreens = client.screens || 1
       const promoServicesCost = client.client_services?.reduce((acc: number, cs: any) => acc + (cs.services?.cost || 0), 0) || 0
       const totalCostForPromo = promoServicesCost * clientScreens * renewMonths
-      
-      // If a promo is selected, consider its discount as the amount paid, otherwise 0
-      const amountPaid = selectedPromo ? (client.plan_value - selectedPromo.discount_value) * renewMonths : 0
+      const amountPaid = promo ? Math.max(0, client.plan_value - promo.discount_value) * renewMonths : 0
       const netProfitForPromo = amountPaid - totalCostForPromo
 
       const { error: paymentError } = await supabase.from('payments').insert({
@@ -243,42 +362,28 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
       if (paymentError) throw paymentError
 
-      const { data: rules } = await supabase
-        .from('automations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('alert_type', 'promotion')
-        .eq('is_active', true)
-        
-      if (rules && rules.length > 0) {
-        for (const rule of rules) {
-          // Fire and forget
-          fetch(window.location.origin + '/api/evolution/send-instant', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
-          })
-          .then(async (res) => {
-            if (!res.ok) {
-              const errData = await res.json()
-              toast.warning(`WhatsApp (Promoção) falhou em background: ${errData.error || 'Erro desconhecido'}`)
-            }
-          })
-          .catch((err: any) => {
-            toast.warning(`O WhatsApp foi bloqueado pelo seu navegador (Failed to fetch).`)
-          })
+      if (notifyWhatsApp) {
+        const { data: rules } = await supabase
+          .from('automations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('alert_type', 'promotion')
+          .eq('is_active', true)
+          
+        if (rules && rules.length > 0) {
+          for (const rule of rules) {
+            fetch(window.location.origin + '/api/evolution/send-instant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
+            }).catch(() => {})
+          }
         }
       }
 
-      toast.success(`Promoção ativada! Vencimento estendido por ${renewMonths} mês(es).`)
-      logAuditClient('client.renew', 'clients', { client_name: client.name, months: renewMonths, promo_name: selectedPromo?.name || 'none' })
-      
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6']
-      })
+      toast.success(`Promoção ativada! Vencimento estendido.`)
+      logAuditClient({ action: 'client.promotion', resource: 'clients', details: { client_name: client.name, promo: promo?.name, days: promo?.extra_days } })
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#3140a8', '#191a1e'] })
       
       onSuccess()
       onOpenChange(false)
@@ -289,93 +394,113 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
     }
   }
 
+  const currentDueDate = client ? new Date(client.due_date + "T12:00:00") : new Date()
+  const displayDate = client ? currentDueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('. de ', '/') : ''
+  const newDueDate = new Date(currentDueDate)
+  newDueDate.setMonth(newDueDate.getMonth() + 1) // default extension 1 month
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] border-amber-500/20 overflow-hidden">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-amber-500 flex items-center gap-3 text-xl">
-            <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center">
-              <Gift className="w-5 h-5 text-amber-500" />
-            </div>
-             Aplicar Promoção
-          </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
-            Configure uma promoção de extensão de plano para <strong className="text-foreground">{client?.name}</strong>.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-5 pt-4 relative z-10">
-          
-          <div className="space-y-3">
-            <Label className="text-muted-foreground">Promoção Global (Opcional)</Label>
-            {isLoadingPromos ? (
-              <div className="h-10 bg-muted/50 animate-pulse rounded-md"></div>
-            ) : (
-              <Select value={selectedPromoId} onValueChange={(val) => setSelectedPromoId(val || "")}>
-                <SelectTrigger className="bg-background/50 h-10 w-full">
-                  {selectedPromoId && selectedPromoId !== "none" && selectedPromo ? (
-                    <span data-slot="select-value" className="text-sm text-left truncate">
-                      {selectedPromo.name} - Desconto: {formatCurrency(selectedPromo.discount_value)}
-                    </span>
-                  ) : selectedPromoId === "none" ? (
-                    <span data-slot="select-value" className="text-sm text-left truncate">
-                      Nenhuma (Apenas gerar bônus gratuito)
-                    </span>
-                  ) : (
-                    <SelectValue placeholder="Selecione uma promoção (ou deixe vazio)" />
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma (Apenas gerar bônus gratuito)</SelectItem>
-                  {promotions.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} - Desconto: {formatCurrency(p.discount_value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-muted-foreground">Quantidade de Meses (Bônus/Extensão)</Label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={() => handleMonthsChange(-1)}>
-                <Minus className="h-4 w-4" />
-              </Button>
-              <div className="h-10 flex-1 flex items-center justify-center font-bold text-lg bg-background/50 border border-border/50 rounded-md">
-                {renewMonths}
+      <DialogContent
+          showCloseButton={false}
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[420px] max-w-[95vw] focus:outline-none"
+        >
+          <div className="modal-2a">
+            {/* HEADER */}
+            <div className="modal-header-2a">
+              <span className="w-[34px] h-[34px] rounded-[9px] bg-accent text-interactive-fg flex items-center justify-center text-[15px]">
+                ▲
+              </span>
+              <div className="flex-1">
+                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
+                  Aplicar promoção
+                </div>
+                <div className="text-muted-foreground text-[11px] mt-[1px] truncate">
+                  {client?.name} · plano {formatCurrency(client?.plan_value || 0)}
+                </div>
               </div>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={() => handleMonthsChange(1)}>
-                <Plus className="h-4 w-4" />
-              </Button>
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-[20px_22px]">
+              {/* Promos */}
+              <div className="space-y-[8px] mb-[20px]">
+                {promotions.length === 0 ? (
+                  <div className="text-[12px] text-muted-foreground py-2">Nenhuma promoção cadastrada.</div>
+                ) : (
+                  promotions.map(p => (
+                    <div 
+                      key={p.id}
+                      onClick={() => setSelectedPromoId(p.id)}
+                      className={cn(
+                        "flex items-center gap-[12px] p-[12px] rounded-[8px] border cursor-pointer transition-all",
+                        selectedPromoId === p.id ? "border-interactive-fg bg-interactive-bg" : "border-input bg-card hover:bg-muted"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-[15px] h-[15px] rounded-full border transition-all",
+                        selectedPromoId === p.id ? "border-[4.5px] border-interactive-fg" : "border-[1px] border-input"
+                      )} />
+                      <div className="flex-1">
+                        <div className="text-[13px] font-medium text-foreground leading-tight">{p.name}</div>
+                        <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{p.description || "Sem descrição"}</div>
+                      </div>
+                      <div className="px-[6px] py-[2px] rounded-[4px] bg-success-bg text-money font-mono text-[11px] font-bold">
+                        +30d
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Summary ruler */}
+              <div className="flex rounded-[8px] border border-border bg-muted overflow-hidden mb-[20px]">
+                <div className="flex-1 p-[12px] border-r border-border">
+                  <div className="microlabel mb-[4px]">DIAS EXTRAS</div>
+                  <div className="font-mono text-[14px] font-bold text-foreground">+30</div>
+                </div>
+                <div className="flex-1 p-[12px]">
+                  <div className="microlabel mb-[4px]">NOVO VENCIMENTO</div>
+                  <div className="font-mono text-[14px] font-bold text-money">{newDueDate.toLocaleDateString('pt-BR')}</div>
+                </div>
+              </div>
+
+              {/* Toggle */}
+              <div className="border-t border-border pt-[8px]">
+                <CustomToggle 
+                  checked={notifyWhatsApp} 
+                  onChange={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                  label="Avisar a cliente no WhatsApp"
+                />
+              </div>
+            </div>
+            
+            <div className="modal-footer-2a">
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                onClick={handlePromo}
+                disabled={isSubmitting || !selectedPromoId}
+                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] disabled:opacity-50"
+              >
+                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                Aplicar promoção
+              </button>
             </div>
           </div>
-          
-          {selectedPromo && (
-             <div className="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20 flex flex-col gap-1 text-sm">
-               <span className="text-amber-500 font-semibold">{selectedPromo.name}</span>
-               <span className="text-muted-foreground">{selectedPromo.description || "Sem descrição."}</span>
-               <div className="mt-1 flex justify-between items-center text-xs">
-                 <span>Valor Base do Cliente: <span className="line-through">{formatCurrency(client?.plan_value || 0)}</span></span>
-                 <span className="font-bold text-emerald-500 text-sm">{formatCurrency(Math.max(0, (client?.plan_value || 0) - selectedPromo.discount_value))} / mês</span>
-               </div>
-             </div>
-          )}
-          {!selectedPromoId || selectedPromoId === "none" ? (
-             <div className="text-xs text-muted-foreground text-center bg-muted/30 p-2 rounded-lg">
-               Isso irá gerar um comprovante de <strong>R$ 0,00</strong> para {renewMonths} mês(es).
-             </div>
-          ) : null}
-
-        </div>
-        <DialogFooter className="pt-6 relative z-10">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-          <Button type="button" className="bg-amber-500 hover:bg-amber-600 text-white w-full sm:w-auto" onClick={handlePromo} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Aplicar Promoção
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+        </DialogContent>
     </Dialog>
   )
 }
@@ -414,7 +539,7 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
       const { error } = await supabase.from('clients').delete().eq('id', client.id)
       if (error) throw error
       toast.success("Cliente excluído!")
-      logAuditClient('client.delete', 'clients', { client_name: client.name })
+      logAuditClient({ action: 'client.delete', resource: 'clients', details: { client_name: client.name } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -424,45 +549,86 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
     }
   }
 
+  const isComplete = !hasPin || pinInput.length === 4
+  const primaryService = client?.client_services?.[0]?.services?.name || 'Vários serviços'
+  const screens = client?.screens || 1
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] border-destructive/30 overflow-hidden">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-destructive/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-destructive flex items-center gap-3 text-xl">
-             <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center">
-               <Trash2 className="w-5 h-5 text-destructive" />
-             </div>
-             Excluir Registro
-          </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
-            Tem certeza que deseja excluir <strong className="text-foreground">{client?.name}</strong>? Esta ação é <strong>irreversível</strong>.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {hasPin && (
-          <div className="flex flex-col items-center justify-center py-6 bg-background/50 rounded-xl border border-destructive/20 space-y-4 mt-2">
-            <Label className="text-sm font-semibold text-destructive uppercase tracking-widest">
-              Autorização Necessária
-            </Label>
-            <InputOTP maxLength={4} value={pinInput} onChange={setPinInput}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={1} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={2} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={3} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
-        )}
+      <DialogContent
+          showCloseButton={false}
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[390px] max-w-[95vw] focus:outline-none"
+        >
+          <div className="modal-2a">
+            {/* Header (No sticky for this one) */}
+            <div className="p-[22px] pb-[16px]">
+              <div className="flex justify-between items-start mb-[12px]">
+                <span className="w-[32px] h-[32px] rounded-[9px] bg-danger-bg text-danger-fg flex items-center justify-center text-[15px]">
+                  🗑
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => onOpenChange(false)}
+                  className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground mb-[4px]">
+                Excluir cliente
+              </div>
+              <div className="text-[13px] text-secondary-foreground leading-[1.4]">
+                Excluir <strong>{client?.name}</strong> apaga o histórico de pagamentos e revoga os acessos. Esta ação é <strong className="text-danger-fg">irreversível</strong>.
+              </div>
+            </div>
 
-        <DialogFooter className="pt-6 relative z-10">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting || (hasPin && pinInput.length !== 4)} className="w-full sm:w-auto">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirmar Exclusão
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+            <div className="px-[22px] pb-[20px]">
+              {/* Summary box */}
+              <div className="bg-muted border border-border rounded-[8px] overflow-hidden mb-[20px]">
+                <div className="p-[12px] flex justify-between items-center border-b border-border">
+                  <span className="text-[12px] text-secondary-foreground">Assinatura</span>
+                  <span className="text-[12px] font-medium text-foreground">{primaryService} · {screens} tela(s)</span>
+                </div>
+                <div className="p-[12px] flex justify-between items-center">
+                  <span className="text-[12px] text-secondary-foreground">Total pago</span>
+                  <span className="text-[12px] font-mono font-bold text-money">{formatCurrency(client?.plan_value || 0)}/m</span>
+                </div>
+              </div>
+
+              {/* PIN Section */}
+              {hasPin && (
+                <div className="flex flex-col items-center">
+                  <div className="text-[10.5px] font-medium text-secondary-foreground mb-[12px] uppercase tracking-wider">
+                    Digite seu PIN do cofre para confirmar
+                  </div>
+                  <VirtualKeypad pin={pinInput} setPin={setPinInput} disabled={isSubmitting} />
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer-2a">
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                onClick={handleDelete}
+                disabled={!isComplete || isSubmitting}
+                className={cn(
+                  "border-none rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] transition-colors",
+                  isComplete ? "bg-danger text-primary-foreground" : "bg-danger-bg text-danger-fg"
+                )}
+              >
+                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                Excluir cliente
+              </button>
+            </div>
+          </div>
+        </DialogContent>
     </Dialog>
   )
 }
@@ -502,7 +668,7 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
       const { error } = await supabase.from('clients').delete().in('id', ids)
       if (error) throw error
       toast.success(`${clients.length} clientes excluídos!`)
-      logAuditClient('client.delete_bulk', 'clients', { count: clients.length })
+      logAuditClient({ action: 'client.bulk_delete', resource: 'clients', details: { count: clients.length } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -512,45 +678,85 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
     }
   }
 
+  const isComplete = !hasPin || pinInput.length === 4
+  const totalValue = clients.reduce((acc, c) => acc + (c.plan_value || 0), 0)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] border-destructive/30 overflow-hidden">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-destructive/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-destructive flex items-center gap-3 text-xl">
-             <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center">
-               <Trash2 className="w-5 h-5 text-destructive" />
-             </div>
-             Excluir Selecionados
-          </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
-            Tem certeza que deseja excluir <strong>{clients.length}</strong> clientes? Esta ação é <strong>irreversível</strong>.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {hasPin && (
-          <div className="flex flex-col items-center justify-center py-6 bg-background/50 rounded-xl border border-destructive/20 space-y-4 mt-2">
-            <Label className="text-sm font-semibold text-destructive uppercase tracking-widest">
-              Autorização Necessária
-            </Label>
-            <InputOTP maxLength={4} value={pinInput} onChange={setPinInput}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={1} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={2} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={3} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
-        )}
+      <DialogContent
+          showCloseButton={false}
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[390px] max-w-[95vw] focus:outline-none"
+        >
+          <div className="modal-2a">
+            {/* Header (No sticky for this one) */}
+            <div className="p-[22px] pb-[16px]">
+              <div className="flex justify-between items-start mb-[12px]">
+                <span className="w-[32px] h-[32px] rounded-[9px] bg-danger-bg text-danger-fg flex items-center justify-center text-[15px]">
+                  🗑
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => onOpenChange(false)}
+                  className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground mb-[4px]">
+                Excluir {clients.length} clientes
+              </div>
+              <div className="text-[13px] text-secondary-foreground leading-[1.4]">
+                Excluir <strong>{clients.length}</strong> clientes apaga todos os históricos e revoga acessos. Esta ação é <strong className="text-danger-fg">irreversível</strong>.
+              </div>
+            </div>
 
-        <DialogFooter className="pt-6 relative z-10">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting || (hasPin && pinInput.length !== 4)} className="w-full sm:w-auto">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirmar Exclusão
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+            <div className="px-[22px] pb-[20px]">
+              {/* Summary box */}
+              <div className="bg-muted border border-border rounded-[8px] overflow-hidden mb-[20px]">
+                <div className="p-[12px] flex justify-between items-center border-b border-border">
+                  <span className="text-[12px] text-secondary-foreground">Clientes selecionados</span>
+                  <span className="text-[12px] font-medium text-foreground">{clients.length}</span>
+                </div>
+                <div className="p-[12px] flex justify-between items-center">
+                  <span className="text-[12px] text-secondary-foreground">Receita em risco</span>
+                  <span className="text-[12px] font-mono font-bold text-danger">{formatCurrency(totalValue)}/m</span>
+                </div>
+              </div>
+
+              {/* PIN Section */}
+              {hasPin && (
+                <div className="flex flex-col items-center">
+                  <div className="text-[10.5px] font-medium text-secondary-foreground mb-[12px] uppercase tracking-wider">
+                    Digite seu PIN do cofre para confirmar
+                  </div>
+                  <VirtualKeypad pin={pinInput} setPin={setPinInput} disabled={isSubmitting} />
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer-2a">
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                onClick={handleDelete}
+                disabled={!isComplete || isSubmitting}
+                className={cn(
+                  "border-none rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] transition-colors",
+                  isComplete ? "bg-danger text-primary-foreground" : "bg-danger-bg text-danger-fg"
+                )}
+              >
+                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                Excluir {clients.length} clientes
+              </button>
+            </div>
+          </div>
+        </DialogContent>
     </Dialog>
   )
 }

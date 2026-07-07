@@ -89,7 +89,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogContent className="glass-card border-primary/20 sm:max-w-[425px]">
+        <AlertDialogContent className="border-primary/20 sm:max-w-[425px]">
           <AlertDialogHeader className="flex flex-col gap-2">
             <div className="flex items-start gap-4">
               <div className={cn("p-3 rounded-full flex-shrink-0 mt-1", bgMap[variant])}>

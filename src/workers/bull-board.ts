@@ -1,4 +1,5 @@
 import '../lib/env';
+import crypto from 'crypto';
 import express from 'express';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
@@ -6,6 +7,14 @@ import { ExpressAdapter } from '@bull-board/express';
 import { messageQueue, webhookQueue, healthQueue, warmupQueue } from '../lib/queue';
 
 const app = express();
+
+/** Comparação em tempo constante para evitar timing attacks nas credenciais. */
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 // Middleware de Basic Auth para proteger a rota /admin/queues
 app.use('/admin/queues', (req, res, next) => {
@@ -19,7 +28,7 @@ app.use('/admin/queues', (req, res, next) => {
     return res.status(500).send('Acesso Negado: Configuração de segurança ausente no servidor.');
   }
 
-  if (login && password && login === adminEmail && password === adminPass) {
+  if (login && password && safeEqual(login, adminEmail) && safeEqual(password, adminPass)) {
     return next();
   }
 

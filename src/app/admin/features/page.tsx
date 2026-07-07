@@ -50,7 +50,7 @@ export default function FeaturesAdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Controle Mestre de Funcionalidades</h2>
+        <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Controle Mestre de Funcionalidades</h2>
         <p className="text-muted-foreground mt-1">Ligue ou desligue partes do sistema para todos os usuários instantaneamente.</p>
       </div>
 
@@ -62,7 +62,7 @@ export default function FeaturesAdminPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <LayoutTemplate className="w-5 h-5 text-sky-500" />
+                <LayoutTemplate className="w-5 h-5 text-interactive" />
                 <CardTitle>Travas de Páginas</CardTitle>
               </div>
               <CardDescription>Oculta páginas inteiras. Quem tentar acessar verá a tela de manutenção.</CardDescription>

@@ -31,6 +31,7 @@
     "date-fns": "^4.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "geist": "^1.7.2",
     "input-otp": "^1.4.2",
     "ioredis": "^5.11.0",
     "lucide-react": "^1.16.0",

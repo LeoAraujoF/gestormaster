@@ -177,7 +177,7 @@ export default function SuportePage() {
 
   const getStatusBadge = (status: string) => {
     switch(status) {
-      case 'open': return <Badge className="bg-sky-500 hover:bg-sky-600">Aberto</Badge>
+      case 'open': return <Badge className="bg-primary hover:bg-primary/90">Aberto</Badge>
       case 'in_progress': return <Badge className="bg-amber-500 hover:bg-amber-600">Em Análise</Badge>
       case 'resolved': return <Badge className="bg-emerald-500 hover:bg-emerald-600">Resolvido</Badge>
       case 'closed': return <Badge variant="outline" className="text-muted-foreground">Encerrado</Badge>
@@ -189,24 +189,22 @@ export default function SuportePage() {
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
       
       {/* Header Premium */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-background to-background border border-border/50 p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-500/5 rounded-full blur-3xl -z-10" />
+      <div className="relative overflow-hidden rounded-2xl bg-card border border-border p-8">
         
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 z-10 relative">
           <div className="flex items-center sm:items-start gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-indigo-500 to-sky-500 p-1 shrink-0">
+            <div className="w-20 h-20 rounded-2xl bg-primary p-1 shrink-0">
               <div className="w-full h-full bg-background rounded-xl flex items-center justify-center">
-                <LifeBuoy className="w-10 h-10 text-indigo-500" />
+                <LifeBuoy className="w-10 h-10 text-muted-foreground" />
               </div>
             </div>
 
             <div className="text-center sm:text-left space-y-2">
               <div className="flex items-center justify-center sm:justify-start gap-3">
-                <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">
+                <h1 className="text-[17px] font-semibold tracking-[-0.02em] text-foreground">
                   Central de Suporte
                 </h1>
-                <Badge className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20 shadow-none">Ajuda</Badge>
+                <Badge className="bg-secondary text-muted-foreground border-border shadow-none">Ajuda</Badge>
               </div>
               <p className="text-muted-foreground max-w-xl">
                 Estamos aqui para ajudar você a extrair o máximo do Gestor. Abra chamados, encontre respostas rápidas ou fale diretamente com nossa equipe.
@@ -219,11 +217,11 @@ export default function SuportePage() {
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Status do Sistema</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-sky-500"/> <span className="text-sm font-medium">API Principal</span></div>
-                {apiStatus === 'online' ? <span className="flex items-center text-xs text-emerald-500 font-bold"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"/> Online</span> : <Loader2 className="w-3 h-3 animate-spin"/>}
+                <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-interactive"/> <span className="text-sm font-medium">API Principal</span></div>
+                {apiStatus === 'online' ? <span className="flex items-center text-xs text-emerald-500 font-bold"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"/> Online</span> : <Loader2 className="w-3 h-3 animate-spin"/>}
               </div>
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2"><Database className="w-3.5 h-3.5 text-indigo-500"/> <span className="text-sm font-medium">Banco de Dados</span></div>
+                <div className="flex items-center gap-2"><Database className="w-3.5 h-3.5 text-muted-foreground"/> <span className="text-sm font-medium">Banco de Dados</span></div>
                 {dbStatus === 'online' ? <span className="flex items-center text-xs text-emerald-500 font-bold"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"/> Online</span> : dbStatus === 'error' ? <span className="text-xs text-red-500">Falha</span> : <Loader2 className="w-3 h-3 animate-spin"/>}
               </div>
               <div className="flex items-center justify-between gap-4">
@@ -237,35 +235,34 @@ export default function SuportePage() {
 
       <Tabs defaultValue="tickets" className="w-full animate-in fade-in duration-700 delay-100">
         <TabsList className="bg-background/50 border border-border/50 p-1 mb-8 h-12 rounded-xl grid grid-cols-2 max-w-[400px]">
-          <TabsTrigger value="tickets" className="rounded-lg data-[state=active]:bg-sky-500/10 data-[state=active]:text-sky-500 h-full transition-all">
+          <TabsTrigger value="tickets" className="rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-interactive h-full transition-all">
             <Ticket className="w-4 h-4 mr-2" />
             Meus Chamados
           </TabsTrigger>
-          <TabsTrigger value="faq" className="rounded-lg data-[state=active]:bg-indigo-500/10 data-[state=active]:text-indigo-500 h-full transition-all">
+          <TabsTrigger value="faq" className="rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-muted-foreground h-full transition-all">
             <BookOpen className="w-4 h-4 mr-2" />
             FAQ Rápido
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tickets" className="mt-0">
-          <Card className="glass-card border-sky-500/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
+          <Card className="border-border relative overflow-hidden">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-sky-500" />
+                  <Ticket className="w-5 h-5 text-interactive" />
                   Meus Chamados (Tickets)
                 </CardTitle>
                 <CardDescription>Acompanhe o status das suas solicitações ou abra um novo chamado.</CardDescription>
               </div>
               <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
                 <DialogTrigger render={
-                  <Button className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
                     <Plus className="w-4 h-4 mr-2" />
                     Abrir Chamado
                   </Button>
                 } />
-                <DialogContent className="sm:max-w-[500px] glass-card border-sky-500/20">
+                <DialogContent className="sm:max-w-[500px] border-border">
                   <DialogHeader>
                     <DialogTitle>Abrir Novo Chamado</DialogTitle>
                     <DialogDescription>Relate o problema ou dúvida que você está enfrentando.</DialogDescription>
@@ -302,7 +299,7 @@ export default function SuportePage() {
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleCreateTicket} disabled={isSubmitting} className="bg-sky-500 hover:bg-sky-600 text-white">
+                    <Button onClick={handleCreateTicket} disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Enviar Chamado
                     </Button>
                   </DialogFooter>
@@ -314,8 +311,8 @@ export default function SuportePage() {
                 <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
               ) : tickets.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center bg-background/30 rounded-xl border border-dashed border-border/50">
-                  <div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-sky-500" />
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-interactive" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Nenhum chamado aberto!</h3>
                   <p className="text-muted-foreground max-w-sm">
@@ -329,9 +326,9 @@ export default function SuportePage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-3">
-                            <span className="font-semibold text-lg group-hover:text-sky-500 transition-colors">{ticket.subject}</span>
+                            <span className="font-semibold text-lg group-hover:text-interactive transition-colors">{ticket.subject}</span>
                             {getStatusBadge(ticket.status)}
-                            {ticket.priority === 'critical' && <Badge variant="destructive" className="animate-pulse">Urgente</Badge>}
+                            {ticket.priority === 'critical' && <Badge variant="destructive">Urgente</Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
                         </div>
@@ -352,10 +349,10 @@ export default function SuportePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: FAQs */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="glass-card border-indigo-500/20 relative overflow-hidden">
+              <Card className="border-border relative overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-2xl flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-indigo-500" />
+                    <BookOpen className="w-5 h-5 text-muted-foreground" />
                     Perguntas Frequentes
                   </CardTitle>
                   <CardDescription>As dúvidas mais comuns resolvidas em segundos.</CardDescription>
@@ -364,17 +361,17 @@ export default function SuportePage() {
                   {faqs.map((faq, index) => (
                     <div 
                       key={index} 
-                      className={`border border-border/50 rounded-xl transition-all duration-300 overflow-hidden ${openFaqIndex === index ? 'bg-background shadow-md border-indigo-500/30' : 'bg-background/50 hover:bg-background'}`}
+                      className={`border border-border/50 rounded-xl transition-all duration-300 overflow-hidden ${openFaqIndex === index ? 'bg-background shadow-md border-border' : 'bg-background/50 hover:bg-background'}`}
                     >
                       <button
                         onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
                         className="w-full flex items-center justify-between p-4 text-left font-medium"
                       >
-                        <span className={openFaqIndex === index ? 'text-indigo-500' : 'text-foreground'}>
+                        <span className={openFaqIndex === index ? 'text-muted-foreground' : 'text-foreground'}>
                           {faq.question}
                         </span>
                         {openFaqIndex === index ? (
-                          <ChevronUp className="w-5 h-5 text-indigo-500 shrink-0" />
+                          <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0" />
                         ) : (
                           <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
                         )}
@@ -393,8 +390,7 @@ export default function SuportePage() {
 
             {/* Right Column: Contact Channels */}
             <div className="space-y-6">
-              <Card className="glass-card border-emerald-500/20 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -z-10 translate-x-1/2 -translate-y-1/2" />
+              <Card className="border-emerald-500/20 relative overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MessageCircle className="w-5 h-5 text-emerald-500" />
@@ -407,7 +403,7 @@ export default function SuportePage() {
                     Para questões financeiras urgentes ou suporte direto de nossa equipe, chame no WhatsApp. O link já enviará os dados da sua conta para agilizar o atendimento!
                   </p>
                   <Button 
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 h-11"
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg h-11"
                     onClick={() => window.open(getSmartWhatsAppLink(), '_blank')}
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
@@ -416,7 +412,7 @@ export default function SuportePage() {
                 </CardContent>
               </Card>
 
-              <Card className="glass-card bg-background/30">
+              <Card className="bg-background/30">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

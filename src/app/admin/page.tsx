@@ -55,7 +55,7 @@ export default function AdminOverviewPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-rose-500" />
+        <Loader2 className="w-10 h-10 animate-spin text-danger" />
         <p className="text-muted-foreground animate-pulse">Carregando painel master...</p>
       </div>
     )
@@ -75,7 +75,7 @@ export default function AdminOverviewPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2 flex items-center gap-2">
             Visão Geral
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400">
@@ -98,10 +98,10 @@ export default function AdminOverviewPage() {
         </div>
 
         <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-sky-500/5 rounded-bl-full -z-10" />
+          <div className="absolute right-0 top-0 w-32 h-32 bg-secondary rounded-bl-full -z-10" />
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-sky-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-sky-500" />
+            <div className="p-3 bg-secondary rounded-xl">
+              <Users className="w-5 h-5 text-interactive" />
             </div>
             <h3 className="font-medium text-muted-foreground">Usuários SaaS</h3>
           </div>
@@ -110,14 +110,14 @@ export default function AdminOverviewPage() {
         </div>
 
         <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full -z-10" />
+          <div className="absolute right-0 top-0 w-32 h-32 bg-secondary rounded-bl-full -z-10" />
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-indigo-500/10 rounded-xl">
-              <Smartphone className="w-5 h-5 text-indigo-500" />
+            <div className="p-3 bg-secondary rounded-xl">
+              <Smartphone className="w-5 h-5 text-muted-foreground" />
             </div>
             <h3 className="font-medium text-muted-foreground">WhatsApps Conectados</h3>
           </div>
-          <p className="text-3xl font-bold mt-2 text-indigo-500">{metrics?.totalInstances || 0}</p>
+          <p className="text-3xl font-bold mt-2 text-muted-foreground">{metrics?.totalInstances || 0}</p>
           <p className="text-xs text-muted-foreground">Instâncias em banco de dados</p>
         </div>
 
@@ -136,7 +136,7 @@ export default function AdminOverviewPage() {
       
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-12 mb-4 gap-4">
         <h3 className="text-xl font-bold flex items-center gap-2">
-          <Activity className="w-5 h-5 text-rose-500" />
+          <Activity className="w-5 h-5 text-danger" />
           Saúde da Infraestrutura
         </h3>
         <Button variant="outline" size="sm" onClick={checkAdminAndLoadData} disabled={isLoading}>
@@ -147,7 +147,7 @@ export default function AdminOverviewPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Database */}
-        <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+        <div className="bg-card text-card-foreground border rounded-lg p-5 rounded-xl border flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-muted-foreground flex items-center gap-2">
               <Server className="w-4 h-4" /> Supabase (DB)
@@ -163,7 +163,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Redis */}
-        <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+        <div className="bg-card text-card-foreground border rounded-lg p-5 rounded-xl border flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-muted-foreground flex items-center gap-2">
               <Activity className="w-4 h-4" /> Redis (Filas)
@@ -179,7 +179,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Evolution API */}
-        <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+        <div className="bg-card text-card-foreground border rounded-lg p-5 rounded-xl border flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-muted-foreground flex items-center gap-2">
               <Smartphone className="w-4 h-4" /> Evolution API
@@ -197,7 +197,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Server */}
-        <div className="glass-card p-5 rounded-xl border flex flex-col gap-3">
+        <div className="bg-card text-card-foreground border rounded-lg p-5 rounded-xl border flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-muted-foreground flex items-center gap-2">
               <Power className="w-4 h-4" /> Servidor (Node)

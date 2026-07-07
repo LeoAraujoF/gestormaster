@@ -184,7 +184,7 @@ export default function AdminTicketsPage() {
 
   const getTicketStatusBadge = (status: string) => {
     switch(status) {
-      case 'open': return <Badge className="bg-sky-500">Aberto</Badge>
+      case 'open': return <Badge className="bg-interactive">Aberto</Badge>
       case 'in_progress': return <Badge className="bg-amber-500">Em Análise</Badge>
       case 'resolved': return <Badge className="bg-emerald-500">Resolvido</Badge>
       case 'closed': return <Badge variant="outline">Encerrado</Badge>
@@ -206,7 +206,7 @@ export default function AdminTicketsPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2 flex items-center gap-2">
             Chamados de Suporte
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400">
@@ -215,7 +215,7 @@ export default function AdminTicketsPage() {
         </div>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden p-4">
+      <div className="bg-card text-card-foreground border rounded-xl overflow-hidden p-4">
         <div className="mb-4 flex justify-between gap-4">
           <Input
             placeholder="Buscar chamado por assunto..."
@@ -247,7 +247,7 @@ export default function AdminTicketsPage() {
                         <Badge variant="outline" className="text-muted-foreground font-mono">#{shortTicketId}</Badge>
                         <span className="font-semibold text-lg">{ticket.subject}</span>
                         {getTicketStatusBadge(ticket.status)}
-                        {ticket.priority === 'critical' && <Badge variant="destructive" className="animate-pulse">Urgente</Badge>}
+                        {ticket.priority === 'critical' && <Badge variant="destructive">Urgente</Badge>}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">

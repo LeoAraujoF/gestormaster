@@ -28,21 +28,19 @@ export function UpgradeModal({ open, onOpenChange, featureName, description, red
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="glass-card sm:max-w-[550px] border-amber-500/30 overflow-hidden p-0">
+      <DialogContent className="sm:max-w-[550px] border-amber-500/30 overflow-hidden p-0">
         {/* Glow Effects */}
-        <div className="absolute -top-20 -right-20 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         
         {/* Banner Header */}
-        <div className="relative h-32 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent border-b border-amber-500/20 flex flex-col items-center justify-center overflow-hidden">
+        <div className="relative h-32 bg-warning-bg border-b border-warning-border flex flex-col items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mb-2 relative z-10">
+          <div className="w-16 h-16 rounded-full bg-warning flex items-center justify-center mb-2 relative z-10">
             <Crown className="w-8 h-8 text-amber-950" />
           </div>
         </div>
 
         <div className="px-8 pt-6 pb-2 text-center relative z-10">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent inline-block">
+          <DialogTitle className="text-2xl font-bold text-foreground inline-block">
             Recurso Premium
           </DialogTitle>
           <DialogDescription className="text-base mt-2 text-foreground/80 font-medium">
@@ -80,7 +78,7 @@ export function UpgradeModal({ open, onOpenChange, featureName, description, red
         <DialogFooter className="px-8 pb-8 pt-2 relative z-10 flex-col sm:flex-col gap-3">
           <Button 
             onClick={handleUpgrade} 
-            className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-amber-950 font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] transition-all h-12 text-lg"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition-all h-12 text-lg"
           >
             <Zap className="w-5 h-5 mr-2 fill-amber-950" />
             Fazer Upgrade Agora

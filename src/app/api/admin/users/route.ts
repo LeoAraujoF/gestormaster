@@ -71,7 +71,7 @@ export async function GET() {
         email: u.email,
         name: u.user_metadata?.full_name || 'Sem Nome',
         plan: u.user_metadata?.plan_name || 'Free',
-        payment_status: u.user_metadata?.payment_status || 'Ativo',
+        payment_status: u.app_metadata?.payment_status || u.user_metadata?.payment_status || 'Ativo',
         due_date: u.user_metadata?.due_date || null,
         phone: u.user_metadata?.phone || u.phone || '',
         is_banned: !!u.banned_until,

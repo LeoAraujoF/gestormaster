@@ -35,19 +35,19 @@ const adminNav = [
     title: "Visão Geral",
     url: "/admin",
     icon: LayoutDashboard,
-    color: "text-rose-500",
+    color: "text-danger",
   },
   {
     title: "Usuários (SaaS)",
     url: "/admin/users",
     icon: Users,
-    color: "text-sky-500",
+    color: "text-interactive",
   },
   {
     title: "Instâncias (Evo)",
     url: "/admin/instances",
     icon: Server,
-    color: "text-indigo-500",
+    color: "text-muted-foreground",
   },
   {
     title: "Chamados",
@@ -71,7 +71,7 @@ const adminNav = [
     title: "Controle de Recursos",
     url: "/admin/features",
     icon: Settings,
-    color: "text-purple-500",
+    color: "text-muted-foreground",
   },
   {
     title: "Logs de Auditoria",
@@ -106,10 +106,10 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
     <Sidebar variant="inset" className="border-r border-border/50 bg-background/50" {...props}>
       <SidebarHeader className="h-16 flex items-center px-4 pt-4 pb-2 border-b border-border/30">
         <div className="flex items-center gap-2 font-bold text-xl w-full">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/15 text-rose-500">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-danger-bg border border-danger-border text-danger">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <span className="tracking-tight text-rose-500">Master Admin</span>
+          <span className="tracking-tight text-danger">Master Admin</span>
         </div>
       </SidebarHeader>
       
@@ -125,7 +125,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                     render={<Link href={item.url} />} 
                     isActive={isActive} 
                     tooltip={item.title}
-                    className={isActive ? `bg-rose-500/10 text-rose-500 border-r-2 border-rose-500` : `hover:bg-secondary/50`}
+                    className={isActive ? `bg-danger-bg text-danger border-r-2 border-danger-border` : `hover:bg-secondary/50`}
                   >
                     <item.icon className={isActive ? item.color : "text-muted-foreground"} />
                     <span className={isActive ? "font-semibold" : ""}>{item.title}</span>

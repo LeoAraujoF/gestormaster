@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "YOUR_GLOBAL_APIKEY"
@@ -12,6 +13,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
+    // Rota pública (sem login) que grava no banco e dispara WhatsApp — limita abuso por IP.
+    const rl = await rateLimit(`revendas:checkout:${getClientIp(request)}`, 10, 60)
+    if (!rl.ok) return tooManyRequests()
+
     const { resellerId, serviceId, creditsAmount } = await request.json()
 
     if (!resellerId || !serviceId || !creditsAmount || creditsAmount <= 0) {

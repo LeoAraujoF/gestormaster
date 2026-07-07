@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    // Basic permissions check (se necessário, extrairia do header ou cookies,
-    // mas por ser uma dashboard de admin assumimos que a página /master já barra a navegação.
-    // Aqui fazemos um ping rápido).
-    
+    // GUARD DE ADMIN — expõe status de infra (DB/Redis/Evolution); restrito ao Master Admin
+    const adminEmail = process.env.ADMIN_EMAIL
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!adminEmail || !user || user.email !== adminEmail) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     // 1. Check Supabase (PostgreSQL)
     const dbStartTime = Date.now()
     let dbStatus = 'offline'

@@ -8,7 +8,9 @@ export async function POST(req: Request) {
     const supabaseUser = await createServerClient();
     const { data: { user } } = await supabaseUser.auth.getUser();
 
-    const isAdm = user && (user.user_metadata?.is_admin === true || user.email === process.env.ADMIN_EMAIL);
+    // Admin é definido apenas pelo e-mail do servidor (ADMIN_EMAIL). NÃO confiar em
+    // user_metadata.is_admin, que o próprio usuário consegue editar pelo navegador.
+    const isAdm = user && user.email === process.env.ADMIN_EMAIL;
     if (!isAdm) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
@@ -34,11 +36,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'ID do usuário é obrigatório' }, { status: 400 })
     }
 
-    // 1. Atualizar o metadata no Supabase Auth
+    // Busca o usuário alvo para preservar as chaves existentes de app_metadata (provider/providers)
+    const { data: targetData, error: targetErr } = await supabaseAdmin.auth.admin.getUserById(userId)
+    if (targetErr || !targetData?.user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // 1. Atualizar o metadata no Supabase Auth.
+    // payment_status é campo de autorização -> vai em app_metadata (só o servidor grava).
     const updatePayload: any = {
+      app_metadata: {
+        ...targetData.user.app_metadata,
+        payment_status: paymentStatus
+      },
       user_metadata: {
+        ...targetData.user.user_metadata,
         plan_name: plan,
-        payment_status: paymentStatus,
         due_date: dueDate,
         phone: phone || ''
       }

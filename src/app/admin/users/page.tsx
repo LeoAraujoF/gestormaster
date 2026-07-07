@@ -236,7 +236,7 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-sky-500" />
+        <Loader2 className="w-10 h-10 animate-spin text-interactive" />
       </div>
     )
   }
@@ -252,20 +252,20 @@ export default function AdminUsersPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2 flex items-center gap-2">
             Usuários / Inquilinos
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400">
             Gestão completa de contas, bloqueios e deleções.
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-sky-500 hover:bg-sky-600 text-white">
+        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <Plus className="w-4 h-4 mr-2" />
           Criar Usuário
         </Button>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden p-4">
+      <div className="bg-card text-card-foreground border rounded-xl overflow-hidden p-4">
         <div className="mb-4">
           <Input
             placeholder="Buscar usuário por email ou nome..."
@@ -306,11 +306,11 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                     {u.stats.messagesMonth < 500 ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-0">🟢 Normal</Badge>
+                      <Badge className="bg-success-bg text-success-fg border-0 gap-1.5"><span className="status-dot bg-money" />Normal</Badge>
                     ) : u.stats.messagesMonth <= 2000 ? (
-                      <Badge className="bg-amber-500/10 text-amber-600 border-0">🟡 Alto</Badge>
+                      <Badge className="bg-warning-bg text-warning-fg border-0 gap-1.5"><span className="status-dot bg-warning" />Alto</Badge>
                     ) : (
-                      <Badge className="bg-red-500/10 text-red-600 border-0 animate-pulse">🔴 Crítico</Badge>
+                      <Badge className="bg-danger-bg text-danger-fg border-0 gap-1.5"><span className="status-dot bg-danger" />Crítico</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -345,10 +345,10 @@ export default function AdminUsersPage() {
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="sm:max-w-[550px] p-0 border-border/50">
-          <div className="bg-gradient-to-r from-sky-500/10 via-background to-background p-6 border-b border-border/50">
+          <div className="bg-muted p-6 border-b border-border">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-500 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-secondary text-interactive flex items-center justify-center">
                   <Users className="w-4 h-4" />
                 </div>
                 Novo Cliente VIP
@@ -362,7 +362,7 @@ export default function AdminUsersPage() {
           <div className="p-6 space-y-6">
             <div className="space-y-4">
               <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-sky-500" /> 
+                <ShieldAlert className="w-4 h-4 text-interactive" /> 
                 Credenciais de Acesso
               </h4>
               <div className="space-y-2">
@@ -395,25 +395,25 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground">Plano</Label>
-                  <Select value={newUserPlan} onValueChange={setNewUserPlan}>
+                  <Select value={newUserPlan} onValueChange={(v) => setNewUserPlan(v ?? "")}>
                     <SelectTrigger className="bg-muted/30 focus:bg-background transition-colors w-full">
                       <SelectValue placeholder="Selecione o plano" />
                     </SelectTrigger>
                     <SelectContent className="min-w-[220px]">
                       <SelectItem value="Free"><span className="font-medium">Plano Free</span> (Limitações ativas)</SelectItem>
-                      <SelectItem value="Pro"><span className="font-medium text-sky-500">Plano Pro</span> (Acesso Total)</SelectItem>
+                      <SelectItem value="Pro"><span className="font-medium text-interactive">Plano Pro</span> (Acesso Total)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground">Status Financeiro</Label>
-                  <Select value={newUserPaymentStatus} onValueChange={setNewUserPaymentStatus}>
+                  <Select value={newUserPaymentStatus} onValueChange={(v) => setNewUserPaymentStatus(v ?? "")}>
                     <SelectTrigger className="bg-muted/30 focus:bg-background transition-colors w-full">
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>
                     <SelectContent className="min-w-[220px]">
                       <SelectItem value="Pago"><span className="text-emerald-500 font-medium">● Pago</span> (Regular)</SelectItem>
-                      <SelectItem value="Ativo"><span className="text-sky-500 font-medium">● Ativo</span> (Cortesia / Manual)</SelectItem>
+                      <SelectItem value="Ativo"><span className="text-interactive font-medium">● Ativo</span> (Cortesia / Manual)</SelectItem>
                       <SelectItem value="Aguardando"><span className="text-amber-500 font-medium">● Aguardando Pagamento</span></SelectItem>
                       <SelectItem value="Vencido"><span className="text-red-500 font-medium">● Vencido</span> (Bloqueado)</SelectItem>
                     </SelectContent>
@@ -425,7 +425,7 @@ export default function AdminUsersPage() {
 
           <div className="p-6 pt-0 bg-muted/10 mt-2 flex justify-end gap-3 rounded-b-xl">
             <Button variant="outline" className="border-border/50 hover:bg-muted/50" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateUser} disabled={isCreating} className="bg-sky-500 hover:bg-sky-600 text-white font-medium px-6 shadow-md shadow-sky-500/20">
+            <Button onClick={handleCreateUser} disabled={isCreating} className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 shadow-md">
               {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
               Criar Conta e Liberar Acesso
             </Button>
@@ -436,14 +436,14 @@ export default function AdminUsersPage() {
       <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
         <SheetContent className="sm:max-w-lg w-full overflow-y-auto border-l border-white/10 bg-background/95 backdrop-blur-xl p-8">
           <SheetHeader className="text-left mb-8">
-            <SheetTitle className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Users className="w-6 h-6 text-sky-500" /> Perfil do Inquilino
+            <SheetTitle className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
+              <Users className="w-6 h-6 text-interactive" /> Perfil do Inquilino
             </SheetTitle>
           </SheetHeader>
           {selectedUser && (
             <div className="space-y-8">
               <div className="flex items-center gap-5 pb-6 border-b border-border/40">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-2xl font-bold text-white shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-white shrink-0">
                   {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -455,7 +455,7 @@ export default function AdminUsersPage() {
 
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-sky-500" />
+                  <ShieldAlert className="w-4 h-4 text-interactive" />
                   Métricas de Uso
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -480,7 +480,7 @@ export default function AdminUsersPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Plano Atual</Label>
-                      <Select value={editPlan} onValueChange={setEditPlan}>
+                      <Select value={editPlan} onValueChange={(v) => setEditPlan(v ?? "")}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Selecione o plano" />
                         </SelectTrigger>
@@ -505,7 +505,7 @@ export default function AdminUsersPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Status</Label>
-                      <Select value={editPaymentStatus} onValueChange={setEditPaymentStatus}>
+                      <Select value={editPaymentStatus} onValueChange={(v) => setEditPaymentStatus(v ?? "")}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -531,7 +531,7 @@ export default function AdminUsersPage() {
                   <Button 
                     onClick={handleUpdateUser} 
                     disabled={isUpdating}
-                    className="w-full mt-2 bg-sky-500 hover:bg-sky-600 text-white"
+                    className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                     Salvar Alterações

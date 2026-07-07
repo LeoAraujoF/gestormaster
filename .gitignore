@@ -46,3 +46,16 @@ debug_*.txt
 clean_orphaned.js
 npm_audit.txt
 .aider*
+
+# ad-hoc test/dump/insert scripts (NUNCA versionar - podem conter segredos ou PII)
+temp_*.js
+test.js
+test2.js
+test-*.ts
+check.js
+setup-storage.js
+clientes_dump*.html
+clientes_debug*.html
+*_dump.html
+*_debug.html
+analyze-dump.ts

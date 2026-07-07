@@ -1,29 +1,28 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    // 1. Exige usuário autenticado (a rota é chamada pelo dashboard do próprio usuário)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!supabaseServiceKey) {
-      return NextResponse.json({ error: 'Service key not configured' }, { status: 500 })
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
 
     // Calcula a data de hoje no fuso horário do Brasil (-03:00)
     const now = new Date()
     const brazilDate = new Date(now.getTime() - (3 * 60 * 60 * 1000))
     const brTodayStr = brazilDate.toISOString().split('T')[0]
 
-    // Atualiza TODOS os clientes ativos com due_date passado para "vencido"
-    const { data, error } = await supabaseAdmin
+    // 2. Atualiza apenas os clientes DO PRÓPRIO usuário (isolamento de tenant).
+    //    Usa o client autenticado — o RLS garante o escopo, sem service role.
+    const { data, error } = await supabase
       .from('clients')
       .update({ status: 'vencido' })
       .eq('status', 'active')
+      .eq('user_id', user.id)
       .lt('due_date', brTodayStr)
       .select('id')
 
@@ -32,9 +31,9 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      updated: data?.length || 0, 
-      cutoff_date: brTodayStr 
+    return NextResponse.json({
+      updated: data?.length || 0,
+      cutoff_date: brTodayStr
     })
   } catch (err: any) {
     console.error('Erro na API update-overdue:', err.message)

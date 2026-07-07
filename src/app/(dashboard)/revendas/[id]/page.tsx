@@ -188,13 +188,13 @@ export default function ResellerDetailsPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{reseller.name}</h1>
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{reseller.name}</h1>
           <p className="text-muted-foreground mt-1">Configure os serviços e margens deste revendedor.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-1 glass-card h-fit">
+        <Card className="md:col-span-1 h-fit">
           <CardHeader>
             <CardTitle>Dados do Parceiro</CardTitle>
           </CardHeader>
@@ -264,7 +264,7 @@ export default function ResellerDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2 glass-card">
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Serviços e Margens de Lucro</CardTitle>
             <CardDescription>

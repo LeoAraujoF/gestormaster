@@ -8,7 +8,9 @@ export async function POST(req: Request) {
     const supabaseUser = await createServerClient();
     const { data: { user } } = await supabaseUser.auth.getUser();
 
-    const isAdm = user && (user.user_metadata?.is_admin === true || user.email === process.env.ADMIN_EMAIL);
+    // Admin é definido apenas pelo e-mail do servidor (ADMIN_EMAIL). NÃO confiar em
+    // user_metadata.is_admin, que o próprio usuário consegue editar pelo navegador.
+    const isAdm = user && user.email === process.env.ADMIN_EMAIL;
     if (!isAdm) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
@@ -44,11 +46,13 @@ export async function POST(req: Request) {
       password,
       email_confirm: true,
       phone: phone || undefined,
+      // payment_status é campo de autorização -> app_metadata (só o servidor grava).
+      app_metadata: {
+        payment_status: paymentStatus || 'Ativo'
+      },
       user_metadata: {
         full_name: name,
         plan_name: plan || 'Free',
-        payment_status: paymentStatus || 'Ativo',
-        is_admin: false,
         due_date: dueDate.toISOString(),
         phone: phone || ''
       }

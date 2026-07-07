@@ -65,8 +65,10 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/onboarding') ||
       request.nextUrl.pathname === '/'
 
-    const isManualActive = user.user_metadata?.payment_status === 'Ativo' || user.user_metadata?.payment_status === 'Pago'
-    const hasSubscription = user.user_metadata?.has_active_subscription === true || isManualActive
+    // Campos de autorização vêm de app_metadata (gravado apenas pelo servidor via service role),
+    // NUNCA de user_metadata, que o próprio usuário consegue editar pelo navegador.
+    const isManualActive = user.app_metadata?.payment_status === 'Ativo' || user.app_metadata?.payment_status === 'Pago'
+    const hasSubscription = user.app_metadata?.has_active_subscription === true || isManualActive
     const hasOnboarding = user.user_metadata?.onboarding_completed === true
     const isAdmin = user.email === process.env.ADMIN_EMAIL
 

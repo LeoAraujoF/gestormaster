@@ -15,7 +15,7 @@ interface GlobalDeleteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   item: { id: string; name: string } | null
-  table: 'clients' | 'services' | 'promotions' | 'automations' | 'users' // add more as needed
+  table: 'clients' | 'services' | 'promotions' | 'automations' | 'users' | 'iptv_accounts' // add more as needed
   title?: string
   description?: string
   onSuccess: () => void
@@ -63,7 +63,7 @@ export function GlobalDeleteDialog({
       const { error } = await supabase.from(table).delete().eq('id', item.id)
       if (error) throw error
       toast.success("Registro excluído com sucesso!")
-      logAuditClient('resource.delete', table, { item_name: item.name || item.id })
+      logAuditClient({ action: 'resource.delete', resource: table, details: { item_name: item.name || item.id } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -75,40 +75,46 @@ export function GlobalDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] border-destructive/30 overflow-hidden">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-destructive/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-destructive flex items-center gap-3 text-xl">
-             <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center">
-               <Trash2 className="w-5 h-5 text-destructive" />
-             </div>
-             {title}
-          </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
-            Tem certeza que deseja excluir <strong className="text-foreground">{item?.name}</strong>? {description}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-[14px] font-semibold">{title}</DialogTitle>
+          <DialogDescription className="text-xs">{description}</DialogDescription>
         </DialogHeader>
-        
+
+        {/* Resumo do que se perde */}
+        <div className="rounded-md bg-secondary px-3 py-2.5 text-xs">
+          <p className="font-semibold text-danger">{item?.name}</p>
+        </div>
+
         {hasPin && (
-          <div className="flex flex-col items-center justify-center py-6 bg-background/50 rounded-xl border border-destructive/20 space-y-4 mt-2">
-            <Label className="text-sm font-semibold text-destructive uppercase tracking-widest">
-              Autorização Necessária
-            </Label>
+          <div className="flex flex-col items-center gap-2.5 py-1">
+            <Label className="microlabel">PIN do cofre</Label>
             <InputOTP maxLength={4} value={pinInput} onChange={setPinInput}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={1} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={2} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
-                <InputOTPSlot index={3} className="w-12 h-12 text-lg border-destructive/30 font-bold bg-background/80" />
+              <InputOTPGroup className="gap-1.5">
+                {[0, 1, 2, 3].map((i) => (
+                  <InputOTPSlot
+                    key={i}
+                    index={i}
+                    className="num h-10 w-[38px] rounded-md border border-input bg-card text-base data-[active=true]:border-interactive data-[active=true]:ring-2 data-[active=true]:ring-interactive/20"
+                  />
+                ))}
               </InputOTPGroup>
             </InputOTP>
           </div>
         )}
 
-        <DialogFooter className="pt-6 relative z-10">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting || (hasPin && pinInput.length !== 4)} className="w-full sm:w-auto">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirmar Exclusão
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="sm:flex-1">
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isSubmitting || (hasPin && pinInput.length !== 4)}
+            className="disabled:bg-[#f0d3d3] disabled:text-white disabled:opacity-100 dark:disabled:bg-danger/30 sm:flex-[1.4]"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Excluir
           </Button>
         </DialogFooter>
       </DialogContent>

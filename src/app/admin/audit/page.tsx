@@ -55,9 +55,9 @@ export default function AuditPage() {
     if (action.includes('send') || action.includes('mass') || action.includes('single') || action.includes('instant'))
       return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
     if (action.includes('checkout') || action.includes('payment') || action.includes('pix') || action.includes('generate'))
-      return 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+      return 'bg-secondary text-muted-foreground border-border'
     if (action.includes('admin') || action.includes('cron') || action.includes('force'))
-      return 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+      return 'bg-danger-bg text-danger border-danger-border'
     return 'bg-slate-500/10 text-slate-500 border-slate-500/20'
   }
 
@@ -95,7 +95,7 @@ export default function AuditPage() {
       'whatsapp.logout': '🔌 Desconectar Instância',
       'whatsapp.update_settings': '⚙️ Configurar Instância',
       'whatsapp.set_primary': '⭐ Definir Instância Primária',
-      'whatsapp.toggle_warmup': '🔥 Modo Aquecimento',
+      'whatsapp.toggle_warmup': 'Modo Aquecimento',
       'payment.create': '💰 Registrar Pagamento',
       'pix.generate': '💳 Gerar Pix',
       'stripe.checkout': '💳 Checkout Stripe',
@@ -187,7 +187,7 @@ export default function AuditPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
             <ShieldCheck className="w-8 h-8 text-teal-500" />
             Logs de Auditoria
           </h2>
@@ -259,10 +259,10 @@ export default function AuditPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ações Críticas</CardTitle>
-              <ShieldCheck className="w-4 h-4 text-rose-500" />
+              <ShieldCheck className="w-4 h-4 text-danger" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${criticalActions.length > 0 ? 'text-rose-500' : ''}`}>
+              <div className={`text-2xl font-bold ${criticalActions.length > 0 ? 'text-danger' : ''}`}>
                 {criticalActions.length}
               </div>
               <p className="text-xs text-muted-foreground">Admin, bloqueios e exclusões em massa</p>
@@ -285,7 +285,7 @@ export default function AuditPage() {
                 disabled={missingTable || isLoading}
               />
             </div>
-            <Select value={actionFilter} onValueChange={setActionFilter} disabled={missingTable || isLoading}>
+            <Select value={actionFilter} onValueChange={(v) => setActionFilter(v ?? "")} disabled={missingTable || isLoading}>
               <SelectTrigger className="w-full md:w-52">
                 <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
                 <SelectValue placeholder="Filtrar por ação" />

@@ -53,7 +53,7 @@ export default function AdminInstancesPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -69,8 +69,8 @@ export default function AdminInstancesPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
-            <Server className="w-8 h-8 text-indigo-500" />
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2 flex items-center gap-2">
+            <Server className="w-8 h-8 text-muted-foreground" />
             Instâncias Evolution API
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400">
@@ -83,7 +83,7 @@ export default function AdminInstancesPage() {
         </Button>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden p-4">
+      <div className="bg-card text-card-foreground border rounded-xl overflow-hidden p-4">
         <div className="mb-4 relative">
           <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
           <Input
@@ -109,7 +109,7 @@ export default function AdminInstancesPage() {
               {filteredInstances.map((inst) => (
                 <TableRow key={inst.id} className="hover:bg-muted/30">
                   <TableCell>
-                    <div className="font-semibold text-sky-500">{inst.instance_name}</div>
+                    <div className="font-semibold text-interactive">{inst.instance_name}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-muted-foreground">{inst.user_email}</div>
@@ -118,7 +118,7 @@ export default function AdminInstancesPage() {
                     <div className="text-sm font-medium">{inst.phone_number ? phoneMask(inst.phone_number) : '-'}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={inst.connection_mode === 'integrated' ? 'border-sky-500/30 text-sky-500' : 'border-indigo-500/30 text-indigo-500'}>
+                    <Badge variant="outline" className={inst.connection_mode === 'integrated' ? 'border-border text-interactive' : 'border-border text-muted-foreground'}>
                       {inst.connection_mode === 'integrated' ? 'Nuvem' : 'Própria'}
                     </Badge>
                   </TableCell>

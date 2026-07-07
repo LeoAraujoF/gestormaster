@@ -75,10 +75,16 @@ export async function POST(request: Request) {
       // Adiciona 30 dias (1 mês)
       newExpiresAt.setDate(newExpiresAt.getDate() + 30)
 
-      // Atualiza o perfil do cliente liberando o acesso e atualizando o vencimento
+      // Atualiza o perfil do cliente liberando o acesso e atualizando o vencimento.
+      // has_active_subscription vai em app_metadata (só o servidor grava); preservamos as chaves
+      // existentes (provider/providers) com o spread para não quebrar o login.
       const { error } = await supabaseAdmin.auth.admin.updateUserById(externalId, {
+        app_metadata: {
+          ...user.app_metadata,
+          has_active_subscription: true
+        },
         user_metadata: {
-          has_active_subscription: true,
+          ...user.user_metadata,
           plan_name: planName,
           plan_expires_at: newExpiresAt.toISOString()
         }

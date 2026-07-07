@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,10 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: Request) {
   try {
+    // Rota pública (sem login) — limita enumeração de revendedores por IP.
+    const rl = await rateLimit(`revendas:public:${getClientIp(request)}`, 60, 60)
+    if (!rl.ok) return tooManyRequests()
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
 

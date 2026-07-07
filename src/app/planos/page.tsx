@@ -1,22 +1,33 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, CreditCard, Zap, LayoutDashboard, LogOut, QrCode, Copy, Check, Coins } from "lucide-react"
+import { Loader2, QrCode, Copy, Check, LayoutDashboard, LogOut } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
+
+type PayMethod = "pix" | "card" | "credit"
+
+const PLAN_PRICE = 20
+const FEATURES: { label: string; value: string; money?: boolean }[] = [
+  { label: "Gestão de clientes", value: "Ilimitada" },
+  { label: "Conexões WhatsApp", value: "3 números" },
+  { label: "Automação de cobrança", value: "Ilimitada" },
+  { label: "Anti-ban / aquecimento", value: "Incluso", money: true },
+  { label: "Disparos em massa", value: "Incluso" },
+]
 
 export default function PlanosPage() {
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState<string | null>(null)
-  const [isPixLoading, setIsPixLoading] = useState<string | null>(null)
-  const [pixData, setPixData] = useState<{qr_code: string, qr_image_url: string} | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pixData, setPixData] = useState<{ qr_code: string; qr_image_url: string } | null>(null)
   const [isCopied, setIsCopied] = useState(false)
-  const [isCreditLoading, setIsCreditLoading] = useState(false)
   const [affiliateBalance, setAffiliateBalance] = useState<number | null>(null)
+  const [method, setMethod] = useState<PayMethod>("pix")
+  const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -24,6 +35,7 @@ export default function PlanosPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
+        setPlanExpiresAt(user.user_metadata?.plan_expires_at || null)
         supabase.from('affiliate_earnings').select('amount, status').eq('referrer_id', user.id).then(({ data }) => {
           if (data) {
             let disponivel = 0
@@ -38,65 +50,52 @@ export default function PlanosPage() {
     })
   }, [supabase])
 
-  // --- Pagamento via Stripe (Cartão) ---
-  const handleCheckout = async (priceId: string, planName: string) => {
-    if (!priceId || priceId.includes("coloque_id")) {
-      return toast.error("O ID de Preço deste plano ainda não foi configurado.")
-    }
-
-    setIsCheckoutLoading(priceId)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, planName })
-      })
-      
-      if (!res.ok) {
-        const errorText = await res.text()
-        throw new Error(errorText || "Erro ao conectar com a operadora de pagamentos")
-      }
-      
-      const data = await res.json()
-      
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        throw new Error("URL de checkout inválida.")
-      }
-    } catch (error: any) {
-      toast.error(error.message)
-    } finally {
-      setIsCheckoutLoading(null)
-    }
+  // --- Stripe (cartão) ---
+  const handleCardCheckout = async () => {
+    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT"
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceId, planName: "Gestor Pro" })
+    })
+    if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com a operadora de pagamentos")
+    const data = await res.json()
+    if (!data.url) throw new Error("URL de checkout inválida.")
+    window.location.href = data.url
   }
 
-  // --- Pagamento via PIXGO (PIX Instantâneo) ---
-  const handlePixCheckout = async (amount: number, planName: string) => {
-    setIsPixLoading(planName)
+  // --- PIXGO (PIX instantâneo) ---
+  const handlePixCheckout = async () => {
+    const res = await fetch('/api/pixgo/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: PLAN_PRICE, planName: "Gestor Pro" })
+    })
+    if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com o gateway de PIX")
+    const data = await res.json()
+    if (!data.qr_code || !data.qr_image_url) throw new Error("Dados do PIX inválidos recebidos da API.")
+    setPixData(data)
+  }
+
+  // --- Saldo de afiliado ---
+  const handleCreditCheckout = async () => {
+    const res = await fetch('/api/afiliados/converter', { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || "Erro ao converter saldo")
+    toast.success("Plano ativado com sucesso usando R$ 20 do seu saldo!")
+    router.push("/")
+  }
+
+  const handlePay = async () => {
+    setIsSubmitting(true)
     try {
-      const res = await fetch('/api/pixgo/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, planName })
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        throw new Error(errorText || "Erro ao conectar com o gateway de PIX")
-      }
-
-      const data = await res.json()
-      
-      if (data.qr_code && data.qr_image_url) {
-        setPixData(data)
-      } else {
-        throw new Error("Dados do PIX inválidos recebidos da API.")
-      }
+      if (method === "pix") await handlePixCheckout()
+      else if (method === "card") await handleCardCheckout()
+      else await handleCreditCheckout()
     } catch (error: any) {
       toast.error(error.message)
     } finally {
-      setIsPixLoading(null)
+      setIsSubmitting(false)
     }
   }
 
@@ -114,126 +113,134 @@ export default function PlanosPage() {
     router.push("/login")
   }
 
-  // --- Pagamento via Saldo de Afiliado ---
-  const handleCreditCheckout = async () => {
-    setIsCreditLoading(true)
-    try {
-      const res = await fetch('/api/afiliados/converter', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Erro ao converter saldo")
-      
-      toast.success("Plano ativado com sucesso usando R$ 20 do seu saldo!")
-      router.push("/")
-    } catch (error: any) {
-      toast.error(error.message)
-    } finally {
-      setIsCreditLoading(false)
-    }
-  }
+  const hasCredit = affiliateBalance !== null && affiliateBalance >= PLAN_PRICE
+  const creditMonths = affiliateBalance ? Math.floor(affiliateBalance / PLAN_PRICE) : 0
+
+  // Dias restantes do teste grátis (banner 8a) — só quando há data de expiração
+  const trialDaysLeft = planExpiresAt
+    ? Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86_400_000)
+    : null
+
+  const methods: { key: PayMethod; label: string; hint: React.ReactNode; show: boolean }[] = [
+    { key: "pix", label: "PIX", hint: "ativação imediata · QR code na próxima etapa", show: true },
+    { key: "card", label: "Cartão de crédito", hint: "renovação automática via Stripe", show: true },
+    {
+      key: "credit",
+      label: "Saldo de afiliado",
+      hint: (
+        <>
+          você tem <span className="num font-semibold text-money">R$ {affiliateBalance?.toFixed(2).replace(".", ",") ?? "0,00"}</span>
+          {creditMonths > 0 && <> — cobre {creditMonths} {creditMonths === 1 ? "mês" : "meses"}</>}
+        </>
+      ),
+      show: hasCredit,
+    },
+  ]
 
   return (
-    <div className="min-h-screen bg-background/95 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Top Bar for Logout */}
-      <div className="absolute top-4 right-4 flex gap-4">
-         <Button variant="ghost" onClick={() => router.push("/")} className="text-muted-foreground">
-           <LayoutDashboard className="w-4 h-4 mr-2" />
-           Já paguei (Ir pro Painel)
-         </Button>
-         <Button variant="outline" onClick={handleLogout} className="text-muted-foreground">
-           <LogOut className="w-4 h-4 mr-2" />
-           Sair
-         </Button>
+    <div className="flex min-h-screen flex-col items-center bg-background px-4 py-10">
+      {/* Barra superior */}
+      <div className="mb-8 flex w-full max-w-[840px] items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-5 w-5 items-center justify-center rounded-[22%] bg-primary">
+            <span className="font-mono text-[11px] font-bold leading-none text-primary-foreground">G</span>
+          </div>
+          <span className="text-[12.5px] font-semibold tracking-tight">Gestor</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="h-8 gap-1.5 text-xs text-muted-foreground">
+            <LayoutDashboard className="size-3.5" /> Já paguei
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 gap-1.5 text-xs text-muted-foreground">
+            <LogOut className="size-3.5" /> Sair
+          </Button>
+        </div>
       </div>
 
-      <div className="max-w-7xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-6">
-            <span className="text-2xl font-black text-sky-500 tracking-tighter">GM</span>
+      <div className="grid w-full max-w-[840px] items-start gap-4 md:grid-cols-2">
+        {/* Card resumo do plano (8a, coluna esquerda) */}
+        <div className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-[30px] items-center justify-center rounded-md bg-primary">
+                <span className="font-mono text-[13px] font-bold leading-none text-primary-foreground">G</span>
+              </div>
+              <p className="text-[14px] font-semibold tracking-[-0.01em]">Gestor Pro</p>
+            </div>
+            <span className="microlabel rounded bg-warning-bg px-1.5 py-1 !text-warning-fg">Oferta limitada</span>
           </div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-            Escolha o plano ideal para o seu negócio
-          </h2>
-          <p className="mt-4 text-xl text-muted-foreground max-w-2xl mx-auto">
-            Comece agora mesmo a gerir seus clientes e escalar suas vendas com automação.
+
+          <p className="num mt-5 text-[28px] font-semibold tracking-[-0.02em]">
+            R$ {PLAN_PRICE}<span className="text-sm font-normal text-muted-foreground"> /mês</span>
           </p>
+          <p className="text-[10.5px] text-muted-foreground">cancele quando quiser</p>
+
+          <div className="mt-4 divide-y divide-border border-t border-border text-xs">
+            {FEATURES.map((f) => (
+              <div key={f.label} className="flex items-center justify-between py-2.5">
+                <span className="text-muted-foreground">{f.label}</span>
+                <span className={cn("font-semibold", f.money ? "text-money" : "text-foreground")}>{f.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex justify-center items-center w-full max-w-md mx-auto">
-          {/* PLANO ÚNICO (PRO) */}
-          <Card className="glass-card flex flex-col relative overflow-hidden border-sky-500/40 shadow-2xl shadow-sky-500/20 scale-100 z-10 w-full transition-all duration-300">
-            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute top-0 w-full text-center py-1.5 bg-rose-500 text-white text-xs font-bold uppercase tracking-widest">
-              🔥 Oferta por Tempo Limitado
+        {/* Coluna direita: banner de trial + pagamento (8a) */}
+        <div className="space-y-4">
+          {trialDaysLeft !== null && (
+            <div className="flex items-start gap-2.5 rounded-md border border-warning-border bg-warning-bg px-3.5 py-3 text-xs text-warning-fg">
+              <span className="status-dot mt-1 bg-warning" />
+              <p>
+                {trialDaysLeft > 0 ? (
+                  <>Seu teste grátis termina em <span className="num font-semibold">{trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"}</span> — seus dados ficam salvos.</>
+                ) : (
+                  <>Seu teste grátis terminou — seus dados ficam salvos.</>
+                )}
+              </p>
             </div>
-            <CardHeader className="pt-10 pb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-3xl font-bold text-sky-500">Gestor Pro</CardTitle>
-                  <CardDescription className="h-10 mt-2">
-                    Todos os recursos liberados para o seu negócio crescer.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-sky-500/10 text-sky-500 shrink-0">
-                  <span className="text-lg font-black tracking-tighter">GM</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-4">
-              <div className="text-5xl font-bold text-foreground">R$ 20<span className="text-xl font-normal text-muted-foreground">/mês</span></div>
-              <div className="space-y-3 mt-6 text-sm">
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">Gestão de Clientes</span>
-                  <span className="font-bold text-foreground">Ilimitado</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">Conexões WhatsApp</span>
-                  <span className="font-bold text-sky-500">Até 3 Números</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">Automação de Cobrança</span>
-                  <span className="font-bold text-foreground">Ilimitado</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">Anti-Ban / Aquecimento</span>
-                  <span className="font-bold text-emerald-500">Incluso</span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-6 mt-auto flex flex-col gap-3">
-              <Button 
-                className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20" 
-                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT", "Gestor Pro")}
-                disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
-              >
-                {isCheckoutLoading === (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT") ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
-                Pagar com Cartão
-              </Button>
-              <Button 
-                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" 
-                onClick={() => handlePixCheckout(20, "Gestor Pro")}
-                disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
-              >
-                {isPixLoading === "Gestor Pro" ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
-                Pagar com PIX
-              </Button>
-              
-              {affiliateBalance !== null && affiliateBalance >= 20 && (
-                <div className="pt-4 border-t mt-2">
-                  <Button 
-                    className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20" 
-                    onClick={handleCreditCheckout}
-                    disabled={isCheckoutLoading !== null || isPixLoading !== null || isCreditLoading}
+          )}
+
+          <div className="rounded-lg border border-border bg-card p-5">
+            <p className="text-[13px] font-semibold">Forma de pagamento</p>
+            <div className="mt-3 space-y-2">
+              {methods.filter((m) => m.show).map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => setMethod(m.key)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors",
+                    method === m.key ? "border-primary" : "border-input hover:bg-muted"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                      method === m.key ? "border-primary" : "border-input"
+                    )}
                   >
-                    {isCreditLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Coins className="w-5 h-5 mr-2" />}
-                    Ativar com Saldo Afiliado (R$ 20,00)
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    Seu saldo atual é de R$ {affiliateBalance.toFixed(2)}
-                  </p>
-                </div>
+                    {method === m.key && <span className="size-1.5 rounded-full bg-primary" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold">{m.label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{m.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <Button onClick={handlePay} disabled={isSubmitting} className="mt-4 h-10 w-full">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Processando…
+                </>
+              ) : (
+                <>Ativar por R$ {PLAN_PRICE}/mês</>
               )}
-            </CardFooter>
-          </Card>
+            </Button>
+            <p className="mt-2.5 text-center text-[11px] text-muted-foreground">
+              Pagamento seguro · suporte via WhatsApp
+            </p>
+          </div>
         </div>
       </div>
 
@@ -241,61 +248,48 @@ export default function PlanosPage() {
       <Dialog open={pixData !== null} onOpenChange={(open) => !open && setPixData(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-emerald-500" />
-              Pagamento via PIX
-            </DialogTitle>
-            <DialogDescription>
-              Escaneie o QR Code abaixo com o aplicativo do seu banco ou copie o código para pagar.
+            <DialogTitle className="text-[14px] font-semibold">Pagamento via PIX</DialogTitle>
+            <DialogDescription className="text-xs">
+              Escaneie o QR Code com o app do seu banco ou copie o código.
             </DialogDescription>
           </DialogHeader>
-          
+
           {pixData && (
-            <div className="flex flex-col items-center space-y-6 py-4">
-              {/* QR Code Image */}
-              <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
-                <img 
-                  src={pixData.qr_image_url} 
-                  alt="QR Code PIX" 
-                  className="w-48 h-48 object-contain"
-                />
+            <div className="flex flex-col items-center space-y-4 py-2">
+              <div className="rounded-lg border border-border bg-white p-3">
+                <img src={pixData.qr_image_url} alt="QR Code PIX" className="h-44 w-44 object-contain" />
               </div>
 
-              {/* Copia e Cola */}
-              <div className="w-full space-y-2">
-                <p className="text-sm font-medium text-center text-muted-foreground">PIX Copia e Cola</p>
+              <div className="w-full space-y-1.5">
+                <p className="microlabel text-center">PIX copia e cola</p>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-muted p-3 rounded-lg text-xs font-mono break-all line-clamp-2 text-muted-foreground">
+                  <div className="num line-clamp-2 flex-1 break-all rounded-md bg-secondary p-2.5 text-[10px] text-secondary-foreground">
                     {pixData.qr_code}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-auto py-3 px-3 shrink-0"
-                    onClick={handleCopyPix}
-                  >
-                    {isCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  <Button variant="outline" size="icon" className="h-auto shrink-0 px-3 py-3" onClick={handleCopyPix}>
+                    {isCopied ? <Check className="size-4 text-money" /> : <Copy className="size-4" />}
                   </Button>
                 </div>
               </div>
 
-              <div className="text-sm text-center text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 p-3 rounded-lg w-full">
+              <div className="w-full rounded-md border border-warning-border bg-warning-bg p-2.5 text-center text-xs text-warning-fg">
                 Após o pagamento, seu acesso será liberado em até 10 segundos.
               </div>
             </div>
           )}
 
           <DialogFooter className="sm:justify-between">
-            <Button variant="ghost" onClick={() => setPixData(null)}>
+            <Button variant="outline" onClick={() => setPixData(null)} className="sm:flex-1">
               Cancelar
             </Button>
-            <Button onClick={() => {
+            <Button
+              onClick={() => {
                 setPixData(null)
                 router.push("/")
-              }} 
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              }}
+              className="sm:flex-[1.4]"
             >
-              Já paguei (Ir pro Painel)
+              Já paguei
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,25 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Flame, Loader2, AlertCircle, Smartphone, Power, Info } from "lucide-react"
+import { Loader2, Power, Flame } from "lucide-react"
 import { toast } from "sonner"
-
+import { cn, phoneMask } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
+
+const WARMUP_DAYS = 14
 
 export default function AquecimentoPage() {
   const [instances, setInstances] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isToggling, setIsToggling] = useState<string | null>(null)
-  
+
   const supabase = createClient()
 
   useEffect(() => {
@@ -32,15 +26,12 @@ export default function AquecimentoPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
       const { data, error } = await supabase
         .from('evolution_instances')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-
       if (error) throw error
-      
       setInstances(data || [])
     } catch (e: any) {
       toast.error('Erro ao carregar instâncias: ' + e.message)
@@ -55,22 +46,13 @@ export default function AquecimentoPage() {
       const res = await fetch('/api/instances/warmup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instance_id: instanceId, is_warming_up: !currentStatus })
+        body: JSON.stringify({ instance_id: instanceId, is_warming_up: !currentStatus }),
       })
-      
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      
-      setInstances(instances.map(inst => 
-        inst.id === instanceId ? { ...inst, is_warming_up: !currentStatus } : inst
-      ))
-      
-      if (!currentStatus) {
-        toast.success('🔥 Aquecimento ativado para esta instância!')
-      } else {
-        toast.info('❄️ Aquecimento desativado.')
-      }
-
+      setInstances(instances.map((inst) => (inst.id === instanceId ? { ...inst, is_warming_up: !currentStatus } : inst)))
+      if (!currentStatus) toast.success('Aquecimento ativado para esta instância!')
+      else toast.info('Aquecimento desativado.')
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -78,141 +60,134 @@ export default function AquecimentoPage() {
     }
   }
 
-  const activeWarmups = instances.filter(i => i.is_warming_up).length
+  const activeWarmups = instances.filter((i) => i.is_warming_up).length
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
-        <p className="text-muted-foreground animate-pulse">Carregando motores de aquecimento...</p>
-      </div>
-    )
+  // Maturidade do chip: dias desde a criação (proxy de reputação), limitado a 14
+  const chipDay = (createdAt: string) => {
+    if (!createdAt) return 1
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000) + 1
+    return Math.max(1, Math.min(days, WARMUP_DAYS))
   }
+  // Limite seguro de envio escala com a maturidade (~10/dia no início → ~80/dia maduro)
+  const safeSend = (day: number) => Math.round(10 + (day / WARMUP_DAYS) * 70)
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 flex items-center gap-2">
-          <Flame className="w-8 h-8 text-orange-500" />
-          Motor de Aquecimento
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400">
-          Simule conversas reais geradas por Inteligência Artificial para aumentar o Score dos seus chips novos e evitar banimentos pelo WhatsApp.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="glass-card rounded-xl p-6 border-orange-500/20 bg-orange-500/5 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/10 rounded-bl-full -z-10" />
-          <h3 className="font-semibold text-lg flex items-center gap-2 mb-2">
-            <Info className="w-5 h-5 text-orange-500" />
-            Como funciona?
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Você precisa ativar o aquecimento em **no mínimo 2 instâncias** que estejam conectadas. O nosso robô fará elas conversarem entre si aleatoriamente enviando gírias, dúvidas e textos humanizados.
-          </p>
-          <div className="text-xs font-semibold text-orange-500 bg-orange-500/10 inline-flex px-3 py-1 rounded-full">
-            Custo coberto pela plataforma
+    <div className="mx-auto max-w-4xl space-y-4 pb-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Aquecimento</h1>
+            {!isLoading && instances.length > 0 && (
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className={cn("status-dot", activeWarmups >= 2 ? "bg-money" : "bg-warning")} />
+                <span className={activeWarmups >= 2 ? "text-money" : "text-warning-fg"}>
+                  {activeWarmups} de {instances.length} aquecendo
+                </span>
+              </span>
+            )}
           </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-6 flex flex-col justify-center items-center text-center">
-          <Flame className={`w-12 h-12 mb-3 ${activeWarmups >= 2 ? 'text-orange-500 animate-pulse' : 'text-muted/50'}`} />
-          <h3 className="font-semibold text-xl">
-            {activeWarmups} {activeWarmups === 1 ? 'Instância Aquecendo' : 'Instâncias Aquecendo'}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {activeWarmups < 2 
-              ? "Ative pelo menos 2 números para iniciar o motor." 
-              : "O motor está rodando perfeitamente em background."}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Conversas simuladas entre seus números para criar reputação antes de disparar.
           </p>
         </div>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden p-4">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Instância</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Status Conexão</TableHead>
-                <TableHead>Aquecimento</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {instances.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Você ainda não possui números de WhatsApp cadastrados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                instances.map((inst) => {
-                  const isConnected = inst.status === 'connected';
-                  
-                  return (
-                    <TableRow key={inst.id} className="hover:bg-muted/30">
-                      <TableCell>
-                        <div className="font-semibold flex items-center gap-2">
-                          <Smartphone className="w-4 h-4 text-muted-foreground" />
-                          {inst.instance_name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{inst.phone_number || '-'}</div>
-                      </TableCell>
-                      <TableCell>
-                        {isConnected ? (
-                           <Badge className="bg-emerald-500/10 text-emerald-500 border-0">Conectado</Badge>
-                        ) : (
-                           <Badge className="bg-red-500/10 text-red-500 border-0">Desconectado</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {inst.is_warming_up ? (
-                           <Badge className="bg-orange-500/10 text-orange-500 border-0 flex w-fit items-center gap-1">
-                             <Flame className="w-3 h-3" />
-                             Ligado
-                           </Badge>
-                        ) : (
-                           <Badge variant="outline" className="text-muted-foreground border-border/50">
-                             Desligado
-                           </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant={inst.is_warming_up ? "destructive" : "default"}
-                          size="sm"
-                          disabled={!isConnected || isToggling === inst.id}
-                          onClick={() => toggleWarmup(inst.id, inst.is_warming_up)}
-                          className={!inst.is_warming_up && isConnected ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
-                        >
-                          {isToggling === inst.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : inst.is_warming_up ? (
-                            <>
-                              <Power className="w-4 h-4 mr-2" />
-                              Parar
-                            </>
-                          ) : (
-                            <>
-                              <Flame className="w-4 h-4 mr-2" />
-                              Aquecer
-                            </>
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
+      {activeWarmups > 0 && activeWarmups < 2 && (
+        <div className="flex items-center gap-2.5 rounded-md border border-warning-border bg-warning-bg px-3 py-2.5 text-xs text-warning-fg">
+          <span className="status-dot bg-warning" />
+          Ative pelo menos <strong>2 números</strong> conectados para o motor de aquecimento funcionar.
         </div>
-      </div>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-[110px] w-full rounded-lg" />
+          ))}
+        </div>
+      ) : instances.length === 0 ? (
+        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-16 text-center">
+          <p className="microlabel">Nenhum número cadastrado</p>
+          <p className="text-xs text-muted-foreground">Conecte um WhatsApp em Automação para começar a aquecer.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {instances.map((inst) => {
+            const isConnected = inst.status === 'connected'
+            const warming = inst.is_warming_up
+            const day = chipDay(inst.created_at)
+            const pct = Math.round((day / WARMUP_DAYS) * 100)
+            const remaining = WARMUP_DAYS - day
+
+            return (
+              <div key={inst.id} className="rounded-lg border border-border bg-card p-4">
+                {/* Cabeçalho da linha */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="num text-[13px] font-semibold text-foreground">
+                      {inst.phone_number ? phoneMask(inst.phone_number) : inst.instance_name}
+                      <span className="ml-1.5 font-sans text-[11px] font-normal text-muted-foreground">· {inst.instance_name}</span>
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Dia <span className="num">{day}</span> de {WARMUP_DAYS}
+                      {!isConnected && <span className="text-danger"> · desconectado</span>}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="flex items-center gap-1.5 text-xs font-medium">
+                      <span className={cn("status-dot", warming ? "bg-money" : "bg-warning")} />
+                      <span className={warming ? "text-money" : "text-warning-fg"}>{warming ? "Aquecendo" : "Início"}</span>
+                    </span>
+                    <Button
+                      variant={warming ? "outline" : "default"}
+                      size="sm"
+                      disabled={!isConnected || isToggling === inst.id}
+                      onClick={() => toggleWarmup(inst.id, warming)}
+                      className="h-7 rounded-md px-2.5 text-xs"
+                    >
+                      {isToggling === inst.id ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : warming ? (
+                        <><Power className="mr-1 size-3" /> Parar</>
+                      ) : (
+                        <><Flame className="mr-1 size-3" /> Aquecer</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Barra de progresso + par rotulado mono */}
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="microlabel">Reputação</span>
+                    <span className="num text-[11px] font-semibold text-foreground">{pct}%</span>
+                  </div>
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={cn("h-full rounded-full", warming ? "bg-money" : "bg-warning")}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Rodapé mono */}
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-[11px] text-muted-foreground">
+                  <span>
+                    Envio seguro: <span className="num font-semibold text-foreground">~{safeSend(day)} msgs/dia</span>
+                  </span>
+                  {remaining > 0 ? (
+                    <span>
+                      Próximo nível: <span className="num font-semibold text-foreground">{remaining} dias</span>
+                    </span>
+                  ) : (
+                    <span className="text-money">Chip maduro ✓</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

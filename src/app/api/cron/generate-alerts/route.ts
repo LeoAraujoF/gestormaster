@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 
 // This route uses the service_role key to bypass RLS since it's a server cron job
 const supabase = createClient(
@@ -9,11 +10,8 @@ const supabase = createClient(
 
 export async function GET(req: Request) {
   try {
-    // 1. Security Check
-    const { searchParams } = new URL(req.url)
-    const secret = searchParams.get('key')
-    
-    if (secret !== process.env.CRON_SECRET) {
+    // 1. Security Check (header Bearer da Vercel Cron ou ?key= legado)
+    if (!isAuthorizedCron(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

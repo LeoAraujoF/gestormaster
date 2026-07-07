@@ -7,6 +7,8 @@ import { NotificationBell } from "@/components/notification-bell"
 import { QuickActions } from "@/components/quick-actions"
 import { WhatsAppStatus } from "@/components/whatsapp-status"
 import { CampaignHeaderStatus } from "@/components/campaign-header-status"
+import { CommandPalette } from "@/components/command-palette"
+import { WhatsAppBanner } from "@/components/whatsapp-banner"
 import { OrganizationProvider } from "@/components/providers/organization-provider"
 
 import { PageProtector } from "@/components/page-protector"
@@ -22,21 +24,24 @@ export default function DashboardLayout({
         <SidebarProvider defaultOpen={true}>
           <AppSidebar />
           <main className="flex-1 w-full flex flex-col bg-background">
-              <header className="h-16 flex items-center px-4 md:px-6 border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-                <SidebarTrigger className="mr-4" />
+              <header className="h-14 flex items-center gap-3 px-4 md:px-6 border-b border-border bg-background sticky top-0 z-50">
+                <SidebarTrigger />
+                <div className="flex-1 max-w-[280px]">
+                  <CommandPalette />
+                </div>
                 <div className="flex-1"></div>
-                <div className="flex items-center gap-2 md:gap-4">
+                <div className="flex items-center gap-1 md:gap-2">
                   <CampaignHeaderStatus />
                   <WhatsAppStatus />
                   <QuickActions />
-                  <div className="h-6 w-px bg-border/50 hidden md:block"></div>
+                  <div className="h-5 w-px bg-border hidden md:block"></div>
                   <NotificationBell />
-                  <div className="h-6 w-px bg-border/50 hidden md:block"></div>
                   <ThemeToggle />
                   <PrivacyToggle />
                 </div>
               </header>
               <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+                <WhatsAppBanner />
                 <PageProtector>
                   {children}
                 </PageProtector>

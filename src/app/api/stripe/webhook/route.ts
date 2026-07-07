@@ -69,11 +69,15 @@ export async function POST(request: Request) {
         // Adiciona 30 dias (1 mês)
         newExpiresAt.setDate(newExpiresAt.getDate() + 30)
 
-        // Cliente pagou! Vamos colocar a tag de "has_active_subscription: true", gravar o nome do plano e atualizar o vencimento
+        // Cliente pagou! has_active_subscription vai em app_metadata (seguro, só o servidor grava);
+        // demais campos de exibição continuam em user_metadata.
         const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          app_metadata: {
+            ...user.app_metadata,
+            has_active_subscription: true
+          },
           user_metadata: {
             ...user.user_metadata,
-            has_active_subscription: true,
             plan_name: planName,
             plan_expires_at: newExpiresAt.toISOString(),
             stripe_customer_id: session.customer as string
@@ -140,10 +144,10 @@ export async function POST(request: Request) {
         const user = usersData.users.find(u => u.user_metadata?.stripe_customer_id === customerId)
 
         if (user) {
-          // Atualiza o usuário para remover o plano ativo
+          // Atualiza o usuário para remover o plano ativo (app_metadata: só o servidor grava)
           await supabaseAdmin.auth.admin.updateUserById(user.id, {
-            user_metadata: {
-              ...user.user_metadata,
+            app_metadata: {
+              ...user.app_metadata,
               has_active_subscription: false
             }
           })

@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
+    // 0. GUARD DE ADMIN — só o Master Admin pode disparar cobranças/boas-vindas
+    const adminEmail = process.env.ADMIN_EMAIL
+    if (!adminEmail) {
+      return NextResponse.json({ error: 'Configuração de administrador ausente no servidor' }, { status: 500 })
+    }
+    const authClient = await createServerClient()
+    const { data: { user: caller } } = await authClient.auth.getUser()
+    if (!caller || caller.email !== adminEmail) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const body = await req.json()
     const { userId, method, type, password } = body
 
@@ -58,7 +70,7 @@ export async function POST(req: Request) {
         if (!stripeKey) {
           return NextResponse.json({ error: 'Chave Stripe não configurada' }, { status: 500 })
         }
-        const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' })
+        const stripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' })
         
         // Define preço base dependendo do plano (Exemplo: Pro = 97 BRL)
         const amount = plan === 'Pro' ? 9700 : 0

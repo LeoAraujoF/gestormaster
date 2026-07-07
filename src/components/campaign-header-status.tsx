@@ -28,9 +28,9 @@ export function CampaignHeaderStatus() {
   if (!isActive) return null
 
   return (
-    <div className="hidden sm:flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm animate-pulse">
-      <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-500" />
-      <Megaphone className="w-3.5 h-3.5 text-sky-500 hidden md:inline-block" />
+    <div className="hidden sm:flex items-center gap-2 bg-secondary border border-border text-interactive px-3 py-1.5 rounded-full text-xs font-semibold">
+      <Loader2 className="w-3.5 h-3.5 animate-spin text-interactive" />
+      <Megaphone className="w-3.5 h-3.5 text-interactive hidden md:inline-block" />
       <span>Campanha Ativa</span>
     </div>
   )

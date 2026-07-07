@@ -68,12 +68,15 @@ export async function POST(req: Request) {
 
     if (earnError) throw earnError
 
-    // Atualiza o vencimento do plano no metadata
+    // Atualiza o vencimento do plano. has_active_subscription vai em app_metadata (só o servidor grava).
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      app_metadata: {
+        ...adminUser.app_metadata,
+        has_active_subscription: true
+      },
       user_metadata: {
         ...userData,
         plan_expires_at: currentExpires.toISOString(),
-        has_active_subscription: true,
         plan_name: "Gestor Pro"
       }
     })

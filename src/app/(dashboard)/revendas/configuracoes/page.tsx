@@ -104,13 +104,13 @@ export default function RevendasConfigPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Configurações de Revenda</h1>
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Configurações de Revenda</h1>
           <p className="text-muted-foreground mt-1">Conecte seus meios de pagamento e notificações do WhatsApp.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <Card className="glass-card">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-emerald-500" />
@@ -133,7 +133,7 @@ export default function RevendasConfigPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-emerald-500" />
@@ -171,10 +171,10 @@ export default function RevendasConfigPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-sky-500" />
+              <CreditCard className="w-5 h-5 text-interactive" />
               Gateways de Pagamento (Em Breve)
             </CardTitle>
             <CardDescription>

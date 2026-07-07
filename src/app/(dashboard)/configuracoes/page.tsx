@@ -244,12 +244,12 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Configurações & Dados</h1>
+        <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2">Configurações & Dados</h1>
         <p className="text-zinc-500 dark:text-zinc-400">Gerencie a segurança da sua conta, backups e migração de dados.</p>
       </div>
 
       {!hasPin ? (
-        <Card className="glass-card border-amber-500/20">
+        <Card className="border-amber-500/20">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-amber-500">
               <KeyRound className="w-5 h-5" /> PIN de Segurança
@@ -284,7 +284,7 @@ export default function ConfiguracoesPage() {
 
           <TabsContent value="backup" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="glass-card">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Download className="w-5 h-5 text-blue-500" /> 
@@ -304,7 +304,7 @@ export default function ConfiguracoesPage() {
                 </CardContent>
               </Card>
 
-              <Card className="glass-card">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Upload className="w-5 h-5 text-emerald-500" /> 
@@ -360,7 +360,7 @@ export default function ConfiguracoesPage() {
         setIsDangerDialogOpen(open)
         if (!open) setDangerPin("")
       }}>
-        <DialogContent className="glass-card sm:max-w-[400px] border-red-500/30">
+        <DialogContent className="sm:max-w-[400px] border-red-500/30">
           <DialogHeader>
             <DialogTitle className="text-red-500 flex items-center gap-2">
               <ShieldAlert className="w-5 h-5" /> Autenticação Necessária

@@ -155,7 +155,7 @@ export default function RevendasPage() {
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Revendas</h1>
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Gestão de Revendas</h1>
           <p className="text-muted-foreground mt-1">Gerencie seus revendedores e aprovações de crédito (White-Label).</p>
         </div>
         <div className="flex gap-2">
@@ -186,7 +186,7 @@ export default function RevendasPage() {
         </TabsList>
 
         <TabsContent value="solicitacoes">
-          <Card className="glass-card">
+          <Card>
             <CardHeader>
               <CardTitle>Solicitações de Crédito</CardTitle>
               <CardDescription>Aprove recargas de crédito solicitadas pelos seus revendedores.</CardDescription>
@@ -254,7 +254,7 @@ export default function RevendasPage() {
         </TabsContent>
 
         <TabsContent value="revendedores">
-          <Card className="glass-card">
+          <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -304,7 +304,7 @@ export default function RevendasPage() {
                         </div>
                       </CardContent>
                       <CardFooter className="pt-0 border-t border-border/40 mt-4 flex items-center justify-between">
-                        <Button variant="link" className="px-0 text-sky-500 h-10" onClick={() => window.location.href=`/revendas/${reseller.id}`}>
+                        <Button variant="link" className="px-0 text-interactive h-10" onClick={() => window.location.href=`/revendas/${reseller.id}`}>
                           Configurar Serviços <ArrowRight className="w-4 h-4 ml-1" />
                         </Button>
                       </CardFooter>

@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  typescript: { ignoreBuildErrors: true },
+  // Type-checking é obrigatório no build (0 erros hoje).
+  // (Next 16 não roda ESLint no build; não há mais a chave `eslint` no config.)
+  typescript: { ignoreBuildErrors: false },
   async rewrites() {
     return [
       {

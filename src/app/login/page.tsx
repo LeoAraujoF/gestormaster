@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
 import { createClient } from "@/lib/supabase/client"
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
+import { BrandMark } from "@/components/brand-mark"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -23,7 +23,6 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
@@ -48,7 +47,6 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
-    
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -56,8 +54,8 @@ export default function LoginPage() {
       })
 
       if (error) {
-        toast.error(error.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos." 
+        toast.error(error.message === "Invalid login credentials"
+          ? "Email ou senha incorretos."
           : "Erro ao fazer login.")
         return
       }
@@ -77,154 +75,95 @@ export default function LoginPage() {
     }
   }
 
-
-
   return (
-    <div className="min-h-screen flex bg-background animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center bg-zinc-900 dark:bg-zinc-950">
-        <div className="relative z-10 px-12 max-w-lg">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-sky-500/15 border border-sky-500/20 flex items-center justify-center">
-              <span className="text-xl font-black text-sky-400 tracking-tighter">GM</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Gestor Master</h1>
-          </div>
-          <p className="text-lg text-zinc-300 leading-relaxed mb-8">
-            Sistema inteligente de gestão de clientes com <span className="text-sky-300">automação</span> e <span className="text-emerald-300">controle financeiro</span>.
-          </p>
-          <div className="space-y-4 text-sm text-zinc-400">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-              <span>Controle de vencimentos automático</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Alertas via WhatsApp integrados</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>Relatórios financeiros em tempo real</span>
-            </div>
-          </div>
-        </div>
-        {/* Subtle decorative element */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
-      </div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+      {/* Logo */}
+      <Link href="/" className="mb-8 flex items-center gap-2">
+        <BrandMark size={26} />
+        <span className="text-[15px] font-semibold tracking-tight text-foreground">Gestor</span>
+      </Link>
 
-      {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/15 flex items-center justify-center">
-              <span className="text-lg font-black text-sky-500 tracking-tighter">GM</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">Gestor Master</h1>
+      {/* Card único */}
+      <div className="w-full max-w-[360px] rounded-[12px] border border-border bg-card p-6 shadow-[0_12px_32px_rgba(0,0,0,.06)]">
+        <h1 className="text-[15px] font-semibold tracking-[-0.02em]">Entrar no painel</h1>
+        <p className="mt-1 text-xs text-muted-foreground">Digite suas credenciais para acessar.</p>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs">E-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              className="h-10"
+              {...register("email")}
+            />
+            {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight">Bem-vindo de volta</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5">
-              Digite suas credenciais para acessar o painel.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-zinc-700 dark:text-zinc-300">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  className="pl-9 h-11"
-                  {...register("email")}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-xs">Senha</Label>
+              <Link href="/forgot-password" className="text-xs font-medium text-interactive hover:underline">
+                Esqueceu a senha?
+              </Link>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-zinc-700 dark:text-zinc-300">Senha</Label>
-                <Link 
-                  href="/forgot-password"
-                  className="text-xs font-medium text-sky-500 hover:underline cursor-pointer relative z-10"
-                >
-                  Esqueceu a senha?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pl-9 pr-10 h-11"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2 mt-2">
-              <Checkbox 
-                id="rememberMe" 
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                className="h-10 pr-10"
+                {...register("password")}
               />
-              <Label 
-                htmlFor="rememberMe" 
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-600 dark:text-zinc-400"
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                tabIndex={-1}
               >
-                Lembrar meu e-mail
-              </Label>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-sm font-medium mt-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" 
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                "Entrar"
-              )}
-            </Button>
-          </form>
-
-
-
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            Não tem uma conta? <Link href="/cadastro" className="text-sky-500 hover:underline">Cadastre-se</Link>
+            {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
 
-          <div className="flex flex-col items-center gap-2 mt-8 text-xs text-zinc-400 dark:text-zinc-500">
-            <p>Acesso restrito a administradores autorizados.</p>
-            <Link href="/privacidade" className="hover:text-zinc-600 dark:hover:text-zinc-300 underline underline-offset-2 transition-colors">
-              Ler Política de Privacidade
-            </Link>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="rememberMe"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+            />
+            <Label htmlFor="rememberMe" className="text-xs font-normal text-muted-foreground">
+              Lembrar meu e-mail
+            </Label>
           </div>
+
+          <Button type="submit" className="h-10 w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando…
+              </>
+            ) : (
+              "Entrar"
+            )}
+          </Button>
+        </form>
+
+        <div className="mt-5 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+          Não tem uma conta?{" "}
+          <Link href="/cadastro" className="font-medium text-interactive hover:underline">
+            Teste 7 dias grátis
+          </Link>
         </div>
       </div>
+
+      <Link
+        href="/privacidade"
+        className="mt-6 text-[11px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+      >
+        Política de Privacidade
+      </Link>
     </div>
   )
 }

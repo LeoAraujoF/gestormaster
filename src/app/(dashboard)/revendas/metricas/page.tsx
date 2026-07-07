@@ -117,13 +117,13 @@ export default function RevendasMetricsPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Métricas de Revenda</h1>
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Métricas de Revenda</h1>
           <p className="text-muted-foreground mt-1">Acompanhe seu faturamento e volume de solicitações da sua rede.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-card bg-gradient-to-br from-emerald-500/10 to-transparent">
+        <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Lucro Líquido (Hoje)</CardTitle>
             <TrendingUp className="w-4 h-4 text-emerald-500" />
@@ -136,7 +136,7 @@ export default function RevendasMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
+        <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Lucro Líquido (Total)</CardTitle>
             <DollarSign className="w-4 h-4 text-emerald-500" />
@@ -147,10 +147,10 @@ export default function RevendasMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
+        <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Revendedores Ativos</CardTitle>
-            <Users className="w-4 h-4 text-sky-500" />
+            <Users className="w-4 h-4 text-interactive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.totalResellers}</div>
@@ -158,7 +158,7 @@ export default function RevendasMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-amber-500/30">
+        <Card className="border-amber-500/30">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Pendentes/Aguardando</CardTitle>
             <Clock className="w-4 h-4 text-amber-500" />
@@ -170,7 +170,7 @@ export default function RevendasMetricsPage() {
         </Card>
       </div>
 
-      <Card className="glass-card">
+      <Card>
         <CardHeader>
           <CardTitle>Últimas Movimentações</CardTitle>
           <CardDescription>Histórico das últimas 10 solicitações de recarga da sua rede.</CardDescription>

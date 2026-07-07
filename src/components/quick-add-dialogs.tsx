@@ -62,7 +62,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
         const { error } = await supabase.from('services').update(payload).eq('id', service.id)
         if (error) throw error
         toast.success("Serviço atualizado!")
-        logAuditClient('service.update', 'services', { service_name: data.name })
+        logAuditClient({ action: 'service.update', resource: 'services', details: { service_name: data.name } })
       } else {
         const { error } = await supabase.from('services').insert({
           user_id: user.id,
@@ -70,7 +70,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
         })
         if (error) throw error
         toast.success("Serviço cadastrado!")
-        logAuditClient('service.create', 'services', { service_name: data.name })
+        logAuditClient({ action: 'service.create', resource: 'services', details: { service_name: data.name } })
       }
       
       onOpenChange(false)
@@ -84,30 +84,26 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[480px] max-h-[90vh] overflow-y-auto border-sky-500/20">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-sky-500 flex items-center gap-3 text-xl">
-             <div className="w-10 h-10 rounded-full bg-sky-500/15 flex items-center justify-center">
-               <Box className="w-5 h-5 text-sky-500" />
-             </div>
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto border-border">
+        <DialogHeader>
+          <DialogTitle className="text-[14px] font-semibold">
              {service ? "Editar Serviço" : "Novo Serviço Global"}
           </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
+          <DialogDescription className="text-xs">
             {service ? "Edite as informações do serviço." : "Cadastre rapidamente um novo serviço para utilizar em todos os seus clientes."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-4 relative z-10">
           <div className="space-y-2">
             <Label>Nome do Serviço</Label>
-            <Input {...register("name")} className="bg-background/80 focus-visible:ring-sky-500/50" placeholder="Ex: Assinatura Mensal VIP" />
+            <Input {...register("name")} className="bg-background/80" placeholder="Ex: Assinatura Mensal VIP" />
             {errors.name && <p className="text-xs text-destructive">{errors.name?.message as string}</p>}
           </div>
           <div className="space-y-2">
             <Label>Custo Fixo (Seu Custo)</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-              <Input type="number" step="0.01" {...register("cost")} className="pl-9 bg-background/80 focus-visible:ring-sky-500/50" />
+              <Input type="number" step="0.01" {...register("cost")} className="pl-9 bg-background/80" />
             </div>
             <p className="text-[10px] text-muted-foreground">Valor pago ao seu fornecedor (usado para calcular o lucro líquido).</p>
             {errors.cost && <p className="text-xs text-destructive">{errors.cost?.message as string}</p>}
@@ -125,7 +121,7 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
             </div>
             
             <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-              {fields.map((field, index) => (
+              {fields.map((field: any, index: number) => (
                 <div key={field.id} className="flex gap-2 items-start bg-muted/30 p-2 rounded-lg border border-border/50">
                   <div className="flex-1 space-y-1">
                     <Input {...register(`plans.${index}.name`)} placeholder="Ex: Mensal" className="h-8 text-sm bg-background" />
@@ -146,9 +142,9 @@ export function QuickAddServiceDialog({ open, onOpenChange, onSuccess, service =
             </div>
           </div>
           
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white">
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="sm:flex-1">Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting} className="sm:flex-[1.4]">
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Salvar Serviço
             </Button>
           </DialogFooter>
@@ -197,19 +193,16 @@ export function WhatsAppStatusDialog({ open, onOpenChange }: any) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] flex flex-col items-center justify-center p-8 text-center overflow-hidden">
+      <DialogContent className="sm:max-w-[425px] flex flex-col items-center justify-center p-8 text-center overflow-hidden">
         
         {/* Glow Effects Background based on status */}
-        {status === 'connected' && <div className="absolute -top-20 -left-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />}
-        {status === 'disconnected' && <div className="absolute -top-20 -left-20 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />}
-        {status === 'error' && <div className="absolute -top-20 -left-20 w-48 h-48 bg-destructive/10 rounded-full blur-3xl pointer-events-none" />}
         
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 relative z-10">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
-              <div className="relative bg-background rounded-full p-4 border border-primary/50 shadow-lg shadow-primary/20">
-                <MessageCircle className="w-8 h-8 text-primary animate-pulse" />
+              <div className="relative bg-background rounded-full p-4 border border-primary/50 shadow-lg">
+                <MessageCircle className="w-8 h-8 text-primary" />
               </div>
             </div>
             <h3 className="text-xl font-semibold mt-4 text-primary">Diagnóstico de Rede...</h3>
@@ -220,8 +213,7 @@ export function WhatsAppStatusDialog({ open, onOpenChange }: any) {
         {status === 'connected' && (
           <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 relative z-10">
             <div className="relative">
-              <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-pulse"></div>
-              <div className="relative bg-background rounded-full p-4 border border-emerald-500/50 shadow-lg shadow-emerald-500/20">
+              <div className="relative bg-background rounded-full p-4 border border-emerald-500/50 shadow-lg">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500" />
               </div>
             </div>
@@ -235,14 +227,14 @@ export function WhatsAppStatusDialog({ open, onOpenChange }: any) {
 
         {status === 'disconnected' && (
           <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 relative z-10">
-            <div className="relative bg-background rounded-full p-4 border border-amber-500/50 shadow-lg shadow-amber-500/20">
+            <div className="relative bg-background rounded-full p-4 border border-amber-500/50 shadow-lg">
               <AlertCircle className="w-10 h-10 text-amber-500" />
             </div>
             <h3 className="text-xl font-bold text-amber-500 mt-4 tracking-tight">Dispositivo Desconectado</h3>
             <p className="text-sm text-muted-foreground bg-amber-500/5 p-3 rounded-lg border border-amber-500/20">
               Seu WhatsApp perdeu a conexão. É necessário ler o QR Code novamente para restaurar os envios.
             </p>
-            <Button className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20" onClick={() => {
+            <Button className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white shadow-md" onClick={() => {
               onOpenChange(false)
               window.location.href = '/automacao'
             }}>
@@ -253,7 +245,7 @@ export function WhatsAppStatusDialog({ open, onOpenChange }: any) {
 
         {status === 'error' && (
           <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 relative z-10">
-            <div className="relative bg-background rounded-full p-4 border border-destructive/50 shadow-lg shadow-destructive/20">
+            <div className="relative bg-background rounded-full p-4 border border-destructive/50 shadow-lg">
               <XCircle className="w-10 h-10 text-destructive" />
             </div>
             <h3 className="text-xl font-bold text-destructive mt-4 tracking-tight">Falha de Comunicação</h3>
@@ -348,7 +340,7 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
         const { error } = await supabase.from('promotions').update(payload).eq('id', promo.id)
         if (error) throw error
         toast.success("Promoção atualizada!")
-        logAuditClient('promotion.update', 'promotions', { promo_name: data.name })
+        logAuditClient({ action: 'promotion.update', resource: 'promotions', details: { promo_name: data.name } })
       } else {
         const { error } = await supabase.from('promotions').insert({
           ...payload,
@@ -356,7 +348,7 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
         })
         if (error) throw error
         toast.success("Promoção criada!")
-        logAuditClient('promotion.create', 'promotions', { promo_name: data.name })
+        logAuditClient({ action: 'promotion.create', resource: 'promotions', details: { promo_name: data.name } })
       }
 
       onOpenChange(false)
@@ -370,16 +362,12 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[425px] border-amber-500/20 overflow-hidden">
-        <DialogHeader className="relative">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <DialogTitle className="text-amber-500 flex items-center gap-3 text-xl">
-             <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center">
-               <Gift className="w-5 h-5 text-amber-500" />
-             </div>
+      <DialogContent className="sm:max-w-[425px] border-amber-500/20 overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-[14px] font-semibold">
              {promo ? "Editar Promoção" : "Nova Promoção Global"}
           </DialogTitle>
-          <DialogDescription className="pt-3 text-base">
+          <DialogDescription className="text-xs">
             {promo ? "Altere as configurações da campanha selecionada." : "Crie uma regra de promoção para usar em campanhas de renovação de clientes."}
           </DialogDescription>
         </DialogHeader>
@@ -410,9 +398,9 @@ export function QuickAddPromoDialog({ open, onOpenChange, onSuccess, promo = nul
             <Label>Descrição / Notas Internas</Label>
             <Input {...register("description")} className="bg-background/80 focus-visible:ring-amber-500/50" placeholder="Apenas para controle interno..." />
           </div>
-          <DialogFooter className="pt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20">
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="sm:flex-1">Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting} className="sm:flex-[1.4]">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {promo ? "Salvar Alterações" : "Salvar Promoção"}
             </Button>

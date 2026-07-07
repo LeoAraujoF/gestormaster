@@ -2,22 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Copy, Users, Wallet, TrendingUp, DollarSign, CalendarPlus, Activity } from "lucide-react"
 import { toast } from "sonner"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AccountTabs } from "@/components/account-tabs"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -38,7 +29,8 @@ export default function AfiliadosPage() {
   const [stats, setStats] = useState({
     totalIndicados: 0,
     saldoPendente: 0,
-    saldoDisponivel: 0
+    saldoDisponivel: 0,
+    comissaoMes: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
 
@@ -63,7 +55,7 @@ export default function AfiliadosPage() {
       setUserId(user.id)
 
       // 1. Busca total de indicados
-      const { count: indicadosCount, error: indicadosErr } = await supabase
+      const { count: indicadosCount } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('referred_by', user.id)
@@ -82,19 +74,28 @@ export default function AfiliadosPage() {
 
       let pendente = 0
       let disponivel = 0
+      let comissaoMes = 0
+      const now = new Date()
 
       comissoes?.forEach(c => {
         if (c.status === 'pending' && Number(c.amount) > 0) pendente += Number(c.amount)
         if (c.status === 'available') disponivel += Number(c.amount)
         if (c.status === 'paid' && Number(c.amount) < 0) disponivel += Number(c.amount) // Deduções (saque ou conversão)
+
+        // Comissões recebidas no mês corrente (entradas positivas)
+        const d = new Date(c.created_at)
+        if (Number(c.amount) > 0 && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+          comissaoMes += Number(c.amount)
+        }
       })
 
       setStats({
         totalIndicados: indicadosCount || 0,
         saldoPendente: pendente,
-        saldoDisponivel: disponivel
+        saldoDisponivel: disponivel,
+        comissaoMes,
       })
-      
+
       setEarnings(comissoes || [])
     } catch (error: any) {
       toast.error("Erro ao carregar painel: " + (error?.message || JSON.stringify(error)))
@@ -104,9 +105,13 @@ export default function AfiliadosPage() {
     }
   }
 
+  const affiliateUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/cadastro?ref=${userId}`
+    : `.../cadastro?ref=${userId}`
+
   function copyAffiliateLink() {
     const url = `${window.location.origin}/cadastro?ref=${userId}`
-    
+
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(url)
       toast.success("Link copiado! Compartilhe para ganhar comissões.")
@@ -134,7 +139,7 @@ export default function AfiliadosPage() {
   async function handleWithdraw(e: React.FormEvent) {
     e.preventDefault()
     const amount = parseFloat(withdrawAmount)
-    
+
     if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
       toast.error(`O valor mínimo para saque é de ${formatCurrency(MIN_WITHDRAWAL)}.`)
       return
@@ -193,159 +198,141 @@ export default function AfiliadosPage() {
     }
   }
 
+  const rowDescription = (e: any) => {
+    const isSaque = Number(e.amount) < 0
+    if (isSaque) {
+      return e.payment_id?.startsWith('withdrawal') ? 'Saque via PIX' : 'Conversão (mês grátis)'
+    }
+    return `Comissão · ${e.referred_user?.full_name || 'nova assinatura (link)'}`
+  }
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Indique e Ganhe</h1>
-          <p className="text-muted-foreground mt-1">Acumule comissões em dinheiro, saque via PIX ou troque por meses grátis.</p>
+    <div className="space-y-4 max-w-5xl mx-auto pb-10">
+      <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Minha conta</h1>
+      <AccountTabs />
+
+      {/* Cabeçalho 5g: título + comissão recorrente */}
+      <div className="flex flex-wrap items-baseline gap-2.5 pt-2">
+        <h2 className="text-[15px] font-semibold tracking-[-0.02em]">Afiliados</h2>
+        <span className="text-[11px] text-muted-foreground">30% de comissão recorrente</span>
+      </div>
+
+      {/* Link de indicação */}
+      <div className="rounded-lg border border-border bg-card px-4 py-4">
+        <p className="mb-2 text-[11.5px] font-medium">Seu link de indicação</p>
+        <div className="flex items-center gap-2 rounded-md bg-secondary py-1.5 pl-3 pr-1.5">
+          <span className="num min-w-0 flex-1 truncate text-xs text-foreground">{affiliateUrl}</span>
+          <Button size="sm" onClick={copyAffiliateLink} className="h-7 shrink-0 px-3 text-xs">
+            Copiar
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass-card bg-gradient-to-br from-primary/10 via-background to-background md:col-span-2">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-muted-foreground font-medium flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-primary" /> Saldo Disponível (R$)
-            </CardDescription>
-            <div className="flex justify-between items-end">
-              <CardTitle className="text-4xl font-bold text-primary">
-                {formatCurrency(stats.saldoDisponivel)}
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <Button 
-                onClick={() => setIsPixOpen(true)} 
-                className="flex-1" 
-                variant="default"
-              >
-                <DollarSign className="w-4 h-4 mr-2" />
-                Sacar via PIX
-              </Button>
-              <Button 
-                onClick={() => setIsConvertOpen(true)} 
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white" 
-                variant="outline"
-              >
-                <CalendarPlus className="w-4 h-4 mr-2" />
-                Trocar por Mês Grátis
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-muted-foreground font-medium flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-amber-500" /> Saldo Pendente
-              </CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {formatCurrency(stats.saldoPendente)}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-muted-foreground font-medium flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-500" /> Cadastros Indicados
-              </CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {stats.totalIndicados} <span className="text-sm font-normal text-muted-foreground">usuários</span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
+      {/* KPIs (5g): cards hairline com microlabel + valor mono */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[72px] rounded-lg" />)}
         </div>
-      </div>
-
-      <Card className="glass-card border-primary/20">
-        <CardHeader>
-          <CardTitle>Seu Link de Indicação</CardTitle>
-          <CardDescription>Envie este link. Você ganha 30% de comissão sempre que alguém assinar.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 bg-secondary/50 rounded-lg p-4 font-mono text-sm break-all border border-border/50 flex items-center">
-              {typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${userId}` : `.../cadastro?ref=${userId}`}
-            </div>
-            <Button size="lg" onClick={copyAffiliateLink} className="sm:w-auto w-full shrink-0">
-              <Copy className="w-4 h-4 mr-2" />
-              Copiar Link
-            </Button>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="microlabel">Indicados ativos</p>
+            <p className="num mt-1 text-[18px] font-semibold tracking-[-0.02em]">{stats.totalIndicados}</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="microlabel">Comissão/mês</p>
+            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em] text-money">
+              {formatCurrency(stats.comissaoMes)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="microlabel">Pendente</p>
+            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em] text-warning">
+              {formatCurrency(stats.saldoPendente)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="microlabel">Saldo</p>
+            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em]">
+              {formatCurrency(stats.saldoDisponivel)}
+            </p>
+          </div>
+        </div>
+      )}
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Extrato Financeiro</CardTitle>
-          <CardDescription>Acompanhe suas entradas de comissão e saídas.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-          ) : earnings.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground border rounded-lg border-dashed">
-              Nenhuma movimentação ainda. Compartilhe seu link!
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {earnings.map((e) => {
-                  const isSaque = Number(e.amount) < 0
-                  return (
-                    <TableRow key={e.id}>
-                      <TableCell>{new Date(e.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>
-                        {isSaque 
-                          ? e.payment_id?.startsWith('withdrawal') ? 'Saque via PIX' : 'Conversão (Mês Grátis)'
-                          : `Comissão de ${e.referred_user?.full_name || 'Usuário'}`
-                        }
-                      </TableCell>
-                      <TableCell className={`font-medium ${isSaque ? 'text-rose-500' : 'text-emerald-500'}`}>
-                        {isSaque ? '' : '+'} {formatCurrency(Math.abs(e.amount))}
-                      </TableCell>
-                      <TableCell>
-                        {e.status === 'pending' && <Badge variant="outline" className="bg-amber-500/10 text-amber-500">Pendente</Badge>}
-                        {e.status === 'available' && <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500">Liberado</Badge>}
-                        {e.status === 'paid' && <Badge variant="secondary">Concluído</Badge>}
-                        {e.status === 'rejected' && <Badge variant="destructive">Rejeitado</Badge>}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Extrato: linhas flat hairline, valor mono à direita */}
+      <div className="rounded-lg border border-border bg-card">
+        {isLoading ? (
+          <div className="px-4 py-8 text-center text-[11.5px] text-muted-foreground">Carregando…</div>
+        ) : earnings.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <p className="text-[12.5px] font-semibold">Nenhuma movimentação ainda</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Compartilhe seu link para começar a ganhar.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {earnings.map((e) => {
+              const isSaque = Number(e.amount) < 0
+              return (
+                <div key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="truncate text-[12.5px]">{rowDescription(e)}</span>
+                    <span className="num text-[10.5px] text-muted-foreground">
+                      {new Date(e.created_at).toLocaleDateString('pt-BR')}
+                    </span>
+                    {e.status === 'pending' && (
+                      <span className="flex items-center gap-1 text-[10.5px] text-warning">
+                        <span className="status-dot bg-warning" /> pendente
+                      </span>
+                    )}
+                    {e.status === 'rejected' && (
+                      <span className="flex items-center gap-1 text-[10.5px] text-danger">
+                        <span className="status-dot bg-danger" /> recusado
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn(
+                    "num shrink-0 whitespace-nowrap text-[12.5px] font-semibold",
+                    isSaque ? "text-danger" : "text-money"
+                  )}>
+                    {isSaque ? "-" : "+"}{formatCurrency(Math.abs(e.amount)).replace("R$", "").trim()}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Ações do extrato */}
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={() => setIsConvertOpen(true)}
+          className="text-[11.5px] font-medium text-interactive hover:underline"
+        >
+          Trocar por mês grátis
+        </button>
+        <Button variant="outline" size="sm" onClick={() => setIsPixOpen(true)} className="h-8 text-xs">
+          Solicitar saque
+        </Button>
+      </div>
 
       {/* Modal PIX */}
       <Dialog open={isPixOpen} onOpenChange={setIsPixOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Solicitar Saque (PIX)</DialogTitle>
+            <DialogTitle>Solicitar saque (PIX)</DialogTitle>
             <DialogDescription>
               Você pode sacar seu saldo disponível direto para sua conta bancária. O valor mínimo é {formatCurrency(MIN_WITHDRAWAL)}.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleWithdraw}>
             <div className="space-y-4 py-4">
+              <p className="text-[11.5px] text-muted-foreground">
+                Saldo disponível: <span className="num font-semibold text-money">{formatCurrency(stats.saldoDisponivel)}</span>
+              </p>
               <div className="space-y-2">
-                <Label>Saldo Disponível: <span className="font-bold text-emerald-500">{formatCurrency(stats.saldoDisponivel)}</span></Label>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Valor do Saque (R$)</Label>
+                <Label htmlFor="amount">Valor do saque (R$)</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -359,21 +346,21 @@ export default function AfiliadosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pixKey">Sua Chave PIX</Label>
+                <Label htmlFor="pixKey">Sua chave PIX</Label>
                 <Input
                   id="pixKey"
                   type="text"
                   value={pixKey}
                   onChange={(e) => setPixKey(e.target.value)}
-                  placeholder="CPF, E-mail, Celular ou Aleatória"
+                  placeholder="CPF, e-mail, celular ou aleatória"
                   required
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsPixOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => setIsPixOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isWithdrawing || stats.saldoDisponivel < MIN_WITHDRAWAL}>
-                {isWithdrawing ? "Processando..." : "Solicitar Saque"}
+                {isWithdrawing ? "Processando…" : "Solicitar saque"}
               </Button>
             </DialogFooter>
           </form>
@@ -384,9 +371,9 @@ export default function AfiliadosPage() {
       <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Trocar por Mês Grátis</DialogTitle>
+            <DialogTitle>Trocar por mês grátis</DialogTitle>
             <DialogDescription>
-              Você deseja usar <strong className="text-primary">{formatCurrency(MONTHLY_COST)}</strong> do seu saldo em dinheiro para assinar o plano Gestor Pro por +30 dias?
+              Usar <strong className="num text-foreground">{formatCurrency(MONTHLY_COST)}</strong> do seu saldo para assinar o Gestor Pro por +30 dias?
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -395,13 +382,12 @@ export default function AfiliadosPage() {
             </p>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setIsConvertOpen(false)}>Cancelar</Button>
-            <Button 
-              onClick={handleConvert} 
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+            <Button type="button" variant="outline" onClick={() => setIsConvertOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleConvert}
               disabled={isConverting || stats.saldoDisponivel < MONTHLY_COST}
             >
-              {isConverting ? "Ativando..." : "Sim, Quero +1 Mês"}
+              {isConverting ? "Ativando…" : "Sim, quero +1 mês"}
             </Button>
           </DialogFooter>
         </DialogContent>

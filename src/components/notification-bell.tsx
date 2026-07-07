@@ -229,7 +229,7 @@ export function NotificationBell() {
                 <div className="px-2 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Atualizações do Sistema</div>
                 {updates.map(update => (
                   <DropdownMenuItem key={update.id} className="cursor-pointer flex items-start gap-3 p-3 rounded-md mb-1" onClick={() => handleNavigation('/atualizacoes')}>
-                    <div className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-sky-500/10 text-sky-500">
+                    <div className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-secondary text-interactive">
                       <Megaphone className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col gap-0.5">
@@ -244,7 +244,7 @@ export function NotificationBell() {
         )}
         
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer w-full text-center p-3 text-sky-500 justify-center font-medium bg-muted/30 hover:bg-muted/50 rounded-none" onClick={() => handleNavigation('/atualizacoes')}>
+        <DropdownMenuItem className="cursor-pointer w-full text-center p-3 text-interactive justify-center font-medium bg-muted/30 hover:bg-muted/50 rounded-none" onClick={() => handleNavigation('/atualizacoes')}>
           Ver Central de Avisos
         </DropdownMenuItem>
       </DropdownMenuContent>

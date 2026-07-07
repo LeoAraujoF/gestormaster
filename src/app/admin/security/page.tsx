@@ -20,7 +20,7 @@ interface SecuritySettings {
   updated_at: string
 }
 
-const PROTECTED_ENDPOINTS = [
+const PROTECTED_ENDPOINTS: { name: string; path: string; status: "protected" | "partial"; method: string }[] = [
   {
     name: "Callbacks Evolution API",
     path: "/api/evolution/webhook",
@@ -165,7 +165,7 @@ export default function SecurityPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
             <Lock className="w-8 h-8 text-red-500" />
             Segurança & Webhooks
           </h2>

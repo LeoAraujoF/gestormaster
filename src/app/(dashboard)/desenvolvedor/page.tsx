@@ -104,7 +104,7 @@ export default function DesenvolvedorPage() {
   return (
     <div className="flex flex-col space-y-8 p-4 md:p-8 max-w-6xl mx-auto">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+        <h2 className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
           <Code className="w-8 h-8 text-zinc-500" />
           API & Desenvolvedores
         </h2>
@@ -217,9 +217,9 @@ export default function DesenvolvedorPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-sky-500/20 shadow-sm bg-gradient-to-b from-sky-500/5 to-transparent">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
+              <CardTitle className="flex items-center gap-2 text-interactive">
                 <Terminal className="w-5 h-5" />
                 Como Utilizar
               </CardTitle>
@@ -227,7 +227,7 @@ export default function DesenvolvedorPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Badge variant="outline" className="bg-sky-500/10 text-sky-600 border-sky-500/20">POST</Badge>
+                <Badge variant="outline" className="bg-secondary text-interactive border-border">POST</Badge>
                 <code className="text-xs font-mono block break-all text-muted-foreground bg-secondary/50 p-2 rounded border">
                   https://seusistema.com/api/v1/messages/send
                 </code>
@@ -236,8 +236,8 @@ export default function DesenvolvedorPage() {
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Cabeçalhos (Headers):</p>
                 <div className="text-xs font-mono bg-secondary/50 p-2 rounded border space-y-1">
-                  <div><span className="text-sky-600">Content-Type:</span> application/json</div>
-                  <div><span className="text-sky-600">Authorization:</span> Bearer gm_live_...</div>
+                  <div><span className="text-interactive">Content-Type:</span> application/json</div>
+                  <div><span className="text-interactive">Authorization:</span> Bearer gm_live_...</div>
                 </div>
               </div>
 

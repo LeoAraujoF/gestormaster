@@ -12,7 +12,7 @@ interface ChartCardProps {
 
 export function ChartCard({ title, description, children, className }: ChartCardProps) {
   return (
-    <Card className={`glass-card ${className}`}>
+    <Card className={`${className}`}>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}

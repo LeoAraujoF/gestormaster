@@ -55,7 +55,7 @@ export function QuickActions() {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-sky-500 hover:bg-sky-600 text-white shadow-sm hover:shadow-md transition-all gap-1.5 h-9 rounded-full px-4 border-0">
+        <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all gap-1.5 h-9 rounded-full px-4 border-0">
           <PlusCircle className="w-4 h-4" />
           <span className="hidden sm:inline-block font-medium">Criar</span>
         </DropdownMenuTrigger>
@@ -65,8 +65,8 @@ export function QuickActions() {
           
           {flags['action_create_client'] !== false && (
             <DropdownMenuItem onClick={() => setIsClientOpen(true)} className="cursor-pointer py-2">
-              <div className="bg-sky-500/10 p-1.5 rounded-md mr-2">
-                <Users className="w-4 h-4 text-sky-500" />
+              <div className="bg-secondary p-1.5 rounded-md mr-2">
+                <Users className="w-4 h-4 text-interactive" />
               </div>
               <span className="font-medium">Novo Cliente</span>
             </DropdownMenuItem>
@@ -83,8 +83,8 @@ export function QuickActions() {
 
           {flags['action_create_service'] !== false && (
             <DropdownMenuItem onClick={() => setIsServiceOpen(true)} className="cursor-pointer py-2">
-              <div className="bg-violet-500/10 p-1.5 rounded-md mr-2">
-                <Package className="w-4 h-4 text-violet-500" />
+              <div className="bg-secondary p-1.5 rounded-md mr-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
               </div>
               <span className="font-medium">Novo Serviço</span>
             </DropdownMenuItem>
@@ -92,7 +92,7 @@ export function QuickActions() {
 
           {flags['action_pix_rapido'] !== false && (
             <DropdownMenuItem onClick={() => setIsPixOpen(true)} className="cursor-pointer py-2">
-              <div className="bg-sky-500/10 p-1.5 rounded-md mr-2 text-sky-500">
+              <div className="bg-secondary p-1.5 rounded-md mr-2 text-interactive">
                 <DollarSign className="w-4 h-4" />
               </div>
               <span className="font-medium text-foreground">Gerar Pix Rápido</span>

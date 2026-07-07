@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gestor Master
 
-## Getting Started
+SaaS de gestão de clientes IPTV/assinaturas com automação de cobranças via WhatsApp
+(Evolution API), pagamentos (Stripe, PIX/Mercado Pago/PIXGO), sistema de revendas e
+afiliados. Multi-tenant com isolamento por organização no Supabase.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, output `standalone`) + React + TypeScript + Tailwind
+- **Supabase** (Postgres + Auth + RLS) — banco e autenticação
+- **BullMQ + Redis** — filas de mensagens, webhooks, health-check e aquecimento
+- **Evolution API** — motor de WhatsApp
+- **Stripe / Mercado Pago / PIXGO** — pagamentos
+
+## Arquitetura de processos
+
+O deploy roda vários processos a partir da **mesma imagem** (ver `docker-compose.yml`):
+
+| Serviço            | Comando                   | Função                                        |
+|--------------------|---------------------------|-----------------------------------------------|
+| `gestor-app`       | `node server.js`          | App Next.js (UI + API routes)                 |
+| `gestor-worker`    | `npm run worker:start`    | Workers BullMQ (mensagens, webhooks, IA, etc.)|
+| `gestor-scheduler` | `npm run scheduler:start` | Cron interno (`node-cron`): varreduras e automações |
+| `redis-queue`      | —                         | Redis das filas                               |
+| `evolution-api`    | —                         | WhatsApp (Evolution) + Postgres próprio       |
+
+O **Bull Board** (painel das filas) sobe dentro do worker em `:3001` e é exposto via
+rewrite `/admin/queues` (protegido por Basic Auth + guard de admin no middleware).
+
+## Desenvolvimento local
+
+Pré-requisitos: Node 22+, um Redis local (ou aponte para o do servidor) e as variáveis
+de ambiente em `.env.local`.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # app em http://localhost:3000
+npm run worker:start # opcional: workers de fila
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variáveis de ambiente
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Definidas em `.env.local` (dev) e injetadas em runtime pelo Portainer/docker-compose (prod).
+Principais:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variável | Descrição |
+|----------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente Supabase (público) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave `sb_secret_...` (server-only, ignora RLS) |
+| `CRON_SECRET` | Autoriza as rotas de cron (`Authorization: Bearer` ou `?key=`) |
+| `ENCRYPTION_KEY` | AES-256-GCM p/ credenciais no banco (mín. 32 chars, **estável**) |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe |
+| `PIXGO_API_KEY` / `PIXGO_WEBHOOK_SECRET` | Gateway PIX |
+| `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` | WhatsApp |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis das filas |
+| `ADMIN_EMAIL` | E-mail do Master Admin (define o acesso `/admin`) |
+| `BULL_BOARD_PASSWORD` | Basic Auth do painel de filas |
 
-## Learn More
+> ⚠️ Campos de autorização (`has_active_subscription`, `payment_status`) vivem em
+> `app_metadata` (gravado só pelo servidor), **nunca** em `user_metadata` (editável pelo usuário).
 
-To learn more about Next.js, take a look at the following resources:
+## Build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+O type-check é **obrigatório** no build (`next.config.ts` → `typescript.ignoreBuildErrors: false`).
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Push em `main` → **GitHub Actions** (`.github/workflows/docker-publish.yml`) builda a imagem
+e publica no GHCR. No servidor (home lab), o **Portainer** puxa a imagem nova e recria a stack.
+Variáveis privadas são injetadas pelo Portainer em runtime (não vão na imagem).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Após atualizar segredos, recrie os containers (não basta reiniciar):
+
+```bash
+docker compose up -d --force-recreate gestor-app gestor-worker gestor-scheduler
+```
+
+## Segurança
+
+Ver [`SEGURANCA_ACOES.md`](./SEGURANCA_ACOES.md) para o histórico de auditoria, o modelo de
+RLS (isolamento por `organization_id`) e as pendências operacionais.

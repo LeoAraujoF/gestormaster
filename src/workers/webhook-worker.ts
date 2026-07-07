@@ -78,7 +78,7 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                });
                logger.info(`🤖 Typebot plugado automaticamente na instância ${instanceName}`);
              } catch (e) {
-               logger.error(`Falha ao plugar Typebot na instância ${instanceName}`, e);
+               logger.error({ err: e }, `Falha ao plugar Typebot na instância ${instanceName}`);
              }
            }
          }
@@ -235,7 +235,7 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
                 .limit(1);
 
               if (clientErr) {
-                logger.error(`[Job ${job.id}] Erro ao buscar cliente:`, clientErr);
+                logger.error({ err: clientErr }, `[Job ${job.id}] Erro ao buscar cliente`);
               }
 
               if (clients && clients.length > 0) {

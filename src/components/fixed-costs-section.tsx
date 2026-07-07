@@ -115,17 +115,17 @@ export function FixedCostsSection({ onTotalChange }: FixedCostsSectionProps) {
     .reduce((sum, c) => sum + Number(c.amount), 0)
 
   return (
-    <Card className="glass-card">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-danger-bg text-danger">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
               <CardTitle className="text-base">Custos Fixos Mensais</CardTitle>
               <CardDescription className="text-xs">
-                Total: <span className="text-rose-500 font-semibold">{formatCurrency(activeTotal)}</span>/mês
+                Total: <span className="text-danger font-semibold">{formatCurrency(activeTotal)}</span>/mês
               </CardDescription>
             </div>
           </div>
@@ -186,13 +186,13 @@ export function FixedCostsSection({ onTotalChange }: FixedCostsSectionProps) {
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={cn(
                     "text-sm font-semibold",
-                    cost.active ? "text-rose-500" : "text-muted-foreground"
+                    cost.active ? "text-danger" : "text-muted-foreground"
                   )}>
                     {formatCurrency(cost.amount)}
                   </span>
                   <button
                     onClick={() => deleteCost(cost.id)}
-                    className="flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-danger hover:bg-danger-bg transition-colors"
                     title="Remover"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

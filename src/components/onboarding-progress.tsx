@@ -130,15 +130,12 @@ export function OnboardingProgress() {
 
   return (
     <Dialog open={true} onOpenChange={() => {}}>
-      <DialogContent 
-        className="sm:max-w-[700px] p-0 overflow-hidden border-border/50 bg-background shadow-2xl" 
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        hideCloseButton
+      <DialogContent
+        className="sm:max-w-[700px] p-0 overflow-hidden border-border/50 bg-background shadow-2xl"
+        showCloseButton={false}
       >
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-background p-6 md:p-8">
+        <div className="relative overflow-hidden p-6 md:p-8">
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
           
           <DialogHeader className="relative mb-6">
             <div className="flex items-center gap-4 mb-2">
@@ -162,7 +159,7 @@ export function OnboardingProgress() {
           {/* Progress bar */}
           <div className="relative h-2.5 bg-muted/50 rounded-full mb-8 overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-700 ease-out"
+              className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-700 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

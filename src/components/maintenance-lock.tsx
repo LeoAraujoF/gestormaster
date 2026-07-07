@@ -6,8 +6,7 @@ export function MaintenanceLock({ title = "Recurso Indisponível" }: { title?: s
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in zoom-in duration-500">
       <div className="relative mb-8">
-        <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full w-32 h-32 -z-10 animate-pulse" />
-        <div className="w-24 h-24 bg-card border-4 border-red-500/20 rounded-full flex items-center justify-center shadow-2xl shadow-red-500/10 relative">
+        <div className="w-24 h-24 bg-card border-4 border-red-500/20 rounded-full flex items-center justify-center shadow-2xl relative">
           <Lock className="w-10 h-10 text-red-500" />
           <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-background rounded-full flex items-center justify-center border border-border">
             <Construction className="w-5 h-5 text-amber-500" />

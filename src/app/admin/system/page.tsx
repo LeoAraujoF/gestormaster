@@ -51,7 +51,7 @@ export default function SystemPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Saúde do Sistema & Performance</h2>
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Saúde do Sistema & Performance</h2>
           <p className="text-muted-foreground mt-1">Monitoramento de infraestrutura e limites de segurança (Throttling).</p>
         </div>
         <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export default function SystemPage() {
                   <span className={healthData?.database.status === 'online' ? 'text-emerald-500' : 'text-red-500'}>
                     {healthData?.database.status === 'online' ? 'Online' : 'Offline'}
                   </span>
-                  <div className={`w-2 h-2 rounded-full ${healthData?.database.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                  <div className={`w-2 h-2 rounded-full ${healthData?.database.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Latência: {healthData?.database.latency}ms
@@ -103,7 +103,7 @@ export default function SystemPage() {
                   <span className={healthData?.redis.status === 'online' ? 'text-emerald-500' : 'text-red-500'}>
                     {healthData?.redis.status === 'online' ? 'Online' : 'Offline'}
                   </span>
-                  <div className={`w-2 h-2 rounded-full ${healthData?.redis.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                  <div className={`w-2 h-2 rounded-full ${healthData?.redis.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Latência: {healthData?.redis.latency}ms
@@ -128,7 +128,7 @@ export default function SystemPage() {
                   <span className={healthData?.evolution.status === 'online' ? 'text-emerald-500' : 'text-red-500'}>
                     {healthData?.evolution.status === 'online' ? 'Online' : 'Offline'}
                   </span>
-                  <div className={`w-2 h-2 rounded-full ${healthData?.evolution.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                  <div className={`w-2 h-2 rounded-full ${healthData?.evolution.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Latência: {healthData?.evolution.latency}ms
@@ -162,9 +162,9 @@ export default function SystemPage() {
       </div>
 
       {/* Tenant Throttling Section */}
-      <Card className="border-rose-500/20 shadow-sm">
-        <CardHeader className="bg-rose-500/5 border-b border-rose-500/10">
-          <CardTitle className="flex items-center gap-2 text-rose-500">
+      <Card className="border-danger-border shadow-sm">
+        <CardHeader className="bg-danger-bg border-b border-danger-border">
+          <CardTitle className="flex items-center gap-2 text-danger">
             <ShieldAlert className="w-5 h-5" />
             Isolamento de Tenants e Throttling (WAF)
           </CardTitle>
@@ -187,10 +187,10 @@ export default function SystemPage() {
                 {maxRps[0]} Req/s
               </Badge>
             </div>
-            <Slider 
-              value={maxRps} 
-              onValueChange={setMaxRps} 
-              max={500} 
+            <Slider
+              value={maxRps}
+              onValueChange={(v) => setMaxRps(v as number[])}
+              max={500}
               min={10} 
               step={10} 
               className="py-4 cursor-pointer"
@@ -201,19 +201,19 @@ export default function SystemPage() {
             <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <Label className="text-base font-semibold flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-sky-500" />
+                  <HardDrive className="w-4 h-4 text-interactive" />
                   Disparos Simultâneos de Webhooks (Global)
                 </Label>
                 <p className="text-sm text-muted-foreground">O número máximo de workers de webhook que podem rodar paralelos sem enfileirar.</p>
               </div>
-              <Badge variant="outline" className="text-lg px-3 py-1 bg-sky-500/10 text-sky-500 border-sky-500/20">
+              <Badge variant="outline" className="text-lg px-3 py-1 bg-secondary text-interactive border-border">
                 {maxConnections[0]} Workers
               </Badge>
             </div>
-            <Slider 
-              value={maxConnections} 
-              onValueChange={setMaxConnections} 
-              max={5000} 
+            <Slider
+              value={maxConnections}
+              onValueChange={(v) => setMaxConnections(v as number[])}
+              max={5000}
               min={100} 
               step={100} 
               className="py-4 cursor-pointer"
@@ -221,7 +221,7 @@ export default function SystemPage() {
           </div>
 
           <div className="pt-4 flex justify-end">
-            <Button onClick={handleSaveThrottling} className="bg-rose-500 hover:bg-rose-600">
+            <Button onClick={handleSaveThrottling} className="bg-destructive hover:bg-destructive/90">
               <ShieldAlert className="w-4 h-4 mr-2" />
               Aplicar Políticas de Segurança
             </Button>

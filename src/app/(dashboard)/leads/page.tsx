@@ -92,6 +92,7 @@ interface Lead {
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
+  const [activeTab, setActiveTab] = useState("base")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterSource, setFilterSource] = useState("all")
@@ -1065,13 +1066,16 @@ export default function LeadsPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="base" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="base" disabled={isSending}>Base de Contatos</TabsTrigger>
           <TabsTrigger value="disparo">Campanha</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="base" className="space-y-4">
+        <TabsContent value="base" className="space-y-4 mt-0">
+  <div className="flex flex-col xl:flex-row gap-6 items-start">
+    <div className="flex-[1.5] min-w-0 w-full space-y-4">
+
           <Card className="glass-card">
             <CardHeader className="pb-4">
               <div className="flex flex-col gap-4">
@@ -1231,139 +1235,53 @@ export default function LeadsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedLeads.map((lead) => (
-                          <TableRow key={lead.id} className={selectedLeads.has(lead.id) ? "bg-muted/50" : ""}>
-                            <TableCell>
-                              <Checkbox 
-                                checked={selectedLeads.has(lead.id)}
-                                onCheckedChange={() => toggleLeadSelection(lead.id)}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {lead.name}
-                              {lead.custom_fields?.tags && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {lead.custom_fields.tags.split(',').map((t, idx) => (
-                                    <Badge key={idx} variant="secondary" className="text-[10px] px-1 py-0 h-4 bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">{t.trim()}</Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div 
-                                className="text-sm cursor-pointer hover:text-foreground transition-colors"
-                                onClick={() => { if(lead.phone) { navigator.clipboard.writeText(lead.phone); toast.success("Telefone copiado!"); } }}
-                                title="Clique para copiar"
-                              >
-                                {lead.phone || 'Sem telefone'}
-                              </div>
-                              {lead.email && (
-                                <div 
-                                  className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                                  onClick={() => { navigator.clipboard.writeText(lead.email!); toast.success("E-mail copiado!"); }}
-                                  title="Clique para copiar"
-                                >
-                                  {lead.email}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1 items-start">
-                                <Badge className={`border-0 ${
-                                  lead.status === 'concluido' 
-                                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
-                                    : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
-                                }`}>
-                                  {lead.status === 'concluido' ? 'Concluído' : 'Novo'}
-                                </Badge>
-                                <span className="text-[10px] text-muted-foreground uppercase">{lead.source}</span>
-                                {lead.custom_fields && Object.keys(lead.custom_fields).length > 0 && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger render={
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-500/10 text-sky-600 dark:text-sky-400 cursor-help" />
-                                      }>
-                                          <Columns3 className="w-3 h-3" />
-                                          +{Object.keys(lead.custom_fields).length} campos
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom" className="max-w-xs">
-                                        <div className="space-y-1 text-xs">
-                                          {Object.entries(lead.custom_fields).map(([key, val]) => (
-                                            <div key={key}><span className="font-semibold capitalize">{key}:</span> {val}</div>
-                                          ))}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  title={lead.status === 'concluido' ? "Marcar como Novo" : "Marcar como Concluído"} 
-                                  onClick={() => toggleLeadStatus(lead)}
-                                  disabled={isSending}
-                                >
-                                  <CheckCircle2 className={`w-4.5 h-4.5 ${lead.status === 'concluido' ? 'text-emerald-500 fill-emerald-500/10' : 'text-muted-foreground/40 hover:text-emerald-500/80'}`} />
-                                </Button>
-                                {lead.phone && (
-                                  <Button variant="ghost" size="icon" title="Chamar no WhatsApp" onClick={() => window.open(getWhatsAppLink(lead.phone), '_blank')}>
-                                    <Phone className="w-4 h-4 text-emerald-500" />
-                                  </Button>
-                                )}
-                                  <AlertDialog>
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9" title="Mais opções">
-                                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <div className="px-2 py-1.5 text-sm font-semibold text-foreground">Ações</div>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => {
-                                          setEditingLead(lead)
-                                          setIsEditDialogOpen(true)
-                                        }}>
-                                          <Edit className="w-4 h-4 mr-2 text-muted-foreground" />
-                                          Editar Lead
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={convertToClient}>
-                                          <UserPlus className="w-4 h-4 mr-2 text-primary" />
-                                          Converter em Cliente
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <AlertDialogTrigger render={
-                                          <DropdownMenuItem 
-                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                            onSelect={(e) => e.preventDefault()}
-                                          >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Excluir
-                                          </DropdownMenuItem>
-                                        } />
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Isso apagará permanentemente o lead {lead.name}.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => deleteLead(lead.id)} className="bg-destructive hover:bg-destructive/90">Apagar</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
+                  {paginatedLeads.map((lead) => (
+                    <TableRow key={lead.id} className={selectedLeads.has(lead.id) ? "bg-muted/50" : ""}>
+                      <TableCell className="pl-4">
+                        <Checkbox 
+                          checked={selectedLeads.has(lead.id)}
+                          onCheckedChange={() => toggleLeadSelection(lead.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-semibold text-foreground leading-tight">{lead.name}</span>
+                          <button
+                            onClick={() => { if(lead.phone) { navigator.clipboard.writeText(lead.phone); toast.success("Telefone copiado!"); } }}
+                            className="num block text-[11px] text-muted-foreground hover:text-foreground text-left mt-0.5"
+                            title="Clique para copiar"
+                          >
+                            {lead.phone ? phoneMask(lead.phone) : 'sem telefone'}
+                          </button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-[13px] text-muted-foreground hidden sm:table-cell">{lead.source || '—'}</TableCell>
+                      <TableCell className="num hidden whitespace-nowrap text-[12px] text-muted-foreground md:table-cell">
+                        {(() => {
+                          if (!lead.created_at) return '—'
+                          const diff = Date.now() - new Date(lead.created_at).getTime()
+                          const h = Math.floor(diff / 3600000)
+                          const days = Math.floor(diff / 86400000)
+                          return h < 1 ? 'agora' : h < 24 ? `há ${h} h` : days === 1 ? 'ontem' : `há ${days} dias`
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        <span 
+                          onClick={() => toggleLeadStatus(lead)}
+                          className={`cursor-pointer inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                            lead.status === 'concluido' 
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25' 
+                              : lead.status === 'teste' 
+                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25'
+                                : 'bg-orange-500/15 text-orange-600 dark:text-orange-400 hover:bg-orange-500/25'
+                          }`}
+                        >
+                          {lead.status === 'concluido' ? 'Convertido' : lead.status === 'teste' ? 'Teste' : 'Contato'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
                     </Table>
                   </div>
 
@@ -1415,7 +1333,83 @@ export default function LeadsPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        
+    </div>
+    
+    {/* COLUNA DIREITA: Campanha em Andamento */}
+    <div className="flex-1 min-w-0 w-full space-y-4 sticky top-6">
+      <Card className="border-border">
+        <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-[15px]">Campanha em andamento</CardTitle>
+              <CardDescription className="text-xs mt-1">
+                {selectedCampaignId && selectedCampaignId !== "new" ? campaignName : "Nova campanha"}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          {isSending ? (
+            <>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
+                  <span>Enviadas</span>
+                  <span className="num font-semibold text-foreground">{logs.filter(l => l.type==="success").length} / {selectedLeads.size || filteredLeads.length}</span>
+                </div>
+                <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${Math.min((logs.filter(l => l.type==="success").length / (selectedLeads.size || filteredLeads.length || 1)) * 100, 100)}%` }}></div>
+                </div>
+              </div>
+              
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Entregues</span>
+                  <span className="text-emerald-500 font-medium num">{logs.filter(l => l.type==="success").length}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Respostas</span>
+                  <span className="text-blue-500 font-medium num">0</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Falhas</span>
+                  <span className="text-red-500 font-medium num">{logs.filter(l => l.type==="error").length}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Intervalo</span>
+                  <span className="num font-medium">{minDelay}-{maxDelay} s</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4 border-t border-border/50">
+                 <Button variant="outline" className="flex-1 text-[11px] h-8" onClick={() => {}}>Pausar</Button>
+                 <Button variant="outline" className="flex-1 text-[11px] h-8 text-danger hover:text-danger hover:bg-danger/10" onClick={() => { if(abortControllerRef.current) abortControllerRef.current.abort(); setIsSending(false) }}>Cancelar</Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-muted-foreground">
+                <Play className="w-5 h-5 ml-1" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Nenhuma campanha ativa</p>
+                <p className="text-xs text-muted-foreground mt-1">Configure o disparo em massa para os seus leads na aba Campanha.</p>
+              </div>
+              <div className="flex gap-2 w-full mt-2 px-4">
+                  <Button onClick={() => setActiveTab("disparo")} variant="outline" className="flex-1 text-xs">
+                    Configurar
+                  </Button>
+                  <Button onClick={startMassMessage} className="flex-1 text-xs bg-primary text-primary-foreground" disabled={filteredLeads.length === 0 || instances.length === 0}>
+                    <Play className="w-3.5 h-3.5 mr-1" /> Iniciar
+                  </Button>
+                </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+</TabsContent>
 
         <TabsContent value="disparo">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1424,7 +1418,7 @@ export default function LeadsPage() {
             <div className="lg:col-span-2 space-y-6">
               
               {/* Audience Summary Card */}
-              <Card className="glass-card bg-primary/5 border-primary/20 shadow-sm animate-in fade-in zoom-in-95">
+              <Card className="bg-muted/20 border-border/40 shadow-none animate-in fade-in zoom-in-95">
                 <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-primary/10 rounded-lg text-primary">
@@ -1458,7 +1452,7 @@ export default function LeadsPage() {
                 <CardContent className="space-y-6">
                   
                   {/* Gerenciador de Campanhas Salvas */}
-                  <div className="p-4 bg-muted/30 border border-border/50 rounded-xl space-y-4 shadow-sm">
+                  <div className="p-4 bg-transparent space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                       <div className="space-y-1">
                         <Label className="text-sm font-semibold">Campanha Ativa / Modelo</Label>

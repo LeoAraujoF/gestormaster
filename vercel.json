@@ -1,11 +1,11 @@
 {
   "crons": [
     {
-      "path": "/api/cron/generate-alerts?key=gestor_cron_secret_2026",
+      "path": "/api/cron/generate-alerts",
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/process-queue?key=gestor_cron_secret_2026",
+      "path": "/api/cron/process-queue",
       "schedule": "*/10 * * * *"
     }
   ]

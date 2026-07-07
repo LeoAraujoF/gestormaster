@@ -2,29 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, Calendar as CalendarIcon, User, MonitorSmartphone, Receipt, Box, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { phoneMask } from "@/lib/utils"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { logAuditClient } from "@/lib/audit-client"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const clientSchema = z.object({
   name: z.string().min(2, "Nome é obrigatório"),
-  username: z.string().optional(),
   phone: z.string().optional(),
   plan_value: z.number().min(0, "O valor não pode ser negativo"),
   screens: z.number().min(1, "Mínimo de 1 tela").max(10, "Máximo de 10 telas"),
@@ -34,6 +24,7 @@ const clientSchema = z.object({
   observation: z.string().optional(),
   description: z.string().optional(),
   selected_services: z.array(z.string()).min(1, "É obrigatório selecionar pelo menos um serviço"),
+  service_access: z.any().optional(),
 })
 
 type ClientForm = z.infer<typeof clientSchema>
@@ -48,13 +39,13 @@ interface ClientFormDialogProps {
 
 export function ClientFormDialog({ open, onOpenChange, client, servicesList, onSuccess }: ClientFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({})
   const supabase = createClient()
   
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "",
-      username: "",
       phone: "",
       plan_value: 0,
       screens: 1,
@@ -64,6 +55,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       observation: "",
       description: "",
       selected_services: [],
+      service_access: {},
     }
   })
 
@@ -72,9 +64,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   useEffect(() => {
     if (open) {
       if (client) {
+        const accessFromClient: Record<string, { username?: string; password?: string }> = {}
+        ;(client.client_services || []).forEach((cs: any) => {
+          accessFromClient[cs.service_id] = { username: cs.username || "", password: cs.password || "" }
+        })
+
         reset({
           name: client.name || "",
-          username: client.username || "",
           phone: client.phone || "",
           plan_value: client.plan_value || 0,
           screens: client.screens || 1,
@@ -84,11 +80,11 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           observation: client.observation || "",
           description: client.description || "",
           selected_services: client.client_services ? client.client_services.map((cs: any) => cs.service_id) : [],
+          service_access: accessFromClient,
         })
       } else {
         reset({
           name: "",
-          username: "",
           phone: "",
           plan_value: 0,
           screens: 1,
@@ -98,8 +94,10 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           observation: "",
           description: "",
           selected_services: [],
+          service_access: {},
         })
       }
+      setRevealed({})
     }
   }, [open, client, reset])
 
@@ -110,6 +108,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       : [...current, serviceId]
     setValue("selected_services", updated, { shouldValidate: true })
   }
+
+  const toggleReveal = (id: string) => setRevealed((r) => ({ ...r, [id]: !r[id] }))
 
   const onSubmit = async (data: ClientForm) => {
     setIsSubmitting(true)
@@ -124,7 +124,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .from('clients')
           .update({
             name: data.name,
-            username: data.username,
             phone: data.phone?.replace(/\D/g, ''),
             plan_value: data.plan_value,
             screens: data.screens,
@@ -163,7 +162,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .insert({
             user_id: user.id,
             name: data.name,
-            username: data.username,
             phone: data.phone?.replace(/\D/g, ''),
             plan_value: data.plan_value,
             screens: data.screens,
@@ -200,9 +198,12 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       }
 
       if (clientId && data.selected_services.length > 0) {
+        const access = data.service_access || {}
         const servicesToInsert = data.selected_services.map(serviceId => ({
           client_id: clientId,
-          service_id: serviceId
+          service_id: serviceId,
+          username: (access as Record<string, any>)[serviceId]?.username?.trim() || null,
+          password: (access as Record<string, any>)[serviceId]?.password || null,
         }))
         
         const { error: serviceError } = await supabase
@@ -223,7 +224,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
         if (rules && rules.length > 0) {
           for (const rule of rules) {
-            // Fire and forget
             fetch(window.location.origin + '/api/evolution/send-instant', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -241,7 +241,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       }
 
       toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!")
-      logAuditClient(client ? 'client.update' : 'client.create', 'clients', { client_name: data.name })
+      logAuditClient({ action: client ? 'client.update' : 'client.create', resource: 'clients', details: { client_name: data.name } })
       onOpenChange(false)
       onSuccess?.()
     } catch (error: any) {
@@ -251,248 +251,263 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
     }
   }
 
+  const statuses = [
+    { value: 'active', label: 'Ativo', color: '#2e7d54' },
+    { value: 'pending', label: 'Pendente', color: '#c98a1e' },
+    { value: 'vencido', label: 'Vencido', color: '#b23c3c' },
+    { value: 'inactive', label: 'Inativo', color: '#9b9a94' },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-4xl w-[95vw] md:w-[80vw] lg:w-[60vw] max-h-[90vh] overflow-y-auto border-primary/20 p-0">
-        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
-          <DialogHeader className="relative">
-            <DialogTitle className="text-primary flex items-center gap-3 text-2xl">
-               <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                 <User className="w-5 h-5 text-primary" />
-               </div>
-               {client ? 'Ficha do Cliente' : 'Novo Cliente'}
-            </DialogTitle>
-            <DialogDescription className="pt-1">
-              Preencha os dados abaixo para {client ? 'atualizar o' : 'registrar um novo'} assinante no sistema.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-        
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8">
-          
-          <div className="space-y-6">
-            {/* Box: Dados do Cliente */}
-            <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden shadow-sm">
-              <div className="bg-muted/40 px-4 py-3 border-b border-border/50 flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Dados Pessoais</h3>
-              </div>
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo <span className="text-destructive">*</span></Label>
-                  <Input id="name" {...register("name")} className="bg-background/80 focus-visible:ring-primary/50" placeholder="Ex: João da Silva" />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+      <DialogContent
+          showCloseButton={false}
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[640px] max-w-[95vw] sm:max-w-none data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
+        >
+          <div className="modal-2a max-h-[90vh] flex flex-col">
+            
+            {/* HEADER */}
+            <div className="modal-header-2a flex-shrink-0">
+              <span className="w-[34px] h-[34px] rounded-[9px] bg-secondary flex items-center justify-center text-[15px]">
+                👤
+              </span>
+              <div className="flex-1">
+                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
+                  {client ? 'Editar cliente' : 'Novo cliente'}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">WhatsApp</Label>
-                  <Input 
-                    id="phone" 
-                    placeholder="(00) 00000-0000"
+                <div className="text-muted-foreground text-[11px] mt-[1px]">
+                  {client ? 'Atualize os dados e os acessos do assinante.' : 'Cadastre o assinante e os acessos de cada serviço.'}
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* BODY */}
+            <form id="client-form" onSubmit={handleSubmit(onSubmit)} className="p-[20px_22px] overflow-y-auto flex-1">
+              
+              {/* DADOS PESSOAIS */}
+              <div className="microlabel mb-[10px]">DADOS PESSOAIS</div>
+              <div className="flex flex-col sm:flex-row gap-[12px] mb-[8px]">
+                <div className="flex-[1.4]">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    Nome completo <span className="text-danger">*</span>
+                  </div>
+                  <input 
+                    {...register("name")}
+                    placeholder="Ex: João da Silva" 
+                    className="input-2a"
+                  />
+                  {errors.name && <p className="text-[10px] text-danger mt-1">{errors.name.message}</p>}
+                </div>
+                <div className="flex-1">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    WhatsApp
+                  </div>
+                  <input 
                     {...register("phone")}
                     onChange={(e) => e.target.value = phoneMask(e.target.value)}
-                    className="bg-background/80 focus-visible:ring-primary/50" 
+                    placeholder="(11) 99999-9999" 
+                    className="input-2a"
                   />
                 </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="username">Login / Usuário (Opcional)</Label>
-                  <Input id="username" placeholder="Ex: joao_iptv" {...register("username")} className="bg-background/80 focus-visible:ring-primary/50" />
-                </div>
               </div>
-            </div>
 
-            {/* Box: Serviços (Obrigatório) */}
-            <div className={cn(
-              "rounded-xl border overflow-hidden shadow-sm transition-colors",
-              errors.selected_services ? "border-destructive/50 bg-destructive/5" : "border-border/50 bg-muted/20"
-            )}>
-              <div className={cn(
-                "px-4 py-3 border-b border-border/50 flex items-center gap-2",
-                errors.selected_services ? "bg-destructive/10 text-destructive" : "bg-muted/40"
-              )}>
-                <Box className={cn("w-4 h-4", errors.selected_services ? "text-destructive" : "text-primary")} />
-                <h3 className="text-sm font-semibold uppercase tracking-wider">
-                  Serviços Adquiridos <span className="text-destructive">*</span>
-                </h3>
+              {/* SERVIÇOS E ACESSOS */}
+              <div className="flex items-center gap-[8px] mt-[20px] mb-[10px]">
+                <span className="microlabel m-0">SERVIÇOS E ACESSOS <span className="text-danger">*</span></span>
+                <span className="font-mono text-[9.5px] font-medium text-muted-foreground">usuário e senha são opcionais</span>
               </div>
-              <div className="p-4 space-y-3">
+              
+              <div className="space-y-[8px]">
                 {servicesList.length === 0 ? (
-                   <p className="text-sm text-muted-foreground text-center py-4">Nenhum serviço cadastrado no sistema ainda.</p>
+                  <p className="text-[12px] text-muted-foreground py-2">Nenhum serviço cadastrado no sistema ainda.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {servicesList.map(service => {
-                      const isSelected = selectedServices.includes(service.id)
-                      return (
+                  servicesList.map((service) => {
+                    const isSelected = selectedServices.includes(service.id)
+                    const show = !!revealed[service.id]
+                    return (
+                      <div
+                        key={service.id}
+                        className={cn(
+                          "rounded-[8px] border overflow-hidden transition-colors",
+                          isSelected ? "border-interactive/40 bg-interactive-bg" : "border-border bg-card"
+                        )}
+                      >
+                        {/* linha de seleção */}
                         <div
-                          key={service.id}
                           onClick={() => toggleService(service.id)}
-                          className={cn(
-                            "relative flex items-center justify-between p-3 rounded-xl cursor-pointer border-2 transition-all duration-200",
-                            isSelected 
-                              ? "border-primary bg-primary/10 text-primary shadow-md shadow-primary/10" 
-                              : "border-border/50 bg-background/80 hover:border-primary/40 text-foreground"
-                          )}
+                          className="flex items-center gap-[10px] px-[12px] py-[12px] cursor-pointer"
                         >
-                          <span className="font-medium text-sm truncate pr-6" title={service.name}>{service.name}</span>
-                          {isSelected && (
-                            <CheckCircle2 className="w-4 h-4 absolute right-3 text-primary animate-in zoom-in duration-200" />
-                          )}
+                          <span
+                            className={cn(
+                              "w-[18px] h-[18px] rounded-[5px] flex items-center justify-center border",
+                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-card"
+                            )}
+                          >
+                            {isSelected && <CheckCircle2 className="w-[12px] h-[12px]" strokeWidth={3} />}
+                          </span>
+                          <span className="flex-1 text-[13px] font-medium text-foreground">{service.name}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {isSelected ? "incluído" : "toque para adicionar"}
+                          </span>
                         </div>
-                      )
-                    })}
-                  </div>
+
+                        {/* credenciais opcionais */}
+                        {isSelected && (
+                          <div className="px-[12px] pb-[12px] grid grid-cols-2 gap-[8px] animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="space-y-[4px]">
+                              <label className="text-[10.5px] text-muted-foreground font-medium">Usuário</label>
+                              <input
+                                placeholder="login do painel"
+                                className="input-2a font-mono text-[11px] bg-muted"
+                                {...register(`service_access.${service.id}.username` as const)}
+                              />
+                            </div>
+                            <div className="space-y-[4px]">
+                              <label className="text-[10.5px] text-muted-foreground font-medium">Senha</label>
+                              <div className="relative">
+                                <input
+                                  type={show ? "text" : "password"}
+                                  placeholder="senha de acesso"
+                                  className="input-2a font-mono text-[11px] bg-muted pr-[28px]"
+                                  {...register(`service_access.${service.id}.password` as const)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => toggleReveal(service.id)}
+                                  className="absolute right-[8px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary-foreground"
+                                  tabIndex={-1}
+                                >
+                                  {show ? <EyeOff className="w-[14px] h-[14px]" /> : <Eye className="w-[14px] h-[14px]" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
                 )}
                 {errors.selected_services && (
-                  <p className="text-xs font-semibold text-destructive flex items-center gap-1 mt-2">
-                    {errors.selected_services.message}
-                  </p>
+                  <p className="text-[10px] text-danger">{errors.selected_services.message}</p>
                 )}
               </div>
-            </div>
 
-            {/* Box: Financeiro & Assinatura */}
-            <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden shadow-sm">
-              <div className="bg-muted/40 px-4 py-3 border-b border-border/50 flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Cobrança e Plano</h3>
-              </div>
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                
-                <div className="space-y-2">
-                  <Label htmlFor="plan_value">Valor Cobrado <span className="text-destructive">*</span></Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input id="plan_value" type="number" step="0.01" {...register("plan_value", { valueAsNumber: true })} className="pl-9 bg-background/80 font-medium" />
+              {/* COBRANÇA E PLANO */}
+              <div className="microlabel mt-[20px] mb-[10px]">COBRANÇA E PLANO</div>
+              <div className="flex flex-col sm:flex-row gap-[12px] mb-[12px]">
+                <div className="flex-1">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    Valor cobrado <span className="text-danger">*</span>
                   </div>
-                  {errors.plan_value && <p className="text-xs text-destructive">{errors.plan_value.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="screens">Telas/Conexões <span className="text-destructive">*</span></Label>
                   <div className="relative">
-                    <MonitorSmartphone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="screens" type="number" min="1" max="10" {...register("screens", { valueAsNumber: true })} className="pl-9 bg-background/80" />
+                    <span className="absolute left-[11px] top-1/2 -translate-y-1/2 text-muted-foreground text-[12px] font-mono">R$</span>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      {...register("plan_value", { valueAsNumber: true })} 
+                      className="input-2a pl-[32px] font-mono text-[12px]"
+                    />
                   </div>
-                  {errors.screens && <p className="text-xs text-destructive">{errors.screens.message}</p>}
+                  {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}
                 </div>
 
-                <div className="space-y-2 lg:col-span-2">
-                  <Label htmlFor="due_date">Data de Vencimento <span className="text-destructive">*</span></Label>
-                  <Controller
-                    control={control}
-                    name="due_date"
-                    render={({ field }) => (
-                      <Popover>
-                        <PopoverTrigger render={
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal bg-background/80 h-10 border-border/50",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          />
-                        }>
-                          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                          <span className="truncate">
-                            {field.value ? format(new Date(field.value + "T00:00:00"), "PPP", { locale: ptBR }) : <span>Selecione a data</span>}
-                          </span>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
-                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
-                            onMonthChange={(newMonth) => {
-                              if (field.value) {
-                                const currentDate = new Date(field.value + "T00:00:00");
-                                const currentDay = currentDate.getDate();
-                                
-                                // Cria nova data no mês selecionado, mantendo o dia original
-                                // Se o dia original for 31 e o novo mês tiver 30 dias, o JS ajusta sozinho
-                                const nextDate = new Date(newMonth.getFullYear(), newMonth.getMonth(), currentDay);
-                                field.onChange(format(nextDate, "yyyy-MM-dd"));
-                              }
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                <div className="flex-1">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    Telas <span className="text-danger">*</span>
+                  </div>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="10" 
+                    {...register("screens", { valueAsNumber: true })} 
+                    className="input-2a font-mono text-[12px]"
                   />
-                  {errors.due_date && <p className="text-xs text-destructive">{errors.due_date.message}</p>}
+                  {errors.screens && <p className="text-[10px] text-danger mt-1">{errors.screens.message}</p>}
                 </div>
 
-                <div className="space-y-2 lg:col-span-2">
-                  <Label htmlFor="due_time">Hora do Vencimento</Label>
-                  <Input 
-                    id="due_time" 
-                    type="time" 
-                    {...register("due_time")} 
-                    className="bg-background/80 h-10 border-border/50" 
+                <div className="flex-[1.2]">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    Vencimento <span className="text-danger">*</span>
+                  </div>
+                  <input 
+                    type="date" 
+                    {...register("due_date")} 
+                    className="input-2a text-[12px]"
                   />
-                  {errors.due_time && <p className="text-xs text-destructive">{errors.due_time.message}</p>}
-                </div>
-
-                <div className="space-y-2 lg:col-span-4 border-t border-border/50 pt-4 mt-2">
-                  <Label>Status Inicial da Assinatura</Label>
-                  <Controller
-                    control={control}
-                    name="status"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="bg-background/80 h-10">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">🟢 Ativo</SelectItem>
-                          <SelectItem value="pending">🟡 Pendente</SelectItem>
-                          <SelectItem value="vencido">🔴 Vencido</SelectItem>
-                          <SelectItem value="inactive">⚫ Inativo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+                  {errors.due_date && <p className="text-[10px] text-danger mt-1">{errors.due_date.message}</p>}
                 </div>
               </div>
+
+              {/* Segmented Control de Status */}
+              <div className="bg-secondary rounded-[7px] p-[2px] flex">
+                <Controller
+                  control={control}
+                  name="status"
+                  render={({ field }) => (
+                    <>
+                      {statuses.map((st) => (
+                        <button
+                          key={st.value}
+                          type="button"
+                          onClick={() => field.onChange(st.value)}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-[6px] rounded-[5px] py-[6px] text-[11.5px] font-medium transition-all",
+                            field.value === st.value 
+                              ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]" 
+                              : "text-muted-foreground hover:text-secondary-foreground"
+                          )}
+                        >
+                          <span 
+                            className="w-[6px] h-[6px] rounded-full" 
+                            style={{ backgroundColor: st.color }}
+                          />
+                          {st.label}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                />
+              </div>
+
+              {/* OBSERVAÇÃO */}
+              <div className="microlabel mt-[20px] mb-[8px]">OBSERVAÇÃO</div>
+              <textarea 
+                {...register("observation")}
+                placeholder="Anotações internas sobre o cliente (opcional)…"
+                className="input-2a min-h-[64px] resize-none leading-[1.55]"
+              />
+
+            </form>
+            
+            {/* FOOTER */}
+            <div className="modal-footer-2a flex-shrink-0">
+              <button 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground hover:bg-muted"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                form="client-form"
+                disabled={isSubmitting}
+                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] hover:bg-foreground disabled:opacity-70"
+              >
+                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                {client ? 'Salvar cliente' : 'Criar cliente'}
+              </button>
             </div>
-
-            {/* Box: Anotações Extras */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-               <div className="space-y-2">
-                 <Label htmlFor="observation" className="text-muted-foreground">Notas Internas</Label>
-                 <Textarea 
-                   id="observation" 
-                   placeholder="Anotações visíveis apenas para você..."
-                   {...register("observation")} 
-                   className="resize-none bg-background/50 h-20" 
-                 />
-               </div>
-               <div className="space-y-2">
-                 <Label htmlFor="description" className="text-muted-foreground">Descrição (Visível ao Cliente)</Label>
-                 <Textarea 
-                   id="description" 
-                   placeholder="Informações extras que vão no comprovante..."
-                   {...register("description")} 
-                   className="resize-none bg-background/50 h-20" 
-                 />
-               </div>
-            </div>
-
+            
           </div>
-
-          <div className="sticky bottom-0 bg-background/80 backdrop-blur-md pt-4 pb-2 border-t border-border/50 flex justify-end gap-3 z-20">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="px-6">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="px-8 shadow-md shadow-primary/20">
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              {client ? 'Salvar Ficha' : 'Criar Cliente'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
+        </DialogContent>
     </Dialog>
   )
 }

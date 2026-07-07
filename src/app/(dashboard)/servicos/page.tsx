@@ -2,19 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Edit2, Trash2, Loader2, Briefcase, Tv, Server, Box, TrendingUp, Wallet, Flame } from "lucide-react"
+import { Plus, Edit2, Trash2, Loader2, Briefcase, Tv, Server } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import type { Service } from "@/types/database"
+import type { Service, Promotion } from "@/types/database"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { QuickAddServiceDialog } from "@/components/quick-add-dialogs"
+import { QuickAddServiceDialog, QuickAddPromoDialog } from "@/components/quick-add-dialogs"
 import { GlobalDeleteDialog } from "@/components/global-delete-dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -23,55 +19,66 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-
-
 
 export default function ServicosPage() {
   const [services, setServices] = useState<Service[]>([])
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  
   const [isLoading, setIsLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false)
+  const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false)
+  
+  const [isDeleteServiceOpen, setIsDeleteServiceOpen] = useState(false)
+  const [isDeletePromoOpen, setIsDeletePromoOpen] = useState(false)
+  
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [deletingService, setDeletingService] = useState<Service | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const [editingPromo, setEditingPromo] = useState<Promotion | null>(null)
+  const [deletingPromo, setDeletingPromo] = useState<Promotion | null>(null)
   
   const supabase = createClient()
 
-
-
-  const loadServices = async () => {
+  const loadData = async () => {
     setIsLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data, error } = await supabase
-        .from('services')
-        .select(`
-          *,
-          client_services (count)
-        `)
-        .eq('user_id', user.id)
-        .order('name')
+      const [servicesRes, promosRes] = await Promise.all([
+        supabase
+          .from('services')
+          .select(`*, client_services (count)`)
+          .eq('user_id', user.id)
+          .order('name'),
+        supabase
+          .from('promotions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+      ])
 
-      if (error) throw error
+      if (servicesRes.error) throw servicesRes.error
+      if (promosRes.error) throw promosRes.error
 
-      // Transform to include count easily
-      const formattedData = data.map((item: any) => ({
+      const formattedServices = servicesRes.data.map((item: any) => ({
         ...item,
         client_count: item.client_services[0]?.count || 0
       }))
 
-      setServices(formattedData)
+      setServices(formattedServices)
+      setPromotions(promosRes.data || [])
     } catch (error) {
-      console.error("Error loading services:", error)
-      toast.error("Não foi possível carregar os serviços.")
+      console.error("Error loading data:", error)
+      toast.error("Não foi possível carregar os dados.")
     } finally {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const getServiceIcon = (name: string) => {
     const n = name.toLowerCase()
@@ -80,175 +87,105 @@ export default function ServicosPage() {
     return <Briefcase className="w-5 h-5" />
   }
 
+  const getPromoStatus = (promo: Promotion) => {
+    if (!promo.is_active) return { label: 'Pausada', color: 'bg-muted text-muted-foreground border-muted-foreground/30' }
+    
+    const today = new Date()
+    today.setHours(0,0,0,0)
+    
+    const startDate = promo.start_date ? new Date(promo.start_date + "T00:00:00") : null
+    const endDate = promo.end_date ? new Date(promo.end_date + "T00:00:00") : null
+
+    if (endDate && endDate < today) return { label: 'Encerrada', color: 'bg-red-500/10 text-red-500 border-red-500/30', dot: 'bg-red-500' }
+    if (startDate && startDate > today) return { label: 'Agendada', color: 'bg-blue-500/10 text-blue-500 border-blue-500/30', dot: 'bg-blue-500' }
+    
+    return { label: 'Ativa', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold', dot: 'bg-emerald-500' }
+  }
+
   const totalServices = services.length
-  const totalFixedCost = services.reduce((acc, s) => acc + (s.cost * (s.client_count || 0)), 0)
-  
-  // Find top service
-  const topService = services.length > 0 
-    ? [...services].sort((a, b) => (b.client_count || 0) - (a.client_count || 0))[0] 
-    : null
 
-  useEffect(() => {
-    loadServices()
-  }, [])
-
-  const openCreateDialog = () => {
-    setEditingService(null)
-    setIsDialogOpen(true)
-  }
-
-  const openEditDialog = (service: Service) => {
-    setEditingService(service)
-    setIsDialogOpen(true)
-  }
-
-  const openDeleteDialog = (service: Service) => {
-    if ((service.client_count || 0) > 0) {
-      toast.error(`Não é possível excluir. Existem ${service.client_count} clientes usando este serviço.`)
+  const openCreateService = () => { setEditingService(null); setIsServiceDialogOpen(true) }
+  const openEditService = (s: Service) => { setEditingService(s); setIsServiceDialogOpen(true) }
+  const openDeleteService = (s: Service) => {
+    if ((s.client_count || 0) > 0) {
+      toast.error(`Não é possível excluir. Existem ${s.client_count} clientes usando este serviço.`)
       return
     }
-    setDeletingService(service)
-    setIsDeleteDialogOpen(true)
+    setDeletingService(s); setIsDeleteServiceOpen(true)
   }
 
-
-
-
+  const openCreatePromo = () => { setEditingPromo(null); setIsPromoDialogOpen(true) }
+  const openEditPromo = (p: Promotion) => { setEditingPromo(p); setIsPromoDialogOpen(true) }
+  const openDeletePromo = (p: Promotion) => { setDeletingPromo(p); setIsDeletePromoOpen(true) }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Serviços</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Gerencie seus produtos e o impacto deles no seu caixa.</p>
-        </div>
-        <Button onClick={openCreateDialog} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Serviço
-        </Button>
-      </div>
-
-      <Tabs defaultValue="servicos" className="w-full">
-        <TabsList className="mb-6 bg-muted/50 p-1">
-          <TabsTrigger value="servicos" className="data-[state=active]:bg-background">Visão Geral (Serviços)</TabsTrigger>
-          <TabsTrigger value="planos" className="data-[state=active]:bg-background">Planos de Renovação</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="servicos" className="space-y-6">
-          {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-sky-500/10 rounded-xl">
-              <Box className="w-5 h-5 text-sky-500" />
-            </div>
-            <h3 className="font-medium text-muted-foreground">Total de Serviços</h3>
+    <div className="pb-10 max-w-5xl mx-auto space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="flex items-baseline gap-2.5">
+            <h1 className="text-[15px] font-semibold tracking-[-0.02em]">Serviços</h1>
+            <span className="num rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">{totalServices}</span>
           </div>
-          <p className="text-3xl font-bold mt-2">{totalServices}</p>
+          <Button size="sm" onClick={openCreateService} className="h-8 gap-1.5 text-xs bg-foreground text-background hover:bg-foreground/90">
+            <Plus className="size-3.5" /> Novo serviço
+          </Button>
         </div>
 
-        <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-red-500/5 rounded-bl-full -z-10" />
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-500/10 rounded-xl">
-              <Wallet className="w-5 h-5 text-red-500" />
-            </div>
-            <h3 className="font-medium text-muted-foreground">Custo Fixo Ativo</h3>
-          </div>
-          <p className="text-3xl font-bold mt-2 text-red-500">{formatCurrency(totalFixedCost)}</p>
-          <p className="text-xs text-muted-foreground">Gasto mensal devido aos clientes ativos</p>
-        </div>
-
-        <div className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-amber-500/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-amber-500" />
-            </div>
-            <h3 className="font-medium text-muted-foreground">Carro Chefe</h3>
-          </div>
-          <p className="text-2xl font-bold mt-2 truncate text-foreground">{topService && topService.client_count ? topService.name : 'Nenhum ativo'}</p>
-          <p className="text-xs text-muted-foreground">{topService?.client_count || 0} clientes vinculados</p>
-        </div>
-      </div>
-
-      <div>
-        <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-12 gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Carregando serviços...</p>
+            <div className="space-y-0 divide-y divide-border">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 space-y-1.5"><Skeleton className="h-3.5 w-40" /><Skeleton className="h-3 w-20" /></div>
+                  <Skeleton className="h-3.5 w-16" /><Skeleton className="h-5 w-14 rounded" />
+                </div>
+              ))}
             </div>
           ) : services.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 gap-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center">
-                <Briefcase className="w-8 h-8 text-sky-500" />
-              </div>
-              <h3 className="text-xl font-semibold">Nenhum serviço cadastrado</h3>
-              <p className="text-muted-foreground max-w-sm">
-                Cadastre seu primeiro serviço para poder vinculá-lo aos seus clientes na hora do registro.
-              </p>
-              <Button onClick={openCreateDialog} variant="outline" className="mt-2">
-                Cadastrar Serviço
-              </Button>
+            <div className="flex flex-col items-center gap-1.5 px-4 py-16 text-center">
+              <p className="microlabel">Nenhum serviço cadastrado</p>
+              <p className="text-xs text-muted-foreground">Cadastre um serviço para vinculá-lo aos clientes no registro.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="pl-6">Serviço</TableHead>
-                    <TableHead>Custo Unitário</TableHead>
-                    <TableHead>Clientes Vinculados</TableHead>
-                    <TableHead>Custo Fixo (Total)</TableHead>
-                    <TableHead className="text-right pr-6">Ações</TableHead>
+                <TableHeader className="bg-muted">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="microlabel pl-4">Serviço</TableHead>
+                    <TableHead className="microlabel hidden sm:table-cell">Painel</TableHead>
+                    <TableHead className="microlabel text-right">Custo un.</TableHead>
+                    <TableHead className="microlabel text-right">Custo total</TableHead>
+                    <TableHead className="microlabel pr-4 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {services.map((service) => (
-                    <TableRow key={service.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium pl-6">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-muted/50 text-sky-500 rounded-lg">
+                    <TableRow key={service.id} className="hover:bg-muted group">
+                      <TableCell className="pl-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
                             {getServiceIcon(service.name)}
                           </div>
-                          <div>
-                            <span className="flex items-center gap-2 text-base">
-                              {service.name}
-                              {topService?.id === service.id && service.client_count ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold tracking-wider uppercase ml-1">
-                                  <Flame className="w-3 h-3" /> Mais Vendido
-                                </span>
-                              ) : null}
-                            </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-foreground">{service.name}</p>
+                            <p className="num text-[11px] text-muted-foreground">{service.client_count || 0} clientes</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground font-medium">{formatCurrency(service.cost)}</TableCell>
-                      <TableCell>
-                        <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-sky-500/10 text-sky-500 text-xs font-bold">
-                          {service.client_count || 0} clientes
-                        </div>
+                      <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
+                        {(service as any).panel_type || '—'}
                       </TableCell>
-                      <TableCell className="font-bold text-red-500/90">
+                      <TableCell className="num whitespace-nowrap text-right text-xs text-muted-foreground">{formatCurrency(service.cost)}</TableCell>
+                      <TableCell className="num whitespace-nowrap text-right text-xs font-medium text-danger">
                         {formatCurrency(service.cost * (service.client_count || 0))}
                       </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => openEditDialog(service)}
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          >
-                            <Edit2 className="w-4 h-4" />
+                      <TableCell className="pr-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => openEditService(service)} className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                            <Edit2 className="size-3.5" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => openDeleteDialog(service)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" onClick={() => openDeleteService(service)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -260,63 +197,27 @@ export default function ServicosPage() {
           )}
         </div>
       </div>
-      </TabsContent>
-
-      <TabsContent value="planos" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map(service => (
-            <div key={service.id} className="p-6 rounded-2xl bg-card border shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-sky-500/10 rounded-xl">
-                  {getServiceIcon(service.name)}
-                </div>
-                <h3 className="font-semibold text-lg">{service.name}</h3>
-              </div>
-              <div className="space-y-2 flex-1">
-                <h4 className="text-sm font-medium text-muted-foreground">Planos Configurados:</h4>
-                {(!service.plans || service.plans.length === 0) ? (
-                   <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg text-center">Nenhum plano configurado para o robô</p>
-                ) : (
-                   <ul className="space-y-2">
-                     {service.plans.map((p: any, i: number) => (
-                       <li key={i} className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/30 border border-border/50">
-                         <span>{p.name}</span>
-                         <span className="font-semibold">{formatCurrency(p.price)}</span>
-                       </li>
-                     ))}
-                   </ul>
-                )}
-              </div>
-              <Button variant="outline" className="mt-auto w-full" onClick={() => openEditDialog(service)}>
-                 Configurar Planos
-              </Button>
-            </div>
-          ))}
-          {services.length === 0 && (
-             <div className="col-span-full p-12 text-center text-muted-foreground bg-muted/10 rounded-2xl border border-dashed">
-               Nenhum serviço cadastrado ainda. Crie um serviço primeiro.
-             </div>
-          )}
-        </div>
-      </TabsContent>
-    </Tabs>
 
       <QuickAddServiceDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
+        open={isServiceDialogOpen} 
+        onOpenChange={setIsServiceDialogOpen} 
         service={editingService} 
-        onSuccess={loadServices} 
+        onSuccess={loadData} 
       />
+      
+
 
       <GlobalDeleteDialog 
-        open={isDeleteDialogOpen} 
-        onOpenChange={setIsDeleteDialogOpen} 
+        open={isDeleteServiceOpen} 
+        onOpenChange={setIsDeleteServiceOpen} 
         item={deletingService} 
         table="services" 
         title="Excluir Serviço" 
         description="Todos os dados deste serviço serão apagados definitivamente." 
-        onSuccess={loadServices} 
+        onSuccess={loadData} 
       />
+      
+
     </div>
   )
 }

@@ -3,11 +3,9 @@
 import ReactMarkdown from 'react-markdown'
 import { useState, useEffect, Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { BellRing, Zap, ShieldAlert, Megaphone, Loader2, Calendar, FileText, CheckCircle2, Sparkles, Bug, ArrowUpCircle, Wrench, Plus, Save } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AccountTabs } from "@/components/account-tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,14 +13,23 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
+
+// Badges de tipo (11b): NOVO verde / MELHORIA azul / CORREÇÃO cinza
+const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
+  feature: { label: "NOVO", cls: "bg-success-bg text-success-fg" },
+  improvement: { label: "MELHORIA", cls: "bg-accent text-accent-foreground" },
+  bugfix: { label: "CORREÇÃO", cls: "bg-secondary text-secondary-foreground" },
+  maintenance: { label: "MANUTENÇÃO", cls: "bg-warning-bg text-warning-fg" },
+}
 
 function AtualizacoesContent() {
   const [updates, setUpdates] = useState<any[]>([])
   const [alerts, setAlerts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
-  
+
   // States for new update modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -57,7 +64,7 @@ function AtualizacoesContent() {
       .select('*')
       .eq('is_published', true)
       .order('created_at', { ascending: false })
-      
+
     if (updatesData) {
       setUpdates(updatesData)
       // Call background API to mark all updates as read
@@ -66,7 +73,7 @@ function AtualizacoesContent() {
 
     // 2. Alerts
     const newAlerts = []
-    
+
     // WPP Check
     const { data: wppDataArray } = await supabase
       .from('evolution_instances')
@@ -80,10 +87,9 @@ function AtualizacoesContent() {
       newAlerts.push({
         id: 'wpp',
         type: 'critical',
-        title: 'Instância Desconectada',
-        desc: 'O número de WhatsApp configurado perdeu a conexão. Suas automações estão pausadas imediatamente.',
-        icon: ShieldAlert,
-        action: 'Resolver Agora',
+        title: 'Instância desconectada',
+        desc: 'O número de WhatsApp configurado perdeu a conexão. Suas automações estão pausadas.',
+        action: 'Resolver agora',
         path: '/automacao'
       })
     }
@@ -92,7 +98,7 @@ function AtualizacoesContent() {
     const today = new Date()
     const fiveDaysFromNow = new Date()
     fiveDaysFromNow.setDate(today.getDate() + 5)
-    
+
     const { data: clientsData } = await supabase
       .from('clients')
       .select('id, name, due_date')
@@ -106,10 +112,9 @@ function AtualizacoesContent() {
       newAlerts.push({
         id: 'clients',
         type: 'warning',
-        title: `${clientsData.length} Cliente(s) Vencendo`,
+        title: `${clientsData.length} cliente(s) vencendo`,
         desc: 'Existem mensalidades que vencem nos próximos 5 dias. Monitore os pagamentos para evitar inadimplência.',
-        icon: Zap,
-        action: 'Ver Clientes',
+        action: 'Ver clientes',
         path: '/clientes'
       })
     }
@@ -125,10 +130,9 @@ function AtualizacoesContent() {
       newAlerts.push({
         id: 'vencidos',
         type: 'critical',
-        title: `${vencidosCount} Cliente(s) Vencidos`,
-        desc: 'Existem clientes com a mensalidade atrasada (Status Vencido). Recomendamos enviar uma cobrança ou suspender o serviço.',
-        icon: ShieldAlert,
-        action: 'Cobrar Agora',
+        title: `${vencidosCount} cliente(s) vencidos`,
+        desc: 'Existem clientes com a mensalidade atrasada. Recomendamos enviar uma cobrança ou suspender o serviço.',
+        action: 'Cobrar agora',
         path: '/automacao'
       })
     }
@@ -162,215 +166,199 @@ function AtualizacoesContent() {
     }
   }
 
-  const getTypeStyle = (type: string) => {
-    switch(type) {
-      case 'feature': return { label: 'Nova Funcionalidade', icon: Sparkles, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/10' }
-      case 'bugfix': return { label: 'Correção de Bug', icon: Bug, color: 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' }
-      case 'improvement': return { label: 'Melhoria', icon: ArrowUpCircle, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-blue-500/10' }
-      case 'maintenance': return { label: 'Manutenção', icon: Wrench, color: 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-amber-500/10' }
-      default: return { label: 'Atualização', icon: Megaphone, color: 'bg-muted text-muted-foreground border-border shadow-none' }
-    }
+  // Coluna mono da timeline: "02 JUL" (+ ano quando difere do atual)
+  const dateLabel = (iso: string) => {
+    const d = new Date(iso)
+    const day = String(d.getDate()).padStart(2, "0")
+    const month = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase()
+    return { main: `${day} ${month}`, year: d.getFullYear() !== new Date().getFullYear() ? String(d.getFullYear()) : null }
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto pb-10">
-      
-      {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500/10 via-primary/5 to-background border border-border/50 p-8 shadow-sm">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl -z-10" />
-        
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 z-10 relative">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-primary text-white shadow-lg shadow-sky-500/30">
-              <Megaphone className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">Central de Notificações</h1>
-              <p className="text-muted-foreground mt-1">Acompanhe as atualizações do sistema e alertas da sua conta.</p>
-            </div>
-          </div>
+    <div className="space-y-4 max-w-5xl mx-auto pb-10">
+      <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Minha conta</h1>
+      <AccountTabs />
 
-          {isAdmin && (
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger render={
-                <Button className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20">
-                  <Plus className="w-4 h-4 mr-2" /> Nova Atualização
-                </Button>
-              } />
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Publicar Nova Atualização</DialogTitle>
-                  <DialogDescription>
-                    Esta mensagem aparecerá na linha do tempo de todos os seus clientes.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Tipo de Atualização</Label>
-                    <Select value={newUpdate.type} onValueChange={(val) => setNewUpdate({...newUpdate, type: val || "improvement" as any})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="feature">🚀 Nova Funcionalidade</SelectItem>
-                        <SelectItem value="improvement">⬆️ Melhoria</SelectItem>
-                        <SelectItem value="bugfix">🐛 Correção de Bug</SelectItem>
-                        <SelectItem value="maintenance">🔧 Manutenção</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Título (Versão ou Nome)</Label>
-                    <Input 
-                      placeholder="Ex: Versão 2.4.0 - Novo Disparo em Massa" 
-                      value={newUpdate.title}
-                      onChange={(e) => setNewUpdate({...newUpdate, title: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Detalhes da Atualização</Label>
-                    <Textarea 
-                      placeholder="Descreva as melhorias ou correções aplicadas..." 
-                      className="min-h-[120px]"
-                      value={newUpdate.content}
-                      onChange={(e) => setNewUpdate({...newUpdate, content: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                  <Button onClick={handlePostUpdate} disabled={isSaving} className="bg-sky-500 hover:bg-sky-600 text-white">
-                    {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Publicar
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+      {/* Cabeçalho: título + segmentado Novidades/Alertas (11b) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-[15px] font-semibold tracking-[-0.02em]">Atualizações</h2>
+          <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5">
+            {([
+              { key: "updates", label: "Novidades" },
+              { key: "alertas", label: "Alertas" },
+            ] as const).map((s) => (
+              <button
+                key={s.key}
+                onClick={() => router.push(`?tab=${s.key}`, { scroll: false })}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-xs transition-colors",
+                  tab === s.key
+                    ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]"
+                    : "text-secondary-foreground hover:text-foreground"
+                )}
+              >
+                {s.label}
+                {s.key === "alertas" && alerts.length > 0 && (
+                  <span className="num rounded bg-warning-bg px-1 text-[9px] font-semibold text-warning-fg">
+                    {alerts.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {isAdmin && (
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger render={
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <Plus className="size-3.5" /> Nova atualização
+              </Button>
+            } />
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle>Publicar nova atualização</DialogTitle>
+                <DialogDescription>
+                  Esta mensagem aparecerá na linha do tempo de todos os seus clientes.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Tipo de atualização</Label>
+                  <Select value={newUpdate.type} onValueChange={(val) => setNewUpdate({ ...newUpdate, type: val || "improvement" as any })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feature">Nova funcionalidade</SelectItem>
+                      <SelectItem value="improvement">Melhoria</SelectItem>
+                      <SelectItem value="bugfix">Correção de bug</SelectItem>
+                      <SelectItem value="maintenance">Manutenção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    placeholder="Ex: Novo disparo em massa"
+                    value={newUpdate.title}
+                    onChange={(e) => setNewUpdate({ ...newUpdate, title: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Detalhes da atualização</Label>
+                  <Textarea
+                    placeholder="Descreva as melhorias ou correções aplicadas..."
+                    className="min-h-[120px]"
+                    value={newUpdate.content}
+                    onChange={(e) => setNewUpdate({ ...newUpdate, content: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                <Button onClick={handlePostUpdate} disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 size-4 animate-spin" />} Publicar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      <Tabs value={tab} className="w-full" onValueChange={(v) => router.push(`?tab=${v}`, { scroll: false })}>
-        <TabsList className="bg-background/50 border border-border/50 p-1 mb-8 h-12 rounded-xl grid grid-cols-2 max-w-[400px]">
-          <TabsTrigger value="updates" className="rounded-lg data-[state=active]:bg-sky-500/10 data-[state=active]:text-sky-500 h-full transition-all">
-            <Megaphone className="w-4 h-4 mr-2" />
-            Atualizações
-          </TabsTrigger>
-          <TabsTrigger value="alertas" className="rounded-lg data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500 h-full transition-all">
-            <BellRing className="w-4 h-4 mr-2" />
-            Alertas
-            {alerts.length > 0 && (
-              <Badge className="ml-2 bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-sm animate-pulse">{alerts.length}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="alertas" className="mt-0 space-y-4">
-          {isLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-          ) : alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center glass-card rounded-2xl border-dashed border-2">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 shadow-inner">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-2">Tudo em Perfeita Ordem!</h3>
-              <p className="text-muted-foreground max-w-md">
-                Não identificamos nenhuma falha de integração ou vencimentos críticos na sua conta no momento. Pode relaxar.
-              </p>
+      {isLoading ? (
+        <div className="flex justify-center py-16"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+      ) : tab === "alertas" ? (
+        /* ── Alertas: faixas acionáveis, contador estático (sem pulse) ── */
+        alerts.length === 0 ? (
+          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-4 py-5">
+            <span className="status-dot bg-money" />
+            <div>
+              <p className="text-[12.5px] font-semibold">Nenhum alerta ativo</p>
+              <p className="text-[11px] text-muted-foreground">Conexão e vencimentos estão em dia.</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {alerts.map(alert => (
-                <Card key={alert.id} className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${alert.type === 'critical' ? 'border-red-500/40 bg-red-500/5 hover:bg-red-500/10 shadow-red-500/5' : 'border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 shadow-amber-500/5'}`}>
-                  {/* Glowing Edge */}
-                  <div className={`absolute top-0 left-0 w-1 h-full ${alert.type === 'critical' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]'}`} />
-                  
-                  <CardHeader className="pb-3 pl-8">
-                    <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                      <div className={`p-2 rounded-xl ${alert.type === 'critical' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'}`}>
-                        <alert.icon className="w-5 h-5" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={cn(
+                  "flex flex-wrap items-center gap-3 rounded-md border px-4 py-3",
+                  alert.type === 'critical'
+                    ? "border-danger-border bg-danger-bg"
+                    : "border-warning-border bg-warning-bg"
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className={cn("text-[12.5px] font-semibold", alert.type === 'critical' ? "text-danger-fg" : "text-warning-fg")}>
+                    {alert.title}
+                  </p>
+                  <p className={cn("mt-0.5 text-[11px]", alert.type === 'critical' ? "text-danger-fg/80" : "text-warning-fg/80")}>
+                    {alert.desc}
+                  </p>
+                </div>
+                <Button size="sm" className="h-7 text-xs" onClick={() => router.push(alert.path)}>
+                  {alert.action}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        /* ── Novidades: timeline com data mono à esquerda + cards (11b) ── */
+        updates.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center">
+            <p className="text-[12.5px] font-semibold">Sem novidades por enquanto</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Nenhuma atualização registrada. Novas melhorias aparecem aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="pt-1">
+            {updates.map((update, i) => {
+              const badge = TYPE_BADGE[update.update_type] || { label: "ATUALIZAÇÃO", cls: "bg-secondary text-secondary-foreground" }
+              const label = dateLabel(update.created_at)
+              const prev = i > 0 ? dateLabel(updates[i - 1].created_at) : null
+              const showDate = !prev || prev.main !== label.main || prev.year !== label.year
+              return (
+                <div key={update.id} className="grid grid-cols-[64px_1fr] gap-4 sm:grid-cols-[76px_1fr]">
+                  {/* Coluna mono: data (só na primeira entrada do dia) */}
+                  <div className="pt-1 text-right">
+                    {showDate && (
+                      <>
+                        <p className="num text-[11px] font-semibold text-foreground">{label.main}</p>
+                        {label.year && <p className="num text-[10px] text-muted-foreground">{label.year}</p>}
+                      </>
+                    )}
+                  </div>
+                  <div className="border-l border-border pb-4 pl-4">
+                    <div className="rounded-lg border border-border bg-card px-4 py-3.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn("num rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em]", badge.cls)}>
+                          {badge.label}
+                        </span>
+                        <p className="text-[13px] font-semibold tracking-[-0.01em]">{update.title}</p>
                       </div>
-                      {alert.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pl-8 pb-6">
-                    <p className={`text-sm ${alert.type === 'critical' ? 'text-red-900/70 dark:text-red-200/70' : 'text-amber-900/70 dark:text-amber-200/70'}`}>{alert.desc}</p>
-                  </CardContent>
-                  <CardFooter className="pl-8 pt-0">
-                    <Button 
-                      variant="default" 
-                      onClick={() => router.push(alert.path)} 
-                      className={`w-full font-medium ${alert.type === 'critical' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}
-                    >
-                      {alert.action}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="updates" className="mt-0">
-          {isLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-          ) : updates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center glass-card rounded-2xl border-dashed border-2">
-              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
-                <Megaphone className="w-10 h-10 text-muted-foreground/50" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-2">Sem novidades por enquanto</h3>
-              <p className="text-muted-foreground max-w-md">
-                Nenhuma atualização registrada no momento. Nossa equipe está trabalhando duro nos bastidores para trazer novas melhorias.
-              </p>
-            </div>
-          ) : (
-            <div className="relative border-l-2 border-border/40 ml-4 md:ml-8 space-y-12 pb-10 mt-6">
-              {updates.map((update) => {
-                const style = getTypeStyle(update.update_type)
-                const Icon = style.icon
-                return (
-                  <div key={update.id} className="relative pl-8 md:pl-12 group">
-                    {/* Timeline Node - Animated */}
-                    <div className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-4 border-background flex items-center justify-center z-10 transition-transform duration-300 group-hover:scale-110 ${style.color}`}>
-                      <div className="bg-background rounded-full w-full h-full flex items-center justify-center">
-                        <Icon className="w-3.5 h-3.5" />
+                      <div className="prose prose-sm dark:prose-invert mt-1.5 max-w-none text-[12px] leading-relaxed text-muted-foreground">
+                        <ReactMarkdown>{update.content}</ReactMarkdown>
                       </div>
                     </div>
-                    
-                    <Card className="glass-card shadow-sm transition-all duration-300 hover:shadow-md hover:border-border overflow-hidden">
-                      <div className={`h-1 w-full opacity-50 ${style.color.split(' ')[0]}`} />
-                      <CardHeader className="pb-3 pt-5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                          <Badge variant="outline" className={`px-2.5 py-0.5 rounded-full font-medium shadow-sm ${style.color}`}>
-                            {style.label}
-                          </Badge>
-                          <div className="flex items-center text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-                            <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                            {new Date(update.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </div>
-                        </div>
-                        <CardTitle className="text-2xl font-bold tracking-tight">{update.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
-                          <ReactMarkdown>{update.content}</ReactMarkdown>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                </div>
+              )
+            })}
+          </div>
+        )
+      )}
     </div>
   )
 }
 
 export default function AtualizacoesPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+    <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
       <AtualizacoesContent />
     </Suspense>
   )

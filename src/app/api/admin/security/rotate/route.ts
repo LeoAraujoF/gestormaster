@@ -8,7 +8,8 @@ async function isAdmin(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const isAdm = user.user_metadata?.is_admin === true || user.email === 'leandro.araujoferreira@gmail.com'
+  // Admin apenas por e-mail (server-side). Não confiar em user_metadata.is_admin (editável pelo usuário).
+  const isAdm = user.email === (process.env.ADMIN_EMAIL || 'leandro.araujoferreira@gmail.com')
   return isAdm ? user : null
 }
 

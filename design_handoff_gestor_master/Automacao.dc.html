@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#fbfbfa;font-family:Geist,system-ui,sans-serif;color:#26272b;-webkit-font-smoothing:antialiased}
+  @keyframes dcspin{to{transform:rotate(360deg)}}
+  @keyframes dcfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes dctoast{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes dcping{0%{transform:scale(1);opacity:.5}80%,100%{transform:scale(1.9);opacity:0}}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#d5d4ce;border-radius:5px;border:2px solid #fbfbfa}
+  ::-webkit-scrollbar-track{background:transparent}
+  [data-ed]:empty:before{content:attr(data-ph);color:#b9b8b2}
+</style>
+</helmet>
+
+<div style="max-width:1000px;margin:0 auto;padding:20px 22px 60px">
+
+  <!-- HEADER (3c style) -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <h1 style="margin:0;font-size:19px;font-weight:600;letter-spacing:-.025em">Automação</h1>
+    <span style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:11.5px;margin-left:4px;color:{{ waFg }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ waFg }}"></span>{{ waLabel }}</span>
+    <div style="flex:1"></div>
+    <button onClick="{{ onGoLogs }}" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:6px;padding:6px 12px;font-weight:500;font-size:11.5px;color:#55565c">Histórico de envios</button>
+    <button onClick="{{ onAddChip }}" style="cursor:pointer;font-family:inherit;border:none;background:#191a1e;color:#fff;border-radius:6px;padding:6px 13px;font-weight:500;font-size:11.5px;display:flex;align-items:center;gap:5px"><span style="font-size:13px;line-height:1">+</span>Conectar número</button>
+  </div>
+
+  <!-- TABS -->
+  <div style="display:flex;gap:2px;background:#f1f0ee;border-radius:8px;padding:3px;margin-bottom:18px;width:fit-content">
+    <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="4">
+      <button onClick="{{ tab.onClick }}" style="{{ tab.style }}">{{ tab.label }}<span style="{{ tab.badgeStyle }}">{{ tab.badge }}</span></button>
+    </sc-for>
+  </div>
+
+  <!-- ============ VISÃO GERAL (instâncias + régua + templates) ============ -->
+  <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+  <div style="animation:dcfade .25s ease-out">
+
+    <!-- instance cards row -->
+    <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap">
+      <sc-for list="{{ instances }}" as="inst" hint-placeholder-count="2">
+        <div style="flex:1;min-width:280px;border:1px solid {{ inst.border }};border-radius:8px;background:#fff;padding:13px 15px;display:flex;align-items:center;gap:12px">
+          <div style="width:34px;height:34px;flex:none;border-radius:8px;background:{{ inst.iconBg }};display:flex;align-items:center;justify-content:center;color:{{ inst.iconFg }};font:700 13px Geist Mono,monospace">{{ inst.slot }}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font-weight:600;font-size:12.5px">{{ inst.name }}</span><span style="{{ inst.primaryStyle }}">★</span></div>
+            <div style="color:#8a8983;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ inst.sub }}</div>
+          </div>
+          <span style="display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:{{ inst.statusFg }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ inst.statusFg }}"></span>{{ inst.statusLabel }}</span>
+          <button onClick="{{ inst.onMenu }}" style="cursor:pointer;font-family:inherit;border:none;background:none;color:#9b9a94;font-size:15px;line-height:1;padding:2px 4px">⋯</button>
+        </div>
+      </sc-for>
+      <button onClick="{{ onAddChip }}" style="cursor:pointer;font-family:inherit;flex:none;min-width:150px;border:1px dashed #d5d4ce;border-radius:8px;background:#fafaf8;color:#77756d;font-size:11.5px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px;padding:13px"><span style="font-size:14px;line-height:1;color:#b9b8b2">+</span>Novo chip</button>
+    </div>
+
+    <!-- régua + templates -->
+    <div style="display:flex;gap:16px;align-items:flex-start">
+
+      <!-- RÉGUA -->
+      <div style="flex:1.4;min-width:0;border:1px solid #ecebe7;border-radius:8px;background:#fff;padding:15px 16px">
+        <div style="display:flex;align-items:center;margin-bottom:3px">
+          <span style="font-weight:600;font-size:13px">Régua de cobrança</span>
+          <span onClick="{{ onToggleRegua }}" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;cursor:pointer;color:{{ reguaFg }}"><span style="{{ reguaTrack }}"><span style="{{ reguaKnob }}"></span></span>{{ reguaLabel }}</span>
+        </div>
+        <div style="color:#8a8983;font-size:10.5px;margin-bottom:15px">mensagens automáticas em volta do vencimento</div>
+
+        <sc-if value="{{ hasSteps }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+              <div onClick="{{ st.onEdit }}" style="display:flex;gap:11px;cursor:pointer">
+                <div style="display:flex;flex-direction:column;align-items:center"><span style="width:9px;height:9px;flex:none;border-radius:50%;background:{{ st.dot }};margin-top:3px"></span><span style="{{ st.lineStyle }}"></span></div>
+                <div style="{{ st.bodyStyle }}">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font:600 10px Geist Mono,monospace;color:{{ st.dot }}">{{ st.day }}</span>
+                    <span style="font-weight:600;font-size:11.5px;color:{{ st.titleColor }}">{{ st.title }}</span>
+                    <span style="{{ st.offBadge }}">pausada</span>
+                    <span style="margin-left:auto;font-size:10px;color:#9b9a94">{{ st.time }}</span>
+                  </div>
+                  <div style="color:#8a8983;font-size:10.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ st.preview }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noSteps }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 0;text-align:center;color:#9b9a94;font-size:11px">Nenhuma etapa na régua. Adicione a primeira abaixo.</div>
+        </sc-if>
+
+        <div style="border-top:1px solid #f1f0ec;margin-top:12px;padding-top:10px">
+          <button onClick="{{ onAddStep }}" style="cursor:pointer;font-family:inherit;border:none;background:none;color:#4055c8;font-weight:500;font-size:11px;padding:0">+ Adicionar etapa</button>
+        </div>
+      </div>
+
+      <!-- TEMPLATES -->
+      <div style="flex:1;min-width:0;border:1px solid #ecebe7;border-radius:8px;background:#fff;padding:15px 16px">
+        <div style="display:flex;align-items:center;margin-bottom:12px">
+          <span style="font-weight:600;font-size:13px">Templates</span>
+          <button onClick="{{ onAddTemplate }}" style="margin-left:auto;cursor:pointer;font-family:inherit;border:none;background:none;color:#4055c8;font-weight:500;font-size:11px;padding:0">+ Novo</button>
+        </div>
+        <sc-for list="{{ templates }}" as="tp" hint-placeholder-count="3">
+          <div onClick="{{ tp.onEdit }}" style="border:1px solid #ecebe7;border-radius:7px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+              <span style="font-weight:600;font-size:11.5px">{{ tp.title }}</span>
+              <span style="{{ tp.badgeStyle }}">{{ tp.badge }}</span>
+              <span style="{{ tp.offBadge }}">off</span>
+              <button onClick="{{ tp.onSend }}" style="margin-left:auto;cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:500;color:#55565c">Usar</button>
+            </div>
+            <div style="color:#8a8983;font-size:10.5px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.preview }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- anti-ban + calls (compact row) -->
+    <div style="display:flex;gap:16px;margin-top:16px;align-items:stretch">
+      <div style="flex:1;border:1px solid #ecebe7;border-radius:8px;background:#fff;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><span style="color:#c98a1e;font-size:13px">🛡</span><span style="font-weight:600;font-size:12.5px">Antibloqueio</span><span style="margin-left:auto;font:600 10px Geist Mono,monospace;color:#8a8983">{{ minDelay }}–{{ maxDelay }}s</span></div>
+        <div style="color:#8a8983;font-size:10.5px;margin-bottom:12px">intervalo aleatório entre cada mensagem</div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1"><div style="font-size:10px;color:#55565c;font-weight:500;margin-bottom:5px">Mínimo (s)</div><div style="display:flex;align-items:center;border:1px solid #e2e1dd;border-radius:7px;overflow:hidden"><button onClick="{{ onMinDown }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:28px;padding:7px 0;color:#55565c;font-size:14px">–</button><span style="flex:1;text-align:center;font:600 12px Geist Mono,monospace">{{ minDelay }}</span><button onClick="{{ onMinUp }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:28px;padding:7px 0;color:#55565c;font-size:14px">+</button></div></div>
+          <div style="flex:1"><div style="font-size:10px;color:#55565c;font-weight:500;margin-bottom:5px">Máximo (s)</div><div style="display:flex;align-items:center;border:1px solid #e2e1dd;border-radius:7px;overflow:hidden"><button onClick="{{ onMaxDown }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:28px;padding:7px 0;color:#55565c;font-size:14px">–</button><span style="flex:1;text-align:center;font:600 12px Geist Mono,monospace">{{ maxDelay }}</span><button onClick="{{ onMaxUp }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:28px;padding:7px 0;color:#55565c;font-size:14px">+</button></div></div>
+        </div>
+      </div>
+      <div style="flex:1;border:1px solid #ecebe7;border-radius:8px;background:#fff;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="color:#b23c3c;font-size:13px">⛔</span>
+          <div style="flex:1"><div style="font-weight:600;font-size:12.5px">Bloquear chamadas</div><div style="color:#8a8983;font-size:10.5px;margin-top:1px">recusa ligações automaticamente</div></div>
+          <span onClick="{{ onToggleCalls }}" style="{{ callTrackStyle }}"><span style="{{ callKnobStyle }}"></span></span>
+        </div>
+        <sc-if value="{{ rejectCalls }}" hint-placeholder-val="{{ false }}">
+          <div contenteditable="true" data-ed="call" data-ph="Mensagem automática ao recusar…" style="margin-top:12px;width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:9px 11px;font-family:inherit;font-size:11px;color:#26272b;min-height:52px;line-height:1.5;white-space:pre-wrap;overflow:auto;outline:none;cursor:text">{{ callMsg }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+  </sc-if>
+
+  <!-- ============ DISPARO EM MASSA ============ -->
+  <sc-if value="{{ isMass }}" hint-placeholder-val="{{ false }}">
+  <div style="animation:dcfade .25s ease-out;max-width:640px">
+    <div style="border:1px solid #ecebe7;border-radius:8px;background:#fff;overflow:hidden">
+      <div style="padding:15px 18px;border-bottom:1px solid #f1f0ec">
+        <div style="font-weight:600;font-size:14px;letter-spacing:-.01em">Disparo em massa</div>
+        <p style="margin:4px 0 0;color:#8a8983;font-size:11px;line-height:1.5">Envie para um grupo de clientes de uma vez, respeitando o intervalo anti-ban.</p>
+      </div>
+      <div style="padding:18px">
+        <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Público-alvo</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">
+          <sc-for list="{{ audiences }}" as="aud" hint-placeholder-count="5">
+            <button onClick="{{ aud.onClick }}" style="{{ aud.style }}">{{ aud.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#e9e9ff;border:1px solid #d5d9f8;border-radius:8px;padding:9px 12px;margin-bottom:16px;font-size:11.5px;color:#3140a8"><span style="font-size:12px">◎</span><b>Público estimado:</b> {{ estimated }} clientes.</div>
+
+        <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Usar um template</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+          <sc-for list="{{ templatePicks }}" as="tp" hint-placeholder-count="3">
+            <button onClick="{{ tp.onClick }}" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;color:#55565c">{{ tp.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Mensagem</div>
+        <div contenteditable="true" data-ed="mass" data-ph="Escreva a mensagem…" style="width:100%;border:1px solid #e2e1dd;border-radius:8px;padding:11px 13px;font-family:inherit;font-size:12px;color:#26272b;min-height:100px;line-height:1.55;white-space:pre-wrap;overflow:auto;outline:none;cursor:text">{{ massMsg }}</div>
+        <div style="background:#f7f7f5;border:1px solid #ecebe7;border-radius:8px;padding:10px 12px;margin:8px 0 16px">
+          <div style="font-size:10.5px;color:#8a8983;font-weight:500;margin-bottom:7px">Inserir variável:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ massVars }}" as="v" hint-placeholder-count="8">
+              <button onClick="{{ v.onClick }}" style="cursor:pointer;font-family:Geist Mono,monospace;border:1px solid #d5d9f8;background:#eef0ff;color:#3140a8;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:500">{{ v.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="border:1px solid #ecebe7;border-radius:8px;padding:12px 14px;background:#fafaf8">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="color:#4055c8;font-size:12px">◷</span><span style="font-size:11.5px;font-weight:500">Agendar (opcional)</span></div>
+          <input onChange="{{ onSchedule }}" type="datetime-local" style="width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:8px 11px;font-family:inherit;font-size:11.5px;color:#55565c;background:#fff">
+        </div>
+      </div>
+      <div style="padding:15px 18px;border-top:1px solid #f1f0ec;background:#fafaf8">
+        <button onClick="{{ onSendMass }}" style="cursor:pointer;font-family:inherit;width:100%;border:none;background:{{ sendBg }};color:#fff;border-radius:8px;padding:11px;font-weight:600;font-size:12.5px">{{ sendLabel }}</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ LOGS ============ -->
+  <sc-if value="{{ isLogs }}" hint-placeholder-val="{{ false }}">
+  <div style="animation:dcfade .25s ease-out">
+    <div style="border:1px solid #ecebe7;border-radius:8px;background:#fff;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid #f1f0ec;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px"><div style="font-weight:600;font-size:13px">Histórico de disparos</div><div style="color:#8a8983;font-size:10.5px;margin-top:1px">programados, enviados e falhas</div></div>
+        <div style="display:flex;gap:2px;background:#f1f0ee;border-radius:7px;padding:2px">
+          <sc-for list="{{ logFilters }}" as="lf" hint-placeholder-count="4">
+            <button onClick="{{ lf.onClick }}" style="{{ lf.style }}">{{ lf.label }}</button>
+          </sc-for>
+        </div>
+        <button onClick="{{ onBulk }}" style="{{ bulkStyle }}">{{ bulkLabel }}</button>
+      </div>
+      <div style="display:flex;gap:10px;padding:9px 16px;background:#f7f7f5;border-bottom:1px solid #ecebe7;font:500 9px Geist Mono,monospace;letter-spacing:.06em;color:#9b9a94">
+        <span style="flex:1.2">CLIENTE</span><span style="width:100px">ETAPA</span><span style="width:110px">PROGRAMADO</span><span style="width:90px">STATUS</span><span style="width:70px;text-align:right">AÇÕES</span>
+      </div>
+      <sc-if value="{{ hasLogs }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ filteredLogs }}" as="log" hint-placeholder-count="5">
+          <div style="display:flex;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid #f1f0ec">
+            <div style="flex:1.2;min-width:0"><div style="font-weight:500;font-size:12px">{{ log.client }}</div><sc-if value="{{ log.hasError }}" hint-placeholder-val="{{ false }}"><div style="color:#b23c3c;font-size:10px;margin-top:1px">{{ log.error }}</div></sc-if></div>
+            <span style="width:100px;color:#55565c;font-size:11px">{{ log.alert }}</span>
+            <span style="width:110px;font:500 10.5px Geist Mono,monospace;color:#8a8983">{{ log.scheduled }}</span>
+            <span style="width:90px"><span style="{{ log.statusStyle }}">{{ log.statusLabel }}</span></span>
+            <span style="width:70px;display:flex;justify-content:flex-end;gap:4px">
+              <sc-if value="{{ log.canResend }}" hint-placeholder-val="{{ false }}"><button onClick="{{ log.onResend }}" title="Reenviar" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:6px;width:26px;height:26px;color:#2e7d54;font-size:12px">↻</button></sc-if>
+              <sc-if value="{{ log.canCancel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ log.onCancel }}" title="Cancelar" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:6px;width:26px;height:26px;color:#c98a1e;font-size:12px">✕</button></sc-if>
+              <button onClick="{{ log.onDelete }}" title="Excluir" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:6px;width:26px;height:26px;color:#a13636;font-size:12px">🗑</button>
+            </span>
+          </div>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ noLogs }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:40px;text-align:center"><div style="font:500 11px Geist Mono,monospace;letter-spacing:.06em;color:#9b9a94">NENHUM LOG NESTE FILTRO</div></div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ DIÁLOGO (etapa da régua / template) ============ -->
+  <sc-if value="{{ dialog }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseDialog }}" style="position:fixed;inset:0;background:rgba(20,20,22,.38);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;animation:dcfade .18s ease-out">
+      <div onClick="{{ stop }}" style="width:500px;max-width:100%;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 20px 48px rgba(0,0,0,.22)">
+        <div style="padding:16px 20px 13px;border-bottom:1px solid #f1f0ec;display:flex;align-items:center;gap:10px">
+          <span style="width:30px;height:30px;border-radius:8px;background:{{ dlgIconBg }};display:flex;align-items:center;justify-content:center;font-size:14px">{{ dlgIcon }}</span>
+          <div style="flex:1"><div style="font-weight:600;font-size:13.5px">{{ dialogTitle }}</div><div style="color:#8a8983;font-size:10.5px;margin-top:1px">{{ dialogSub }}</div></div>
+          <button onClick="{{ onCloseDialog }}" style="cursor:pointer;font-family:inherit;border:none;background:none;color:#9b9a94;font-size:17px">✕</button>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Nome</div>
+          <input value="{{ formTitle }}" onChange="{{ onFormTitle }}" style="width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:8px 11px;font-family:inherit;font-size:12px;color:#26272b;margin-bottom:14px">
+
+          <!-- step fields -->
+          <sc-if value="{{ isStepDialog }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Momento</div>
+            <select onChange="{{ onFormType }}" style="width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:9px 11px;font-family:inherit;font-size:12px;color:#26272b;background:#fff;margin-bottom:14px">
+              <sc-for list="{{ typeOptions }}" as="opt" hint-placeholder-count="3">
+                <option value="{{ opt.value }}" selected="{{ opt.selected }}">{{ opt.label }}</option>
+              </sc-for>
+            </select>
+            <div style="display:flex;gap:12px;margin-bottom:14px">
+              <sc-if value="{{ showDays }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:1"><div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Dias de diferença</div><div style="display:flex;align-items:center;border:1px solid #e2e1dd;border-radius:7px;overflow:hidden"><button onClick="{{ onDaysDown }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:34px;padding:8px 0;color:#55565c;font-size:14px">–</button><span style="flex:1;text-align:center;font:600 13px Geist Mono,monospace">{{ formDays }}</span><button onClick="{{ onDaysUp }}" style="cursor:pointer;font-family:inherit;border:none;background:#f7f7f5;width:34px;padding:8px 0;color:#55565c;font-size:14px">+</button></div></div>
+              </sc-if>
+              <div style="flex:1"><div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Horário</div><input value="{{ formTime }}" onChange="{{ onFormTime }}" type="time" style="width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:8px 11px;font-family:inherit;font-size:12px;color:#26272b;background:#fff"></div>
+            </div>
+          </sc-if>
+
+          <!-- template fields -->
+          <sc-if value="{{ isTemplateDialog }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Etiqueta</div>
+            <select onChange="{{ onFormBadge }}" style="width:100%;border:1px solid #e2e1dd;border-radius:7px;padding:9px 11px;font-family:inherit;font-size:12px;color:#26272b;background:#fff;margin-bottom:14px">
+              <sc-for list="{{ badgeOptions }}" as="opt" hint-placeholder-count="4">
+                <option value="{{ opt.value }}" selected="{{ opt.selected }}">{{ opt.label }}</option>
+              </sc-for>
+            </select>
+          </sc-if>
+
+          <div style="font-size:11px;font-weight:500;color:#55565c;margin-bottom:6px">Mensagem</div>
+          <div contenteditable="true" data-ed="form" data-ph="Escreva o template…" style="width:100%;border:1px solid #e2e1dd;border-radius:8px;padding:11px 13px;font-family:inherit;font-size:12px;color:#26272b;min-height:96px;line-height:1.55;white-space:pre-wrap;overflow:auto;outline:none;cursor:text">{{ formTemplate }}</div>
+          <div style="background:#f7f7f5;border:1px solid #ecebe7;border-radius:8px;padding:10px 12px;margin:8px 0 14px">
+            <div style="font-size:10.5px;color:#8a8983;font-weight:500;margin-bottom:7px">Inserir variável:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ formVars }}" as="v" hint-placeholder-count="8">
+                <button onClick="{{ v.onClick }}" style="cursor:pointer;font-family:Geist Mono,monospace;border:1px solid #d5d9f8;background:#eef0ff;color:#3140a8;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:500">{{ v.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid #ecebe7;border-radius:8px;padding:11px 13px;background:#fafaf8">
+            <div style="flex:1"><div style="font-weight:500;font-size:12px">Ativo</div><div style="color:#8a8983;font-size:10.5px;margin-top:1px">se desativado, o robô ignora este item</div></div>
+            <span onClick="{{ onToggleFormActive }}" style="{{ formActiveTrack }}"><span style="{{ formActiveKnob }}"></span></span>
+          </div>
+        </div>
+        <div style="padding:13px 20px;border-top:1px solid #f1f0ec;display:flex;gap:9px;justify-content:space-between;align-items:center">
+          <sc-if value="{{ canDeleteForm }}" hint-placeholder-val="{{ false }}"><button onClick="{{ onDeleteForm }}" style="cursor:pointer;font-family:inherit;border:none;background:none;color:#a13636;font-weight:500;font-size:11.5px">Excluir</button></sc-if>
+          <sc-if value="{{ noDeleteForm }}" hint-placeholder-val="{{ true }}"><span></span></sc-if>
+          <div style="display:flex;gap:9px">
+            <button onClick="{{ onCloseDialog }}" style="cursor:pointer;font-family:inherit;border:1px solid #e2e1dd;background:#fff;border-radius:7px;padding:9px 16px;font-weight:500;font-size:12px;color:#55565c">Cancelar</button>
+            <button onClick="{{ onSaveForm }}" style="cursor:pointer;font-family:inherit;border:none;background:#191a1e;color:#fff;border-radius:7px;padding:9px 18px;font-weight:600;font-size:12px">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- MENU DE INSTÂNCIA -->
+  <sc-if value="{{ instMenu }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseMenu }}" style="position:fixed;inset:0;background:rgba(20,20,22,.38);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;animation:dcfade .18s ease-out">
+      <div onClick="{{ stop }}" style="width:340px;max-width:100%;background:#fff;border-radius:12px;box-shadow:0 20px 48px rgba(0,0,0,.22);overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid #f1f0ec"><div style="font-weight:600;font-size:13.5px">{{ menuName }}</div><div style="color:#8a8983;font-size:10.5px;margin-top:1px">{{ menuStatus }}</div></div>
+        <div style="padding:8px">
+          <sc-for list="{{ menuActions }}" as="a" hint-placeholder-count="3">
+            <button onClick="{{ a.onClick }}" style="{{ a.style }}">{{ a.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid {{ toastBorder }};border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:12px 15px;font-size:12px;animation:dctoast .22s ease-out;max-width:340px">
+      <span style="width:7px;height:7px;flex:none;border-radius:50%;background:{{ toastDot }}"></span>
+      <span style="flex:1">{{ toastMsg }}</span>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'overview',
+    minDelay: 10,
+    maxDelay: 25,
+    rejectCalls: false,
+    callMsg: 'As chamadas estão desativadas. Por favor, envie uma mensagem de texto.',
+    reguaActive: true,
+    instances: [
+      { id:'i1', slot:'1', name:'Principal', phone:'(11) 98800-1234', sub:'cobrança + renovações · 412 msgs este mês', status:'online', primary:true },
+      { id:'i2', slot:'2', name:'Disparos', phone:'(11) 97744-8890', sub:'campanhas em massa · aquecido 84%', status:'online', primary:false },
+    ],
+    rules: [
+      { id:'r1', kind:'step', type:'before_due', days:3, time:'09:00', title:'Lembrete amigável', active:true, template:'Olá {nome}, tudo bem? Seu plano {plano} vence em 3 dias. Deseja renovar? Chave PIX: {pix}' },
+      { id:'r2', kind:'step', type:'on_due', days:0, time:'08:30', title:'Vence hoje + PIX', active:true, template:'Olá {nome}! O vencimento do seu plano é hoje. Copia e cola: {pix} — envio o QR code em seguida.' },
+      { id:'r3', kind:'step', type:'after_due', days:1, time:'10:00', title:'Cobrança direta', active:true, template:'{nome}, seu acesso venceu ontem e está pendente. Deseja reativar hoje?' },
+      { id:'r4', kind:'step', type:'after_due', days:3, time:'10:00', title:'Aviso de suspensão', active:true, template:'{nome}, seu acesso será suspenso amanhã caso o pagamento não seja identificado.' },
+      { id:'t1', kind:'template', badge:'PIX', title:'Cobrança padrão', active:true, template:'Olá {nome}! Seu plano {plano} vence {data}. Renove por {valor} no PIX abaixo. Qualquer dúvida, estou à disposição.' },
+      { id:'t2', kind:'template', badge:'LOGIN', title:'Boas-vindas', active:true, template:'Bem-vindo(a), {nome}! Seus dados de acesso: usuário {usuario} e senha {senha}. Bom proveito!' },
+      { id:'t3', kind:'template', badge:'CAMPANHA', title:'Promoção renovação', active:false, template:'{nome}, renove por 3 meses e ganhe 10% de desconto! Oferta válida até o fim da semana.' },
+    ],
+    logs: [
+      { id:'l1', client:'Carlos Mendes', type:'before_due', scheduled:'Hoje 09:00', status:'pending', error:'' },
+      { id:'l2', client:'Ana Paula Souza', type:'on_due', scheduled:'Hoje 08:30', status:'pending', error:'' },
+      { id:'l3', client:'Marcos Lima', type:'renewal', scheduled:'30/06 14:12', status:'sent', error:'' },
+      { id:'l4', client:'Pedro Alves', type:'before_due', scheduled:'30/06 09:00', status:'sent', error:'' },
+      { id:'l5', client:'Fernanda Rocha', type:'after_due', scheduled:'30/06 10:00', status:'failed', error:'Número inválido ou sem WhatsApp' },
+      { id:'l6', client:'João Batista', type:'after_due', scheduled:'29/06 10:00', status:'failed', error:'Chip temporariamente bloqueado' },
+    ],
+    logFilter: 'pending',
+    massAudience: 'all',
+    massMsg: 'Olá {nome}, temos uma oferta especial para você este mês!',
+    dialog: false,
+    dlgKind: 'step',
+    editingId: null,
+    form: { title:'', type:'before_due', days:3, time:'09:00', badge:'PIX', template:'', active:true },
+    instMenu: null,
+    toast: null,
+  }
+
+  VARS = ['{nome}','{plano}','{valor}','{data}','{pix}','{usuario}','{senha}','{empresa}']
+  BADGES = ['PIX','LOGIN','CAMPANHA','PROMO','AVISO']
+  STEP_TYPES = { before_due:'Antes do vencimento', on_due:'No dia do vencimento', after_due:'Após o vencimento' }
+  LOG_TYPE = { before_due:'Aviso prévio', on_due:'No vencimento', after_due:'Atraso', renewal:'Renovação', activation:'Boas-vindas', promotion:'Promoção' }
+
+  toast(msg, tone) {
+    tone = tone || 'ok'
+    clearTimeout(this._t)
+    this.setState({ toast: { msg, tone } })
+    this._t = setTimeout(() => this.setState({ toast: null }), 2600)
+  }
+  readEd(which) { const el = document.querySelector('[data-ed="' + which + '"]'); return el ? el.innerText : '' }
+  track(on) { return 'display:inline-flex;flex:none;width:22px;height:12px;border-radius:999px;padding:1px;cursor:pointer;transition:background .15s;background:' + (on ? '#2e7d54' : '#d5d4ce') }
+  knob(on) { return 'width:10px;height:10px;border-radius:50%;background:#fff;transition:margin .15s;margin-left:' + (on ? '10px' : '0') }
+  offset(r) { return r.type === 'before_due' ? -r.days : r.type === 'after_due' ? r.days : 0 }
+  dayLabel(r) { const o = this.offset(r); return o < 0 ? 'D-' + Math.abs(o) : o > 0 ? 'D+' + o : 'D-0' }
+  stepDot(r) { return r.type === 'after_due' ? '#b23c3c' : '#c98a1e' }
+
+  setInst(id, patch) { this.setState({ instances: this.state.instances.map(i => i.id===id ? { ...i, ...patch } : i) }) }
+  setRule(id, patch) { this.setState({ rules: this.state.rules.map(r => r.id===id ? { ...r, ...patch } : r) }) }
+  setLog(id, patch) { this.setState({ logs: this.state.logs.map(l => l.id===id ? { ...l, ...patch } : l) }) }
+
+  addChip() {
+    const s = this.state
+    if (s.instances.length >= 5) { this.toast('Limite de 5 chips atingido.', 'warn'); return }
+    const n = s.instances.length + 1
+    this.setState({ tab:'overview', instances:[...s.instances, { id:'i'+Date.now(), slot:String(n), name:'Chip '+n, phone:'—', sub:'aguardando conexão · escaneie o QR', status:'connecting', primary:false }] })
+    this.toast('Novo chip criado — escaneie o QR code.')
+  }
+
+  openStep(rule) {
+    if (rule) this.setState({ dialog:true, dlgKind:'step', editingId:rule.id, form:{ title:rule.title, type:rule.type, days:(typeof rule.days==='number'?rule.days:1), time:rule.time, badge:'PIX', template:rule.template, active:rule.active } })
+    else this.setState({ dialog:true, dlgKind:'step', editingId:null, form:{ title:'', type:'before_due', days:3, time:'09:00', badge:'PIX', template:'Olá {nome}, ', active:true } })
+  }
+  openTemplate(rule) {
+    if (rule) this.setState({ dialog:true, dlgKind:'template', editingId:rule.id, form:{ title:rule.title, type:'before_due', days:0, time:'09:00', badge:rule.badge, template:rule.template, active:rule.active } })
+    else this.setState({ dialog:true, dlgKind:'template', editingId:null, form:{ title:'', type:'before_due', days:0, time:'09:00', badge:'PIX', template:'Olá {nome}, ', active:true } })
+  }
+  saveForm() {
+    const s = this.state, f = s.form
+    const template = (this.readEd('form') || '').trim() || f.template
+    const title = (f.title || '').trim() || (s.dlgKind==='step' ? 'Nova etapa' : 'Novo template')
+    if (s.editingId) {
+      this.setRule(s.editingId, { title, type:f.type, days:f.days, time:f.time, badge:f.badge, template, active:f.active })
+      this.setState({ dialog:false })
+      this.toast(s.dlgKind==='step' ? 'Etapa atualizada.' : 'Template atualizado.')
+    } else {
+      const base = { id:(s.dlgKind==='step'?'r':'t')+Date.now(), kind:s.dlgKind, title, template, active:f.active }
+      const rule = s.dlgKind==='step' ? { ...base, type:f.type, days:f.days, time:f.time } : { ...base, badge:f.badge }
+      this.setState({ rules:[...s.rules, rule], dialog:false })
+      this.toast(s.dlgKind==='step' ? 'Etapa adicionada à régua.' : 'Template criado.')
+    }
+  }
+  deleteForm() {
+    const s = this.state
+    if (s.editingId) { this.setState({ rules: s.rules.filter(r => r.id!==s.editingId), dialog:false }); this.toast('Item removido.', 'warn') }
+  }
+
+  bulk(act) {
+    const s = this.state
+    if (act === 'clear') { this.setState({ logs: [] }); this.toast('Histórico limpo.', 'warn') }
+    else if (act === 'resend') { this.setState({ logs: s.logs.map(l => l.status==='failed'?{ ...l, status:'pending', error:'' }:l) }); this.toast('Falhas reenviadas.') }
+    else if (act === 'cancel') { this.setState({ logs: s.logs.map(l => l.status==='pending'?{ ...l, status:'failed', error:'Cancelado em lote' }:l) }); this.toast('Pendentes cancelados.', 'warn') }
+  }
+
+  renderVals() {
+    const s = this.state, set = (o) => this.setState(o)
+    const anyOnline = s.instances.some(i => i.status === 'online')
+    const pendingCount = s.logs.filter(l => l.status === 'pending').length
+
+    // tabs
+    const tabDefs = [ {k:'overview',l:'Visão geral',b:''}, {k:'mass',l:'Disparo em massa',b:''}, {k:'logs',l:'Logs',b: pendingCount?String(pendingCount):''} ]
+    const tabBase = 'cursor:pointer;font-family:inherit;border:none;border-radius:6px;padding:6px 13px;font-size:11.5px;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .12s;'
+    const tabs = tabDefs.map(t => ({
+      label:t.l, badge:t.b,
+      badgeStyle: t.b ? 'font:600 9px Geist Mono,monospace;background:'+(s.tab===t.k?'#f2e8d4':'#e6dfd0')+';color:#8a6d1f;border-radius:4px;padding:1px 5px' : 'display:none',
+      style: tabBase + (s.tab===t.k ? 'background:#fff;color:#191a1e;box-shadow:0 1px 2px rgba(0,0,0,.08)' : 'background:transparent;color:#77756d'),
+      onClick: () => set({ tab:t.k }),
+    }))
+
+    const wa = anyOnline
+      ? { waLabel: s.instances.filter(i=>i.status==='online').length+' de '+s.instances.length+' instâncias online', waFg:'#2e7d54' }
+      : { waLabel:'Nenhuma instância online', waFg:'#b23c3c' }
+
+    // instances
+    const instances = s.instances.map(i => {
+      const online=i.status==='online', qr=i.status==='connecting'
+      return {
+        slot:i.slot, name:i.name,
+        sub: online||i.phone!=='—' ? i.phone+' · '+i.sub.split(' · ').slice(-1)[0] : i.sub,
+        border: online?'#cfe3d8':qr?'#eadfc0':'#ecebe7',
+        iconBg: online?'#e2efe6':qr?'#f2e8d4':'#f1f0ee',
+        iconFg: online?'#256b45':qr?'#8a6d1f':'#9b9a94',
+        statusLabel: online?'Online':qr?'Conectando':'Offline',
+        statusFg: online?'#2e7d54':qr?'#c98a1e':'#9b9a94',
+        primaryStyle: i.primary ? 'font-size:9px;color:#c98a1e' : 'display:none',
+        onMenu: () => set({ instMenu: i.id }),
+      }
+    })
+
+    // régua steps
+    const stepRules = s.rules.filter(r => r.kind==='step').sort((a,b)=>this.offset(a)-this.offset(b))
+    const steps = stepRules.map((r, idx) => {
+      const dot = this.stepDot(r), active = r.active && s.reguaActive
+      return {
+        dot, day:this.dayLabel(r), title:r.title, time:r.time, preview:r.template,
+        titleColor: active ? '#26272b' : '#9b9a94',
+        lineStyle: idx < stepRules.length-1 ? 'width:1px;flex:1;background:#ecebe7' : 'display:none',
+        bodyStyle: 'padding-bottom:'+(idx<stepRules.length-1?'14px':'0')+';flex:1;min-width:0;opacity:'+(active?'1':'.55'),
+        offBadge: r.active ? 'display:none' : 'font:500 8.5px Geist Mono,monospace;background:#f1f0ee;color:#8a8983;border-radius:3px;padding:1px 5px',
+        onEdit: () => this.openStep(r),
+      }
+    })
+
+    // templates
+    const tplRules = s.rules.filter(r => r.kind==='template')
+    const badgeColor = (b) => ({ PIX:['#f1f0ee','#777670'], LOGIN:['#f1f0ee','#777670'], CAMPANHA:['#e9e9ff','#3140a8'], PROMO:['#efe9ff','#5b3fd4'], AVISO:['#f6e4e4','#a13636'] }[b] || ['#f1f0ee','#777670'])
+    const templates = tplRules.map(r => {
+      const bc = badgeColor(r.badge)
+      return {
+        title:r.title, badge:r.badge, preview:r.template,
+        badgeStyle: 'font:500 9px Geist Mono,monospace;background:'+bc[0]+';color:'+bc[1]+';border-radius:3px;padding:1px 5px',
+        offBadge: r.active ? 'display:none' : 'font:500 8.5px Geist Mono,monospace;background:#f6e4e4;color:#a13636;border-radius:3px;padding:1px 5px',
+        onEdit: () => this.openTemplate(r),
+        onSend: (e) => { e.stopPropagation(); set({ tab:'mass', massMsg:r.template }); this.toast('Template carregado no disparo.') },
+      }
+    })
+
+    // logs
+    const filteredLogs = s.logs.filter(l => s.logFilter==='all' || l.status===s.logFilter).map(l => {
+      const m = ({ pending:['Na fila','#f2e8d4','#8a6d1f'], sent:['Enviado','#e2efe6','#256b45'], failed:['Falhou','#f6e4e4','#a13636'] })[l.status]
+      return {
+        client:l.client, alert:this.LOG_TYPE[l.type]||l.type, scheduled:l.scheduled,
+        statusLabel:m[0], statusStyle:'display:inline-flex;font-size:10px;font-weight:600;background:'+m[1]+';color:'+m[2]+';border-radius:4px;padding:2px 9px',
+        hasError:!!l.error, error:l.error,
+        canResend:l.status!=='sent', canCancel:l.status==='pending',
+        onResend: () => { this.setLog(l.id,{ status:'pending', error:'' }); this.toast('Reenviado para a fila.') },
+        onCancel: () => { this.setLog(l.id,{ status:'failed', error:'Cancelado' }); this.toast('Cancelado.', 'warn') },
+        onDelete: () => { this.setState({ logs: s.logs.filter(x=>x.id!==l.id) }); this.toast('Registro removido.', 'warn') },
+      }
+    })
+    const lfDefs=[{k:'pending',l:'Em andamento'},{k:'sent',l:'Sucesso'},{k:'failed',l:'Erro'},{k:'all',l:'Todos'}]
+    const lfBase='cursor:pointer;font-family:inherit;border:none;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:500;transition:all .12s;'
+    const logFilters=lfDefs.map(f=>({ label:f.l, style:lfBase+(s.logFilter===f.k?'background:#fff;color:#191a1e;box-shadow:0 1px 2px rgba(0,0,0,.07)':'background:transparent;color:#77756d'), onClick:()=>set({logFilter:f.k}) }))
+    let bulkLabel='Limpar histórico', bulkTone='danger', bulkAct='clear'
+    if (s.logFilter==='failed'){ bulkLabel='Reenviar todos'; bulkTone='ok'; bulkAct='resend' }
+    else if (s.logFilter==='pending'){ bulkLabel='Cancelar todos'; bulkTone='warn'; bulkAct='cancel' }
+    const bc = { danger:['#f0d9d9','#fdf6f6','#a13636'], ok:['#cfe3d8','#f4faf6','#2e7d54'], warn:['#e8d9b5','#faf6ec','#8a6d1f'] }[bulkTone]
+
+    // mass
+    const audDefs=[{k:'all',l:'Todos os clientes'},{k:'active',l:'Apenas ativos'},{k:'inactive',l:'Apenas inativos'},{k:'expired',l:'Vencimento atrasado'},{k:'service',l:'Por serviço'}]
+    const audBase='cursor:pointer;font-family:inherit;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:500;transition:all .12s;'
+    const audiences=audDefs.map(a=>({ label:a.l, style:audBase+(s.massAudience===a.k?'border:1.5px solid #191a1e;background:#191a1e;color:#fff':'border:1px solid #e2e1dd;background:#fff;color:#55565c'), onClick:()=>set({massAudience:a.k, massMsg:this.readEd('mass')}) }))
+    const estimate=({all:128,active:121,inactive:7,expired:6,service:34})[s.massAudience]||0
+    const massVars=this.VARS.map(v=>({ label:v, onClick:()=>{ const t=this.readEd('mass'); set({massMsg:t+(t.endsWith(' ')||!t?'':' ')+v}); this.toast('Variável inserida.') } }))
+    const templatePicks=tplRules.filter(r=>r.active).map(r=>({ label:r.title, onClick:()=>{ set({massMsg:r.template}); this.toast('Template aplicado.') } }))
+
+    // dialog
+    const f = s.form, isStep = s.dlgKind==='step'
+    const formVars=this.VARS.map(v=>({ label:v, onClick:()=>{ const t=this.readEd('form'); set({form:{...f, template:t+(t.endsWith(' ')||!t?'':' ')+v}}) } }))
+    const typeOptions=Object.keys(this.STEP_TYPES).map(k=>({ value:k, label:this.STEP_TYPES[k], selected:f.type===k }))
+    const badgeOptions=this.BADGES.map(b=>({ value:b, label:b, selected:f.badge===b }))
+
+    // instance menu
+    const menuInst = s.instMenu ? s.instances.find(i=>i.id===s.instMenu) : null
+    let menuActions=[]
+    if (menuInst) {
+      const mBase='cursor:pointer;font-family:inherit;width:100%;text-align:left;border:none;background:none;border-radius:7px;padding:9px 11px;font-size:12px;font-weight:500;'
+      const acts=[]
+      if (menuInst.status==='online' && !menuInst.primary) acts.push({ label:'★ Tornar principal', tone:'n', fn:()=>{ this.setState({instances:s.instances.map(x=>({...x,primary:x.id===menuInst.id})), instMenu:null}); this.toast(menuInst.name+' é o número principal.') } })
+      if (menuInst.status==='online') acts.push({ label:'Desconectar', tone:'w', fn:()=>{ this.setInst(menuInst.id,{status:'offline'}); set({instMenu:null}); this.toast('Desconectado.', 'warn') } })
+      if (menuInst.status!=='online') acts.push({ label:'Reconectar (novo QR)', tone:'n', fn:()=>{ this.setInst(menuInst.id,{status:'connecting'}); set({instMenu:null}); this.toast('Gerando novo QR…') } })
+      if (menuInst.status==='connecting') acts.push({ label:'Simular leitura do QR', tone:'g', fn:()=>{ this.setInst(menuInst.id,{status:'online', phone:'(11) 9'+Math.floor(1000+Math.random()*8999)+'-'+Math.floor(1000+Math.random()*8999)}); set({instMenu:null}); this.toast('Chip conectado!') } })
+      acts.push({ label:'Excluir chip', tone:'d', fn:()=>{ this.setState({instances:s.instances.filter(x=>x.id!==menuInst.id), instMenu:null}); this.toast('Chip removido.', 'warn') } })
+      menuActions = acts.map(a=>({ label:a.label, style:mBase+'color:'+({n:'#26272b',g:'#2e7d54',w:'#c98a1e',d:'#a13636'}[a.tone])+';', onClick:a.fn }))
+    }
+
+    const tm = s.toast ? ({ ok:['#cfe3d8','#2e7d54'], warn:['#e8d9b5','#c98a1e'], err:['#f0d9d9','#b23c3c'] }[s.toast.tone]||['#cfe3d8','#2e7d54']) : ['#ecebe7','#2e7d54']
+
+    return {
+      tabs, ...wa,
+      isOverview:s.tab==='overview', isMass:s.tab==='mass', isLogs:s.tab==='logs',
+      onGoLogs: () => set({ tab:'logs' }),
+      onAddChip: () => this.addChip(),
+
+      // instances + régua + templates
+      instances,
+      reguaActive:s.reguaActive, reguaLabel:s.reguaActive?'Ativa':'Pausada', reguaFg:s.reguaActive?'#2e7d54':'#9b9a94',
+      reguaTrack:this.track(s.reguaActive), reguaKnob:this.knob(s.reguaActive),
+      onToggleRegua: () => { set({ reguaActive:!s.reguaActive }); this.toast(s.reguaActive?'Régua pausada.':'Régua ativada.') },
+      steps, hasSteps:steps.length>0, noSteps:steps.length===0,
+      onAddStep: () => this.openStep(null),
+      templates, onAddTemplate: () => this.openTemplate(null),
+
+      // anti-ban + calls
+      minDelay:s.minDelay, maxDelay:s.maxDelay,
+      onMinUp:()=>set({minDelay:Math.min(s.minDelay+1,s.maxDelay)}), onMinDown:()=>set({minDelay:Math.max(5,s.minDelay-1)}),
+      onMaxUp:()=>set({maxDelay:s.maxDelay+1}), onMaxDown:()=>set({maxDelay:Math.max(s.minDelay,s.maxDelay-1)}),
+      rejectCalls:s.rejectCalls, callMsg:s.callMsg,
+      callTrackStyle:this.track(s.rejectCalls), callKnobStyle:this.knob(s.rejectCalls),
+      onToggleCalls:()=>set({rejectCalls:!s.rejectCalls}),
+
+      // mass
+      audiences, estimated:String(estimate), massMsg:s.massMsg, massVars, templatePicks,
+      onSchedule:()=>{},
+      sendBg: anyOnline?'#2e7d54':'#c9c8c2', sendLabel: anyOnline?'Iniciar disparo em massa':'Conecte um número primeiro',
+      onSendMass:()=>{ if(anyOnline){ set({tab:'logs'}); this.toast('Disparo iniciado! Veja nos logs.') } else this.toast('Conecte um número primeiro.', 'err') },
+
+      // logs
+      logFilters, filteredLogs, hasLogs:filteredLogs.length>0, noLogs:filteredLogs.length===0,
+      bulkLabel, bulkStyle:'cursor:pointer;font-family:inherit;border:1px solid '+bc[0]+';background:'+bc[1]+';color:'+bc[2]+';border-radius:7px;padding:6px 12px;font-size:11px;font-weight:500',
+      onBulk:()=>this.bulk(bulkAct),
+
+      // dialog
+      dialog:s.dialog, dlgKind:s.dlgKind, isStepDialog:isStep, isTemplateDialog:!isStep,
+      dialogTitle: (s.editingId?'Editar ':'Nova ') + (isStep?'etapa da régua':'template'),
+      dialogSub: isStep?'quando e o que o robô envia':'mensagem reutilizável',
+      dlgIcon: isStep?'⏱':'✉', dlgIconBg: isStep?'#f2e8d4':'#e9e9ff',
+      formTitle:f.title, onFormTitle:(e)=>set({form:{...f,title:e.target.value}}),
+      typeOptions, onFormType:(e)=>set({form:{...f,type:e.target.value}}),
+      showDays: f.type==='before_due'||f.type==='after_due',
+      formDays:String(f.days), onDaysUp:()=>set({form:{...f,days:Math.min(30,f.days+1),template:this.readEd('form')}}), onDaysDown:()=>set({form:{...f,days:Math.max(1,f.days-1),template:this.readEd('form')}}),
+      formTime:f.time, onFormTime:(e)=>set({form:{...f,time:e.target.value,template:this.readEd('form')}}),
+      badgeOptions, onFormBadge:(e)=>set({form:{...f,badge:e.target.value}}),
+      formTemplate:f.template, formVars,
+      formActiveTrack:this.track(f.active), formActiveKnob:this.knob(f.active),
+      onToggleFormActive:()=>set({form:{...f,active:!f.active,template:this.readEd('form')}}),
+      canDeleteForm:!!s.editingId, noDeleteForm:!s.editingId,
+      onDeleteForm:()=>this.deleteForm(),
+      onSaveForm:()=>this.saveForm(),
+      onCloseDialog:()=>set({dialog:false}),
+      stop:(e)=>e.stopPropagation(),
+
+      // instance menu
+      instMenu:s.instMenu, menuName:menuInst?menuInst.name:'', menuStatus:menuInst?(menuInst.status==='online'?menuInst.phone+' · online':menuInst.status==='connecting'?'aguardando QR':'offline'):'', menuActions,
+      onCloseMenu:()=>set({instMenu:null}),
+
+      // toast
+      toast:s.toast, toastMsg:s.toast?s.toast.msg:'', toastBorder:tm[0], toastDot:tm[1],
+    }
+  }
+}
+</script>
+</body>
+</html>

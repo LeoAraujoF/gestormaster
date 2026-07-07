@@ -32,7 +32,7 @@ export function MetricCard({
   }
 
   return (
-    <Card className={cn("glass-card overflow-hidden relative group", className)}>
+    <Card className={cn("overflow-hidden relative group", className)}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between space-y-0 pb-2">
           <p className="text-sm font-medium text-muted-foreground">

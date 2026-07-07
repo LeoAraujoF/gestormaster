@@ -95,11 +95,11 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {open === undefined && (
         <DialogTrigger nativeButton={!children} render={
-          children || (
+          (children || (
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
               <DollarSign className="w-4 h-4" /> Gerar Pix Rápido
             </Button>
-          )
+          )) as React.ReactElement
         } />
       )}
       <DialogContent className="sm:max-w-md">
@@ -129,7 +129,7 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
             </div>
             <div className="space-y-2">
               <Label>WhatsApp Emissor</Label>
-              <Select value={pixInstance} onValueChange={setPixInstance}>
+              <Select value={pixInstance} onValueChange={(v) => setPixInstance(v ?? "")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a instância" />
                 </SelectTrigger>

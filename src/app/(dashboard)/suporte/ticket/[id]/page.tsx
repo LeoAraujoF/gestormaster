@@ -113,7 +113,7 @@ export default function TicketDetailsPage() {
 
   const getStatusBadge = (status: string) => {
     switch(status) {
-      case 'open': return <Badge className="bg-sky-500">Aberto</Badge>
+      case 'open': return <Badge className="bg-interactive">Aberto</Badge>
       case 'in_progress': return <Badge className="bg-amber-500">Em Análise</Badge>
       case 'resolved': return <Badge className="bg-emerald-500">Resolvido</Badge>
       case 'closed': return <Badge variant="outline">Encerrado</Badge>
@@ -132,7 +132,7 @@ export default function TicketDetailsPage() {
         Voltar para Suporte
       </Button>
 
-      <Card className="glass-card">
+      <Card>
         <CardHeader className="border-b border-border/50 pb-6">
           <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
             <div className="space-y-1">

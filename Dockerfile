@@ -18,10 +18,8 @@ COPY . .
 # Environment variables must be present at build time for Next.js if they are public
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Disable Type Checking and Linting during Docker Build (we already do it locally)
-ENV NEXT_PUBLIC_IGNORE_BUILD_ERRORS=true
-ENV NEXT_IGNORE_ESLINT=true
-ENV NEXT_IGNORE_TYPE_CHECK=true
+# Type-checking roda no build (controlado por next.config.ts: typescript.ignoreBuildErrors=false).
+# Next 16 não executa ESLint durante o build.
 
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 

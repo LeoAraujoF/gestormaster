@@ -1,4 +1,4 @@
-export type ClientStatus = 'active' | 'inactive' | 'pending' | 'vencido'
+export type ClientStatus = 'active' | 'inactive' | 'pending' | 'vencido' | 'suspended' | 'canceled'
 export type AlertType = 'before_due' | 'on_due' | 'after_due' | 'renewal' | 'promotion' | 'quick_message'
 export type AlertSendStatus = 'sent' | 'failed' | 'pending'
 export type InstanceStatus = 'connected' | 'disconnected'
@@ -142,6 +142,28 @@ export interface DashboardMetrics {
   monthly_net_revenue: number
 }
 
+export interface AdvancedDashboardMetrics {
+  monthly_goal: number
+  mrr: number
+  active_clients: number
+  total_clients: number
+  default_clients: number
+  default_amount: number
+  expected_revenue: number
+  received_today: number
+  received_month: number
+  received_last_month: number
+  renewals_this_month: number
+  renewals_last_month: number
+  new_clients_this_month: number
+  new_clients_last_month: number
+  alerts_sent_today: number
+  top_clients: Array<{ name: string; total_paid: number }>
+  revenue_by_service: Array<{ service_name: string; total_value: number }>
+  revenue_evolution: Array<{ date: string; amount: number }>
+  receipt_methods: Array<{ method: string; value: number }>
+}
+
 export interface Payment {
   id: string
   organization_id?: string
@@ -162,4 +184,30 @@ export interface MonthlyGrowth {
 export interface ClientsByService {
   service_name: string
   client_count: number
+}
+
+export interface ClientsManagementMetrics {
+  total_clients: number
+  active_clients: number
+  overdue_clients: number
+  suspended_clients: number
+  canceled_clients: number
+  new_clients_this_month: number
+  no_whatsapp_clients: number
+  no_service_clients: number
+  pending_pix_clients: number
+  due_today_clients: number
+  due_tomorrow_clients: number
+  due_in_7_days_clients: number
+  chart_clients_by_status: Array<{ name: string; value: number }>
+  chart_clients_by_plan: Array<{ name: string; value: number }>
+  chart_base_growth: Array<{ month: string; new_clients: number }>
+}
+
+export interface EnrichedClient extends Client {
+  last_payment_date: string | null
+  renewal_count: number
+  last_charge_sent_date: string | null
+  last_communication_status: string | null
+  days_as_client: number
 }

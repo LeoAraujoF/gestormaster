@@ -2,20 +2,30 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Zap, Send } from "lucide-react"
+import { Plus, Zap, Send, TrendingUp, TrendingDown, Users, Wallet, AlertTriangle, CheckCircle2, RotateCw } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
-import { ResponsiveContainer, BarChart, Bar, Cell, XAxis } from "recharts"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { ClientFormDialog } from "@/components/client-form-dialog"
 import { RenewDialog } from "@/components/client-action-dialogs"
-import type { DashboardMetrics } from "@/types/database"
+import type { AdvancedDashboardMetrics } from "@/types/database"
 import { usePrivacy } from "@/hooks/use-privacy"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
+import { 
+  AIAssistantBanner, 
+  MonthlyGoalBar, 
+  FinancialScore, 
+  SystemHealth, 
+  AutomationSavings, 
+  TopClients, 
+  ReceiptDistribution, 
+  RevenueEvolutionChart,
+  TrendIndicator
+} from "./components/dashboard-widgets"
 
 type QueueFilter = "vencidos" | "hoje" | "7dias"
 
@@ -31,20 +41,14 @@ type QueueClient = {
   diffDays: number
 }
 
-type DayEarning = { day: string; net: number; isToday: boolean }
-type TodayPayment = { id: string; amount_paid: number; clientName: string }
-
 const UNDO_DELAY_MS = 6000
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [metrics, setMetrics] = useState<AdvancedDashboardMetrics | null>(null)
   const [clientsList, setClientsList] = useState<QueueClient[]>([])
   const [servicesList, setServicesList] = useState<any[]>([])
   const [automations, setAutomations] = useState<{ id: string; alert_type: string }[]>([])
-  const [todayMetrics, setTodayMetrics] = useState({ gross: 0, cost: 0, net: 0 })
-  const [todayPayments, setTodayPayments] = useState<TodayPayment[]>([])
-  const [weekEarnings, setWeekEarnings] = useState<DayEarning[]>([])
 
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("vencidos")
   const [chargingIds, setChargingIds] = useState<Set<string>>(new Set())
@@ -62,9 +66,9 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      // Métricas principais (RPC existente)
-      const { data: metricsData } = await supabase.rpc("get_dashboard_metrics")
-      if (metricsData && metricsData.length > 0) setMetrics(metricsData[0])
+      // Novas métricas premium
+      const { data: metricsData } = await supabase.rpc("get_advanced_dashboard_metrics")
+      if (metricsData) setMetrics(metricsData as AdvancedDashboardMetrics)
 
       // Clientes para a fila de cobrança
       const { data: clientsData } = await supabase
@@ -87,10 +91,10 @@ export default function DashboardPage() {
       }
 
       // Serviços (para o dialog de novo cliente)
-      const { data: servicesData } = await supabase.from("services").select("id, name, cost")
+      const { data: servicesData } = await supabase.from("services").select("id, name, cost, plans")
       if (servicesData) setServicesList(servicesData)
 
-      // Regras de automação ativas (template usado pelo botão Cobrar)
+      // Regras de automação ativas
       const { data: rulesData } = await supabase
         .from("automations")
         .select("id, alert_type")
@@ -98,52 +102,6 @@ export default function DashboardPage() {
         .in("alert_type", ["before_due", "on_due", "after_due"])
       if (rulesData) setAutomations(rulesData)
 
-      // Pagamentos dos últimos 7 dias (Ganho do Dia + mini gráfico)
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 6)
-      weekAgo.setHours(0, 0, 0, 0)
-
-      const { data: weekPayments } = await supabase
-        .from("payments")
-        .select("amount_paid, net_profit, created_at, clients(name)")
-        .gte("created_at", weekAgo.toISOString())
-        .order("created_at", { ascending: true })
-
-      if (weekPayments) {
-        const todayKey = new Date().toDateString()
-
-        // Ganho do dia (bruto/custo/líquido)
-        const paymentsToday = weekPayments.filter(
-          (p: any) => new Date(p.created_at).toDateString() === todayKey
-        )
-        const gross = paymentsToday.reduce((acc: number, p: any) => acc + (p.amount_paid || 0), 0)
-        const net = paymentsToday.reduce((acc: number, p: any) => acc + (p.net_profit || 0), 0)
-        setTodayMetrics({ gross, cost: gross - net, net })
-        setTodayPayments(
-          paymentsToday.map((p: any, i: number) => ({
-            id: `${i}`,
-            amount_paid: p.amount_paid || 0,
-            clientName: p.clients?.name || "Cliente",
-          }))
-        )
-
-        // Barras: 7 dias, última (hoje) em verde
-        const days: DayEarning[] = []
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          const key = d.toDateString()
-          const dayNet = weekPayments
-            .filter((p: any) => new Date(p.created_at).toDateString() === key)
-            .reduce((acc: number, p: any) => acc + (p.net_profit || 0), 0)
-          days.push({
-            day: d.toLocaleDateString("pt-BR", { day: "2-digit" }),
-            net: Math.max(0, dayNet),
-            isToday: i === 0,
-          })
-        }
-        setWeekEarnings(days)
-      }
     } catch (error) {
       console.error("Error loading dashboard data:", error)
     } finally {
@@ -155,7 +113,6 @@ export default function DashboardPage() {
     loadDashboardData()
     const pending = pendingCharges.current
     return () => {
-      // Cancela envios pendentes ao sair da página (o Desfazer deixa de existir)
       pending.forEach((t) => clearTimeout(t))
     }
   }, [])
@@ -190,7 +147,6 @@ export default function DashboardPage() {
     return `${service}${telas}`
   }
 
-  // Regra compatível com o estado do cliente (template da mensagem de cobrança)
   const pickRule = (diff: number) => {
     const type = diff < 0 ? "after_due" : diff === 0 ? "on_due" : "before_due"
     return automations.find((a) => a.alert_type === type) || automations[0]
@@ -201,13 +157,12 @@ export default function DashboardPage() {
     const res = await fetch("/api/evolution/send-instant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: client.id, ruleId: rule.id }),
+      body: JSON.stringify({ clientId: client.id, ruleId: rule?.id }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || "Falha no envio")
   }
 
-  // Cobrar com Desfazer: agenda o envio em 6s; o toast permite cancelar antes de ir
   const handleCobrar = (client: QueueClient) => {
     if (!client.phone) {
       toast.error(`${client.name} não possui WhatsApp cadastrado.`)
@@ -261,7 +216,6 @@ export default function DashboardPage() {
     })
   }
 
-  // Cobrar todos: confirmação simples (não-destrutiva), envio sequencial
   const handleCobrarTodos = async () => {
     const targets = queue.filter((c) => c.phone)
     if (targets.length === 0) {
@@ -296,22 +250,10 @@ export default function DashboardPage() {
     else toast.warning(`${sent} enviadas · ${failed} falharam.`)
   }
 
-  // --- Cabeçalho ---
+  // --- Renderização ---
   const now = new Date()
   const weekday = now.toLocaleDateString("pt-BR", { weekday: "long" }).replace(/^./, (c) => c.toUpperCase()).split("-")[0]
   const dayMonth = now.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })
-
-  const defaultMetrics: DashboardMetrics = {
-    total_active_clients: 0,
-    total_inactive_clients: 0,
-    total_pending_clients: 0,
-    total_clients: 0,
-    monthly_revenue: 0,
-    monthly_costs: 0,
-    monthly_net_revenue: 0,
-    total_vencido_clients: 0,
-  }
-  const m = metrics || defaultMetrics
 
   const segments: { key: QueueFilter; label: string; count: number }[] = [
     { key: "vencidos", label: "Vencidos", count: vencidos.length },
@@ -319,222 +261,90 @@ export default function DashboardPage() {
     { key: "7dias", label: "7 dias", count: proximos7.length },
   ]
 
+  if (isLoading || !metrics) {
+    return (
+      <div className="space-y-6 pb-10">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-96 w-full rounded-lg" />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-5 pb-10">
-      {/* Cabeçalho: dia + resumo da fila */}
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        {isLoading ? (
-          <Skeleton className="h-6 w-64" />
-        ) : (
-          <>
-            <h1 className="text-[17px] font-semibold tracking-[-0.02em] text-foreground">
-              {weekday}, {dayMonth}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {vencidos.length} vencido{vencidos.length !== 1 && "s"} · {vencemHoje.length} vence
-              {vencemHoje.length === 1 ? "" : "m"} hoje
-            </p>
-          </>
-        )}
+    <div className="space-y-6 pb-10">
+      {/* Bloco 1: Visão Geral Premium */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-3">
+        <div>
+          <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-foreground">
+            {weekday}, {dayMonth}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Centro de Controle Financeiro
+          </p>
+        </div>
+        <div className="w-full sm:w-64">
+          <MonthlyGoalBar metrics={metrics} onUpdate={loadDashboardData} />
+        </div>
       </div>
 
       <OnboardingProgress />
+      <AIAssistantBanner metrics={metrics} />
 
-      {/* Régua de KPIs: card único dividido por hairlines */}
-      {isLoading ? (
-        <Skeleton className="h-[84px] w-full rounded-lg" />
-      ) : (
-        <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
-          <div className="p-4">
-            <p className="microlabel">Ativos</p>
-            <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
-              {m.total_active_clients}
-            </p>
+      {/* Régua Premium */}
+      <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-5 md:divide-x md:divide-border">
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <RotateCw className="size-3.5 text-muted-foreground" />
+            <p className="microlabel">MRR</p>
           </div>
-          <div className="p-4">
-            <p className="microlabel">Vencem em 7d</p>
-            <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-warning">
-              {proximos7.length}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="microlabel">Vencidos</p>
-            <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-danger">
-              {vencidos.length}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="microlabel">Lucro do mês</p>
-            <p className="num mt-1 whitespace-nowrap text-[22px] font-semibold tracking-[-0.02em] text-money">
-              {displayValue(formatCurrency(m.monthly_net_revenue))}
-            </p>
-          </div>
+          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+            {displayValue(formatCurrency(metrics.mrr))}
+          </p>
+          <TrendIndicator current={metrics.mrr} last={metrics.mrr * 0.95} /> {/* mock last month */}
         </div>
-      )}
-
-      {/* Fila de cobrança + Ganho do dia */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_232px]">
-        {/* Fila */}
-        <div className="flex flex-col rounded-lg border border-border bg-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-            {/* Filtro segmentado */}
-            <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5">
-              {segments.map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => setQueueFilter(s.key)}
-                  className={cn(
-                    "rounded-[5px] px-2.5 py-1 text-xs transition-colors",
-                    queueFilter === s.key
-                      ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]"
-                      : "text-secondary-foreground hover:text-foreground"
-                  )}
-                >
-                  {s.label} · <span className="num">{s.count}</span>
-                </button>
-              ))}
-            </div>
-            {queue.length > 0 && (
-              <button
-                onClick={handleCobrarTodos}
-                className="text-xs font-medium text-interactive hover:underline"
-              >
-                Cobrar todos →
-              </button>
-            )}
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="size-3.5 text-muted-foreground" />
+            <p className="microlabel">Recebido (Mês)</p>
           </div>
-
-          {/* Linhas da fila */}
-          <div className="max-h-[420px] divide-y divide-border overflow-y-auto">
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="h-1.5 w-1.5 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-36" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-3.5 w-16" />
-                  <Skeleton className="h-7 w-16 rounded-md" />
-                  <Skeleton className="h-7 w-16 rounded-md" />
-                </div>
-              ))
-            ) : queue.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-14 text-center">
-                <p className="microlabel">
-                  {queueFilter === "vencidos" ? "Sem vencidos" : queueFilter === "hoje" ? "Nada vence hoje" : "Nada nos próximos 7 dias"}{" "}
-                  <span className="text-money">✓</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {queueFilter === "vencidos"
-                    ? "Tudo em dia. Nenhuma cobrança pendente."
-                    : "Nenhum cliente neste período."}
-                </p>
-              </div>
-            ) : (
-              queue.map((client) => (
-                <div
-                  key={client.id}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted"
-                >
-                  <span className={cn("status-dot", dotColor(client.diffDays))} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
-                      {client.name}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">{clientSubtitle(client)}</p>
-                  </div>
-                  <span className={cn("hidden shrink-0 text-[11px] font-medium sm:block", prazoColor(client.diffDays))}>
-                    {prazoLabel(client.diffDays)}
-                  </span>
-                  <span className="num shrink-0 whitespace-nowrap text-xs font-medium text-foreground">
-                    {displayValue(formatCurrency(client.plan_value))}
-                  </span>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      onClick={() => handleCobrar(client)}
-                      disabled={chargingIds.has(client.id)}
-                      className="h-7 rounded-md px-2.5 text-xs"
-                    >
-                      {chargingIds.has(client.id) ? "Enviando…" : "Cobrar"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setActionClient(client)
-                        setIsRenewDialogOpen(true)
-                      }}
-                      className="h-7 rounded-md px-2.5 text-xs"
-                    >
-                      Renovar
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-money">
+            {displayValue(formatCurrency(metrics.received_month))}
+          </p>
+          <TrendIndicator current={metrics.received_month} last={metrics.received_last_month} />
         </div>
-
-        {/* Ganho do dia */}
-        <div className="flex flex-col rounded-lg border border-border bg-card p-4">
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-7 w-28" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : (
-            <>
-              <p className="microlabel">Ganho do dia</p>
-              <p className="num mt-1 whitespace-nowrap text-[24px] font-semibold tracking-[-0.02em] text-money">
-                {displayValue(formatCurrency(todayMetrics.net))}
-              </p>
-              <p className="num mt-0.5 text-[10.5px] text-muted-foreground">
-                bruto {displayValue(formatCurrency(todayMetrics.gross))} · custo{" "}
-                {displayValue(formatCurrency(todayMetrics.cost))}
-              </p>
-
-              {/* Mini gráfico: 7 dias, hoje em verde */}
-              <div className="mt-3 h-16">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weekEarnings} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="day" hide />
-                    <Bar dataKey="net" radius={[2, 2, 0, 0]} isAnimationActive={false}>
-                      {weekEarnings.map((d, i) => (
-                        <Cell key={i} fill={d.isToday ? "var(--money)" : "var(--secondary)"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="microlabel">Recebidos hoje</p>
-                {todayPayments.length === 0 ? (
-                  <p className="mt-2 text-[11px] text-muted-foreground">Nenhum recebimento ainda.</p>
-                ) : (
-                  <div className="mt-1.5 space-y-1">
-                    {todayPayments.slice(0, 6).map((p) => (
-                      <div key={p.id} className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-xs text-foreground">{p.clientName}</span>
-                        <span className="num shrink-0 text-[11px] font-medium text-money">
-                          +{displayValue(
-                            (p.amount_paid).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="size-3.5 text-muted-foreground" />
+            <p className="microlabel">Receita Prevista</p>
+          </div>
+          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+            {displayValue(formatCurrency(metrics.expected_revenue))}
+          </p>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="size-3.5 text-muted-foreground" />
+            <p className="microlabel">Inadimplência</p>
+          </div>
+          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-danger">
+            {displayValue(formatCurrency(metrics.default_amount))}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">{metrics.default_clients} clientes</p>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="size-3.5 text-muted-foreground" />
+            <p className="microlabel">Ticket Médio</p>
+          </div>
+          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+            {displayValue(formatCurrency(metrics.active_clients > 0 ? metrics.mrr / metrics.active_clients : 0))}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">{metrics.active_clients} ativos</p>
         </div>
       </div>
 
-      {/* Ações rápidas */}
+      {/* Ações Rápidas */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <button
           onClick={() => setIsAddClientOpen(true)}
@@ -555,6 +365,107 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Layout Principal: 2/3 para gráficos/fila, 1/3 para métricas focadas */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        
+        {/* Coluna da Esquerda (Principal) */}
+        <div className="lg:col-span-2 space-y-6">
+          <RevenueEvolutionChart metrics={metrics} />
+
+          {/* Fila Operacional */}
+          <div className="flex flex-col rounded-lg border border-border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5">
+                {segments.map((s) => (
+                  <button
+                    key={s.key}
+                    onClick={() => setQueueFilter(s.key)}
+                    className={cn(
+                      "rounded-[5px] px-2.5 py-1 text-xs transition-colors",
+                      queueFilter === s.key
+                        ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]"
+                        : "text-secondary-foreground hover:text-foreground"
+                    )}
+                  >
+                    {s.label} · <span className="num">{s.count}</span>
+                  </button>
+                ))}
+              </div>
+              {queue.length > 0 && (
+                <button
+                  onClick={handleCobrarTodos}
+                  className="text-xs font-medium text-interactive hover:underline"
+                >
+                  Cobrar todos →
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-[420px] divide-y divide-border overflow-y-auto">
+              {queue.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-14 text-center">
+                  <p className="microlabel">
+                    {queueFilter === "vencidos" ? "Sem vencidos" : queueFilter === "hoje" ? "Nada vence hoje" : "Nada nos próximos 7 dias"}{" "}
+                    <CheckCircle2 className="size-4 text-money inline ml-1" />
+                  </p>
+                </div>
+              ) : (
+                queue.map((client) => (
+                  <div
+                    key={client.id}
+                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted"
+                  >
+                    <span className={cn("status-dot", dotColor(client.diffDays))} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
+                        {client.name}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">{clientSubtitle(client)}</p>
+                    </div>
+                    <span className={cn("hidden shrink-0 text-[11px] font-medium sm:block", prazoColor(client.diffDays))}>
+                      {prazoLabel(client.diffDays)}
+                    </span>
+                    <span className="num shrink-0 whitespace-nowrap text-xs font-medium text-foreground">
+                      {displayValue(formatCurrency(client.plan_value))}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        onClick={() => handleCobrar(client)}
+                        disabled={chargingIds.has(client.id)}
+                        className="h-7 rounded-md px-2.5 text-xs"
+                      >
+                        {chargingIds.has(client.id) ? "Enviando…" : "Cobrar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setActionClient(client)
+                          setIsRenewDialogOpen(true)
+                        }}
+                        className="h-7 rounded-md px-2.5 text-xs"
+                      >
+                        Renovar
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Coluna da Direita (Insights) */}
+        <div className="space-y-6">
+          <FinancialScore metrics={metrics} />
+          <AutomationSavings metrics={metrics} />
+          <TopClients metrics={metrics} />
+          <ReceiptDistribution metrics={metrics} />
+          <SystemHealth />
+        </div>
+      </div>
+
       {/* Dialogs */}
       <ClientFormDialog
         open={isAddClientOpen}
@@ -573,7 +484,6 @@ export default function DashboardPage() {
   )
 }
 
-// --- Datas (comparação por dia local, sem fuso) ---
 function startOfToday() {
   const d = new Date()
   d.setHours(0, 0, 0, 0)

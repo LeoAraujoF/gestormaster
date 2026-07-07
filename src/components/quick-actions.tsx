@@ -32,7 +32,7 @@ export function QuickActions() {
   useEffect(() => {
     // Busca a lista de serviços uma vez para alimentar o modal de cliente caso seja aberto
     const fetchServices = async () => {
-      const { data } = await supabase.from('services').select('id, name, cost')
+      const { data } = await supabase.from('services').select('id, name, cost, plans')
       if (data) setServicesList(data)
     }
     fetchServices()

@@ -39,9 +39,12 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
     if (isOpen) {
       // Fetch instances when opened
       supabase.from('evolution_instances').select('instance_name').then(({ data }) => {
-        if (data) {
+        if (data && data.length > 0) {
           setPixInstances(data)
-          if (data.length > 0) setPixInstance(data[0].instance_name)
+          setPixInstance(data[0].instance_name)
+        } else {
+          setPixInstances([{ instance_name: "Nenhuma" }])
+          setPixInstance("Nenhuma")
         }
       })
     }
@@ -94,7 +97,7 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {open === undefined && (
-        <DialogTrigger nativeButton={!children} render={
+        <DialogTrigger nativeButton={true} render={
           (children || (
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
               <DollarSign className="w-4 h-4" /> Gerar Pix Rápido

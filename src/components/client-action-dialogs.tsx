@@ -92,6 +92,13 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'money' | 'card'>('pix')
+  
+  // Estados para geração do PIX
+  const [generatedPix, setGeneratedPix] = useState<{copia_e_cola: string, qr_code_base64: string} | null>(null)
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false)
+  const [pixInstance, setPixInstance] = useState("")
+  const [pixInstances, setPixInstances] = useState<any[]>([])
+
   const supabase = createClient()
 
   const planNameToMonths: Record<string, number> = {
@@ -107,6 +114,18 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       setRenewScreens(client.screens || 1)
       setNotifyWhatsApp(true)
       setPaymentMethod('pix')
+      setGeneratedPix(null)
+
+      // Busca instâncias disponíveis para notificação de webhook
+      supabase.from('evolution_instances').select('instance_name').then(({ data, error }) => {
+        if (data && data.length > 0) {
+          setPixInstances(data)
+          setPixInstance(data[0].instance_name)
+        } else {
+          setPixInstances([{ instance_name: "Nenhuma" }])
+          setPixInstance("Nenhuma")
+        }
+      })
     }
   }, [client, open])
 
@@ -132,6 +151,48 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   // Chip ativo: plano cujo preço bate exatamente com o valor atual
   const activePeriod = periods.find(p => p.price === renewAmount && p.months === renewMonths) ?? null
+
+  const handleGeneratePix = async () => {
+    if (!client || !pixInstance) {
+      toast.error("Instância do WhatsApp não selecionada para o emissor.")
+      return
+    }
+
+    setIsGeneratingPix(true)
+    setGeneratedPix(null)
+
+    try {
+      const res = await fetch('/api/pix/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valor: renewAmount,
+          descricao: `Renovação: ${client.name}`,
+          telefone_pagador: client.phone || "00000000000",
+          instance_name: pixInstance
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setGeneratedPix({ copia_e_cola: data.copia_e_cola, qr_code_base64: data.qr_code_base64 })
+        toast.success("Pix gerado com sucesso via Mercado Pago!")
+      } else {
+        toast.error(data.error || "Erro ao gerar Pix no Mercado Pago.")
+      }
+    } catch (e) {
+      toast.error("Erro interno ao gerar Pix.")
+    } finally {
+      setIsGeneratingPix(false)
+    }
+  }
+
+  const handleCopyPix = () => {
+    if (generatedPix) {
+      navigator.clipboard.writeText(generatedPix.copia_e_cola)
+      toast.success("Copia e Cola copiado!")
+    }
+  }
 
   const handleRenew = async () => {
     if (!client) return
@@ -194,9 +255,10 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths } })
       
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#2e7d54', '#4055c8', '#191a1e'] })
-      
-      onSuccess()
+
       onOpenChange(false)
+      // Pequeno delay para garantir que o Supabase commitou antes do reload
+      setTimeout(() => { onSuccess() }, 300)
     } catch (error) {
       toast.error("Erro ao renovar cliente.")
     } finally {
@@ -354,14 +416,47 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
               </div>
 
               {paymentMethod === 'pix' && (
-                <div className="flex items-center gap-[12px] p-[12px] bg-muted rounded-[8px] border border-border mb-[20px]">
-                  <div className="w-[66px] h-[66px] bg-card border border-input rounded-[4px] flex items-center justify-center text-[10px] text-muted-foreground">
-                    QR CODE
-                  </div>
-                  <div className="flex-1">
-                    <input readOnly value="00020126360014br.gov.bcb.pix..." className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px]" />
-                    <button className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
-                  </div>
+                <div className="bg-muted rounded-[8px] border border-border mb-[20px] p-[12px] flex flex-col gap-3">
+                  {!generatedPix ? (
+                    <>
+                      <div className="flex flex-col gap-[6px]">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">WhatsApp Emissor (Aviso Webhook Mercado Pago)</label>
+                        <select 
+                          className="h-[32px] rounded-[6px] border border-input bg-card text-[12px] px-[8px] outline-none w-full text-foreground"
+                          value={pixInstance}
+                          onChange={(e) => setPixInstance(e.target.value)}
+                        >
+                          {pixInstances.length === 0 && <option value="">Carregando...</option>}
+                          {pixInstances.map(inst => (
+                            <option key={inst.instance_name} value={inst.instance_name}>{inst.instance_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={handleGeneratePix}
+                        disabled={isGeneratingPix || !pixInstance}
+                        className="h-[32px] rounded-[6px] bg-primary text-primary-foreground text-[12px] font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        {isGeneratingPix && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                        Gerar PIX Mercado Pago (R$ {renewAmount.toFixed(2).replace('.', ',')})
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex gap-[12px]">
+                      <div className="w-[66px] h-[66px] bg-white border border-input rounded-[4px] overflow-hidden flex-shrink-0">
+                        <img src={`data:image/jpeg;base64,${generatedPix.qr_code_base64}`} alt="QR Code" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center min-w-0">
+                        <input readOnly value={generatedPix.copia_e_cola} className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px] truncate select-all" />
+                        <div className="flex gap-2">
+                          <button type="button" onClick={handleCopyPix} className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
+                          <span className="text-muted-foreground text-[11px]">•</span>
+                          <button type="button" onClick={() => setGeneratedPix(null)} className="text-muted-foreground text-[11px] font-medium hover:underline">Gerar outro</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

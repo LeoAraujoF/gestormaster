@@ -110,19 +110,21 @@ export async function POST(req: Request) {
           text: finalMessage
         })
       })
-    } finally {
-      clearTimeout(timeoutId)
-    }
-
-    if (!apiReq.ok) {
-      const errData = await apiReq.text()
+      
+      if (!apiReq.ok) {
+        const errData = await apiReq.text()
+        throw new Error(`API Evolution erro HTTP ${apiReq.status}: ${errData}`)
+      }
+    } catch (fetchErr: any) {
       // Log failed
       await supabase.from('alert_history').insert({
         user_id: user.id, client_id: client.id, automation_id: rule.id,
-        status: 'failed', error_message: `API Evolution erro: ${errData}`,
+        status: 'failed', error_message: `Falha no envio: ${fetchErr.message}`,
         scheduled_at: new Date().toISOString()
       })
-      throw new Error(`Falha no envio Evolution: ${errData}`)
+      throw new Error(`Falha no envio Evolution: ${fetchErr.message}`)
+    } finally {
+      clearTimeout(timeoutId)
     }
 
     // 5. Log success

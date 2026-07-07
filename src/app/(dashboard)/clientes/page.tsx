@@ -535,6 +535,7 @@ export default function ClientesPage() {
                               <DropdownMenuTrigger className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }}>Renovar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }}>Ativar Promoção</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => { setEditingClient(client); setIsDialogOpen(true) }}>Editar / Trocar Serviço</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleWhatsApp(client)}>Conversar no WhatsApp</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openProfile(client)}>Ficha do Cliente</DropdownMenuItem>

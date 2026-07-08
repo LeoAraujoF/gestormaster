@@ -23,7 +23,7 @@ export default function DashboardLayout({
       <OrganizationProvider>
         <SidebarProvider defaultOpen={true}>
           <AppSidebar />
-          <main className="flex-1 w-full flex flex-col bg-background">
+          <main className="flex-1 w-full flex flex-col bg-background min-w-0 overflow-x-hidden">
               <header className="h-14 flex items-center gap-3 px-4 md:px-6 border-b border-border bg-background sticky top-0 z-50">
                 <SidebarTrigger />
                 <div className="flex-1 max-w-[280px]">

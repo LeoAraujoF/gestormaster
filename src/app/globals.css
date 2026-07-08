@@ -161,14 +161,18 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
     scroll-behavior: smooth;
     overflow-y: scroll;
+    overflow-x: hidden;
+    max-width: 100vw;
     scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
 

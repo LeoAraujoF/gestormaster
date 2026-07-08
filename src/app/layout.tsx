@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
@@ -21,6 +21,13 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Gestor Master - Sistema de Clientes",
   description: "Gestão inteligente de clientes com automação",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

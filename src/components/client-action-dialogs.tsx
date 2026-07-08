@@ -285,7 +285,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[440px] max-w-[95vw] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] focus:outline-none"
         >
           <div className="modal-2a flex flex-col max-h-[90vh]">
             {/* HEADER */}
@@ -587,7 +587,7 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[420px] max-w-[95vw] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[420px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* HEADER */}
@@ -741,7 +741,7 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[390px] max-w-[95vw] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* Header (No sticky for this one) */}
@@ -869,7 +869,7 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 sm:max-w-none w-[390px] max-w-[95vw] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* Header (No sticky for this one) */}

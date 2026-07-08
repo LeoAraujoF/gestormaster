@@ -272,6 +272,29 @@ export default function ClientesPage() {
     loadData()
   }
 
+  const fetchClientServices = async (clientId: string) => {
+    const { data } = await supabase.from('client_services').select('*, services(*)').eq('client_id', clientId)
+    return data || []
+  }
+
+  const openEdit = async (client: EnrichedClient) => {
+    const services = await fetchClientServices(client.id)
+    setEditingClient({ ...client, client_services: services })
+    setIsDialogOpen(true)
+  }
+
+  const openRenew = async (client: EnrichedClient) => {
+    const services = await fetchClientServices(client.id)
+    setRenewingClient({ ...client, client_services: services })
+    setIsRenewDialogOpen(true)
+  }
+
+  const openPromo = async (client: EnrichedClient) => {
+    const services = await fetchClientServices(client.id)
+    setPromoClient({ ...client, client_services: services })
+    setIsPromoDialogOpen(true)
+  }
+
   const openProfile = async (client: EnrichedClient) => {
     setProfileClient(client)
     setIsProfileLoading(true)

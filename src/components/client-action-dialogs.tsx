@@ -293,8 +293,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
               <span className="w-[34px] h-[34px] rounded-[9px] bg-success-bg text-success-fg flex items-center justify-center text-[15px]">
                 ↻
               </span>
-              <div className="flex-1">
-                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground truncate">
                   Renovar assinatura
                 </div>
                 <div className="text-muted-foreground text-[11px] mt-[1px] truncate">
@@ -368,7 +368,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                         setRenewAmount(isNaN(num) ? 0 : num)
                       }}
                       placeholder="0,00"
-                      className="flex-1 pr-[11px] font-mono text-[13px] font-semibold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                      className="flex-1 min-w-0 pr-[11px] font-mono text-[13px] font-semibold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                   {planValue > 0 && renewAmount !== planValue && (
@@ -595,8 +595,8 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
               <span className="w-[34px] h-[34px] rounded-[9px] bg-accent text-interactive-fg flex items-center justify-center text-[15px]">
                 ▲
               </span>
-              <div className="flex-1">
-                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground truncate">
                   Aplicar promoção
                 </div>
                 <div className="text-muted-foreground text-[11px] mt-[1px] truncate">

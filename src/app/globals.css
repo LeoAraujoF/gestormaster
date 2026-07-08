@@ -259,8 +259,8 @@ html[data-tabular-nums="off"] .num {
   animation: dcfade 0.18s ease-out;
 }
 .modal-2a {
-  width: 640px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 640px;
   max-height: 90vh;              /* garante o limite mesmo se a classe JSX falhar */
   display: flex;
   flex-direction: column;

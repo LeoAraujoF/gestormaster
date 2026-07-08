@@ -282,7 +282,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
               <span className="w-[34px] h-[34px] rounded-[9px] bg-secondary flex items-center justify-center text-[15px]">
                 👤
               </span>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
                   {client ? 'Editar cliente' : 'Novo cliente'}
                 </div>
@@ -452,7 +452,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                         const num = parseFloat(raw)
                         setValue("plan_value", isNaN(num) ? 0 : num, { shouldValidate: true })
                       }}
-                      className="flex-1 py-[9px] pr-[11px] font-mono text-[12px] bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                      className="flex-1 min-w-0 py-[9px] pr-[11px] font-mono text-[12px] bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                   {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}

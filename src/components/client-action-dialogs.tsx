@@ -296,7 +296,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] sm:max-w-[440px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] sm:max-w-[720px] focus:outline-none"
         >
           <div className="modal-2a flex flex-col max-h-[90vh]">
             {/* HEADER */}
@@ -322,7 +322,10 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
             </div>
             
             <div className="p-[20px_22px] overflow-y-auto flex-1">
-              {/* Period grid */}
+              <div className="flex flex-col sm:flex-row gap-[24px]">
+                {/* LEFT COLUMN */}
+                <div className="flex-1 min-w-0">
+                  {/* Period grid */}
               <div className="grid grid-cols-2 gap-[8px] mb-[12px]">
                 {periods.map(p => {
                   const isActive = activePeriod?.months === p.months && activePeriod?.price === p.price
@@ -405,88 +408,93 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 </div>
               </div>
 
-              {/* Payment methods */}
-              <div className="space-y-[8px] mb-[20px]">
-                {paymentMethods.map(pm => (
-                  <div 
-                    key={pm.id}
-                    onClick={() => setPaymentMethod(pm.id)}
-                    className="flex items-center gap-[12px] p-[12px] rounded-[8px] border border-input cursor-pointer"
-                  >
-                    <div className={cn(
-                      "w-[15px] h-[15px] rounded-full border transition-all",
-                      paymentMethod === pm.id ? "border-[4.5px] border-primary" : "border-[1px] border-input"
-                    )} />
-                    <div>
-                      <div className="text-[13px] font-medium text-foreground leading-tight">{pm.label}</div>
-                      <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{pm.desc}</div>
-                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              {paymentMethod === 'pix' && (
-                <div className="bg-muted rounded-[8px] border border-border mb-[20px] p-[12px] flex flex-col gap-3">
-                  {!generatedPix ? (
-                    <>
-                      <div className="flex flex-col gap-[6px]">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">WhatsApp Emissor (confirmação automática)</label>
-                        <select 
-                          className="h-[32px] rounded-[6px] border border-input bg-card text-[12px] px-[8px] outline-none w-full text-foreground"
-                          value={pixInstance}
-                          onChange={(e) => setPixInstance(e.target.value)}
-                        >
-                          {pixInstances.length === 0 && <option value="">Carregando...</option>}
-                          {pixInstances.map(inst => (
-                            <option key={inst.instance_name} value={inst.instance_name}>{inst.instance_name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground leading-snug">
-                        PIX dinâmico com validade de 24h. Quando o cliente pagar, o sistema renova o vencimento, registra o pagamento e envia o comprovante.
-                      </p>
-                      <button 
-                        type="button"
-                        onClick={handleGeneratePix}
-                        disabled={isGeneratingPix || !pixInstance}
-                        className="h-[32px] rounded-[6px] bg-primary text-primary-foreground text-[12px] font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
+                {/* RIGHT COLUMN */}
+                <div className="flex-1 min-w-0 flex flex-col">
+                  {/* Payment methods */}
+                  <div className="space-y-[8px] mb-[20px]">
+                    {paymentMethods.map(pm => (
+                      <div 
+                        key={pm.id}
+                        onClick={() => setPaymentMethod(pm.id)}
+                        className="flex items-center gap-[12px] p-[12px] rounded-[8px] border border-input cursor-pointer hover:bg-muted transition-colors"
                       >
-                        {isGeneratingPix && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
-                        Gerar PIX Mercado Pago (R$ {renewAmount.toFixed(2).replace('.', ',')})
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-[12px]">
-                        <div className="w-[66px] h-[66px] bg-white border border-input rounded-[4px] overflow-hidden flex-shrink-0">
-                          <img src={`data:image/jpeg;base64,${generatedPix.qr_code_base64}`} alt="QR Code" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 flex flex-col justify-center min-w-0">
-                          <input readOnly value={generatedPix.copia_e_cola} className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px] truncate select-all" />
-                          <div className="flex gap-2">
-                            <button type="button" onClick={handleCopyPix} className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
-                            <span className="text-muted-foreground text-[11px]">•</span>
-                            <button type="button" onClick={() => setGeneratedPix(null)} className="text-muted-foreground text-[11px] font-medium hover:underline">Gerar outro</button>
-                          </div>
+                        <div className={cn(
+                          "w-[15px] h-[15px] rounded-full border transition-all",
+                          paymentMethod === pm.id ? "border-[4.5px] border-primary" : "border-[1px] border-input"
+                        )} />
+                        <div>
+                          <div className="text-[13px] font-medium text-foreground leading-tight">{pm.label}</div>
+                          <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{pm.desc}</div>
                         </div>
                       </div>
-                      <p className="text-[10px] text-money font-medium">
-                        Aguardando pagamento · renovação automática ao confirmar
-                      </p>
+                    ))}
+                  </div>
+
+                  {paymentMethod === 'pix' && (
+                    <div className="bg-muted rounded-[8px] border border-border mb-[20px] p-[12px] flex flex-col gap-3">
+                      {!generatedPix ? (
+                        <>
+                          <div className="flex flex-col gap-[6px]">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">WhatsApp Emissor</label>
+                            <select 
+                              className="h-[32px] rounded-[6px] border border-input bg-card text-[12px] px-[8px] outline-none w-full text-foreground"
+                              value={pixInstance}
+                              onChange={(e) => setPixInstance(e.target.value)}
+                            >
+                              {pixInstances.length === 0 && <option value="">Carregando...</option>}
+                              {pixInstances.map(inst => (
+                                <option key={inst.instance_name} value={inst.instance_name}>{inst.instance_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground leading-snug">
+                            PIX dinâmico com validade de 24h. Renovação automática ao confirmar.
+                          </p>
+                          <button 
+                            type="button"
+                            onClick={handleGeneratePix}
+                            disabled={isGeneratingPix || !pixInstance}
+                            className="h-[32px] rounded-[6px] bg-primary text-primary-foreground text-[12px] font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 mt-auto"
+                          >
+                            {isGeneratingPix && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                            Gerar PIX Mercado Pago
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-[12px]">
+                            <div className="w-[66px] h-[66px] bg-white border border-input rounded-[4px] overflow-hidden flex-shrink-0">
+                              <img src={`data:image/jpeg;base64,${generatedPix.qr_code_base64}`} alt="QR Code" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 flex flex-col justify-center min-w-0">
+                              <input readOnly value={generatedPix.copia_e_cola} className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px] truncate select-all" />
+                              <div className="flex gap-2">
+                                <button type="button" onClick={handleCopyPix} className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
+                                <span className="text-muted-foreground text-[11px]">•</span>
+                                <button type="button" onClick={() => setGeneratedPix(null)} className="text-muted-foreground text-[11px] font-medium hover:underline">Gerar outro</button>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-money font-medium">
+                            Aguardando pagamento · renovação automática
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
+
+                  <div className="mt-auto border-t border-border pt-[8px]">
+                    <CustomToggle 
+                      checked={notifyWhatsApp} 
+                      onChange={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                      label="Avisar o cliente da renovação no WhatsApp"
+                    />
+                  </div>
                 </div>
-              )}
-
-              {/* Toggle */}
-              <div className="border-t border-border pt-[8px]">
-                <CustomToggle 
-                  checked={notifyWhatsApp} 
-                  onChange={() => setNotifyWhatsApp(!notifyWhatsApp)}
-                  label="Avisar o cliente da renovação no WhatsApp"
-                />
               </div>
-
             </div>
             
             <div className="modal-footer-2a flex-shrink-0">

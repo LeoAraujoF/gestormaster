@@ -87,7 +87,7 @@ function VirtualKeypad({ pin, setPin, disabled }: { pin: string, setPin: (val: s
 
 export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, client: any, onSuccess: () => void }) {
   const [renewMonths, setRenewMonths] = useState(1)
-  const [renewAmount, setRenewAmount] = useState(0)
+  const [renewAmountStr, setRenewAmountStr] = useState("0")
   const [renewScreens, setRenewScreens] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
@@ -109,7 +109,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
   useEffect(() => {
     if (client && open) {
       // Inicializa com os dados atuais do cliente
-      setRenewAmount(client.plan_value || 0)
+      setRenewAmountStr(String(client.plan_value || 0).replace('.', ','))
       setRenewMonths(1)
       setRenewScreens(client.screens || 1)
       setNotifyWhatsApp(true)
@@ -131,6 +131,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   const planValue = client?.plan_value || 0
   const screens = client?.screens || 1
+  const renewAmount = parseFloat(renewAmountStr.replace(',', '.')) || 0
 
   // Pega os planos do serviço vinculado ao cliente (se existir)
   const servicePlans: { name: string; price: number }[] =
@@ -328,7 +329,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                   return (
                     <button
                       key={p.months}
-                      onClick={() => { setRenewMonths(p.months); setRenewAmount(p.price) }}
+                      onClick={() => { setRenewMonths(p.months); setRenewAmountStr(String(p.price).replace('.', ',')) }}
                       className={cn(
                         "rounded-[8px] p-[10px] text-left transition-colors flex flex-col gap-[2px]",
                         isActive
@@ -371,11 +372,10 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={renewAmount === 0 ? "" : String(renewAmount).replace('.', ',')}
+                      value={renewAmountStr}
                       onChange={(e) => {
-                        const raw = e.target.value.replace(',', '.')
-                        const num = parseFloat(raw)
-                        setRenewAmount(isNaN(num) ? 0 : num)
+                        const val = e.target.value.replace(/[^0-9,.]/g, '')
+                        setRenewAmountStr(val)
                       }}
                       placeholder="0,00"
                       className="flex-1 min-w-0 pr-[11px] font-mono text-[13px] font-semibold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
@@ -384,7 +384,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                   {planValue > 0 && renewAmount !== planValue && (
                     <button
                       type="button"
-                      onClick={() => { setRenewAmount(planValue); setRenewScreens(screens) }}
+                      onClick={() => { setRenewAmountStr(String(planValue).replace('.', ',')); setRenewScreens(screens) }}
                       className="text-[10px] text-interactive mt-[4px] hover:underline"
                     >
                       Restaurar (R$ {planValue.toFixed(2).replace('.', ',')} · {screens} tela{screens > 1 ? 's' : ''})

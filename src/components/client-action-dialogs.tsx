@@ -169,14 +169,24 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
           valor: renewAmount,
           descricao: `Renovação: ${client.name}`,
           telefone_pagador: client.phone || "00000000000",
-          instance_name: pixInstance
+          instance_name: pixInstance,
+          client_id: client.id,
+          months: renewMonths,
+          purpose: 'renewal',
+          plan_name: client.name,
+          expires_minutes: 24 * 60,
         })
       })
 
       const data = await res.json()
       if (res.ok && data.success) {
         setGeneratedPix({ copia_e_cola: data.copia_e_cola, qr_code_base64: data.qr_code_base64 })
-        toast.success("Pix gerado com sucesso via Mercado Pago!")
+        const exp = data.expires_at
+          ? new Date(data.expires_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          : null
+        toast.success(exp
+          ? `PIX gerado! Expira em ${exp}. Ao pagar, a renovação é automática.`
+          : "PIX gerado! Ao pagar, a renovação é automática.")
       } else {
         toast.error(data.error || "Erro ao gerar Pix no Mercado Pago.")
       }
@@ -285,7 +295,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] sm:max-w-[440px] focus:outline-none"
         >
           <div className="modal-2a flex flex-col max-h-[90vh]">
             {/* HEADER */}
@@ -420,7 +430,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                   {!generatedPix ? (
                     <>
                       <div className="flex flex-col gap-[6px]">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">WhatsApp Emissor (Aviso Webhook Mercado Pago)</label>
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">WhatsApp Emissor (confirmação automática)</label>
                         <select 
                           className="h-[32px] rounded-[6px] border border-input bg-card text-[12px] px-[8px] outline-none w-full text-foreground"
                           value={pixInstance}
@@ -432,6 +442,9 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                           ))}
                         </select>
                       </div>
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        PIX dinâmico com validade de 24h. Quando o cliente pagar, o sistema renova o vencimento, registra o pagamento e envia o comprovante.
+                      </p>
                       <button 
                         type="button"
                         onClick={handleGeneratePix}
@@ -443,18 +456,23 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       </button>
                     </>
                   ) : (
-                    <div className="flex gap-[12px]">
-                      <div className="w-[66px] h-[66px] bg-white border border-input rounded-[4px] overflow-hidden flex-shrink-0">
-                        <img src={`data:image/jpeg;base64,${generatedPix.qr_code_base64}`} alt="QR Code" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center min-w-0">
-                        <input readOnly value={generatedPix.copia_e_cola} className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px] truncate select-all" />
-                        <div className="flex gap-2">
-                          <button type="button" onClick={handleCopyPix} className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
-                          <span className="text-muted-foreground text-[11px]">•</span>
-                          <button type="button" onClick={() => setGeneratedPix(null)} className="text-muted-foreground text-[11px] font-medium hover:underline">Gerar outro</button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-[12px]">
+                        <div className="w-[66px] h-[66px] bg-white border border-input rounded-[4px] overflow-hidden flex-shrink-0">
+                          <img src={`data:image/jpeg;base64,${generatedPix.qr_code_base64}`} alt="QR Code" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-center min-w-0">
+                          <input readOnly value={generatedPix.copia_e_cola} className="w-full bg-card border border-input rounded-[6px] px-[10px] py-[6px] text-[11px] font-mono text-secondary-foreground mb-[6px] truncate select-all" />
+                          <div className="flex gap-2">
+                            <button type="button" onClick={handleCopyPix} className="text-interactive text-[11px] font-medium hover:underline">Copiar código PIX</button>
+                            <span className="text-muted-foreground text-[11px]">•</span>
+                            <button type="button" onClick={() => setGeneratedPix(null)} className="text-muted-foreground text-[11px] font-medium hover:underline">Gerar outro</button>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-[10px] text-money font-medium">
+                        Aguardando pagamento · renovação automática ao confirmar
+                      </p>
                     </div>
                   )}
                 </div>
@@ -587,7 +605,7 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[420px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[420px] sm:max-w-[420px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* HEADER */}
@@ -741,7 +759,7 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] sm:max-w-[390px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* Header (No sticky for this one) */}
@@ -869,7 +887,7 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[390px] sm:max-w-[390px] focus:outline-none"
         >
           <div className="modal-2a">
             {/* Header (No sticky for this one) */}

@@ -65,16 +65,18 @@ export function PixRapidoModal({ children, open, onOpenChange }: PixRapidoModalP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           valor: parseFloat(pixValor.replace(',', '.')),
-          descricao: pixDescricao,
+          descricao: pixDescricao || 'PIX rápido',
           telefone_pagador: pixTelefone,
-          instance_name: pixInstance
+          instance_name: pixInstance,
+          purpose: 'manual',
+          expires_minutes: 24 * 60,
         })
       })
 
       const data = await res.json()
       if (res.ok && data.success) {
         setGeneratedPix({ copia_e_cola: data.copia_e_cola, qr_code_base64: data.qr_code_base64 })
-        toast.success("Pix gerado com sucesso!")
+        toast.success("PIX dinâmico gerado! Você será avisado no WhatsApp quando for pago.")
       } else {
         toast.error(data.error || "Erro ao gerar Pix.")
       }

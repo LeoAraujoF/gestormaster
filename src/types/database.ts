@@ -175,6 +175,46 @@ export interface Payment {
   created_at: string
 }
 
+export type PixChargePurpose = 'manual' | 'renewal' | 'charge'
+export type PixChargeStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'failed'
+
+export interface PixCharge {
+  id: string
+  organization_id: string
+  user_id: string
+  client_id: string | null
+  provider: string
+  provider_payment_id: string | null
+  purpose: PixChargePurpose
+  status: PixChargeStatus
+  amount: number
+  description: string | null
+  phone: string | null
+  instance_name: string | null
+  months_to_renew: number
+  plan_name: string | null
+  copia_e_cola: string | null
+  qr_code_base64: string | null
+  ticket_url: string | null
+  external_reference: string | null
+  expires_at: string | null
+  paid_at: string | null
+  payment_id: string | null
+  processed_at: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PixChargeMetrics {
+  pending_count: number
+  pending_amount: number
+  paid_today_count: number
+  paid_today_amount: number
+  paid_month_count: number
+  paid_month_amount: number
+}
+
 export interface MonthlyGrowth {
   month: string
   total_clients: number

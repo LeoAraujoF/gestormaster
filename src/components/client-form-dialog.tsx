@@ -273,7 +273,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[640px] data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[640px] sm:max-w-[640px] data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
         >
           <div className="modal-2a max-h-[90vh] flex flex-col">
             

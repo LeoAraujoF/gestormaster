@@ -408,7 +408,6 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 </div>
               </div>
 
-                  </div>
                 </div>
 
                 {/* RIGHT COLUMN */}

@@ -322,7 +322,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
             </div>
             
             <div className="p-[20px_22px] overflow-y-auto flex-1">
-              <div className="flex flex-col sm:flex-row gap-[24px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[24px]">
                 {/* LEFT COLUMN */}
                 <div className="flex-1 min-w-0">
                   {/* Period grid */}
@@ -368,9 +368,9 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 </div>
 
                 {/* Campo de valor editável */}
-                <div className="flex-1">
-                  <div className="text-[10px] font-medium text-muted-foreground mb-[5px] uppercase tracking-wider">Valor cobrado · editável</div>
-                  <div className="flex items-center border border-input rounded-[7px] bg-card transition-colors focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(64,85,200,0.12)] h-[38px]">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-medium text-muted-foreground mb-[5px] uppercase tracking-wider truncate">Valor cobrado · editável</div>
+                  <div className="flex items-center border border-input rounded-[7px] bg-card transition-colors focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(64,85,200,0.12)] h-[38px] w-full min-w-0">
                     <span className="pl-[11px] pr-[4px] text-muted-foreground text-[12px] font-mono select-none">R$</span>
                     <input
                       type="text"
@@ -397,13 +397,13 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
               </div>
 
               {/* Summary ruler */}
-              <div className="flex rounded-[8px] border border-border bg-muted overflow-hidden mb-[20px]">
-                <div className="flex-1 p-[12px] border-r border-border">
-                  <div className="microlabel mb-[4px]">NOVO VENCIMENTO</div>
+              <div className="flex rounded-[8px] border border-border bg-muted overflow-hidden mb-[20px] w-full min-w-0">
+                <div className="flex-1 p-[12px] border-r border-border min-w-0">
+                  <div className="microlabel mb-[4px] truncate">NOVO VENCIMENTO</div>
                   <div className="font-mono text-[14px] font-bold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</div>
                 </div>
-                <div className="flex-1 p-[12px]">
-                  <div className="microlabel mb-[4px]">TOTAL</div>
+                <div className="flex-1 p-[12px] min-w-0">
+                  <div className="microlabel mb-[4px] truncate">TOTAL</div>
                   <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(renewAmount)}</div>
                 </div>
               </div>

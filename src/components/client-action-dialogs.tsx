@@ -343,8 +343,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 })}
               </div>
 
-              {/* Telas + Valor (linha única) */}
-              <div className="flex gap-[10px] mb-[16px]">
+              {/* Telas + Valor (linha única em desktop) */}
+              <div className="flex flex-col sm:flex-row gap-[10px] mb-[16px]">
                 {/* Seletor de telas */}
                 <div className="shrink-0">
                   <div className="text-[10px] font-medium text-muted-foreground mb-[5px] uppercase tracking-wider">Telas</div>

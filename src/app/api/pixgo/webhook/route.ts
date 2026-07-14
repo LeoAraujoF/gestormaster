@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { claimWebhookEvent, releaseWebhookEvent } from '@/lib/webhook-events'
 import { upsertOrganizationEntitlementForUser } from '@/lib/entitlements'
 import { getPlanById } from '@/lib/plan-catalog'
@@ -83,11 +83,6 @@ export async function POST(request: Request) {
       if (Math.round(amount * 100) !== plan.monthlyPriceCents) throw new Error('Valor do PIX diverge do catálogo')
 
       // Inicializa o Supabase no modo Administrador (Service Role)
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-
       // Busca o usuário para verificar o vencimento atual
       const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(externalId)
       if (userError || !user) {

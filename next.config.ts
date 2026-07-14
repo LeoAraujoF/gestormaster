@@ -48,10 +48,6 @@ const nextConfig: NextConfig = {
 
     return [{ source: '/:path*', headers }]
   },
-  // O acesso local também é feito pelo IP da rede. Sem esta origem, o
-  // bundle/HMR pode não carregar e formulários client-side caem no submit
-  // nativo, ignorando a autenticação do Supabase.
-  allowedDevOrigins: ['192.168.1.8', '192.168.1.9', 'localhost'],
 };
 
 export default nextConfig;

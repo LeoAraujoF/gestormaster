@@ -59,3 +59,41 @@ clientes_debug*.html
 *_dump.html
 *_debug.html
 analyze-dump.ts
+
+# development-only agent context and design handoff
+/.agents/
+/.ai/
+/.claude/
+/.junie/
+/design_handoff_gestor_master/
+/logo/
+/scripts/
+
+# local planning, documentation and reference artifacts
+/*.md
+/*.html
+/*.zip
+/skills-lock.json
+/components.json
+/eslint.config.mjs
+/vercel.json
+
+# ad-hoc database and diagnostic files kept outside canonical Supabase assets
+/*.sql
+/test_*.js
+/apply_*.js
+/fix_*.js
+/patch_*.js
+
+# source-level development tests are not part of the production repository
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# unused starter assets from the Next.js scaffold
+/public/file.svg
+/public/globe.svg
+/public/next.svg
+/public/vercel.svg
+/public/window.svg

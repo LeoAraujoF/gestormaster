@@ -19,7 +19,14 @@ scripts
 *.md
 *.zip
 landing.html
+components.json
+eslint.config.mjs
+vercel.json
 test_*.js
 apply_fase2.js
 fix_fase2.js
 patch_*.js
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx

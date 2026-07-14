@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { logAudit } from "@/lib/audit"
 import { isAuthorizedCron } from '@/lib/cron-auth'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Dias de carência antes de liberar o saldo (Garantia incondicional padrão do CDC é 7 dias)
 const HOLD_DAYS = 7

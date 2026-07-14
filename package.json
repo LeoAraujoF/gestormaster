@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\" \"tsx src/workers/health-worker.ts\" \"tsx src/workers/warmup-worker.ts\" \"tsx src/workers/bull-board.ts\" \"tsx src/workers/ai-worker.ts\" \"tsx src/workers/intelligence-worker.ts\"",
-    "scheduler:start": "tsx src/workers/scheduler-service.ts",
-    "eval:intelligence": "tsx scripts/intelligence-model-eval.ts"
+    "scheduler:start": "tsx src/workers/scheduler-service.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

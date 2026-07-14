@@ -1,5 +1,0 @@
-# Bugs
-
-## Abertos
-
-## Resolvidos

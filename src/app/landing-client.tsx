@@ -468,30 +468,33 @@ export function LandingClient() {
         <div className="wrap">
           <div className="sec-head rv">
             <span className="sec-idx">05</span>
-            <h2>Um plano. <em>Tudo dentro.</em></h2>
-            <p className="sec-sub">Sem degraus, sem &ldquo;fale com vendas&rdquo;. O preço de uma pizza por mês.</p>
+            <h2>Um plano para <em>cada estágio.</em></h2>
+            <p className="sec-sub">Comece com o essencial, automatize no Pro e leve inteligência para a operação no Master.</p>
           </div>
 
-          <div className="price-card rv d1">
-            <span className="pc-badge">Preço de lançamento</span>
-            <div className="pc-name">Gestor Pro</div>
-            <p className="pc-desc">Todos os recursos, clientes ilimitados, um número de WhatsApp conectado 24h.</p>
-            <div className="pc-price">
-              <span className="pc-cur">R$</span>
-              <span className="pc-val num">20</span>
-              <span className="pc-per">/mês</span>
+          <div className="price-grid">
+            <div className="price-card rv">
+              <div className="pc-name">Starter</div>
+              <p className="pc-desc">Organização essencial para começar.</p>
+              <div className="pc-price"><span className="pc-val pc-coming">Em breve</span></div>
+              <ul className="pc-feats"><li>Até <b>100 clientes</b></li><li><b>1</b> WhatsApp conectado</li><li>Painel e financeiro básico</li><li>Automação básica</li><li>Promoções <b className="g">Incluso</b></li></ul>
+              <Link href="/cadastro" className="btn pc-cta magnetic">Criar conta <span className="arr">→</span></Link>
             </div>
-            <p className="pc-bill">cobrado mensalmente · cancele quando quiser</p>
-            <ul className="pc-feats">
-              <li>Clientes na carteira <b>Ilimitados</b></li>
-              <li>Cobranças automáticas no WhatsApp <b>Ilimitadas</b></li>
-              <li>Conexões WhatsApp <b>3 números</b></li>
-              <li>Carteira: receitas, custos e lucro <b className="g">Incluso</b></li>
-              <li>Confirmação automática de PIX <b className="g">Incluso</b></li>
-              <li>Anti-ban e aquecimento de chip <b className="g">Incluso</b></li>
-            </ul>
-            <Link href="/cadastro" className="btn pc-cta magnetic">Testar grátis por 7 dias <span className="arr">→</span></Link>
-            <p className="pc-note">sem cartão de crédito · seus dados ficam salvos após o teste</p>
+            <div className="price-card featured rv d1">
+              <span className="pc-badge">Preço de lançamento</span>
+              <div className="pc-name">Pro</div>
+              <p className="pc-desc">Automação e crescimento para operações em escala.</p>
+              <div className="pc-price"><span className="pc-cur">R$</span><span className="pc-val num">20</span><span className="pc-per">/mês</span></div>
+              <ul className="pc-feats"><li>Até <b>500 clientes</b></li><li><b>2</b> WhatsApps conectados</li><li>Cobrança Inteligente e Analytics</li><li>Portal do Cliente</li><li>Promoções <b className="g">Incluso</b></li></ul>
+              <Link href="/cadastro" className="btn pc-cta magnetic">Testar grátis por 7 dias <span className="arr">→</span></Link>
+            </div>
+            <div className="price-card rv d2">
+              <div className="pc-name">Master</div>
+              <p className="pc-desc">Inteligência e recursos para alto volume.</p>
+              <div className="pc-price"><span className="pc-val pc-coming">Em breve</span></div>
+              <ul className="pc-feats"><li>Clientes <b>Ilimitados</b></li><li><b>3</b> WhatsApps conectados</li><li>Todos os recursos do Pro</li><li>Intelligence, Revendas e API</li><li>Promoções <b className="g">Incluso</b></li></ul>
+              <Link href="/cadastro" className="btn pc-cta magnetic">Criar conta <span className="arr">→</span></Link>
+            </div>
           </div>
         </div>
       </section>

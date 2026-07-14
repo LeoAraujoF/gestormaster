@@ -10,17 +10,27 @@ import { CampaignHeaderStatus } from "@/components/campaign-header-status"
 import { CommandPalette } from "@/components/command-palette"
 import { WhatsAppBanner } from "@/components/whatsapp-banner"
 import { OrganizationProvider } from "@/components/providers/organization-provider"
+import { PlanProvider } from '@/components/providers/plan-provider'
+import { PlanRouteGate } from '@/components/plan-route-gate'
+import { createClient } from '@/lib/supabase/server'
+import { getOrganizationMembership } from '@/lib/access-control'
+import { getOrganizationPlanContext } from '@/lib/plan-catalog'
 
 import { PageProtector } from "@/components/page-protector"
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const membership = user ? await getOrganizationMembership(supabase, user.id) : null
+  const plan = membership ? await getOrganizationPlanContext(membership.organizationId) : { plan: 'starter' as const, active: false, expiresAt: null, limits: { clients: 100, whatsappInstances: 1 }, capabilities: [] }
   return (
     <PrivacyProvider>
       <OrganizationProvider>
+       <PlanProvider value={plan}>
         <SidebarProvider defaultOpen={true}>
           <AppSidebar />
           <main className="flex-1 w-full flex flex-col bg-background min-w-0 overflow-x-hidden">
@@ -43,11 +53,12 @@ export default function DashboardLayout({
               <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
                 <WhatsAppBanner />
                 <PageProtector>
-                  {children}
+                  <PlanRouteGate>{children}</PlanRouteGate>
                 </PageProtector>
               </div>
           </main>
         </SidebarProvider>
+       </PlanProvider>
       </OrganizationProvider>
     </PrivacyProvider>
   )

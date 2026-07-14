@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { Loader2, Plus, ShoppingCart, CheckCircle2, ArrowRight, Clock, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label"
 
 export default function PublicResellerArea() {
   const { id } = useParams()
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token') || ''
   const supabase = createClient()
-  
+
   const [reseller, setReseller] = useState<any>(null)
   const [gestorPix, setGestorPix] = useState<{key: string, type: string} | null>(null)
   const [services, setServices] = useState<any[]>([])
@@ -35,11 +37,11 @@ export default function PublicResellerArea() {
   async function loadData() {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/revendas/public?id=${id}`)
+      const response = await fetch(`/api/revendas/public?id=${id}&token=${encodeURIComponent(token)}`)
       if (!response.ok) throw new Error("Erro ao carregar dados")
-      
+
       const { data } = await response.json()
-      
+
       setReseller(data.reseller)
       setGestorPix(data.gestorPix)
       setServices(data.services)
@@ -62,7 +64,7 @@ export default function PublicResellerArea() {
     try {
       const response = await fetch('/api/revendas/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-reseller-access-token': token },
         body: JSON.stringify({
           resellerId: id,
           serviceId: selectedService.id,
@@ -74,7 +76,7 @@ export default function PublicResellerArea() {
         const errorData = await response.json()
         throw new Error(errorData.error || "Falha ao gerar pedido")
       }
-      
+
       toast.success("Pedido gerado! Realize o pagamento.")
       loadData()
     } catch (error: any) {
@@ -88,7 +90,7 @@ export default function PublicResellerArea() {
     try {
       const response = await fetch('/api/revendas/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-reseller-access-token': token },
         body: JSON.stringify({
           requestId,
           newStatus: 'paid',
@@ -97,7 +99,7 @@ export default function PublicResellerArea() {
       })
 
       if (!response.ok) throw new Error("Falha na requisição")
-      
+
       toast.success("Aviso enviado ao Gestor!")
       loadData()
     } catch (error: any) {
@@ -115,7 +117,7 @@ export default function PublicResellerArea() {
 
   if (!reseller) return <div className="p-8 text-center">Revendedor inválido.</div>
 
-  const totalPrice = selectedService ? (selectedService.base_price + selectedService.profit_margin) * creditsAmount : 0
+  const totalPrice = selectedService ? selectedService.unit_price * creditsAmount : 0
 
   return (
     <div className="min-h-screen bg-background text-foreground py-10 px-4">
@@ -180,11 +182,11 @@ export default function PublicResellerArea() {
             ) : (
               services.map(srv => {
                 const isSelected = selectedService?.id === srv.id
-                const finalPrice = srv.base_price + srv.profit_margin
-                
+                const finalPrice = srv.unit_price
+
                 return (
-                  <Card 
-                    key={srv.id} 
+                  <Card
+                    key={srv.id}
                     className={`cursor-pointer transition-all ${isSelected ? 'border-primary ring-1 ring-primary shadow-md' : 'hover:border-primary/50'}`}
                     onClick={() => {
                       setSelectedService(srv)
@@ -224,14 +226,15 @@ export default function PublicResellerArea() {
                         {selectedService.service_name}
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label>Quantidade de Créditos</Label>
-                      <Input 
-                        type="number" 
-                        min={1} 
-                        value={creditsAmount} 
-                        onChange={(e) => setCreditsAmount(parseInt(e.target.value) || 1)}
+                      <Input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={creditsAmount}
+                        onChange={(e) => setCreditsAmount(Math.min(1000, Math.max(1, parseInt(e.target.value) || 1)))}
                         className="text-lg"
                       />
                     </div>
@@ -241,12 +244,12 @@ export default function PublicResellerArea() {
                         <span className="text-muted-foreground">Total a pagar:</span>
                         <span className="text-3xl font-black text-emerald-500">{formatCurrency(totalPrice)}</span>
                       </div>
-                      <Button 
-                        className="w-full h-12 text-lg bg-primary hover:bg-primary/90" 
+                      <Button
+                        className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
                         onClick={handleGenerateRequest}
                         disabled={isGenerating}
                       >
-                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Gerar Pedido"} 
+                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Gerar Pedido"}
                         {!isGenerating && <ArrowRight className="w-5 h-5 ml-2" />}
                       </Button>
                     </div>

@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -50,11 +50,8 @@ ENV NEXT_PUBLIC_STRIPE_PRICE_PREMIUM=$NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
 # Defaults de build para não travar a compilação estática
 # Os valores REAIS são injetados pelo docker-compose em runtime
 # ============================================================
-ARG SUPABASE_SERVICE_ROLE_KEY="placeholder_service_key"
-ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
-
-ARG OPENAI_API_KEY="placeholder_openai_key"
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
+ENV SUPABASE_SERVICE_ROLE_KEY="placeholder_service_key"
+ENV OPENAI_API_KEY="placeholder_openai_key"
 
 # Variáveis que o env.ts valida e que precisam existir no momento do build
 # Serão sobrescritas em runtime pelo docker-compose

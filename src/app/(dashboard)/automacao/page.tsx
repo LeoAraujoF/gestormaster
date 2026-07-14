@@ -1,5 +1,5 @@
 "use client"
-// Automação — direção 2a (design_handoff/Automacao.dc.html + GUIA-AUTOMACAO-E-MODAIS PARTE 1)
+// AutomaÃ§Ã£o â€” direÃ§Ã£o 2a (design_handoff/Automacao.dc.html + GUIA-AUTOMACAO-E-MODAIS PARTE 1)
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { phoneMask, cn } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
+import { usePlan } from "@/components/providers/plan-provider"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,35 +24,36 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Skeleton } from "@/components/ui/skeleton"
 
 const externalConnectionSchema = z.object({
-  baseUrl: z.string().url("URL inválida (ex: http://192.168.1.100:8080)"),
-  apiKey: z.string().min(5, "API Key é obrigatória"),
-  instanceName: z.string().min(2, "Nome da instância obrigatório"),
+  baseUrl: z.string().url("URL invÃ¡lida (ex: http://192.168.1.100:8080)"),
+  apiKey: z.string().min(5, "API Key Ã© obrigatÃ³ria"),
+  instanceName: z.string().min(2, "Nome da instÃ¢ncia obrigatÃ³rio"),
 })
 type ExternalConnectionForm = z.infer<typeof externalConnectionSchema>
 
 const getDefaultTemplate = (type: string) => {
-  const base = "{Olá|Oi|Tudo bem} {{primeiro_nome}}?\\n"
-  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix: {{pix}}\\nTitular: {{titular_pix}}\\nBanco: {{banco_pix}}\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
+  const base = "{OlÃ¡|Oi|Tudo bem} {{primeiro_nome}}?\\n"
+  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix: {{pix}}\\nTitular: {{titular_pix}}\\nBanco: {{banco_pix}}\\n\\nSe tiver alguma dÃºvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
   const defaults: Record<string, string> = {
-    before_due: base + "Seu plano vence amanhã, deseja renovar lo?" + pixStr,
-    on_due: base + "Lembrando que o vencimento do seu plano é hoje! Deseja renovar?" + pixStr,
-    after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativá-lo?" + pixStr,
-    renewal: "{Olá|Oi|Tudo ótimo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confiança é essencial!\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}\\n\\nNão esqueça de seguir nosso canal para não ficar de fora de promoções e novidades!\\nLink: {{link_canal}}",
-    promotion: base + "Temos uma oferta imperdível para você! [Insira sua promoção aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
-    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso Rápido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
-    activation: "Olá {{primeiro_nome}}! Seja muito bem-vindo(a)! 🌟\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse número aqui, ele será o nosso canal oficial de suporte técnico e onde você receberá seus avisos de vencimento, ok? 🤝\\n\\n💰 Valor do Plano: R$ {{plan_value}}\\n📅 Seu Vencimento: {{due_date}}\\n\\n🎁 *PROMOÇÃO INDIQUE E GANHE*\\nSabia que você pode ganhar meses grátis? É muito simples: indicou um amigo e ele fechou com a gente, o seu próximo mês sai 100% DE GRAÇA! Sem sorteio, indicou, ganhou! 🚀\\n\\n📱 *NOSSO CANAL EXCLUSIVO*\\nNão fique de fora das novidades, manutenções programadas e promoções relâmpago! Entre agora no nosso canal oficial para clientes:\\n👉 {{link_canal}}\\n\\nQualquer dúvida, é só nos chamar por aqui. Aproveite!"
+    before_due: base + "Seu plano vence amanhÃ£, deseja renovar lo?" + pixStr,
+    on_due: base + "Lembrando que o vencimento do seu plano Ã© hoje! Deseja renovar?" + pixStr,
+    after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativÃ¡-lo?" + pixStr,
+    renewal: "{OlÃ¡|Oi|Tudo Ã³timo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confianÃ§a Ã© essencial!\\n\\nSe tiver alguma dÃºvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}\\n\\nNÃ£o esqueÃ§a de seguir nosso canal para nÃ£o ficar de fora de promoÃ§Ãµes e novidades!\\nLink: {{link_canal}}",
+    promotion: base + "Temos uma oferta imperdÃ­vel para vocÃª! [Insira sua promoÃ§Ã£o aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso RÃ¡pido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    activation: "OlÃ¡ {{primeiro_nome}}! Seja muito bem-vindo(a)! ðŸŒŸ\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse nÃºmero aqui, ele serÃ¡ o nosso canal oficial de suporte tÃ©cnico e onde vocÃª receberÃ¡ seus avisos de vencimento, ok? ðŸ¤\\n\\nðŸ’° Valor do Plano: R$ {{plan_value}}\\nðŸ“… Seu Vencimento: {{due_date}}\\n\\nðŸŽ *PROMOÃ‡ÃƒO INDIQUE E GANHE*\\nSabia que vocÃª pode ganhar meses grÃ¡tis? Ã‰ muito simples: indicou um amigo e ele fechou com a gente, o seu prÃ³ximo mÃªs sai 100% DE GRAÃ‡A! Sem sorteio, indicou, ganhou! ðŸš€\\n\\nðŸ“± *NOSSO CANAL EXCLUSIVO*\\nNÃ£o fique de fora das novidades, manutenÃ§Ãµes programadas e promoÃ§Ãµes relÃ¢mpago! Entre agora no nosso canal oficial para clientes:\\nðŸ‘‰ {{link_canal}}\\n\\nQualquer dÃºvida, Ã© sÃ³ nos chamar por aqui. Aproveite!"
   }
   return defaults[type] || defaults.before_due
 }
 
 // Mapa de cores por tipo (GUIA 1.7)
-const STEP_TYPES: Record<string, string> = { before_due: 'Antes do vencimento', on_due: 'No dia do vencimento', after_due: 'Após o vencimento' }
-const TEMPLATE_TYPES: Record<string, string> = { renewal: 'Renovação', activation: 'Boas-vindas', quick_message: 'Mensagem rápida', promotion: 'Promoção' }
-const LOG_TYPE: Record<string, string> = { before_due: 'Aviso prévio', on_due: 'No vencimento', after_due: 'Atraso', renewal: 'Renovação', activation: 'Boas-vindas', promotion: 'Promoção', quick_message: 'Msg rápida' }
+const STEP_TYPES: Record<string, string> = { before_due: 'Antes do vencimento', on_due: 'No dia do vencimento', after_due: 'ApÃ³s o vencimento' }
+const TEMPLATE_TYPES: Record<string, string> = { renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', quick_message: 'Mensagem rÃ¡pida', promotion: 'PromoÃ§Ã£o' }
+const STARTER_SYSTEM_TYPES: Record<string, string> = { renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', quick_message: 'Mensagem rÃ¡pida' }
+const LOG_TYPE: Record<string, string> = { before_due: 'Aviso prÃ©vio', on_due: 'No vencimento', after_due: 'Atraso', renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', promotion: 'PromoÃ§Ã£o', quick_message: 'Msg rÃ¡pida' }
 const TYPE_DOT: Record<string, string> = { before_due: 'var(--interactive)', on_due: 'var(--warning)', after_due: 'var(--danger)', renewal: 'var(--money)', activation: 'var(--money)', quick_message: 'var(--money)', promotion: '#7a5af8' }
 const VARS = ['{{primeiro_nome}}', '{{plan_value}}', '{{due_date}}', '{{pix}}', '{{titular_pix}}', '{{banco_pix}}', '{{empresa}}', '{{link_canal}}']
 
-// Etiquetas dos templates (protótipo): cores por significado
+// Etiquetas dos templates (protÃ³tipo): cores por significado
 const BADGES = ['PIX', 'LOGIN', 'CAMPANHA', 'PROMO', 'AVISO'] as const
 const BADGE_CLS: Record<string, string> = {
   PIX: 'bg-secondary text-secondary-foreground',
@@ -63,7 +65,7 @@ const BADGE_CLS: Record<string, string> = {
 
 const isStepType = (t: string) => ['before_due', 'on_due', 'after_due'].includes(t)
 
-// Toggle 22×12 (design §7)
+// Toggle 22Ã—12 (design Â§7)
 function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React.MouseEvent) => void; disabled?: boolean }) {
   return (
     <span
@@ -75,11 +77,11 @@ function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React
   )
 }
 
-// Stepper −/valor/+ (GUIA 1.4)
+// Stepper âˆ’/valor/+ (GUIA 1.4)
 function NumStepper({ value, onDown, onUp }: { value: number; onDown: () => void; onUp: () => void }) {
   return (
     <div className="flex items-center overflow-hidden rounded-[7px] border border-input">
-      <button type="button" onClick={onDown} className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">–</button>
+      <button type="button" onClick={onDown} className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">â€“</button>
       <span className="num flex-1 text-center text-[12px] font-semibold">{value}</span>
       <button type="button" onClick={onUp} className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">+</button>
     </div>
@@ -88,6 +90,8 @@ function NumStepper({ value, onDown, onUp }: { value: number; onDown: () => void
 
 export default function AutomacaoPage() {
   const confirm = useConfirm()
+  const plan = usePlan()
+  const isStarter = plan.plan === 'starter'
   const [activeTab, setActiveTab] = useState<'overview' | 'mass' | 'logs'>('overview')
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'loading' | 'error'>('loading')
   const [isConnecting, setIsConnecting] = useState(false)
@@ -124,14 +128,14 @@ export default function AutomacaoPage() {
   const [antiBanConfig, setAntiBanConfig] = useState({ min_delay: 10, max_delay: 25 })
   const [isSavingAntiBan, setIsSavingAntiBan] = useState(false)
   const [rejectCalls, setRejectCalls] = useState(false)
-  const [rejectCallsMessage, setRejectCallsMessage] = useState("As chamadas de voz e vídeo estão desativadas para este número. Por favor, envie uma mensagem de texto.")
+  const [rejectCallsMessage, setRejectCallsMessage] = useState("As chamadas de voz e vÃ­deo estÃ£o desativadas para este nÃºmero. Por favor, envie uma mensagem de texto.")
   const [isSavingCallSettings, setIsSavingCallSettings] = useState(false)
 
   // Disparo em massa
   const [massAudience, setMassAudience] = useState<string>('all')
   const [massServiceId, setMassServiceId] = useState<string>('')
   const [massImage, setMassImage] = useState<File | null>(null)
-  const [massMessage, setMassMessage] = useState<string>('Olá {{primeiro_nome}}, temos uma oferta especial para você!')
+  const [massMessage, setMassMessage] = useState<string>('OlÃ¡ {{primeiro_nome}}, temos uma oferta especial para vocÃª!')
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
   const [isSendingMass, setIsSendingMass] = useState(false)
   const [estimatedAudience, setEstimatedAudience] = useState<number | null>(null)
@@ -144,7 +148,7 @@ export default function AutomacaoPage() {
     defaultValues: { baseUrl: "", apiKey: "", instanceName: "" }
   })
 
-  /* ————— carga inicial ————— */
+  /* â€”â€”â€”â€”â€” carga inicial â€”â€”â€”â€”â€” */
   useEffect(() => {
     checkAdminStatus()
     loadSettings()
@@ -154,7 +158,7 @@ export default function AutomacaoPage() {
     loadServices()
   }, [])
 
-  /* ————— templates livres (message_templates) ————— */
+  /* â€”â€”â€”â€”â€” templates livres (message_templates) â€”â€”â€”â€”â€” */
   const loadTemplates = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -165,12 +169,12 @@ export default function AutomacaoPage() {
   const openTemplateDialog = (tpl: any | null) => {
     setEditingTemplate(tpl)
     if (tpl) setTemplateForm({ title: tpl.title, badge: tpl.badge, message: tpl.message, is_active: tpl.is_active })
-    else setTemplateForm({ title: '', badge: 'PIX', message: 'Olá {{primeiro_nome}}, ', is_active: true })
+    else setTemplateForm({ title: '', badge: 'PIX', message: 'OlÃ¡ {{primeiro_nome}}, ', is_active: true })
     setIsTemplateDialogOpen(true)
   }
 
   const handleTemplateSubmit = async () => {
-    if (!templateForm.title.trim()) return toast.error("Dê um nome ao template.")
+    if (!templateForm.title.trim()) return toast.error("DÃª um nome ao template.")
     if (!templateForm.message.trim()) return toast.error("Escreva a mensagem do template.")
     setIsSubmittingTemplate(true)
     try {
@@ -254,7 +258,7 @@ export default function AutomacaoPage() {
     if (data) setServices(data)
   }
 
-  /* ————— público estimado ————— */
+  /* â€”â€”â€”â€”â€” pÃºblico estimado â€”â€”â€”â€”â€” */
   useEffect(() => {
     const calculateAudience = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -274,7 +278,7 @@ export default function AutomacaoPage() {
     calculateAudience()
   }, [massAudience, massServiceId])
 
-  /* ————— conexão ————— */
+  /* â€”â€”â€”â€”â€” conexÃ£o â€”â€”â€”â€”â€” */
   const handleIntegratedConnect = async () => {
     setIsConnecting(true)
     try {
@@ -283,8 +287,8 @@ export default function AutomacaoPage() {
         body: JSON.stringify({ mode: 'integrated' })
       })
       const responseData = await res.json()
-      if (!res.ok) throw new Error(responseData.error || 'Erro de conexão')
-      toast.success("Instância gerada! Escaneie o QR Code no card do chip.")
+      if (!res.ok) throw new Error(responseData.error || 'Erro de conexÃ£o')
+      toast.success("InstÃ¢ncia gerada! Escaneie o QR Code no card do chip.")
       setIsConnectDialogOpen(false)
       loadSettings()
     } catch (error: any) { toast.error(error.message) } finally { setIsConnecting(false) }
@@ -298,15 +302,15 @@ export default function AutomacaoPage() {
         body: JSON.stringify({ mode: 'external', ...data })
       })
       const responseData = await res.json()
-      if (!res.ok) throw new Error(responseData.error || 'Erro de conexão')
-      toast.success("Instância conectada! Escaneie o QR Code no card do chip.")
+      if (!res.ok) throw new Error(responseData.error || 'Erro de conexÃ£o')
+      toast.success("InstÃ¢ncia conectada! Escaneie o QR Code no card do chip.")
       setIsConnectDialogOpen(false)
       loadSettings()
     } catch (error: any) { toast.error(error.message) } finally { setIsConnecting(false) }
   }
 
   const handleDisconnect = async (instanceName: string) => {
-    if (!await confirm({ title: "Desconectar WhatsApp", description: "Os disparos serão interrompidos até você conectar novamente.", variant: "warning" })) return
+    if (!await confirm({ title: "Desconectar WhatsApp", description: "Os disparos serÃ£o interrompidos atÃ© vocÃª conectar novamente.", variant: "warning" })) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/logout', {
@@ -331,9 +335,9 @@ export default function AutomacaoPage() {
         const errorData = await res.json()
         throw new Error(errorData.error || "Erro ao remover")
       }
-      toast.success("Limpeza profunda concluída! Instância removida.")
+      toast.success("Limpeza profunda concluÃ­da! InstÃ¢ncia removida.")
       loadSettings()
-    } catch (e: any) { toast.error(e.message || "Erro fatal ao remover instância") } finally { setIsConnecting(false) }
+    } catch (e: any) { toast.error(e.message || "Erro fatal ao remover instÃ¢ncia") } finally { setIsConnecting(false) }
   }
 
   const handleSetPrimary = async (instanceName: string) => {
@@ -347,24 +351,24 @@ export default function AutomacaoPage() {
       if (res.ok) {
         toast.success(data.message)
         setInstances(prev => prev.map(inst => ({ ...inst, is_primary: inst.instance_name === instanceName })))
-      } else toast.error(data.error || 'Erro ao definir instância primária.')
-    } catch (error) { toast.error('Erro de conexão ao definir instância primária.') } finally { setIsConnecting(false) }
+      } else toast.error(data.error || 'Erro ao definir instÃ¢ncia primÃ¡ria.')
+    } catch (error) { toast.error('Erro de conexÃ£o ao definir instÃ¢ncia primÃ¡ria.') } finally { setIsConnecting(false) }
   }
 
-  /* ————— anti-ban + chamadas ————— */
+  /* â€”â€”â€”â€”â€” anti-ban + chamadas â€”â€”â€”â€”â€” */
   const handleSaveAntiBan = async () => {
     setIsSavingAntiBan(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Não autenticado")
+      if (!user) throw new Error("NÃ£o autenticado")
       const { error } = await supabase
         .from('evolution_instances')
         .update({ min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay })
         .eq('user_id', user.id)
       if (error) throw error
       logAuditClient({ action: 'antiban.update', resource: 'evolution_instances', details: { min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay } })
-      toast.success("Configurações antibloqueio salvas!")
-    } catch (error) { toast.error("Erro ao salvar configurações.") } finally { setIsSavingAntiBan(false) }
+      toast.success("ConfiguraÃ§Ãµes antibloqueio salvas!")
+    } catch (error) { toast.error("Erro ao salvar configuraÃ§Ãµes.") } finally { setIsSavingAntiBan(false) }
   }
 
   const handleSaveCallSettings = async (nextReject?: boolean) => {
@@ -380,7 +384,7 @@ export default function AutomacaoPage() {
     } catch (e: any) { toast.error(e.message || "Erro ao salvar") } finally { setIsSavingCallSettings(false) }
   }
 
-  /* ————— régua + templates (automations) ————— */
+  /* â€”â€”â€”â€”â€” rÃ©gua + templates (automations) â€”â€”â€”â€”â€” */
   const loadAutomations = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -434,6 +438,11 @@ export default function AutomacaoPage() {
   }
 
   const handleRuleSubmit = async () => {
+    if (isStarter && dlgKind === 'step') return toast.error('A rÃ©gua financeira estÃ¡ disponÃ­vel nos planos Pro e Master.')
+    if (isStarter && !(ruleForm.alert_type in STARTER_SYSTEM_TYPES)) return toast.error('Tipo de mensagem disponÃ­vel somente nos planos Pro e Master.')
+    if (isStarter && autoRules.some(rule => rule.alert_type === ruleForm.alert_type && rule.id !== editingRule?.id)) {
+      return toast.error('JÃ¡ existe uma mensagem deste tipo. Edite a configuraÃ§Ã£o existente.')
+    }
     setIsSubmittingRule(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -453,12 +462,12 @@ export default function AutomacaoPage() {
         const { error } = await supabase.from('automations').update(payload).eq('id', editingRule.id)
         if (error) throw error
         logAuditClient({ action: 'automation.update', resource: 'automations', resource_id: editingRule.id, details: { alert_type: ruleForm.alert_type } })
-        toast.success(dlgKind === 'step' ? "Etapa atualizada." : "Mensagem automática atualizada.")
+        toast.success(dlgKind === 'step' ? "Etapa atualizada." : "Mensagem automÃ¡tica atualizada.")
       } else {
         const { error } = await supabase.from('automations').insert(payload)
         if (error) throw error
         logAuditClient({ action: 'automation.create', resource: 'automations', details: { alert_type: ruleForm.alert_type } })
-        toast.success(dlgKind === 'step' ? "Etapa adicionada à régua." : "Mensagem automática criada.")
+        toast.success(dlgKind === 'step' ? "Etapa adicionada Ã  rÃ©gua." : "Mensagem automÃ¡tica criada.")
       }
       setIsRuleDialogOpen(false)
       loadAutomations()
@@ -478,12 +487,13 @@ export default function AutomacaoPage() {
     loadAutomations()
   }
 
-  // Régua master: liga/desliga todas as etapas de uma vez
+  // RÃ©gua master: liga/desliga todas as etapas de uma vez
   const stepRules = automations.filter(r => isStepType(r.alert_type)).sort((a, b) => {
     const off = (r: any) => r.alert_type === 'before_due' ? -Math.abs(r.days_offset) : r.alert_type === 'after_due' ? Math.abs(r.days_offset) : 0
     return off(a) - off(b)
   })
   const autoRules = automations.filter(r => !isStepType(r.alert_type))
+  const visibleAutoRules = isStarter ? autoRules.filter(rule => rule.alert_type in STARTER_SYSTEM_TYPES) : autoRules
   const reguaActive = stepRules.length > 0 && stepRules.every(r => r.is_active)
 
   const toggleRegua = async () => {
@@ -492,7 +502,7 @@ export default function AutomacaoPage() {
     const next = !reguaActive
     await supabase.from('automations').update({ is_active: next })
       .eq('user_id', user.id).in('alert_type', ['before_due', 'on_due', 'after_due'])
-    toast.success(next ? "Régua ativada." : "Régua pausada.")
+    toast.success(next ? "RÃ©gua ativada." : "RÃ©gua pausada.")
     loadAutomations()
   }
 
@@ -502,7 +512,7 @@ export default function AutomacaoPage() {
     return 'D-0'
   }
 
-  /* ————— logs ————— */
+  /* â€”â€”â€”â€”â€” logs â€”â€”â€”â€”â€” */
   const loadLogs = async () => {
     setIsLogsLoading(true)
     try {
@@ -524,7 +534,7 @@ export default function AutomacaoPage() {
     loadLogs()
   }
   const handleCancelLog = async (id: string) => {
-    await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuário' }).eq('id', id)
+    await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuÃ¡rio' }).eq('id', id)
     logAuditClient({ action: 'alert.cancel', resource: 'alert_history', resource_id: id })
     toast.success("Cancelado.")
     loadLogs()
@@ -559,10 +569,10 @@ export default function AutomacaoPage() {
         const { error } = await supabase.from('alert_history').delete().eq('user_id', user.id)
         if (error) throw error
         logAuditClient({ action: 'alert.clear_all', resource: 'alert_history' })
-        toast.success("Histórico limpo.")
+        toast.success("HistÃ³rico limpo.")
       }
       loadLogs()
-    } catch (e: any) { toast.error("Erro na ação em lote: " + e.message) } finally { setIsBulkActioning(false) }
+    } catch (e: any) { toast.error("Erro na aÃ§Ã£o em lote: " + e.message) } finally { setIsBulkActioning(false) }
   }
 
   const handleTestConnection = async () => {
@@ -574,17 +584,27 @@ export default function AutomacaoPage() {
         body: JSON.stringify({ phone: testPhone })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao testar conexão')
+      if (!res.ok) throw new Error(data.error || 'Erro ao testar conexÃ£o')
       toast.success("Mensagem de teste enviada!")
       setIsTestDialogOpen(false)
     } catch (e: any) { toast.error(e.message) } finally { setIsTestingPhone(false) }
   }
 
-  /* ————— disparo em massa ————— */
+  /* â€”â€”â€”â€”â€” disparo em massa â€”â€”â€”â€”â€” */
   const handleSendMass = async () => {
+    const previewRes = await fetch('/api/evolution/send-mass', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'preview', audience: massAudience, serviceId: massServiceId,
+        messageTemplate: massMessage, scheduledAt: scheduledAt ? scheduledAt.toISOString() : null
+      })
+    })
+    const previewData = await previewRes.json()
+    if (!previewRes.ok) return toast.error(previewData.error || 'NÃ£o foi possÃ­vel calcular a prÃ©via.')
+    const preview = previewData.preview
     if (!await confirm({
       title: "Disparo em massa",
-      description: "Iniciar o disparo para os clientes do público selecionado? A mensagem irá pelo WhatsApp respeitando o intervalo anti-ban.",
+      description: `${preview.eligible} elegÃ­veis, ${preview.deferred} serÃ£o adiados por contato prioritÃ¡rio e ${preview.blocked} estÃ£o bloqueados pelo limite do plano. Deseja confirmar?`,
     })) return
     setIsSendingMass(true)
     try {
@@ -602,6 +622,7 @@ export default function AutomacaoPage() {
       const res = await fetch('/api/evolution/send-mass', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'confirm',
           audience: massAudience, serviceId: massServiceId, messageTemplate: massMessage,
           mediaUrl, delaySeconds: 5, scheduledAt: scheduledAt ? scheduledAt.toISOString() : null
         })
@@ -614,7 +635,7 @@ export default function AutomacaoPage() {
     } catch (e: any) { toast.error(e.message) } finally { setIsSendingMass(false) }
   }
 
-  /* ————— derivados ————— */
+  /* â€”â€”â€”â€”â€” derivados â€”â€”â€”â€”â€” */
   const onlineCount = instances.filter(i => i.status === 'connected').length
   const anyOnline = onlineCount > 0
   const pendingCount = logs.filter(l => l.status === 'pending').length
@@ -624,7 +645,7 @@ export default function AutomacaoPage() {
     ? { label: 'Reenviar todos', action: 'resend_failed' as const, cls: 'border-money/40 bg-success-bg text-success-fg' }
     : logFilter === 'pending'
       ? { label: 'Cancelar todos', action: 'cancel_pending' as const, cls: 'border-warning-border bg-warning-bg text-warning-fg' }
-      : { label: 'Limpar histórico', action: 'clear_all' as const, cls: 'border-danger-border bg-danger-bg text-danger-fg' }
+      : { label: 'Limpar histÃ³rico', action: 'clear_all' as const, cls: 'border-danger-border bg-danger-bg text-danger-fg' }
 
   const insertVar = (v: string, target: 'form' | 'mass') => {
     if (target === 'form') setRuleForm(f => ({ ...f, message_template: f.message_template + (f.message_template.endsWith(' ') || !f.message_template ? '' : ' ') + v }))
@@ -646,24 +667,30 @@ export default function AutomacaoPage() {
     <div className="mx-auto max-w-[1000px] pb-14">
       {/* HEADER */}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        <h1 className="text-[19px] font-semibold tracking-[-0.025em]">Automação</h1>
+        <h1 className="text-[19px] font-semibold tracking-[-0.025em]">AutomaÃ§Ã£o</h1>
         <span className={cn("ml-1 flex items-center gap-1.5 text-[11.5px] font-medium", anyOnline ? "text-money" : "text-danger")}>
           <span className={cn("status-dot", anyOnline ? "bg-money" : "bg-danger")} />
-          {anyOnline ? `${onlineCount} de ${instances.length} instância${instances.length > 1 ? 's' : ''} online` : 'Nenhuma instância online'}
+          {anyOnline ? `${onlineCount} de ${instances.length} instÃ¢ncia${instances.length > 1 ? 's' : ''} online` : 'Nenhuma instÃ¢ncia online'}
         </span>
         <div className="flex-1" />
         <Button variant="outline" size="sm" onClick={() => setIsTestDialogOpen(true)} className="h-8 text-[11.5px]">
           Testar disparo
         </Button>
         <Button size="sm" onClick={() => setIsConnectDialogOpen(true)} className="h-8 gap-1 text-[11.5px]">
-          <span className="text-[13px] leading-none">+</span> Conectar número
+          <span className="text-[13px] leading-none">+</span> Conectar nÃºmero
         </Button>
       </div>
+
+      {isStarter && (
+        <div className="mb-4 rounded-lg border border-accent bg-interactive-bg px-3.5 py-3 text-[11.5px] text-interactive-fg">
+          <b>AutomaÃ§Ã£o BÃ¡sica:</b> disparos, promoÃ§Ãµes, templates e agendamentos para atÃ© {plan.limits.clients ?? 100} clientes. RÃ©gua financeira avanÃ§ada, segmentaÃ§Ã£o e mÃ©tricas de conversÃ£o exigem Pro ou Master.
+        </div>
+      )}
 
       {/* TABS segmentadas */}
       <div className="mb-5 flex w-fit gap-0.5 rounded-lg bg-secondary p-[3px]">
         {([
-          { k: 'overview', l: 'Visão geral' },
+          { k: 'overview', l: 'VisÃ£o geral' },
           { k: 'mass', l: 'Disparo em massa' },
           { k: 'logs', l: 'Logs', badge: pendingCount > 0 ? String(pendingCount) : '' },
         ] as { k: typeof activeTab; l: string; badge?: string }[]).map(t => (
@@ -681,10 +708,10 @@ export default function AutomacaoPage() {
         ))}
       </div>
 
-      {/* ============ VISÃO GERAL ============ */}
+      {/* ============ VISÃƒO GERAL ============ */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          {/* Cards de instância */}
+          {/* Cards de instÃ¢ncia */}
           <div className="flex flex-wrap gap-3.5">
             {instances.map((inst, idx) => {
               const online = inst.status === 'connected'
@@ -707,7 +734,7 @@ export default function AutomacaoPage() {
                         {inst.is_primary && <Star className="size-3 shrink-0 fill-warning text-warning" />}
                       </div>
                       <div className="num truncate text-[10.5px] text-muted-foreground">
-                        {inst.phone_number ? phoneMask(inst.phone_number) : qr ? 'aguardando conexão · escaneie o QR' : '—'}
+                        {inst.phone_number ? phoneMask(inst.phone_number) : qr ? 'aguardando conexÃ£o Â· escaneie o QR' : 'â€”'}
                       </div>
                     </div>
                     <span className={cn("flex items-center gap-1.5 text-[10.5px] font-semibold", online ? "text-money" : qr ? "text-warning-fg" : "text-muted-foreground")}>
@@ -720,7 +747,7 @@ export default function AutomacaoPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {online && !inst.is_primary && (
-                          <DropdownMenuItem onClick={() => handleSetPrimary(inst.instance_name)}>★ Tornar principal</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSetPrimary(inst.instance_name)}>â˜… Tornar principal</DropdownMenuItem>
                         )}
                         {online && (
                           <DropdownMenuItem onClick={() => handleDisconnect(inst.instance_name)}>Desconectar</DropdownMenuItem>
@@ -733,7 +760,7 @@ export default function AutomacaoPage() {
                     </DropdownMenu>
                   </div>
 
-                  {/* QR fica no card — não é modal (GUIA 1.4) */}
+                  {/* QR fica no card â€” nÃ£o Ã© modal (GUIA 1.4) */}
                   {qr && (
                     <div className="mt-3 flex flex-col items-center gap-2 border-t border-border pt-3">
                       <div className="rounded-lg border border-border bg-white p-2.5">
@@ -748,7 +775,7 @@ export default function AutomacaoPage() {
                         )}
                       </div>
                       <p className="flex items-center gap-1.5 text-[10.5px] text-warning-fg">
-                        <Loader2 className="size-3 animate-spin" /> Aguardando leitura…
+                        <Loader2 className="size-3 animate-spin" /> Aguardando leituraâ€¦
                       </p>
                     </div>
                   )}
@@ -764,21 +791,21 @@ export default function AutomacaoPage() {
             </button>
           </div>
 
-          {/* Régua + Templates */}
+          {/* RÃ©gua + Templates */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            {/* RÉGUA */}
-            <div className="min-w-0 flex-[1.4] rounded-lg border border-border bg-card p-4">
+            {/* RÃ‰GUA */}
+            {!isStarter && <div className="min-w-0 flex-[1.4] rounded-lg border border-border bg-card p-4">
               <div className="mb-0.5 flex items-center">
-                <span className="text-[13px] font-semibold">Régua de cobrança</span>
+                <span className="text-[13px] font-semibold">RÃ©gua de cobranÃ§a</span>
                 <span className={cn("ml-auto flex cursor-pointer items-center gap-1.5 text-[10.5px] font-semibold", reguaActive ? "text-money" : "text-muted-foreground")} onClick={toggleRegua}>
                   <MiniToggle on={reguaActive} onClick={() => {}} />
                   {reguaActive ? 'Ativa' : 'Pausada'}
                 </span>
               </div>
-              <p className="mb-4 text-[10.5px] text-muted-foreground">mensagens automáticas em volta do vencimento</p>
+              <p className="mb-4 text-[10.5px] text-muted-foreground">mensagens automÃ¡ticas em volta do vencimento</p>
 
               {stepRules.length === 0 ? (
-                <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhuma etapa na régua. Adicione a primeira abaixo.</p>
+                <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhuma etapa na rÃ©gua. Adicione a primeira abaixo.</p>
               ) : (
                 <div className="flex flex-col">
                   {stepRules.map((r, idx) => {
@@ -814,7 +841,7 @@ export default function AutomacaoPage() {
                   + Adicionar etapa
                 </button>
               </div>
-            </div>
+            </div>}
 
             {/* TEMPLATES (livres: nome + etiqueta + mensagem) */}
             <div className="min-w-0 flex-1 space-y-4">
@@ -824,7 +851,7 @@ export default function AutomacaoPage() {
                   <button onClick={() => openTemplateDialog(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Novo</button>
                 </div>
                 {templates.length === 0 ? (
-                  <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhum template. Crie mensagens reutilizáveis para a régua e o disparo em massa.</p>
+                  <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhum template. Crie mensagens reutilizÃ¡veis para a rÃ©gua e o disparo em massa.</p>
                 ) : (
                   templates.map(t => (
                     <div key={t.id} onClick={() => openTemplateDialog(t)} className="mb-2 cursor-pointer rounded-[7px] border border-border p-2.5 transition-colors hover:bg-muted">
@@ -845,17 +872,17 @@ export default function AutomacaoPage() {
                 )}
               </div>
 
-              {/* Mensagens automáticas do robô (boas-vindas, renovação…) */}
+              {/* Mensagens automÃ¡ticas do robÃ´ (boas-vindas, renovaÃ§Ã£oâ€¦) */}
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-1 flex items-center">
-                  <span className="text-[13px] font-semibold">Robô do sistema</span>
+                  <span className="text-[13px] font-semibold">RobÃ´ do sistema</span>
                   <button onClick={() => openAuto(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Nova</button>
                 </div>
-                <p className="mb-3 text-[10.5px] text-muted-foreground">disparadas por eventos: boas-vindas, renovação, promoção…</p>
-                {autoRules.length === 0 ? (
-                  <p className="py-3 text-center text-[11px] text-muted-foreground">Nenhuma mensagem automática.</p>
+                <p className="mb-3 text-[10.5px] text-muted-foreground">{isStarter ? 'controle bÃ¡sico de boas-vindas, renovaÃ§Ã£o e mensagem rÃ¡pida' : 'disparadas por eventos: boas-vindas, renovaÃ§Ã£o, promoÃ§Ã£oâ€¦'}</p>
+                {visibleAutoRules.length === 0 ? (
+                  <p className="py-3 text-center text-[11px] text-muted-foreground">Nenhuma mensagem automÃ¡tica.</p>
                 ) : (
-                  autoRules.map(r => (
+                  visibleAutoRules.map(r => (
                     <div key={r.id} onClick={() => openAuto(r)} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted">
                       <span className="size-[7px] shrink-0 rounded-full" style={{ background: TYPE_DOT[r.alert_type] }} />
                       <span className={cn("flex-1 truncate text-[11.5px] font-medium", !r.is_active && "text-muted-foreground line-through")}>
@@ -875,12 +902,12 @@ export default function AutomacaoPage() {
               <div className="mb-0.5 flex items-center gap-2">
                 <Shield className="size-3.5 text-warning" />
                 <span className="text-[12.5px] font-semibold">Antibloqueio</span>
-                <span className="num ml-auto text-[10px] font-semibold text-muted-foreground">{antiBanConfig.min_delay}–{antiBanConfig.max_delay}s</span>
+                <span className="num ml-auto text-[10px] font-semibold text-muted-foreground">{antiBanConfig.min_delay}â€“{antiBanConfig.max_delay}s</span>
               </div>
-              <p className="mb-3 text-[10.5px] text-muted-foreground">intervalo aleatório entre cada mensagem</p>
+              <p className="mb-3 text-[10.5px] text-muted-foreground">intervalo aleatÃ³rio entre cada mensagem</p>
               <div className="flex gap-2.5">
                 <div className="flex-1">
-                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">Mínimo (s)</p>
+                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">MÃ­nimo (s)</p>
                   <NumStepper
                     value={antiBanConfig.min_delay}
                     onDown={() => setAntiBanConfig(c => ({ ...c, min_delay: Math.max(5, c.min_delay - 1) }))}
@@ -888,7 +915,7 @@ export default function AutomacaoPage() {
                   />
                 </div>
                 <div className="flex-1">
-                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">Máximo (s)</p>
+                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">MÃ¡ximo (s)</p>
                   <NumStepper
                     value={antiBanConfig.max_delay}
                     onDown={() => setAntiBanConfig(c => ({ ...c, max_delay: Math.max(c.min_delay, c.max_delay - 1) }))}
@@ -906,7 +933,7 @@ export default function AutomacaoPage() {
                 <PhoneOff className="size-3.5 text-danger" />
                 <div className="flex-1">
                   <p className="text-[12.5px] font-semibold">Bloquear chamadas</p>
-                  <p className="mt-px text-[10.5px] text-muted-foreground">recusa ligações automaticamente</p>
+                  <p className="mt-px text-[10.5px] text-muted-foreground">recusa ligaÃ§Ãµes automaticamente</p>
                 </div>
                 <MiniToggle on={rejectCalls} disabled={isSavingCallSettings} onClick={() => { const next = !rejectCalls; setRejectCalls(next); handleSaveCallSettings(next) }} />
               </div>
@@ -915,7 +942,7 @@ export default function AutomacaoPage() {
                   <Textarea
                     value={rejectCallsMessage}
                     onChange={(e) => setRejectCallsMessage(e.target.value)}
-                    placeholder="Mensagem automática ao recusar…"
+                    placeholder="Mensagem automÃ¡tica ao recusarâ€¦"
                     className="min-h-[52px] resize-none text-[11px]"
                   />
                   <Button variant="outline" size="sm" onClick={() => handleSaveCallSettings()} disabled={isSavingCallSettings} className="h-7 w-full text-[11px]">
@@ -937,14 +964,14 @@ export default function AutomacaoPage() {
               <p className="mt-1 text-[11px] leading-normal text-muted-foreground">Envie para um grupo de clientes de uma vez, respeitando o intervalo anti-ban.</p>
             </div>
             <div className="p-4">
-              <p className="mb-1.5 text-[11px] font-medium text-secondary-foreground">Público-alvo</p>
+              <p className="mb-1.5 text-[11px] font-medium text-secondary-foreground">PÃºblico-alvo</p>
               <div className="mb-3 flex flex-wrap gap-1.5">
                 {[
                   { k: 'all', l: 'Todos os clientes' },
                   { k: 'active', l: 'Apenas ativos' },
                   { k: 'inactive', l: 'Apenas inativos' },
                   { k: 'expired', l: 'Vencimento atrasado' },
-                  { k: 'service', l: 'Por serviço' },
+                  ...(!isStarter ? [{ k: 'service', l: 'Por serviÃ§o' }] : []),
                 ].map(a => (
                   <button
                     key={a.k}
@@ -962,7 +989,7 @@ export default function AutomacaoPage() {
                 <div className="mb-3">
                   <Select value={massServiceId} onValueChange={(v) => setMassServiceId(v ?? '')}>
                     <SelectTrigger className="h-9 w-full text-xs">
-                      <SelectValue placeholder="Escolha o serviço">{services.find(s => s.id === massServiceId)?.name || 'Escolha o serviço'}</SelectValue>
+                      <SelectValue placeholder="Escolha o serviÃ§o">{services.find(s => s.id === massServiceId)?.name || 'Escolha o serviÃ§o'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -972,7 +999,7 @@ export default function AutomacaoPage() {
               )}
 
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-accent bg-interactive-bg px-3 py-2 text-[11.5px] text-interactive-fg">
-                ◎ <b>Público estimado:</b> {estimatedAudience ?? '…'} clientes.
+                â—Ž <b>PÃºblico estimado:</b> {estimatedAudience ?? 'â€¦'} clientes.
               </div>
 
               {activeTemplates.length > 0 && (
@@ -996,11 +1023,11 @@ export default function AutomacaoPage() {
               <Textarea
                 value={massMessage}
                 onChange={(e) => setMassMessage(e.target.value)}
-                placeholder="Escreva a mensagem…"
+                placeholder="Escreva a mensagemâ€¦"
                 className="min-h-[100px] text-xs leading-relaxed"
               />
               <div className="my-2 rounded-lg border border-border bg-muted px-3 py-2.5">
-                <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
+                <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {VARS.map(v => (
                     <button key={v} onClick={() => insertVar(v, 'mass')} className="num rounded-[5px] border border-accent bg-interactive-bg px-1.5 py-0.5 text-[10px] font-medium text-interactive-fg hover:brightness-95">
@@ -1031,7 +1058,7 @@ export default function AutomacaoPage() {
               </div>
 
               <div className="rounded-lg border border-border bg-muted px-3.5 py-3">
-                <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-medium"><span className="text-interactive">◷</span> Agendar (opcional)</p>
+                <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-medium"><span className="text-interactive">â—·</span> Agendar (opcional)</p>
                 <Input
                   type="datetime-local"
                   onChange={(e) => setScheduledAt(e.target.value ? new Date(e.target.value) : null)}
@@ -1048,7 +1075,7 @@ export default function AutomacaoPage() {
                   anyOnline ? "bg-money hover:brightness-95" : "cursor-not-allowed bg-input text-muted-foreground"
                 )}
               >
-                {isSendingMass ? <Loader2 className="mx-auto size-4 animate-spin" /> : anyOnline ? 'Iniciar disparo em massa' : 'Conecte um número primeiro'}
+                {isSendingMass ? <Loader2 className="mx-auto size-4 animate-spin" /> : anyOnline ? 'Iniciar disparo em massa' : 'Conecte um nÃºmero primeiro'}
               </button>
             </div>
           </div>
@@ -1060,7 +1087,7 @@ export default function AutomacaoPage() {
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-3">
             <div className="min-w-[160px] flex-1">
-              <p className="text-[13px] font-semibold">Histórico de disparos</p>
+              <p className="text-[13px] font-semibold">HistÃ³rico de disparos</p>
               <p className="mt-px text-[10.5px] text-muted-foreground">programados, enviados e falhas</p>
             </div>
             <div className="flex gap-0.5 rounded-[7px] bg-secondary p-0.5">
@@ -1088,10 +1115,10 @@ export default function AutomacaoPage() {
             </button>
           </div>
 
-          {/* Nota anti-ban só no filtro "Em andamento" (GUIA 1.8) */}
+          {/* Nota anti-ban sÃ³ no filtro "Em andamento" (GUIA 1.8) */}
           {logFilter === 'pending' && filteredLogs.length > 0 && (
             <div className="border-b border-warning-border bg-warning-bg px-4 py-2 text-[10.5px] text-warning-fg">
-              O horário agendado é o <b>início</b> — as mensagens saem gradualmente respeitando o delay anti-ban ({antiBanConfig.min_delay}–{antiBanConfig.max_delay}s).
+              O horÃ¡rio agendado Ã© o <b>inÃ­cio</b> â€” as mensagens saem gradualmente respeitando o delay anti-ban ({antiBanConfig.min_delay}â€“{antiBanConfig.max_delay}s).
             </div>
           )}
 
@@ -1101,7 +1128,7 @@ export default function AutomacaoPage() {
             <span className="w-[100px]">ETAPA</span>
             <span className="w-[110px]">PROGRAMADO</span>
             <span className="w-[90px]">STATUS</span>
-            <span className="w-[80px] text-right">AÇÕES</span>
+            <span className="w-[80px] text-right">AÃ‡Ã•ES</span>
           </div>
 
           {isLogsLoading ? (
@@ -1116,35 +1143,38 @@ export default function AutomacaoPage() {
             <div className="px-4 py-10 text-center"><p className="microlabel">Nenhum log neste filtro</p></div>
           ) : (
             filteredLogs.map((log) => {
+              const displayStatus = log.status === 'pending' && log.contact_decision === 'deferred' ? 'deferred' : log.status
               const st = ({
                 pending: ['Na fila', 'bg-warning-bg text-warning-fg'],
+                deferred: ['Adiado', 'bg-interactive-bg text-interactive-fg'],
                 sent: ['Enviado', 'bg-success-bg text-success-fg'],
                 failed: ['Falhou', 'bg-danger-bg text-danger-fg'],
-              } as Record<string, [string, string]>)[log.status] || [log.status, 'bg-secondary']
+              } as Record<string, [string, string]>)[displayStatus] || [displayStatus, 'bg-secondary']
               const sched = log.scheduled_at
                 ? `${new Date(log.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${new Date(log.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                : '—'
+                : 'â€”'
               return (
                 <div key={log.id} className="flex items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
                   <div className="min-w-0 flex-[1.2]">
                     <p className="truncate text-xs font-medium">{log.client?.name || 'Cliente removido'}</p>
                     {log.error_message && <p className="mt-px truncate text-[10px] text-danger">{log.error_message}</p>}
+                    {displayStatus === 'deferred' && <p className="mt-px truncate text-[10px] text-interactive-fg">Adiado por uma cobranÃ§a prioritÃ¡ria</p>}
                   </div>
                   <span className="w-[100px] truncate text-[11px] text-secondary-foreground">
-                    {LOG_TYPE[log.automation?.alert_type] || '—'}
+                    {LOG_TYPE[log.automation?.alert_type] || 'â€”'}
                   </span>
                   <span className="num w-[110px] text-[10.5px] text-muted-foreground">{sched}</span>
                   <span className="w-[90px]">
                     <span className={cn("inline-flex rounded px-2 py-0.5 text-[10px] font-semibold", st[1])}>{st[0]}</span>
                   </span>
                   <span className="flex w-[80px] justify-end gap-1">
-                    {log.status !== 'sent' && (
-                      <button onClick={() => handleResendLog(log.id)} title="Reenviar" className="size-[26px] rounded-md border border-input bg-card text-xs text-money hover:bg-muted">↻</button>
+                    {displayStatus !== 'sent' && displayStatus !== 'deferred' && (
+                      <button onClick={() => handleResendLog(log.id)} title="Reenviar" className="size-[26px] rounded-md border border-input bg-card text-xs text-money hover:bg-muted">â†»</button>
                     )}
-                    {log.status === 'pending' && (
-                      <button onClick={() => handleCancelLog(log.id)} title="Cancelar" className="size-[26px] rounded-md border border-input bg-card text-xs text-warning hover:bg-muted">✕</button>
+                    {displayStatus === 'pending' && (
+                      <button onClick={() => handleCancelLog(log.id)} title="Cancelar" className="size-[26px] rounded-md border border-input bg-card text-xs text-warning hover:bg-muted">âœ•</button>
                     )}
-                    <button onClick={() => handleDeleteLog(log.id)} title="Excluir" className="size-[26px] rounded-md border border-input bg-card text-xs text-danger-fg hover:bg-muted">🗑</button>
+                    <button onClick={() => handleDeleteLog(log.id)} title="Excluir" className="size-[26px] rounded-md border border-input bg-card text-xs text-danger-fg hover:bg-muted">ðŸ—‘</button>
                   </span>
                 </div>
               )
@@ -1153,19 +1183,19 @@ export default function AutomacaoPage() {
         </div>
       )}
 
-      {/* ============ DIÁLOGO etapa/template ============ */}
+      {/* ============ DIÃLOGO etapa/template ============ */}
       <Dialog open={isRuleDialogOpen} onOpenChange={setIsRuleDialogOpen}>
         <DialogContent className="max-h-[90vh] w-[500px] max-w-[95vw] overflow-y-auto sm:max-w-none">
           <DialogHeader className="flex-row items-center gap-2.5 space-y-0">
             <span className={cn("flex size-[30px] items-center justify-center rounded-lg text-sm", dlgKind === 'step' ? "bg-warning-bg" : "bg-accent")}>
-              {dlgKind === 'step' ? '⏱' : '⚡'}
+              {dlgKind === 'step' ? 'â±' : 'âš¡'}
             </span>
             <div>
               <DialogTitle className="text-[13.5px] font-semibold">
-                {editingRule ? 'Editar ' : 'Nova '}{dlgKind === 'step' ? 'etapa da régua' : 'mensagem automática'}
+                {editingRule ? 'Editar ' : 'Nova '}{dlgKind === 'step' ? 'etapa da rÃ©gua' : 'mensagem automÃ¡tica'}
               </DialogTitle>
               <DialogDescription className="mt-px text-[10.5px]">
-                {dlgKind === 'step' ? 'quando e o que o robô envia' : 'disparada por evento do sistema'}
+                {dlgKind === 'step' ? 'quando e o que o robÃ´ envia' : 'disparada por evento do sistema'}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -1176,7 +1206,7 @@ export default function AutomacaoPage() {
               <Select value={ruleForm.alert_type} onValueChange={(v) => v && setRuleForm(f => ({ ...f, alert_type: v, message_template: editingRule ? f.message_template : getDefaultTemplate(v) }))}>
                 <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(dlgKind === 'step' ? STEP_TYPES : TEMPLATE_TYPES).map(([k, l]) => (
+                  {Object.entries(dlgKind === 'step' ? STEP_TYPES : isStarter ? STARTER_SYSTEM_TYPES : TEMPLATE_TYPES).map(([k, l]) => (
                     <SelectItem key={k} value={k}>{l}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1187,7 +1217,7 @@ export default function AutomacaoPage() {
               <div className="flex gap-3">
                 {(ruleForm.alert_type === 'before_due' || ruleForm.alert_type === 'after_due') && (
                   <div className="flex-1 space-y-1.5">
-                    <Label className="text-[11px]">Dias de diferença</Label>
+                    <Label className="text-[11px]">Dias de diferenÃ§a</Label>
                     <NumStepper
                       value={ruleForm.days}
                       onDown={() => setRuleForm(f => ({ ...f, days: Math.max(1, f.days - 1) }))}
@@ -1196,7 +1226,7 @@ export default function AutomacaoPage() {
                   </div>
                 )}
                 <div className="flex-1 space-y-1.5">
-                  <Label className="text-[11px]">Horário</Label>
+                  <Label className="text-[11px]">HorÃ¡rio</Label>
                   <Input type="time" value={ruleForm.send_time} onChange={(e) => setRuleForm(f => ({ ...f, send_time: e.target.value }))} className="num h-9 text-xs" />
                 </div>
               </div>
@@ -1227,12 +1257,12 @@ export default function AutomacaoPage() {
               <Textarea
                 value={ruleForm.message_template}
                 onChange={(e) => setRuleForm(f => ({ ...f, message_template: e.target.value }))}
-                placeholder="Escreva o template…"
+                placeholder="Escreva o templateâ€¦"
                 className="min-h-[96px] text-xs leading-relaxed"
               />
             </div>
             <div className="rounded-lg border border-border bg-muted px-3 py-2.5">
-              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
+              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
               <div className="flex flex-wrap gap-1.5">
                 {VARS.map(v => (
                   <button key={v} type="button" onClick={() => insertVar(v, 'form')} className="num rounded-[5px] border border-accent bg-interactive-bg px-1.5 py-0.5 text-[10px] font-medium text-interactive-fg hover:brightness-95">
@@ -1245,7 +1275,7 @@ export default function AutomacaoPage() {
             <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-3 py-2.5">
               <div className="flex-1">
                 <p className="text-xs font-medium">Ativo</p>
-                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, o robô ignora este item</p>
+                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, o robÃ´ ignora este item</p>
               </div>
               <MiniToggle on={ruleForm.is_active} onClick={() => setRuleForm(f => ({ ...f, is_active: !f.is_active }))} />
             </div>
@@ -1265,16 +1295,16 @@ export default function AutomacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÁLOGO template (nome + etiqueta + mensagem) ============ */}
+      {/* ============ DIÃLOGO template (nome + etiqueta + mensagem) ============ */}
       <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
         <DialogContent className="max-h-[90vh] w-[500px] max-w-[95vw] overflow-y-auto sm:max-w-none">
           <DialogHeader className="flex-row items-center gap-2.5 space-y-0">
-            <span className="flex size-[30px] items-center justify-center rounded-lg bg-accent text-sm">✉</span>
+            <span className="flex size-[30px] items-center justify-center rounded-lg bg-accent text-sm">âœ‰</span>
             <div>
               <DialogTitle className="text-[13.5px] font-semibold">
                 {editingTemplate ? 'Editar template' : 'Novo template'}
               </DialogTitle>
-              <DialogDescription className="mt-px text-[10.5px]">mensagem reutilizável na régua e no disparo em massa</DialogDescription>
+              <DialogDescription className="mt-px text-[10.5px]">mensagem reutilizÃ¡vel na rÃ©gua e no disparo em massa</DialogDescription>
             </div>
           </DialogHeader>
 
@@ -1284,7 +1314,7 @@ export default function AutomacaoPage() {
               <Input
                 value={templateForm.title}
                 onChange={(e) => setTemplateForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Ex: Cobrança padrão"
+                placeholder="Ex: CobranÃ§a padrÃ£o"
                 className="h-9 text-xs"
               />
             </div>
@@ -1308,12 +1338,12 @@ export default function AutomacaoPage() {
               <Textarea
                 value={templateForm.message}
                 onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
-                placeholder="Escreva o template…"
+                placeholder="Escreva o templateâ€¦"
                 className="min-h-[96px] text-xs leading-relaxed"
               />
             </div>
             <div className="rounded-lg border border-border bg-muted px-3 py-2.5">
-              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
+              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
               <div className="flex flex-wrap gap-1.5">
                 {VARS.map(v => (
                   <button
@@ -1331,7 +1361,7 @@ export default function AutomacaoPage() {
             <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-3 py-2.5">
               <div className="flex-1">
                 <p className="text-xs font-medium">Ativo</p>
-                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, não aparece nos seletores</p>
+                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, nÃ£o aparece nos seletores</p>
               </div>
               <MiniToggle on={templateForm.is_active} onClick={() => setTemplateForm(f => ({ ...f, is_active: !f.is_active }))} />
             </div>
@@ -1351,11 +1381,11 @@ export default function AutomacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÁLOGO conectar número ============ */}
+      {/* ============ DIÃLOGO conectar nÃºmero ============ */}
       <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
         <DialogContent className="w-[440px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
-            <DialogTitle className="text-[13.5px] font-semibold">Conectar número</DialogTitle>
+            <DialogTitle className="text-[13.5px] font-semibold">Conectar nÃºmero</DialogTitle>
             <DialogDescription className="text-[10.5px]">Gere um novo chip e escaneie o QR code com o WhatsApp.</DialogDescription>
           </DialogHeader>
 
@@ -1369,7 +1399,7 @@ export default function AutomacaoPage() {
                   connectionMode === m ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]" : "text-muted-foreground"
                 )}
               >
-                {m === 'integrated' ? 'API do sistema' : 'API própria'}
+                {m === 'integrated' ? 'API do sistema' : 'API prÃ³pria'}
               </button>
             ))}
           </div>
@@ -1377,10 +1407,10 @@ export default function AutomacaoPage() {
           {connectionMode === 'integrated' ? (
             <div className="space-y-3">
               <p className="rounded-md bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                Geramos a instância automaticamente na nossa infraestrutura. Depois é só escanear o QR que aparece no card do chip.
+                Geramos a instÃ¢ncia automaticamente na nossa infraestrutura. Depois Ã© sÃ³ escanear o QR que aparece no card do chip.
               </p>
               <Button onClick={handleIntegratedConnect} disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar instância automática
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar instÃ¢ncia automÃ¡tica
               </Button>
             </div>
           ) : (
@@ -1396,24 +1426,24 @@ export default function AutomacaoPage() {
                 {connErrs.apiKey && <p className="text-[10.5px] text-danger">{connErrs.apiKey.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px]">Nome da instância</Label>
+                <Label className="text-[11px]">Nome da instÃ¢ncia</Label>
                 <Input placeholder="ex: chip-disparos" className="h-9 text-xs" {...regConn("instanceName")} />
                 {connErrs.instanceName && <p className="text-[10.5px] text-danger">{connErrs.instanceName.message}</p>}
               </div>
               <Button type="submit" disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Conectar instância
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Conectar instÃ¢ncia
               </Button>
             </form>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÁLOGO testar disparo ============ */}
+      {/* ============ DIÃLOGO testar disparo ============ */}
       <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
         <DialogContent className="w-[400px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
             <DialogTitle className="text-[13.5px] font-semibold">Testar disparo</DialogTitle>
-            <DialogDescription className="text-[10.5px]">Envia uma mensagem de teste para conferir a conexão.</DialogDescription>
+            <DialogDescription className="text-[10.5px]">Envia uma mensagem de teste para conferir a conexÃ£o.</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
             <Label className="text-[11px]">WhatsApp de destino</Label>

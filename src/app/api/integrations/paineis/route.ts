@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { getCapabilityMembership } from '@/lib/plan-access'
 
 // GET all panels
 export async function GET(request: Request) {
@@ -9,6 +10,7 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!(await getCapabilityMembership(supabase, user.id, 'iptv_panels'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
 
     const { data: panels, error } = await supabase
       .from('iptv_accounts')
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!(await getCapabilityMembership(supabase, user.id, 'iptv_panels'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
 
     const body = await request.json()
     const { provider, username, password, url, linked_service_id } = body
@@ -77,6 +80,7 @@ export async function PUT(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!(await getCapabilityMembership(supabase, user.id, 'iptv_panels'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
 
     const body = await request.json()
     const { id, provider, username, password, url, linked_service_id } = body
@@ -122,6 +126,7 @@ export async function DELETE(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!(await getCapabilityMembership(supabase, user.id, 'iptv_panels'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

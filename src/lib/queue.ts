@@ -37,6 +37,18 @@ export const aiQueue = new Queue(AI_QUEUE_NAME, {
   },
 });
 
+export const INTELLIGENCE_QUEUE_NAME = 'intelligence-queue';
+
+export const intelligenceQueue = new Queue(INTELLIGENCE_QUEUE_NAME, {
+  connection: redisConnection as any,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: { age: 86400, count: 1000 },
+    removeOnFail: { age: 604800, count: 1000 },
+  },
+});
+
 export const HEALTH_QUEUE_NAME = 'health-queue';
 
 export const healthQueue = new Queue(HEALTH_QUEUE_NAME, {

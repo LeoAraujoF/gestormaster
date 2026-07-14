@@ -1,156 +1,140 @@
-"use client"
+'use client'
 
-import * as React from "react"
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, type ComponentProps } from 'react'
 import {
-  LayoutDashboard,
-  Users,
-  Server,
   Activity,
-  ShieldCheck,
-  LifeBuoy,
-  LogOut,
   ArrowLeft,
-  Settings,
-  Lock
-} from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
-import Link from "next/link"
+  HeartPulse,
+  LayoutDashboard,
+  LifeBuoy,
+  Loader2,
+  Lock,
+  LogOut,
+  ScrollText,
+  Server,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users,
+} from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-  SidebarGroup,
-} from "@/components/ui/sidebar"
-import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
+} from '@/components/ui/sidebar'
+import { createClient } from '@/lib/supabase/client'
 
-const adminNav = [
+const navigationGroups = [
   {
-    title: "Visão Geral",
-    url: "/admin",
-    icon: LayoutDashboard,
-    color: "text-danger",
+    label: 'Cockpit e operação',
+    items: [
+      { title: 'Cockpit executivo', url: '/admin', icon: LayoutDashboard },
+      { title: 'Usuários e SaaS', url: '/admin/users', icon: Users },
+      { title: 'Instâncias Evolution', url: '/admin/instances', icon: Server },
+      { title: 'Chamados', url: '/admin/tickets', icon: LifeBuoy },
+      { title: 'Filas BullMQ', url: '/admin/queues', icon: Activity },
+      { title: 'Saúde do sistema', url: '/admin/system', icon: HeartPulse },
+    ],
   },
   {
-    title: "Usuários (SaaS)",
-    url: "/admin/users",
-    icon: Users,
-    color: "text-interactive",
-  },
-  {
-    title: "Instâncias (Evo)",
-    url: "/admin/instances",
-    icon: Server,
-    color: "text-muted-foreground",
-  },
-  {
-    title: "Chamados",
-    url: "/admin/tickets",
-    icon: LifeBuoy,
-    color: "text-amber-500",
-  },
-  {
-    title: "Filas (BullMQ)",
-    url: "/admin/queues",
-    icon: Activity,
-    color: "text-emerald-500",
-  },
-  {
-    title: "Saúde do Sistema",
-    url: "/admin/system",
-    icon: Settings,
-    color: "text-slate-500",
-  },
-  {
-    title: "Controle de Recursos",
-    url: "/admin/features",
-    icon: Settings,
-    color: "text-muted-foreground",
-  },
-  {
-    title: "Logs de Auditoria",
-    url: "/admin/audit",
-    icon: ShieldCheck,
-    color: "text-teal-500",
-  },
-  {
-    title: "Segurança / Secrets",
-    url: "/admin/security",
-    icon: Lock,
-    color: "text-red-500",
+    label: 'Governança',
+    items: [
+      { title: 'Controle de recursos', url: '/admin/features', icon: SlidersHorizontal },
+      { title: 'Logs de auditoria', url: '/admin/audit', icon: ScrollText },
+      { title: 'Segurança e secrets', url: '/admin/security', icon: Lock },
+    ],
   },
 ]
 
-export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AdminSidebar(props: ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
-  
+  const [isSigningOut, setIsSigningOut] = useState(false)
+
   const handleLogout = async () => {
+    if (isSigningOut) return
+    setIsSigningOut(true)
+
     try {
-      await supabase.auth.signOut()
-      router.push("/login")
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      router.replace('/login')
       router.refresh()
-    } catch (error) {
-      toast.error("Erro ao sair.")
+    } catch {
+      toast.error('Não foi possível encerrar a sessão.')
+      setIsSigningOut(false)
     }
   }
 
   return (
-    <Sidebar variant="inset" className="border-r border-border/50 bg-background/50" {...props}>
-      <SidebarHeader className="h-16 flex items-center px-4 pt-4 pb-2 border-b border-border/30">
-        <div className="flex items-center gap-2 font-bold text-xl w-full">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-danger-bg border border-danger-border text-danger">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <span className="tracking-tight text-danger">Master Admin</span>
-        </div>
+    <Sidebar variant="inset" collapsible="icon" {...props}>
+      <SidebarHeader className="border-b border-sidebar-border p-3">
+        <Link href="/admin" className="flex h-10 items-center gap-3 rounded-lg px-1.5 focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-danger-border bg-danger-bg text-danger-fg">
+            <ShieldCheck aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">GestorMaster</span>
+            <span className="block truncate text-[10px] uppercase tracking-[0.08em] text-danger">Admin control</span>
+          </span>
+        </Link>
       </SidebarHeader>
-      
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {adminNav.map((item) => {
-              const isActive = pathname === item.url || (item.url !== "/admin" && pathname?.startsWith(item.url))
-              
-              return (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    render={<Link href={item.url} />} 
-                    isActive={isActive} 
-                    tooltip={item.title}
-                    className={isActive ? `bg-danger-bg text-danger border-r-2 border-danger-border` : `hover:bg-secondary/50`}
-                  >
-                    <item.icon className={isActive ? item.color : "text-muted-foreground"} />
-                    <span className={isActive ? "font-semibold" : ""}>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+
+      <SidebarContent className="py-2">
+        {navigationGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarMenu>
+              {group.items.map((item) => {
+                const isActive = pathname === item.url || (item.url !== '/admin' && pathname.startsWith(`${item.url}/`))
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} aria-current={isActive ? 'page' : undefined} />}
+                      isActive={isActive}
+                      tooltip={item.title}
+                      className="h-9 gap-2.5 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                    >
+                      <item.icon aria-hidden="true" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
-      
+
       <SidebarSeparator />
-      
-      <SidebarFooter className="p-4 border-t border-border/30">
+      <SidebarFooter className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href="/painel" />} className="text-muted-foreground hover:bg-secondary w-full justify-center rounded-lg mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <SidebarMenuButton render={<Link href="/painel" />} tooltip="Voltar ao SaaS">
+              <ArrowLeft aria-hidden="true" />
               <span>Voltar ao SaaS</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="text-red-500 hover:bg-red-500/10 hover:text-red-500 w-full justify-center rounded-lg">
-              <LogOut className="w-4 h-4 mr-2" />
-              <span>Sair da Conta</span>
+            <SidebarMenuButton
+              onClick={() => void handleLogout()}
+              disabled={isSigningOut}
+              tooltip="Sair da conta"
+              className="text-danger hover:bg-danger-bg hover:text-danger-fg"
+            >
+              {isSigningOut ? <Loader2 aria-hidden="true" className="animate-spin" /> : <LogOut aria-hidden="true" />}
+              <span>{isSigningOut ? 'Saindo…' : 'Sair da conta'}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

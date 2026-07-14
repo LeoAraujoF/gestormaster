@@ -14,13 +14,37 @@ const supabaseAdmin = createClient(
 export async function POST(request: Request) {
   try {
     // Rota pública (sem login) que grava no banco e dispara WhatsApp — limita abuso por IP.
-    const rl = await rateLimit(`revendas:checkout:${getClientIp(request)}`, 10, 60)
+    const rl = await rateLimit(`revendas:checkout:${getClientIp(request)}`, 10, 60, { failOpen: false })
+    if (rl.unavailable) {
+      return NextResponse.json({ error: 'Serviço temporariamente indisponível' }, { status: 503 })
+    }
     if (!rl.ok) return tooManyRequests()
 
     const { resellerId, serviceId, creditsAmount } = await request.json()
+    const token = request.headers.get('x-reseller-access-token')
 
-    if (!resellerId || !serviceId || !creditsAmount || creditsAmount <= 0) {
+    if (
+      !resellerId ||
+      !serviceId ||
+      !token ||
+      !Number.isSafeInteger(creditsAmount) ||
+      creditsAmount < 1 ||
+      creditsAmount > 1000
+    ) {
       return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 })
+    }
+
+    // O token do link é uma capacidade aleatória emitida pelo gestor. O ID
+    // isolado nunca concede acesso ao fluxo público.
+    const { data: reseller, error: resellerErr } = await supabaseAdmin
+      .from('resellers')
+      .select('id')
+      .eq('id', resellerId)
+      .eq('public_token', token)
+      .maybeSingle()
+
+    if (resellerErr || !reseller) {
+      return NextResponse.json({ error: 'Link de acesso inválido' }, { status: 403 })
     }
 
     // 1. Buscar o serviço e o revendedor
@@ -69,7 +93,7 @@ export async function POST(request: Request) {
 
     if (gestorNumber && EVOLUTION_API_URL) {
       const message = `🔔 *Novo Pedido de Revenda*\nO revendedor *${resellerName}* acabou de gerar um pedido de *${creditsAmount}x créditos* para o serviço *${service.service_name}*.\n\nValor: R$ ${totalValue}\nStatus: Aguardando Pagamento (PIX).`
-      
+
       await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
         method: "POST",
         headers: {

@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Download } from "lucide-react"
 import { formatCurrency, cn } from "@/lib/utils"
-import type { DashboardMetrics, ClientsByService } from "@/types/database"
+import type { DashboardMetrics, ClientsByService, PixCharge, PixChargeMetrics } from "@/types/database"
+import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
 import { usePrivacy } from "@/hooks/use-privacy"
 import { FixedCostsSection } from "@/components/fixed-costs-section"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from "recharts"
+import { ExecutiveDashboardView } from "@/components/executive-dashboard-view"
+import { usePlanCapability } from "@/components/providers/plan-provider"
 
 type Period = "hoje" | "mes" | "ano"
 
@@ -22,6 +25,7 @@ export default function FinanceiroPage() {
   const [serviceData, setServiceData] = useState<ClientsByService[]>([])
   const [mrr, setMrr] = useState(0)
   const [overdueAmount, setOverdueAmount] = useState(0)
+  const [basicOverdue, setBasicOverdue] = useState({ count: 0, total: 0 })
   const [churnRate, setChurnRate] = useState(0)
   const [fixedCostsTotal, setFixedCostsTotal] = useState(0)
   const [annualCashflow, setAnnualCashflow] = useState<any[]>([])
@@ -29,8 +33,15 @@ export default function FinanceiroPage() {
   const [period, setPeriod] = useState<Period>("mes")
   const [reportPayments, setReportPayments] = useState<any[]>([])
   const [isReportLoading, setIsReportLoading] = useState(false)
+  const [pixMetrics, setPixMetrics] = useState<PixChargeMetrics | null>(null)
+  const [pixCharges, setPixCharges] = useState<PixCharge[]>([])
+  const [pixMigrationRequired, setPixMigrationRequired] = useState(false)
+  const [executive, setExecutive] = useState<ExecutiveDashboardDTO | null>(null)
+  const [executivePeriod, setExecutivePeriod] = useState<ExecutivePeriod>("month")
+  const [upgradeRequired, setUpgradeRequired] = useState(false)
 
   const { displayValue } = usePrivacy()
+  const hasAdvancedFinance = usePlanCapability('finance_advanced')
   const supabase = createClient()
 
   useEffect(() => {
@@ -39,6 +50,25 @@ export default function FinanceiroPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
+
+        if (hasAdvancedFinance) {
+          const executiveResponse = await fetch(`/api/executive-dashboard?period=${executivePeriod}`)
+          const executivePayload = await executiveResponse.json()
+          if (executiveResponse.ok) {
+            const executiveData = executivePayload as ExecutiveDashboardDTO
+            setExecutive(executiveData)
+            setUpgradeRequired(false)
+            setMrr(executiveData.summary.mrr)
+            setOverdueAmount(executiveData.summary.at_risk)
+            setChurnRate(executiveData.rates.cancellation)
+          } else if (executiveResponse.status === 403 && executivePayload.upgrade_required) {
+            setExecutive(null)
+            setUpgradeRequired(true)
+          }
+        } else {
+          setExecutive(null)
+          setUpgradeRequired(true)
+        }
 
         const { data: metricsData } = await supabase.rpc('get_dashboard_metrics')
         if (metricsData && metricsData.length > 0) setMetrics(metricsData[0])
@@ -62,56 +92,40 @@ export default function FinanceiroPage() {
           })
         }
 
+        const { data: overdueData } = await supabase
+          .from('clients')
+          .select('plan_value')
+          .eq('user_id', user.id)
+          .eq('status', 'vencido')
+        if (overdueData) {
+          const total = overdueData.reduce((acc, client) => acc + Number(client.plan_value || 0), 0)
+          setBasicOverdue({ count: overdueData.length, total })
+          if (!hasAdvancedFinance) setOverdueAmount(total)
+        }
+
         // Distribuição por serviços
-        const { data: services } = await supabase.rpc('get_clients_by_service')
-        if (services) setServiceData(services)
+        if (hasAdvancedFinance) {
+          const { data: services } = await supabase.rpc('get_clients_by_service')
+          if (services) setServiceData(services)
+        }
 
         // Custos fixos ativos (somam no KPI de custos)
-        const { data: fixedData } = await supabase
-          .from('fixed_costs')
-          .select('amount')
-          .eq('active', true)
-        if (fixedData) setFixedCostsTotal(fixedData.reduce((acc, f) => acc + Number(f.amount || 0), 0))
-
-        // MRR / inadimplência / churn (mesma lógica anterior)
-        const { data: allClients } = await supabase
-          .from('clients')
-          .select(`plan_value, due_date, status, created_at, updated_at`)
-          .eq('user_id', user.id)
-        if (allClients) {
-          const active = allClients.filter((c) => c.status === 'active')
-          const inactive = allClients.filter((c) => c.status === 'inactive')
-          const vencido = allClients.filter((c) => c.status === 'vencido')
-          const startOfToday = new Date()
-          startOfToday.setHours(0, 0, 0, 0)
-
-          let currentMrr = 0
-          let currentOverdue = 0
-          active.forEach((c) => {
-            currentMrr += c.plan_value || 0
-            if (c.due_date && new Date(c.due_date + "T00:00:00") < startOfToday) currentOverdue += c.plan_value || 0
-          })
-          vencido.forEach((c) => (currentOverdue += c.plan_value || 0))
-          setMrr(currentMrr)
-          setOverdueAmount(currentOverdue)
-
-          const thirtyDaysAgo = new Date()
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-          const recentChurns = inactive.filter((c) => {
-            const d = c.updated_at ? new Date(c.updated_at) : new Date(c.created_at)
-            return d >= thirtyDaysAgo
-          })
-          setChurnRate(active.length > 0 ? (recentChurns.length / active.length) * 100 : 0)
+        if (hasAdvancedFinance) {
+          const { data: fixedData } = await supabase
+            .from('fixed_costs')
+            .select('amount')
+            .eq('active', true)
+          if (fixedData) setFixedCostsTotal(fixedData.reduce((acc, f) => acc + Number(f.amount || 0), 0))
         }
 
         // Evolução anual (linha, sem gradiente)
         const firstDayOfYear = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0]
-        const { data: allYearPayments } = await supabase
+        const { data: allYearPayments } = hasAdvancedFinance ? await supabase
           .from('payments')
           .select('amount_paid, net_profit, created_at')
           .eq('user_id', user.id)
-          .gte('created_at', firstDayOfYear + "T00:00:00")
-        if (allYearPayments) {
+          .gte('created_at', firstDayOfYear + "T00:00:00") : { data: null }
+        if (hasAdvancedFinance && allYearPayments) {
           const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
           const monthlyData = months.map((m) => ({ name: m, Receita: 0, Lucro: 0 }))
           allYearPayments.forEach((p) => {
@@ -121,6 +135,19 @@ export default function FinanceiroPage() {
           })
           setAnnualCashflow(monthlyData.slice(0, today.getMonth() + 1))
         }
+
+        // PIX ledger (Fase 1)
+        try {
+          const pixRes = await fetch("/api/pix/charges?limit=30&metrics=1")
+          if (pixRes.ok) {
+            const pixData = await pixRes.json()
+            if (pixData.metrics) setPixMetrics(pixData.metrics as PixChargeMetrics)
+            if (Array.isArray(pixData.charges)) setPixCharges(pixData.charges as PixCharge[])
+            if (pixData.migration_required) setPixMigrationRequired(true)
+          }
+        } catch {
+          /* ignore */
+        }
       } catch (error) {
         console.error("Error loading financial data", error)
       } finally {
@@ -128,7 +155,7 @@ export default function FinanceiroPage() {
       }
     }
     loadFinancials()
-  }, [supabase])
+  }, [supabase, executivePeriod, hasAdvancedFinance])
 
   // Período segmentado → intervalo de datas
   const periodRange = useCallback((p: Period) => {
@@ -148,7 +175,9 @@ export default function FinanceiroPage() {
       const { start, end } = periodRange(p)
       const { data } = await supabase
         .from('payments')
-        .select(`id, amount_paid, net_profit, created_at, clients(name)`)
+        .select(hasAdvancedFinance
+          ? `id, amount_paid, net_profit, created_at, clients(name)`
+          : `id, amount_paid, created_at, clients(name)`)
         .eq('user_id', user.id)
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())
@@ -159,7 +188,7 @@ export default function FinanceiroPage() {
     } finally {
       setIsReportLoading(false)
     }
-  }, [supabase, periodRange])
+  }, [supabase, periodRange, hasAdvancedFinance])
 
   useEffect(() => {
     loadReport(period)
@@ -255,14 +284,28 @@ export default function FinanceiroPage() {
             ))}
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCSV} disabled={reportPayments.length === 0} className="h-8 gap-1.5 text-xs">
-          <Download className="size-3.5" /> Relatório
-        </Button>
+        {hasAdvancedFinance && (
+          <Button variant="outline" size="sm" onClick={exportCSV} disabled={reportPayments.length === 0} className="h-8 gap-1.5 text-xs">
+            <Download className="size-3.5" /> Relatório
+          </Button>
+        )}
       </div>
+
+      {executive && <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} compact />}
+      {upgradeRequired && !hasAdvancedFinance && (
+        <div className="flex flex-col gap-3 rounded-lg border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-interactive-fg">Visão financeira básica ativa</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Previsões, MRR, churn, custos, comparativos e relatórios completos estão disponíveis no Pro.</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => window.location.assign('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
+        </div>
+      )}
 
       {/* Régua de KPIs do período */}
       <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
-        <div className="p-4">
+        {hasAdvancedFinance ? <>
+          <div className="p-4">
           <p className="microlabel">Lucro líquido</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-money">
             {displayValue(formatCurrency(reportNetProfit))}
@@ -270,32 +313,54 @@ export default function FinanceiroPage() {
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">
             margem {reportRevenue > 0 ? ((reportNetProfit / reportRevenue) * 100).toFixed(0) : 0}%
           </p>
-        </div>
-        <div className="p-4">
+          </div>
+          <div className="p-4">
           <p className="microlabel">Receita bruta</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-foreground">
             {displayValue(formatCurrency(reportRevenue))}
           </p>
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">{reportPayments.length} pagamentos</p>
-        </div>
-        <div className="p-4">
+          </div>
+          <div className="p-4">
           <p className="microlabel">Custos</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-danger">
             {displayValue(formatCurrency(totalCosts))}
           </p>
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">painéis + fixos</p>
-        </div>
-        <div className="p-4">
+          </div>
+          <div className="p-4">
           <p className="microlabel">A receber (7d)</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-warning">
             {displayValue(formatCurrency(upcoming7d.total))}
           </p>
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">{upcoming7d.count} renovações</p>
-        </div>
+          </div>
+        </> : <>
+          <div className="p-4">
+            <p className="microlabel">Faturamento</p>
+            <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-money">{displayValue(formatCurrency(reportRevenue))}</p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">no período selecionado</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">Pagamentos</p>
+            <p className="num mt-1 text-[20px] font-semibold tracking-[-0.02em]">{reportPayments.length}</p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">recebimentos registrados</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">A receber (7d)</p>
+            <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-warning">{displayValue(formatCurrency(upcoming7d.total))}</p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{upcoming7d.count} renovações</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">Vencido</p>
+            <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-danger">{displayValue(formatCurrency(basicOverdue.total))}</p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{basicOverdue.count} clientes</p>
+          </div>
+        </>}
       </div>
 
       {/* Régua secundária: base recorrente */}
-      <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
+      {hasAdvancedFinance && <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
         <div className="px-4 py-3">
           <p className="microlabel">MRR</p>
           <p className="num mt-0.5 whitespace-nowrap text-sm font-semibold">{displayValue(formatCurrency(mrr))}</p>
@@ -312,11 +377,118 @@ export default function FinanceiroPage() {
           <p className="microlabel">Churn (30d)</p>
           <p className="num mt-0.5 text-sm font-semibold">{churnRate.toFixed(1)}%</p>
         </div>
-      </div>
+      </div>}
+
+      {/* PIX — Fase 1 */}
+      {pixMetrics && (
+        <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
+          <div className="p-4">
+            <p className="microlabel">PIX pendentes</p>
+            <p className="num mt-1 text-[18px] font-semibold text-warning-fg">
+              {displayValue(formatCurrency(pixMetrics.pending_amount))}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.pending_count} em aberto</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">PIX pagos hoje</p>
+            <p className="num mt-1 text-[18px] font-semibold text-money">
+              {displayValue(formatCurrency(pixMetrics.paid_today_amount))}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_today_count} confirmações</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">PIX no mês</p>
+            <p className="num mt-1 text-[18px] font-semibold text-foreground">
+              {displayValue(formatCurrency(pixMetrics.paid_month_amount))}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_month_count} pagos</p>
+          </div>
+          <div className="p-4">
+            <p className="microlabel">Inadimplência (base)</p>
+            <p className="num mt-1 text-[18px] font-semibold text-danger">
+              {displayValue(formatCurrency(overdueAmount))}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">clientes em atraso</p>
+          </div>
+        </div>
+      )}
+
+      {pixMigrationRequired && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-xs text-warning-fg">
+          Ledger PIX ainda não migrado. Execute <code className="font-mono">supabase/pix_charges.sql</code> no Supabase para ativar histórico e renovação automática.
+        </div>
+      )}
+
+      {pixCharges.length > 0 && (
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-[13px] font-semibold">Histórico de cobranças PIX</p>
+            <span className="text-[10px] text-muted-foreground">últimas {pixCharges.length}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Expira</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pixCharges.map((c) => {
+                  const statusCls =
+                    c.status === "paid"
+                      ? "bg-money/10 text-money"
+                      : c.status === "pending"
+                        ? "bg-warning/10 text-warning-fg"
+                        : "bg-muted text-muted-foreground"
+                  const purposeLabel =
+                    c.purpose === "renewal" ? "Renovação" : c.purpose === "charge" ? "Cobrança" : "Manual"
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {new Date(c.created_at).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={cn("text-[10px] font-medium", statusCls)}>
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{purposeLabel}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.phone || "—"}</TableCell>
+                      <TableCell className="num text-right text-xs font-semibold">
+                        {displayValue(formatCurrency(Number(c.amount)))}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {c.expires_at
+                          ? new Date(c.expires_at).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
       {/* Lucro por dia + Últimos recebimentos */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="rounded-lg border border-border bg-card p-4">
+      <div className={cn("grid grid-cols-1 gap-4", hasAdvancedFinance && "lg:grid-cols-[1fr_300px]")}>
+        {hasAdvancedFinance && <div className="rounded-lg border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[13px] font-semibold">
               Lucro por dia <span className="ml-1 text-[11px] font-normal text-muted-foreground">{period === "mes" ? monthName.toLowerCase() : period === "ano" ? year : "hoje"}</span>
@@ -356,7 +528,7 @@ export default function FinanceiroPage() {
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </div>}
 
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-[13px] font-semibold">Últimos recebimentos</p>
@@ -390,7 +562,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Custos fixos (gestão) */}
-      <FixedCostsSection />
+      {hasAdvancedFinance && <FixedCostsSection />}
 
       {/* Planilha de ganhos do período */}
       <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -416,7 +588,7 @@ export default function FinanceiroPage() {
                   <TableHead className="microlabel text-[9px]">Cliente</TableHead>
                   <TableHead className="microlabel text-[9px]">Tipo</TableHead>
                   <TableHead className="microlabel text-right text-[9px]">Recebido</TableHead>
-                  <TableHead className="microlabel pr-4 text-right text-[9px]">Lucro</TableHead>
+                  {hasAdvancedFinance && <TableHead className="microlabel pr-4 text-right text-[9px]">Lucro</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -439,9 +611,9 @@ export default function FinanceiroPage() {
                       <TableCell className="num whitespace-nowrap text-right text-xs font-medium text-money">
                         {displayValue(formatCurrency(p.amount_paid))}
                       </TableCell>
-                      <TableCell className="num whitespace-nowrap pr-4 text-right text-xs text-muted-foreground">
+                      {hasAdvancedFinance && <TableCell className="num whitespace-nowrap pr-4 text-right text-xs text-muted-foreground">
                         {displayValue(formatCurrency(p.net_profit))}
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                   )
                 })}
@@ -452,7 +624,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Evolução anual + distribuição por serviços */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {hasAdvancedFinance && <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-[13px] font-semibold">Evolução de caixa</p>
           <p className="mb-4 text-[11px] text-muted-foreground">Receita e lucro mês a mês em {year}</p>
@@ -501,7 +673,7 @@ export default function FinanceiroPage() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

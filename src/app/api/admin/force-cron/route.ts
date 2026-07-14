@@ -1,36 +1,78 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { adminCriticalActionSchema, type AdminCriticalAction } from '@/lib/admin-types'
+import {
+  adminErrorResponse,
+  claimAdminAction,
+  finishAdminAction,
+  protectAdminMutation,
+  type MasterAdminSession,
+} from '@/lib/admin-security'
+import { executeAdminOperationalRoutines } from '@/lib/admin-routines'
+import type { AdminOperationalRoutineResult } from '@/lib/admin-routine-contracts'
+import { getIpFromRequest, logAudit } from '@/lib/audit'
 
-export async function POST(req: Request) {
+function auditDetails(results: AdminOperationalRoutineResult[]) {
+  return {
+    routines: results,
+    succeededCount: results.filter((result) => result.ok).length,
+    failedCount: results.filter((result) => !result.ok).length,
+  }
+}
+
+export async function POST(request: Request) {
+  let admin: MasterAdminSession | null = null
+  let input: AdminCriticalAction | null = null
+  let claimId: string | null = null
+  let results: AdminOperationalRoutineResult[] = []
+
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    admin = await protectAdminMutation(request, { recentAuth: true, limit: 3 })
+    input = adminCriticalActionSchema.parse(await request.json())
+    if (input.confirmation !== 'EXECUTAR ROTINAS') {
+      return NextResponse.json(
+        { error: { code: 'ADMIN_CONFIRMATION_MISMATCH', message: 'Confirmação inválida' } },
+        { status: 400 },
+      )
     }
 
-    const host = req.headers.get('host')
-    const protocol = req.headers.get('x-forwarded-proto') || 'http'
-    const baseUrl = `${protocol}://${host}`
+    claimId = await claimAdminAction(admin, input, 'admin.force_cron')
+    results = await executeAdminOperationalRoutines()
+    const failed = results.some((result) => !result.ok)
 
-    const cronSecret = process.env.CRON_SECRET
-
-    // Chama os robôs via HTTP passando a chave
-    await fetch(`${baseUrl}/api/cron/generate-alerts?key=${cronSecret}`)
-    await fetch(`${baseUrl}/api/cron/process-queue?key=${cronSecret}`)
-
+    await finishAdminAction(claimId, failed ? 'failed' : 'completed')
     await logAudit({
-      user_id: user.id,
+      user_id: admin.userId,
       action: 'admin.force_cron',
       resource: 'system',
-      details: { crons_triggered: ['generate-alerts', 'process-queue'] },
-      ip_address: getIpFromRequest(req)
+      details: auditDetails(results),
+      reason: input.reason,
+      correlation_id: input.idempotencyKey,
+      outcome: failed ? 'failure' : 'success',
+      ip_address: getIpFromRequest(request),
     })
 
-    return NextResponse.json({ success: true })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    if (failed) {
+      return NextResponse.json({
+        error: { code: 'ADMIN_ROUTINE_EXECUTION_FAILED', message: 'Uma ou mais rotinas operacionais falharam' },
+        data: { results },
+      }, { status: 502 })
+    }
+
+    return NextResponse.json({ data: { executed: true, results }, meta: {} })
+  } catch (error) {
+    if (claimId) await finishAdminAction(claimId, 'failed')
+    if (claimId && admin && input) {
+      await logAudit({
+        user_id: admin.userId,
+        action: 'admin.force_cron',
+        resource: 'system',
+        details: auditDetails(results),
+        reason: input.reason,
+        correlation_id: input.idempotencyKey,
+        outcome: 'failure',
+        ip_address: getIpFromRequest(request),
+      })
+    }
+    return adminErrorResponse(error)
   }
 }

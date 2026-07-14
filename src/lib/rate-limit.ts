@@ -31,8 +31,9 @@ function getClient(): Redis {
 export async function rateLimit(
   key: string,
   limit: number,
-  windowSec: number
-): Promise<{ ok: boolean; remaining: number }> {
+  windowSec: number,
+  options: { failOpen?: boolean } = {}
+): Promise<{ ok: boolean; remaining: number; unavailable?: boolean }> {
   const redisKey = `ratelimit:${key}`
   try {
     const redis = getClient()
@@ -43,14 +44,25 @@ export async function rateLimit(
     return { ok: count <= limit, remaining: Math.max(0, limit - count) }
   } catch (e) {
     console.error('Rate limit indisponível (fail-open):', e)
+    if (options.failOpen === false) {
+      return { ok: false, remaining: 0, unavailable: true }
+    }
     return { ok: true, remaining: limit }
   }
 }
 
 /** Extrai o IP do cliente respeitando o proxy reverso (X-Forwarded-For). */
 export function getClientIp(request: Request): string {
-  const xff = request.headers.get('x-forwarded-for')
-  if (xff) return xff.split(',')[0].trim()
+  // Provedores gerenciados sobrescrevem estes headers; não confie no XFF enviado
+  // diretamente pelo cliente, pois ele permite burlar limites por IP.
+  const platformIp = request.headers.get('x-vercel-forwarded-for') || request.headers.get('cf-connecting-ip')
+  if (platformIp) return platformIp.trim()
+
+  if (process.env.TRUST_PROXY === 'true') {
+    const xff = request.headers.get('x-forwarded-for')
+    if (xff) return xff.split(',')[0].trim()
+  }
+
   return request.headers.get('x-real-ip') || 'unknown'
 }
 

@@ -4,7 +4,10 @@ import express from 'express';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { messageQueue, webhookQueue, healthQueue, warmupQueue } from '../lib/queue';
+import { messageQueue, webhookQueue, healthQueue, warmupQueue, intelligenceQueue } from '../lib/queue';
+import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+
+startOperationalHeartbeat('bull_board');
 
 const app = express();
 
@@ -46,7 +49,8 @@ createBullBoard({
     new BullMQAdapter(messageQueue),
     new BullMQAdapter(webhookQueue),
     new BullMQAdapter(healthQueue),
-    new BullMQAdapter(warmupQueue)
+    new BullMQAdapter(warmupQueue),
+    new BullMQAdapter(intelligenceQueue)
   ],
   serverAdapter: serverAdapter,
 });

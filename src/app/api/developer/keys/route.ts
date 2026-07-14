@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import crypto from 'crypto'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { getAuthorizedOrganizationId } from '@/lib/access-control'
+import { organizationHasCapability } from '@/lib/plan-catalog'
 
 export async function GET(request: Request) {
   try {
@@ -12,7 +14,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const orgId = user.user_metadata?.organization_id
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'developer_api'))) return NextResponse.json({ error: 'Recurso exclusivo do plano Master', upgrade_required: true }, { status: 403 })
 
     const { data: keys, error } = await supabase
       .from('api_keys')
@@ -44,13 +48,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const orgId = user.user_metadata?.organization_id
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'developer_api'))) return NextResponse.json({ error: 'Recurso exclusivo do plano Master', upgrade_required: true }, { status: 403 })
     const { name } = await request.json()
 
     // Generate plain token
     const randomHex = crypto.randomBytes(24).toString('hex')
     const plainToken = `gm_live_${randomHex}`
-    
+
     // Create Hash
     const hash = crypto.createHash('sha256').update(plainToken).digest('hex')
 
@@ -81,9 +87,9 @@ export async function POST(request: Request) {
     })
 
     // Only return the plainToken ONCE
-    return NextResponse.json({ 
-      success: true, 
-      key: { ...data, plainToken } 
+    return NextResponse.json({
+      success: true,
+      key: { ...data, plainToken }
     })
 
   } catch (error: any) {
@@ -103,7 +109,9 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    const orgId = user.user_metadata?.organization_id
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'developer_api'))) return NextResponse.json({ error: 'Recurso exclusivo do plano Master', upgrade_required: true }, { status: 403 })
 
     const { error } = await supabase
       .from('api_keys')

@@ -1,5 +1,20 @@
 import { IWhatsAppProvider, SendMessageOptions } from './IWhatsAppProvider';
 
+type EvolutionQrResponse = {
+  base64?: string
+  code?: string
+  qrcode?: string | { base64?: string }
+}
+
+type EvolutionCreateResponse = {
+  qrcode?: { base64?: string }
+  hash?: { qrcode?: string }
+}
+
+type EvolutionConnectionResponse = {
+  instance?: { state?: string; status?: string }
+}
+
 export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
   private baseUrl: string;
   private apiKey: string;
@@ -10,7 +25,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     this.apiKey = apiKey;
   }
 
-  private async request(endpoint: string, method: string = 'GET', body?: any) {
+  private async request<T = Record<string, unknown>>(endpoint: string, method: string = 'GET', body?: Record<string, unknown>): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method,
       headers: {
@@ -25,7 +40,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
       throw new Error(`Evolution API Error [${response.status}]: ${errorText}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   async sendMessage(instanceName: string, phone: string, text: string, options?: SendMessageOptions) {
@@ -43,8 +58,6 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
   }
 
   async sendMedia(instanceName: string, phone: string, mediaBase64OrUrl: string, mediaType: string, caption?: string, options?: SendMessageOptions) {
-    const isUrl = mediaBase64OrUrl.startsWith('http');
-    
     return this.request(`/message/sendMedia/${instanceName}`, 'POST', {
       number: phone,
       options: {
@@ -59,24 +72,24 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
 
   async getQR(instanceName: string) {
     // Evolution API: Retorna o QR em base64 se a instância estiver pendente
-    return this.request(`/instance/connect/${instanceName}`, 'GET');
+    return this.request<EvolutionQrResponse>(`/instance/connect/${instanceName}`, 'GET');
   }
 
   async checkConnection(instanceName: string) {
-    const data = await this.request(`/instance/connectionState/${instanceName}`, 'GET');
+    const data = await this.request<EvolutionConnectionResponse>(`/instance/connectionState/${instanceName}`, 'GET');
     return {
       state: data.instance?.state || 'unknown',
       status: data.instance?.status || 'unknown'
     };
   }
 
-  async createInstance(instanceName: string, webhookUrl?: string, webhookSecret?: string) {
-    const payload: any = {
+  async createInstance(instanceName: string, webhookUrl?: string, webhookSecret?: string, webhookToken?: string) {
+    const payload: Record<string, unknown> = {
       instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS"
     };
-    
+
     if (webhookUrl) {
       payload.webhook = {
         enabled: true,
@@ -84,22 +97,32 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
         byEvents: false,
         base64: false,
         events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
-        ...(webhookSecret ? { headers: { "x-webhook-secret": webhookSecret } } : {})
+        ...((webhookSecret || webhookToken) ? {
+          headers: {
+            ...(webhookSecret ? { "x-webhook-secret": webhookSecret } : {}),
+            ...(webhookToken ? { "x-webhook-token": webhookToken } : {}),
+          },
+        } : {})
       };
     }
-    
-    return this.request(`/instance/create`, 'POST', payload);
+
+    return this.request<EvolutionCreateResponse>(`/instance/create`, 'POST', payload);
   }
 
-  async setWebhook(instanceName: string, webhookUrl: string, webhookSecret?: string) {
-    const payload: any = {
+  async setWebhook(instanceName: string, webhookUrl: string, webhookSecret?: string, webhookToken?: string) {
+    const payload: Record<string, unknown> = {
       webhook: {
         enabled: true,
         url: webhookUrl,
         byEvents: false,
         base64: false,
         events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
-        ...(webhookSecret ? { headers: { "x-webhook-secret": webhookSecret } } : {})
+        ...((webhookSecret || webhookToken) ? {
+          headers: {
+            ...(webhookSecret ? { "x-webhook-secret": webhookSecret } : {}),
+            ...(webhookToken ? { "x-webhook-token": webhookToken } : {}),
+          },
+        } : {})
       }
     };
     return this.request(`/webhook/set/${instanceName}`, 'POST', payload);

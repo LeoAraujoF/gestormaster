@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { logAudit } from "@/lib/audit"
+import { isAuthorizedCron } from '@/lib/cron-auth'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,12 +13,7 @@ const HOLD_DAYS = 7
 
 export async function GET(req: Request) {
   try {
-    // Autenticação básica para proteger a rota do cron
-    // Recomenda-se passar um header Authorization: Bearer CRON_SECRET nas configurações do seu Cron
-    const authHeader = req.headers.get("authorization")
-    const cronSecret = process.env.CRON_SECRET
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!isAuthorizedCron(req)) {
        return NextResponse.json({ error: "Não autorizado." }, { status: 401 })
     }
 
@@ -59,8 +55,8 @@ export async function GET(req: Request) {
       ip_address: "127.0.0.1"
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `${idsToRelease.length} comissões foram liberadas.`,
       released_ids: idsToRelease
     })

@@ -1,88 +1,145 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { z } from 'zod'
+import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { adminCriticalActionSchema } from '@/lib/admin-types'
+import { AdminAccessError, adminErrorResponse, claimAdminAction, finishAdminAction, protectAdminMutation } from '@/lib/admin-security'
+import { getIpFromRequest, logAudit } from '@/lib/audit'
 
-export async function POST(req: Request) {
+const schema = adminCriticalActionSchema.extend({
+  userId: z.string().uuid(),
+  name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().max(30),
+  organization: z.object({
+    id: z.string().uuid(),
+    name: z.string().trim().min(2).max(120),
+    planId: z.enum(['starter', 'pro', 'master']),
+    entitlementActive: z.boolean(),
+    expiresAt: z.string().datetime().nullable(),
+  }).nullable(),
+})
+
+function sameInstant(left: string | null | undefined, right: string | null | undefined) {
+  if (!left && !right) return true
+  if (!left || !right) return false
+  return new Date(left).getTime() === new Date(right).getTime()
+}
+export async function POST(request: Request) {
+  let claimId: string | null = null
   try {
-    const { createClient: createServerClient } = require('@/lib/supabase/server');
-    const supabaseUser = await createServerClient();
-    const { data: { user } } = await supabaseUser.auth.getUser();
-
-    // Admin é definido apenas pelo e-mail do servidor (ADMIN_EMAIL). NÃO confiar em
-    // user_metadata.is_admin, que o próprio usuário consegue editar pelo navegador.
-    const isAdm = user && user.email === process.env.ADMIN_EMAIL;
-    if (!isAdm) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    const admin = await protectAdminMutation(request, { recentAuth: true, limit: 10 })
+    const parsed = schema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: { code: 'ADMIN_USER_UPDATE_INVALID', message: 'Revise os dados da conta' } },
+        { status: 400 },
+      )
+    }
+    const input = parsed.data
+    if (input.confirmation !== `ALTERAR ${input.userId}`) {
+      return NextResponse.json(
+        { error: { code: 'ADMIN_CONFIRMATION_MISMATCH', message: 'Confirmação inválida' } },
+        { status: 400 },
+      )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({ error: 'Supabase Service Role Key não configurada no .env' }, { status: 500 })
+    claimId = await claimAdminAction(admin, input, 'admin.user.update')
+    const { data: target, error: targetError } = await supabaseAdmin.auth.admin.getUserById(input.userId)
+    if (targetError || !target.user) {
+      await finishAdminAction(claimId, 'failed')
+      claimId = null
+      return NextResponse.json(
+        { error: { code: 'ADMIN_USER_NOT_FOUND', message: 'Usuário não encontrado' } },
+        { status: 404 },
+      )
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    let organizationId: string | null = null
+    let entitlementChanged = false
+    let currentEntitlementSource: string | null = null
+    if (input.organization) {
+      organizationId = input.organization.id
+      const [{ data: membership, error: membershipError }, { data: plan, error: planError }, { data: currentEntitlement, error: entitlementReadError }] = await Promise.all([
+        supabaseAdmin.from('organization_members').select('organization_id').eq('organization_id', input.organization.id).eq('user_id', input.userId).maybeSingle(),
+        supabaseAdmin.from('saas_plan_catalog').select('plan').eq('plan', input.organization.planId).maybeSingle(),
+        supabaseAdmin.from('organization_entitlements').select('plan,is_active,expires_at,source').eq('organization_id', input.organization.id).maybeSingle(),
+      ])
+      if (membershipError || !membership) {
+        throw new AdminAccessError(409, 'ADMIN_ORGANIZATION_MISMATCH', 'A conta não pertence à organização informada')
       }
+      if (planError || !plan) {
+        throw new AdminAccessError(409, 'ADMIN_PLAN_NOT_FOUND', 'Plano oficial não encontrado')
+      }
+      if (entitlementReadError) throw entitlementReadError
+      currentEntitlementSource = currentEntitlement?.source || null
+
+      entitlementChanged = !currentEntitlement
+        || currentEntitlement.plan !== input.organization.planId
+        || currentEntitlement.is_active !== input.organization.entitlementActive
+        || !sameInstant(currentEntitlement.expires_at, input.organization.expiresAt)
+
+      if (currentEntitlement?.source === 'stripe' && entitlementChanged) {
+        throw new AdminAccessError(
+          409,
+          'ADMIN_STRIPE_MANAGED_ENTITLEMENT',
+          'Este entitlement é gerenciado pela Stripe e deve ser alterado no fluxo de assinatura',
+        )
+      }
+
+    }
+
+    const currentMetadata = target.user.user_metadata && typeof target.user.user_metadata === 'object'
+      ? target.user.user_metadata
+      : {}
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+      user_metadata: { ...currentMetadata, full_name: input.name, phone: input.phone },
     })
+    if (authError) throw authError
 
-    const body = await req.json()
-    const { userId, plan, paymentStatus, dueDate, phone } = body
+    if (input.organization) {
+      const { error: organizationError } = await supabaseAdmin.from('organizations').update({
+        name: input.organization.name,
+        updated_at: new Date().toISOString(),
+      }).eq('id', input.organization.id)
+      if (organizationError) throw organizationError
 
-    if (!userId) {
-      return NextResponse.json({ error: 'ID do usuário é obrigatório' }, { status: 400 })
-    }
-
-    // Busca o usuário alvo para preservar as chaves existentes de app_metadata (provider/providers)
-    const { data: targetData, error: targetErr } = await supabaseAdmin.auth.admin.getUserById(userId)
-    if (targetErr || !targetData?.user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
-    }
-
-    // 1. Atualizar o metadata no Supabase Auth.
-    // payment_status é campo de autorização -> vai em app_metadata (só o servidor grava).
-    const updatePayload: any = {
-      app_metadata: {
-        ...targetData.user.app_metadata,
-        payment_status: paymentStatus
-      },
-      user_metadata: {
-        ...targetData.user.user_metadata,
-        plan_name: plan,
-        due_date: dueDate,
-        phone: phone || ''
+      if (currentEntitlementSource !== 'stripe') {
+        const { error: entitlementError } = await supabaseAdmin.from('organization_entitlements').upsert({
+          organization_id: input.organization.id,
+          plan: input.organization.planId,
+          is_active: input.organization.entitlementActive,
+          source: 'admin',
+          expires_at: input.organization.expiresAt,
+          updated_by: admin.userId,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'organization_id' })
+        if (entitlementError) throw entitlementError
       }
     }
-    
-    // Se o telefone foi passado, tenta atualizar a raiz também (pode falhar se o formato não for E.164, então deixamos no metadata como garantido)
-    if (phone) {
-      updatePayload.phone = phone
-    }
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      updatePayload
-    )
-
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
-    }
-
+    await finishAdminAction(claimId, 'completed')
     await logAudit({
-      user_id: null,
+      organization_id: organizationId,
+      user_id: admin.userId,
       action: 'admin.update_user',
       resource: 'users',
-      resource_id: userId,
-      details: { plan, paymentStatus, dueDate, phone },
-      ip_address: getIpFromRequest(req)
+      resource_id: input.userId,
+      details: {
+        display_name_changed: input.name !== target.user.user_metadata?.full_name,
+        phone_changed: input.phone !== (target.user.user_metadata?.phone || target.user.phone || ''),
+        organization_name: input.organization?.name || null,
+        plan: input.organization?.planId || null,
+        entitlement_active: input.organization?.entitlementActive ?? null,
+        entitlement_changed: entitlementChanged,
+        expires_at: input.organization?.expiresAt || null,
+      },
+      reason: input.reason,
+      correlation_id: input.idempotencyKey,
+      outcome: 'success',
+      ip_address: getIpFromRequest(request),
     })
-
-    return NextResponse.json({ success: true, user: authData.user })
-  } catch (error: any) {
-    console.error("Erro interno ao atualizar usuário:", error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return NextResponse.json({ data: { updated: true }, meta: {} })
+  } catch (error) {
+    if (claimId) await finishAdminAction(claimId, 'failed')
+    return adminErrorResponse(error)
   }
 }

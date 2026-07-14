@@ -91,8 +91,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Criar View para Clientes Enriquecidos
-CREATE OR REPLACE VIEW public.vw_enriched_clients AS
-SELECT 
+CREATE OR REPLACE VIEW public.vw_enriched_clients WITH (security_invoker = true) AS
+SELECT
     c.id,
     c.organization_id,
     c.user_id,
@@ -100,6 +100,7 @@ SELECT
     c.phone,
     c.plan_value,
     c.status,
+    c.screens,
     c.due_date,
     c.created_at,
     (SELECT MAX(created_at) FROM public.payments p WHERE p.client_id = c.id) as last_payment_date,
@@ -111,7 +112,9 @@ SELECT
     COALESCE(
         (SELECT jsonb_agg(
             jsonb_build_object(
-              'service_id', cs.service_id, 
+              'service_id', cs.service_id,
+              'username', cs.username,
+              'password', cs.password,
               'services', jsonb_build_object('id', s.id, 'name', s.name, 'cost', s.cost)
             )
           )

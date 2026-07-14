@@ -4,6 +4,10 @@ import { redisConnection } from '../lib/redis';
 import { AI_QUEUE_NAME, messageQueue } from '../lib/queue';
 import { logger } from '../lib/logger';
 import OpenAI from 'openai';
+import { supabaseAdmin } from '../lib/supabase/service-role';
+import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+
+startOperationalHeartbeat('ai_worker');
 
 logger.info('🧠 AI Worker (Multi-LLM) iniciado e aguardando contexto...');
 
@@ -11,10 +15,19 @@ logger.info('🧠 AI Worker (Multi-LLM) iniciado e aguardando contexto...');
 const MAX_HISTORY_LENGTH = 10;
 
 const worker = new Worker(AI_QUEUE_NAME, async (job: Job) => {
-  const { organization_id, instance_name, remoteJid, messageText, credentials } = job.data;
-  
+  const { organization_id, instance_name, remoteJid, messageText, integration_id } = job.data;
+  const { data: integration } = await supabaseAdmin
+    .from('integrations')
+    .select('credentials')
+    .eq('id', integration_id)
+    .eq('organization_id', organization_id)
+    .eq('provider', 'ai_assistant')
+    .eq('is_active', true)
+    .maybeSingle();
+  const credentials = integration?.credentials;
+
   if (!credentials?.api_key) {
-    logger.error(`[AI Job ${job.id}] Org ${organization_id} não possui API Key configurada.`);
+    logger.error(`[AI Job ${job.id}] Org ${organization_id} não possui integração de IA ativa.`);
     return;
   }
 
@@ -33,8 +46,8 @@ const worker = new Worker(AI_QUEUE_NAME, async (job: Job) => {
     // 2. Recuperar Histórico do Redis
     const historyKey = `ai_history:${organization_id}:${remoteJid}`;
     const rawHistory = await redisConnection.lrange(historyKey, 0, -1);
-    
-    // O Redis retorna de trás pra frente dependendo de como inserimos. 
+
+    // O Redis retorna de trás pra frente dependendo de como inserimos.
     // Usaremos rpush, então os mais velhos estão no índice 0
     let history: {role: "user" | "assistant" | "system", content: string}[] = rawHistory.map(h => JSON.parse(h));
 
@@ -64,7 +77,7 @@ const worker = new Worker(AI_QUEUE_NAME, async (job: Job) => {
     // 4. Salvar Histórico (Mensagem do Usuário + Resposta da IA) no Redis
     await redisConnection.rpush(historyKey, JSON.stringify({ role: "user", content: messageText }));
     await redisConnection.rpush(historyKey, JSON.stringify({ role: "assistant", content: aiReply }));
-    
+
     // Manter apenas as últimas N mensagens
     await redisConnection.ltrim(historyKey, -(MAX_HISTORY_LENGTH), -1);
     // Expirar histórico caso o usuário fique mais de 12 horas sem falar
@@ -86,7 +99,7 @@ const worker = new Worker(AI_QUEUE_NAME, async (job: Job) => {
     logger.error(`[AI Job ${job.id}] ❌ Falha no processamento da IA: ${error.message}`);
     throw error;
   }
-}, { 
+}, {
   connection: redisConnection as any,
   concurrency: 5, // Limita concorrência para evitar rate limits excessivos nas APIs de IA
 });

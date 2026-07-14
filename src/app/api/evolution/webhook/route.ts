@@ -1,95 +1,109 @@
-import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { webhookQueue } from '@/lib/queue';
-import { supabaseAdmin } from '@/lib/supabase/service-role';
-import { SecretsManager } from '@/lib/encryption';
+import crypto from 'crypto'
+import { NextResponse } from 'next/server'
 
-export async function POST(req: Request) {
+import { SecretsManager } from '@/lib/encryption'
+import { verifyEvolutionWebhookSignature } from '@/lib/evolution-webhook-signature'
+import { webhookQueue } from '@/lib/queue'
+import { supabaseAdmin } from '@/lib/supabase/service-role'
+
+const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
+
+function safeEqual(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer)
+}
+
+export async function POST(request: Request) {
   try {
-    const headersList = req.headers;
-
-    // 1. Proteção por Secret Token via Query ou Header (Legado / Opcional)
-    const url = new URL(req.url);
-    const token = url.searchParams.get('token') || headersList.get('authorization');
-    const secretsEnv = process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '';
-    const validSecrets = secretsEnv.split(',').map(s => s.trim()).filter(Boolean);
-
-    // Se o admin configurou a variável de ambiente WEBHOOK_SECRETS, exigimos ela.
-    if (validSecrets.length > 0) {
-      if (!token || !validSecrets.includes(token)) {
-        console.warn('Bloqueado: Tentativa de webhook sem token válido (WEBHOOK_SECRETS)');
-        return NextResponse.json({ error: 'Unauthorized token' }, { status: 401 });
-      }
+    const headers = request.headers
+    if (Number(headers.get('content-length') || '0') > MAX_WEBHOOK_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload muito grande' }, { status: 413 })
     }
 
-    // 2. Ler o body como texto bruto para HMAC e depois parsear
-    const rawBody = await req.text();
-    const payload = JSON.parse(rawBody);
+    // Tokens em query strings podem vazar para logs. Aceite-os somente em headers.
+    const authorization = headers.get('authorization') || ''
+    const token = headers.get('x-webhook-token') || authorization.replace(/^Bearer\s+/i, '')
+    const environmentSecrets = (process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '')
+      .split(',')
+      .map((secret) => secret.trim())
+      .filter(Boolean)
+    const hasValidToken = environmentSecrets.some((secret) => safeEqual(token, secret))
 
-    // 3. Validação HMAC (opcional, controlada pelo admin)
+    if (environmentSecrets.length > 0 && !hasValidToken) {
+      console.warn('[WEBHOOK] Callback bloqueado por token inválido')
+      return NextResponse.json({ error: 'Unauthorized token' }, { status: 401 })
+    }
+
+    const rawBody = await request.text()
+    if (Buffer.byteLength(rawBody, 'utf8') > MAX_WEBHOOK_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload muito grande' }, { status: 413 })
+    }
+    const payload: unknown = JSON.parse(rawBody)
+
+    let requiresSignature = false
     try {
-      const { data: secSettings } = await supabaseAdmin
+      const { data: settings, error: settingsError } = await supabaseAdmin
         .from('security_settings')
-        .select('hmac_secret, require_signature')
+        .select('hmac_secret,hmac_previous_secret,hmac_previous_valid_until,require_signature')
         .limit(1)
-        .single();
+        .single()
+      if (settingsError) throw settingsError
 
-      if (secSettings?.require_signature) {
-        const incomingSignature = headersList.get('x-hmac-signature') 
-          || headersList.get('x-hub-signature-256')
-          || headersList.get('x-signature')
-          || headersList.get('apikey')
-          || headersList.get('x-webhook-secret');
+      requiresSignature = Boolean(settings?.require_signature)
+      if (requiresSignature) {
+        if (!settings?.hmac_secret) {
+          return NextResponse.json({ error: 'Webhook não configurado' }, { status: 503 })
+        }
 
-        if (incomingSignature) {
-          // Descriptografar o secret armazenado no banco
-          const secret = SecretsManager.decrypt(secSettings.hmac_secret);
-          
-          // 1. Verificar se é apenas o secret estático (Evolution API envia puro no header)
-          const isStaticMatch = crypto.timingSafeEqual(
-            Buffer.from(incomingSignature.padEnd(secret.length, ' ')), 
-            Buffer.from(secret.padEnd(incomingSignature.length, ' '))
-          ) && incomingSignature === secret;
+        const incomingSignature = headers.get('x-hmac-signature')
+          || headers.get('x-hub-signature-256')
+          || headers.get('x-signature')
+          || headers.get('apikey')
+          || headers.get('x-webhook-secret')
+        if (!incomingSignature) {
+          return NextResponse.json({ error: 'Missing webhook secret' }, { status: 401 })
+        }
 
-          // 2. Computar HMAC esperado (caso a Evolution implemente assinatura real no futuro)
-          const expectedSignature = crypto
-            .createHmac('sha256', secret)
-            .update(rawBody)
-            .digest('hex');
+        const acceptedSecrets = [SecretsManager.decrypt(settings.hmac_secret)]
+        const previousValidUntil = settings.hmac_previous_valid_until
+          ? new Date(settings.hmac_previous_valid_until).getTime()
+          : Number.NaN
+        if (
+          settings.hmac_previous_secret
+          && Number.isFinite(previousValidUntil)
+          && previousValidUntil > Date.now()
+        ) {
+          acceptedSecrets.push(SecretsManager.decrypt(settings.hmac_previous_secret))
+        }
 
-          let isHmacMatch = false;
-          try {
-            const sigClean = incomingSignature.replace('sha256=', '');
-            const sigBuffer = Buffer.from(sigClean, 'utf8');
-            const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
-            isHmacMatch = sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer);
-          } catch (e) {}
-
-          if (!isStaticMatch && !isHmacMatch) {
-            console.warn('Bloqueado: Assinatura ou Secret inválido no webhook da Evolution');
-            return NextResponse.json({ error: 'Invalid webhook secret/signature' }, { status: 401 });
-          }
-
-          console.log('[WEBHOOK] Assinatura/Secret validado com sucesso ✓');
-        } else {
-          console.warn('[WEBHOOK] Validação exigida mas nenhum header (apikey, x-signature) foi recebido. Bloqueando.');
-          return NextResponse.json({ error: 'Missing webhook secret' }, { status: 401 });
+        if (!verifyEvolutionWebhookSignature(incomingSignature, rawBody, acceptedSecrets)) {
+          console.warn('[WEBHOOK] Callback bloqueado por assinatura inválida')
+          return NextResponse.json({ error: 'Invalid webhook secret/signature' }, { status: 401 })
         }
       }
-    } catch (hmacError) {
-      // Se falhar ao ler as configs de segurança, não bloqueia o webhook
-      console.warn('[WEBHOOK] Erro ao verificar HMAC (não bloqueante):', hmacError);
+    } catch (error) {
+      // Falhe fechado quando nenhuma credencial alternativa de ambiente protege o endpoint.
+      console.error('[WEBHOOK] Falha ao validar a configuração HMAC:', error)
+      if (environmentSecrets.length === 0) {
+        return NextResponse.json({ error: 'Webhook não configurado' }, { status: 503 })
+      }
     }
 
-    // 4. Roteamento para Fila
+    if (environmentSecrets.length === 0 && !requiresSignature) {
+      return NextResponse.json({ error: 'Webhook não configurado' }, { status: 503 })
+    }
+
+    const event = payload && typeof payload === 'object' && 'event' in payload
+      ? String((payload as { event?: unknown }).event || '')
+      : ''
     await webhookQueue.add('evolution-webhook', payload, {
-      priority: payload.event === 'CONNECTION_UPDATE' ? 1 : 2
-    });
+      priority: event === 'CONNECTION_UPDATE' ? 1 : 2,
+    })
 
-    return NextResponse.json({ received: true }, { status: 200 });
-
-  } catch (error: any) {
-    console.error('Webhook error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('[WEBHOOK] Falha ao processar callback:', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

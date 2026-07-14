@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
+import { redisConnection } from '@/lib/redis'
+import { getCapabilityMembership } from '@/lib/plan-access'
+
+const MAX_GENERATIONS_PER_DAY = 3
+const MAX_CONTEXT_LENGTH = 4_000
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +14,9 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+    }
+    if (!(await getCapabilityMembership(supabase, user.id, 'leads'))) {
+      return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -23,27 +31,35 @@ export async function POST(req: Request) {
       baseURL: process.env.OPENAI_BASE_URL || undefined,
     })
 
-    // --- LÓGICA DE LIMITE (3 por dia) ---
+    // O limite não pode ficar em user_metadata, pois o usuário pode alterá-lo.
+    // Redis é compartilhado entre instâncias e falha fechado para evitar custos
+    // não autorizados quando a infraestrutura de rate limit estiver indisponível.
     const today = new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD
-    const aiUsage = user.user_metadata?.ai_usage || { date: '', count: 0 }
-    
-    let currentCount = aiUsage.count
-    if (aiUsage.date !== today) {
-      currentCount = 0 // Reseta o limite em um novo dia
+    const usageKey = `ratelimit:ai:${user.id}:${today}`
+    let currentCount: number
+    try {
+      currentCount = await redisConnection.incr(usageKey)
+      if (currentCount === 1) await redisConnection.expire(usageKey, 60 * 60 * 24)
+    } catch {
+      return NextResponse.json({ error: 'Serviço de limite temporariamente indisponível.' }, { status: 503 })
     }
 
-    if (currentCount >= 3) {
+    if (currentCount > MAX_GENERATIONS_PER_DAY) {
       return NextResponse.json(
         { error: 'Você atingiu o limite de 3 gerações de IA por dia. Volte amanhã!' },
-        { status: 403 }
+        { status: 429 }
       )
     }
 
     const body = await req.json()
     const { context, count = 4 } = body
 
-    if (!context) {
+    if (typeof context !== 'string' || !context.trim() || context.length > MAX_CONTEXT_LENGTH) {
       return NextResponse.json({ error: 'Contexto é obrigatório.' }, { status: 400 })
+    }
+
+    if (!Number.isInteger(count) || count < 1 || count > 4) {
+      return NextResponse.json({ error: 'A quantidade deve estar entre 1 e 4.' }, { status: 400 })
     }
 
     const prompt = `
@@ -70,7 +86,7 @@ Gere as mensagens agora no formato JSON:
     })
 
     const rawContent = response.choices[0].message.content || '[]'
-    
+
     // Tenta limpar caso a IA responda com marcações de código markdown
     let cleanedContent = rawContent.trim()
     if (cleanedContent.startsWith('```json')) {
@@ -88,16 +104,6 @@ Gere as mensagens agora no formato JSON:
       console.error('Erro ao fazer parse da resposta da IA:', cleanedContent)
       return NextResponse.json({ error: 'A resposta da Inteligência Artificial não veio no formato esperado.' }, { status: 500 })
     }
-
-    // Salva o uso do dia para limitar a 3 chamadas
-    await supabase.auth.updateUser({
-      data: {
-        ai_usage: {
-          date: today,
-          count: currentCount + 1
-        }
-      }
-    })
 
     return NextResponse.json({ variants })
   } catch (error: any) {

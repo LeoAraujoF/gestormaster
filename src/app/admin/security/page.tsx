@@ -1,292 +1,452 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Lock, Key, Shield, RefreshCcw, Eye, EyeOff, Save, Webhook, CheckCircle2, Loader2, Copy, Check } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDashed,
+  Clock3,
+  History,
+  Info,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  RefreshCw,
+  RotateCcw,
+  Server,
+  ShieldAlert,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react"
 import { toast } from "sonner"
-import { Switch } from "@/components/ui/switch"
-import { useConfirm } from "@/components/providers/confirm-provider"
 
-interface SecuritySettings {
-  id: string
-  hmac_secret: string
-  require_signature: boolean
-  rotated_at: string
-  created_at: string
-  updated_at: string
+import { useAdminCriticalAction } from "@/components/admin-critical-action-provider"
+import { useConfirm } from "@/components/providers/confirm-provider"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+
+type Severity = "critical" | "warning" | "info"
+type Priority = "high" | "medium" | "low"
+type Distribution = "synced" | "failed" | "unverified"
+
+type SecurityData = {
+  settings: {
+    id: string
+    hmac_configured: boolean
+    require_signature: boolean
+    rotated_at: string | null
+    rotation_grace_until: string | null
+    created_at: string
+    updated_at: string
+  }
+  posture: "strong" | "attention" | "critical"
+  rotation_age_days: number | null
+  coverage: {
+    total: number
+    ready: number
+    synced: number
+    failed: number
+    unverified: number
+    verified_at: string | null
+    instances: Array<{
+      name: string
+      mode: "external" | "managed"
+      ready: boolean
+      distribution: Distribution
+      failure_code: string | null
+    }>
+  }
+  alerts: Array<{
+    id: string
+    severity: Severity
+    title: string
+    description: string
+  }>
+  recommendations: Array<{
+    id: string
+    priority: Priority
+    title: string
+    description: string
+  }>
+  events: Array<{
+    id: string
+    action: string
+    details: Record<string, unknown> | null
+    outcome: "success" | "failure"
+    reason: string | null
+    correlation_id: string | null
+    created_at: string
+  }>
+}
+type SecurityResponse = { data: SecurityData; meta: { generated_at: string } }
+
+const postureCopy = {
+  strong: { label: "Postura forte", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", icon: ShieldCheck },
+  attention: { label: "Requer atenção", className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300", icon: AlertTriangle },
+  critical: { label: "Postura crítica", className: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300", icon: ShieldAlert },
+} as const
+
+const eventLabels: Record<string, string> = {
+  "admin.security.rotate_hmac": "Secret HMAC rotacionado",
+  "admin.security.enable_hmac": "Validação HMAC ativada",
+  "admin.security.disable_hmac": "Validação HMAC desativada",
+  "admin.security.update": "Política HMAC alterada",
 }
 
-const PROTECTED_ENDPOINTS: { name: string; path: string; status: "protected" | "partial"; method: string }[] = [
-  {
-    name: "Callbacks Evolution API",
-    path: "/api/evolution/webhook",
-    status: "protected" as const,
-    method: "Token + HMAC SHA-256"
-  },
-  {
-    name: "Stripe Webhooks",
-    path: "/api/stripe/webhook",
-    status: "protected" as const,
-    method: "Stripe Signature (nativa)"
-  },
-  {
-    name: "PIXGO Webhooks",
-    path: "/api/pixgo/webhook",
-    status: "protected" as const,
-    method: "HMAC SHA-256 (nativa)"
-  },
-  {
-    name: "MercadoPago Webhooks",
-    path: "/api/webhooks/mercadopago",
-    status: "protected" as const,
-    method: "Validação API MercadoPago (Seguro)"
+function formatDate(value: string | null) {
+  if (!value) return "Sem registro"
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return "Data inválida"
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date)
+}
+
+function errorMessage(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback
+  const error = (payload as { error?: unknown }).error
+  if (typeof error === "string") return error
+  if (error && typeof error === "object" && typeof (error as { message?: unknown }).message === "string") {
+    return (error as { message: string }).message
   }
-]
+  return fallback
+}
+
+async function requestSecurityData() {
+  const res = await fetch("/api/admin/security", { cache: "no-store" })
+  const payload: unknown = await res.json()
+  if (!res.ok || !payload || typeof payload !== "object" || !("data" in payload)) {
+    throw new Error(errorMessage(payload, "Não foi possível carregar o centro de segurança"))
+  }
+  return payload as SecurityResponse
+}
+
+function AlertIcon({ severity }: { severity: Severity }) {
+  if (severity === "critical") return <ShieldAlert className="size-4 text-red-600" />
+  if (severity === "warning") return <AlertTriangle className="size-4 text-amber-600" />
+  return <Info className="size-4 text-blue-600" />
+}
+
+function DistributionBadge({ status }: { status: Distribution }) {
+  if (status === "synced") {
+    return <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-3" /> Sincronizada</Badge>
+  }
+  if (status === "failed") {
+    return <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"><XCircle className="size-3" /> Falhou</Badge>
+  }
+  return <Badge variant="outline" className="text-muted-foreground"><CircleDashed className="size-3" /> Não verificada</Badge>
+}
 
 export default function SecurityPage() {
   const confirm = useConfirm()
-  const [settings, setSettings] = useState<SecuritySettings | null>(null)
+  const confirmCritical = useAdminCriticalAction()
+  const [response, setResponse] = useState<SecurityResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [showSecret, setShowSecret] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [requireSignature, setRequireSignature] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
+  const [requireSignature, setRequireSignature] = useState(false)
 
-  useEffect(() => {
-    fetchSettings()
-  }, [])
-
-  const fetchSettings = async () => {
-    setIsLoading(true)
+  const fetchSecurity = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/security')
-      if (res.ok) {
-        const data = await res.json()
-        setSettings(data)
-        setRequireSignature(data.require_signature)
-      } else {
-        toast.error("Erro ao carregar configurações de segurança")
-      }
-    } catch (e) {
-      toast.error("Erro ao conectar com o servidor")
+      const nextResponse = await requestSecurityData()
+      setResponse(nextResponse)
+      setRequireSignature(nextResponse.data.settings.require_signature)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar o centro de segurança")
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void requestSecurityData()
+      .then((nextResponse) => {
+        if (!active) return
+        setResponse(nextResponse)
+        setRequireSignature(nextResponse.data.settings.require_signature)
+      })
+      .catch((error: unknown) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Não foi possível carregar o centro de segurança")
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+    return () => { active = false }
+  }, [])
+
+  const data = response?.data ?? null
+  const hasPolicyChanges = Boolean(data && requireSignature !== data.settings.require_signature)
+  const posture = data ? postureCopy[data.posture] : postureCopy.attention
+  const PostureIcon = posture.icon
+
+  const orderedAlerts = useMemo(() => {
+    const order: Record<Severity, number> = { critical: 0, warning: 1, info: 2 }
+    return [...(data?.alerts ?? [])].sort((a, b) => order[a.severity] - order[b.severity])
+  }, [data?.alerts])
 
   const handleRotateSecret = async () => {
-    if (!await confirm({
-      title: "Rotacionar Secret HMAC",
-      description: "Ao gerar um novo secret, todas as integrações que utilizam o secret anterior precisarão ser atualizadas. Deseja continuar?",
+    const accepted = await confirm({
+      title: "Rotacionar secret HMAC",
+      description: "O secret será substituído e distribuído diretamente pelo servidor. O valor nunca será enviado ao navegador; o secret anterior ficará válido por até 24 horas durante a transição.",
       variant: "warning",
-      confirmText: "Sim, Rotacionar"
-    })) return
+      confirmText: "Continuar",
+    })
+    if (!accepted) return
+
+    const critical = await confirmCritical({
+      title: "Autorizar rotação HMAC",
+      description: "Informe o motivo, digite a confirmação exata e reautentique sua sessão.",
+      confirmationText: "ROTACIONAR HMAC",
+    })
+    if (!critical) return
 
     setIsRotating(true)
     try {
-      const res = await fetch('/api/admin/security/rotate', { method: 'POST' })
-      const data = await res.json()
-      
-      if (res.ok && data.success) {
-        setSettings(prev => prev ? { ...prev, hmac_secret: data.hmac_secret, rotated_at: data.rotated_at } : prev)
-        setShowSecret(true)
-        toast.success("Novo secret HMAC gerado com sucesso! Copie-o agora.")
-      } else {
-        toast.error(data.error || "Erro ao rotacionar secret")
+      const res = await fetch("/api/admin/security/rotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(critical),
+      })
+      const payload: unknown = await res.json()
+      if (!res.ok || !payload || typeof payload !== "object" || !("data" in payload)) {
+        throw new Error(errorMessage(payload, "Não foi possível rotacionar o secret"))
       }
-    } catch (e) {
-      toast.error("Erro ao rotacionar secret")
+
+      const result = payload as { data: { distribution: { failed: number } } }
+      const failed = result.data.distribution.failed
+      if (failed > 0) toast.warning(`Secret rotacionado no servidor; ${failed} instância(s) exigem correção durante a janela de 24 horas.`)
+      else toast.success("Secret rotacionado e distribuído pelo servidor para todas as instâncias elegíveis.")
+      setIsRefreshing(true)
+      await fetchSecurity()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível rotacionar o secret")
     } finally {
       setIsRotating(false)
     }
   }
 
-  const handleSaveSecurity = async () => {
+  const handleSavePolicy = async () => {
+    if (!data || !hasPolicyChanges) return
+    const confirmationText = requireSignature ? "ATIVAR HMAC" : "DESATIVAR HMAC"
+    const critical = await confirmCritical({
+      title: requireSignature ? "Ativar validação HMAC" : "Desativar validação HMAC",
+      description: requireSignature
+        ? "A política passará a rejeitar callbacks da Evolution sem o secret ou assinatura válidos."
+        : "Callbacks sem a validação HMAC obrigatória poderão alcançar o endpoint.",
+      confirmationText,
+    })
+    if (!critical) return
+
     setIsSaving(true)
     try {
-      const res = await fetch('/api/admin/security', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ require_signature: requireSignature })
+      const res = await fetch("/api/admin/security", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ require_signature: requireSignature, ...critical }),
       })
-      const data = await res.json()
-      
-      if (res.ok && data.success) {
-        setHasChanges(false)
-        toast.success("Configurações de segurança salvas com sucesso!")
-      } else {
-        toast.error(data.error || "Erro ao salvar configurações")
-      }
-    } catch (e) {
-      toast.error("Erro ao salvar configurações")
+      const payload: unknown = await res.json()
+      if (!res.ok) throw new Error(errorMessage(payload, "Não foi possível atualizar a política"))
+      toast.success(requireSignature ? "Validação HMAC ativada." : "Validação HMAC desativada.")
+      setIsRefreshing(true)
+      await fetchSecurity()
+    } catch (error) {
+      setRequireSignature(data.settings.require_signature)
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar a política")
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleCopySecret = () => {
-    if (settings?.hmac_secret) {
-      navigator.clipboard.writeText(settings.hmac_secret)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toast.success("Secret copiado para a área de transferência!")
-    }
-  }
-
-  const handleToggleSignature = (checked: boolean) => {
-    setRequireSignature(checked)
-    setHasChanges(checked !== settings?.require_signature)
-  }
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      })
-    } catch { return '—' }
-  }
-
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2"><Skeleton className="h-7 w-56" /><Skeleton className="h-4 w-[34rem] max-w-full" /></div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}</div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]"><Skeleton className="h-[430px] rounded-xl" /><Skeleton className="h-[430px] rounded-xl" /></div>
       </div>
     )
   }
 
+  if (!data) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex min-h-72 flex-col items-center justify-center gap-3 text-center">
+          <ShieldAlert className="size-9 text-muted-foreground" />
+          <div><p className="font-medium">Centro de segurança indisponível</p><p className="text-sm text-muted-foreground">A configuração não pôde ser carregada.</p></div>
+          <Button variant="outline" onClick={() => void fetchSecurity()}><RefreshCw className="size-4" /> Tentar novamente</Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
-            <Lock className="w-8 h-8 text-red-500" />
-            Segurança & Webhooks
-          </h2>
-          <p className="text-muted-foreground mt-1">Gerenciamento de chaves secretas (HMAC) e políticas de validação de endpoints.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Centro de segurança</h2>
+            <Badge variant="outline" className={posture.className}><PostureIcon className="size-3.5" /> {posture.label}</Badge>
+          </div>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Postura HMAC, cobertura auditada das instâncias e operações críticas de rotação.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-muted-foreground sm:inline">Atualizado em {formatDate(response?.meta.generated_at ?? null)}</span>
+          <Button variant="outline" size="sm" onClick={() => { setIsRefreshing(true); void fetchSecurity() }} disabled={isRefreshing}>
+            <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} /> Atualizar
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Painel Principal de Configuração HMAC */}
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-start justify-between p-5">
+            <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Secret HMAC</p><p className="mt-2 text-xl font-semibold">{data.settings.hmac_configured ? "Configurado" : "Ausente"}</p><p className="mt-1 text-xs text-muted-foreground">Nunca retornado pelo inventário</p></div>
+            <div className={`rounded-lg p-2 ${data.settings.hmac_configured ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}><KeyRound className="size-5" /></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-start justify-between p-5">
+            <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Validação</p><p className="mt-2 text-xl font-semibold">{data.settings.require_signature ? "Obrigatória" : "Desativada"}</p><p className="mt-1 text-xs text-muted-foreground">Callbacks Evolution</p></div>
+            <div className={`rounded-lg p-2 ${data.settings.require_signature ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}><LockKeyhole className="size-5" /></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-start justify-between p-5">
+            <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Última rotação</p><p className="mt-2 text-xl font-semibold">{data.rotation_age_days === null ? "Sem registro" : `${data.rotation_age_days} dia(s)`}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(data.settings.rotated_at)}</p></div>
+            <div className="rounded-lg bg-secondary p-2 text-muted-foreground"><Clock3 className="size-5" /></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-start justify-between p-5">
+            <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Cobertura vigente</p><p className="mt-2 text-xl font-semibold">{data.coverage.total === 0 ? "Sem instâncias" : `${data.coverage.synced} / ${data.coverage.total}`}</p><p className="mt-1 text-xs text-muted-foreground">Sincronizadas na rotação atual</p></div>
+            <div className="rounded-lg bg-blue-500/10 p-2 text-blue-600"><Server className="size-5" /></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {orderedAlerts.length > 0 && (
+        <Card className="border-amber-500/20 bg-amber-500/[0.025]">
+          <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-sm"><ShieldAlert className="size-4" /> Alertas ativos</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {orderedAlerts.map((alert) => (
+              <div key={alert.id} className="flex gap-3 rounded-lg border bg-background/80 p-3">
+                <div className="mt-0.5"><AlertIcon severity={alert.severity} /></div>
+                <div><p className="text-sm font-medium">{alert.title}</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{alert.description}</p></div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.settings.rotation_grace_until && (
+        <Card className="border-blue-500/30 bg-blue-500/[0.035]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-muted-foreground" />
-              Chaves de Assinatura de Webhooks (HMAC)
-            </CardTitle>
-            <CardDescription>
-              O sistema utiliza HMAC SHA-256 para assinar os webhooks enviados aos seus clientes. 
-              Eles devem utilizar este secret para validar que a requisição partiu genuinamente do Gestor Master.
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base"><KeyRound className="size-4 text-blue-600" /> Rotação em período de transição</CardTitle>
+            <CardDescription className="mt-1">O secret anterior será aceito somente pelo servidor até {formatDate(data.settings.rotation_grace_until)}. O novo secret não foi exposto ao navegador.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>Secret de Assinatura Atual</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input 
-                    type={showSecret ? "text" : "password"} 
-                    value={settings?.hmac_secret || ''} 
-                    readOnly 
-                    className="font-mono bg-secondary/50 pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-                    onClick={() => setShowSecret(!showSecret)}
-                  >
-                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </Card>
+      )}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="size-4" /> Política HMAC</CardTitle>
+              <CardDescription>Controle a exigência criptográfica e a rotação do secret compartilhado com a Evolution.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="require-signature" className="font-medium">Exigir validação em todos os callbacks</Label>
+                  <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">Ao ativar, requisições sem secret estático válido ou assinatura HMAC SHA-256 são rejeitadas.</p>
+                  {!data.settings.hmac_configured && !data.settings.require_signature && <p className="text-xs font-medium text-red-600">Rotacione um secret antes de ativar esta política.</p>}
+                </div>
+                <Switch id="require-signature" checked={requireSignature} onCheckedChange={setRequireSignature} disabled={!data.settings.hmac_configured && !data.settings.require_signature} />
+              </div>
+              <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div><p className="text-sm font-medium">Rotação controlada</p><p className="text-xs text-muted-foreground">Requer motivo, frase exata, senha recente e chave idempotente.</p></div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={handleRotateSecret} disabled={isRotating || isSaving}>
+                    {isRotating ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />} Rotacionar secret
+                  </Button>
+                  <Button onClick={handleSavePolicy} disabled={!hasPolicyChanges || isSaving || isRotating} variant={requireSignature ? "default" : "destructive"}>
+                    {isSaving ? <Loader2 className="size-4 animate-spin" /> : <LockKeyhole className="size-4" />}
+                    {requireSignature ? "Ativar política" : "Desativar política"}
                   </Button>
                 </div>
-                <Button variant="outline" size="icon" onClick={handleCopySecret} title="Copiar secret">
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
-                <Button variant="outline" onClick={handleRotateSecret} disabled={isRotating}>
-                  <RefreshCcw className={`w-4 h-4 mr-2 ${isRotating ? "animate-spin" : ""}`} />
-                  Rotacionar
-                </Button>
               </div>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>Última rotação: {settings?.rotated_at ? formatDate(settings.rotated_at) : '—'}</span>
-                <span>•</span>
-                <span>Dica: Rotacione o secret a cada 90 dias ou caso suspeite de vazamento.</span>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-lg flex items-start gap-3">
-              <Shield className="w-5 h-5 text-red-500 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold text-red-600 dark:text-red-400">Aplicação Rigorosa de Assinatura</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Se habilitado, o sistema rejeitará qualquer webhook recebido da Evolution que não contenha a assinatura correta no cabeçalho ou que tente forjar dados.
-                </p>
-                <div className="flex items-center gap-2 mt-4">
-                  <Switch 
-                    id="require-signature" 
-                    checked={requireSignature}
-                    onCheckedChange={handleToggleSignature}
-                  />
-                  <Label htmlFor="require-signature" className="font-medium">
-                    Exigir validação criptográfica (Recomendado)
-                  </Label>
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div><CardTitle className="flex items-center gap-2 text-base"><Server className="size-4" /> Cobertura das instâncias</CardTitle><CardDescription className="mt-1">Evidência registrada durante a rotação correspondente ao secret vigente.</CardDescription></div>
+                {data.coverage.verified_at && <Badge variant="outline" className="w-fit text-muted-foreground">Verificada em {formatDate(data.coverage.verified_at)}</Badge>}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {data.coverage.instances.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center"><Server className="mx-auto size-7 text-muted-foreground" /><p className="mt-2 text-sm font-medium">Nenhuma instância ativa</p><p className="text-xs text-muted-foreground">Não há distribuição HMAC pendente no inventário atual.</p></div>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {data.coverage.instances.map((instance, index) => (
+                    <div key={`${instance.name}-${index}`} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0"><p className="truncate text-sm font-medium">{instance.name}</p><p className="text-xs text-muted-foreground">{instance.mode === "external" ? "Evolution externa" : "Evolution gerenciada"} · {instance.ready ? "pronta para rotação" : "configuração incompleta"}</p></div>
+                      <DistributionBadge status={instance.distribution} />
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </div>
+              )}
+              <p className="mt-3 text-xs text-muted-foreground">“Não verificada” significa ausência de evidência para o secret atual; não é tratada como protegida nem como falha.</p>
+            </CardContent>
+          </Card>
+        </div>
 
-          </CardContent>
-          <CardFooter className="border-t bg-secondary/10 px-6 py-4 flex justify-end">
-            <Button onClick={handleSaveSecurity} disabled={isSaving || !hasChanges}>
-              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salvar Alterações
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* Resumo de Endpoints Protegidos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Webhook className="w-5 h-5 text-muted-foreground" />
-              Endpoints Protegidos
-            </CardTitle>
-            <CardDescription>Rotas ativas e seu nível de proteção</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {PROTECTED_ENDPOINTS.map((endpoint) => (
-                <div key={endpoint.path} className={`flex items-center justify-between p-3 border rounded-lg ${
-                  endpoint.status === 'partial' ? 'border-dashed bg-secondary/20' : ''
-                }`}>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm">{endpoint.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{endpoint.path}</div>
-                    <div className="text-xs text-muted-foreground/70 mt-0.5">{endpoint.method}</div>
-                  </div>
-                  {endpoint.status === 'protected' ? (
-                    <Badge variant="default" className="bg-emerald-500 ml-2 flex-shrink-0">
-                      <CheckCircle2 className="w-3 h-3 mr-1" /> Protegido
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-amber-500 border-amber-500 ml-2 flex-shrink-0">
-                      Parcial
-                    </Badge>
-                  )}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Recomendações</CardTitle><CardDescription>Derivadas deterministicamente da configuração e da cobertura atuais.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              {data.recommendations.map((recommendation) => (
+                <div key={recommendation.id} className="rounded-lg border p-3">
+                  <div className="flex items-center gap-2"><Badge variant="outline" className={recommendation.priority === "high" ? "border-red-500/30 text-red-700 dark:text-red-300" : recommendation.priority === "medium" ? "border-amber-500/30 text-amber-700 dark:text-amber-300" : "text-muted-foreground"}>{recommendation.priority === "high" ? "Alta" : recommendation.priority === "medium" ? "Média" : "Baixa"}</Badge><p className="text-sm font-medium">{recommendation.title}</p></div>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{recommendation.description}</p>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><History className="size-4" /> Eventos de segurança</CardTitle><CardDescription>Últimas ações administrativas registradas em auditoria.</CardDescription></CardHeader>
+            <CardContent>
+              {data.events.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Nenhum evento administrativo de segurança registrado.</div>
+              ) : (
+                <div className="space-y-4">
+                  {data.events.slice(0, 8).map((event, index) => {
+                    const updated = typeof event.details?.instances_updated === "number" ? event.details.instances_updated : null
+                    const failed = typeof event.details?.instances_failed === "number" ? event.details.instances_failed : null
+                    return (
+                      <div key={event.id} className="relative flex gap-3">
+                        {index < Math.min(data.events.length, 8) - 1 && <span className="absolute left-[7px] top-5 h-[calc(100%+4px)] w-px bg-border" />}
+                        <span className={`relative mt-1.5 size-3.5 shrink-0 rounded-full border-2 border-background ${event.outcome === "success" ? "bg-emerald-500" : "bg-red-500"}`} />
+                        <div className="min-w-0 pb-1"><p className="text-sm font-medium">{eventLabels[event.action] ?? event.action}</p><p className="text-xs text-muted-foreground">{formatDate(event.created_at)}</p>{event.reason && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">Motivo: {event.reason}</p>}{updated !== null && failed !== null && <p className="mt-1 text-xs text-muted-foreground">Distribuição: {updated} concluída(s), {failed} com falha.</p>}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

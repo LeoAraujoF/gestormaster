@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { getAuthorizedOrganizationId } from '@/lib/access-control'
+import { organizationHasCapability } from '@/lib/plan-catalog'
 
 export async function GET(request: Request) {
   try {
@@ -11,17 +13,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    let orgId = user.user_metadata?.organization_id;
-    if (!orgId) {
-      const { data: instanceData } = await supabase
-        .from('evolution_instances')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-      
-      orgId = instanceData?.organization_id || user.id;
-    }
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'integrations'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
 
     const { data: integrations, error } = await supabase
       .from('integrations')
@@ -34,7 +28,7 @@ export async function GET(request: Request) {
       }
       throw error
     }
-    
+
     // Buscar também credenciais de IPTV
     const { data: iptvData } = await supabase
       .from('iptv_accounts')
@@ -42,14 +36,14 @@ export async function GET(request: Request) {
       .eq('user_id', user.id)
       .eq('provider', 'tvdc_iptv')
       .maybeSingle();
-      
+
     const finalIntegrations = integrations || [];
     if (iptvData) {
       finalIntegrations.push({
         id: iptvData.id,
         provider: 'tvdc_iptv',
-        credentials: { 
-          username: iptvData.username, 
+        credentials: {
+          username: iptvData.username,
           password: iptvData.password,
           service_id: iptvData.linked_service_id || ""
         },
@@ -74,19 +68,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    let orgId = user.user_metadata?.organization_id;
-    if (!orgId) {
-      // Tenta buscar a org_id da primeira instância do usuário como fallback para usuários legados
-      const { data: instanceData } = await supabase
-        .from('evolution_instances')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-      
-      orgId = instanceData?.organization_id || user.id;
-    }
-    
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'integrations'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
+
     const body = await request.json()
     const { provider, credentials, is_active } = body
 
@@ -96,7 +81,7 @@ export async function POST(request: Request) {
 
     if (provider === 'tvdc_iptv') {
       const { username, password, service_id } = credentials;
-      
+
       // Substitui upsert por select + insert/update para evitar erro de constraint unique
       const { data: existing } = await supabase
         .from('iptv_accounts')
@@ -126,12 +111,12 @@ export async function POST(request: Request) {
           .select()
           .single();
       }
-        
+
       if (dbResult.error) {
         console.error('IPTV Save Error:', dbResult.error);
         return NextResponse.json({ error: 'Erro ao salvar credenciais do painel IPTV.' }, { status: 500 });
       }
-      
+
       await logAudit({
         user_id: user.id,
         action: 'integration.save',
@@ -246,14 +231,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const orgId = user.user_metadata?.organization_id || user.id;
+    const orgId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!orgId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    if (!(await organizationHasCapability(orgId, 'integrations'))) return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
     const { searchParams } = new URL(request.url)
     const provider = searchParams.get('provider')
 
     if (!provider) {
       return NextResponse.json({ error: 'Provedor é obrigatório.' }, { status: 400 })
     }
-    
+
     if (provider === 'tvdc_iptv') {
       await supabase.from('iptv_accounts').delete().eq('user_id', user.id).eq('provider', provider);
       await logAudit({

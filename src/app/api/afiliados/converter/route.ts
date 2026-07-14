@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { createClient as createServerClient } from "@/lib/supabase/server"
+import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { getIpFromRequest } from "@/lib/audit"
 import { logAudit } from "@/lib/audit"
 import { upsertOrganizationEntitlementForUser } from "@/lib/entitlements"
 import { getPlanById } from '@/lib/plan-catalog'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function POST(req: Request) {
   try {

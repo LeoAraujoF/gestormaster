@@ -1,12 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { getSupabasePublicConfig } from './config'
 
 export async function createClient() {
+  const config = getSupabasePublicConfig()
+  if (!config) throw new Error('Configuração pública do Supabase indisponível.')
+
   const cookieStore = await cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll() {
@@ -27,14 +32,14 @@ export async function createClient() {
   )
 }
 
-export async function getActiveOrganization(supabase: any, userId: string) {
+export async function getActiveOrganization(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from('organization_members')
     .select('organization_id, role, organizations(*)')
     .eq('user_id', userId)
     .limit(1)
     .maybeSingle()
-  
+
   if (error || !data) return null
   return data
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PricingModal } from "@/components/pricing-modal"
 import { cn } from "@/lib/utils"
 
 // Abas internas (5f): texto 11.5px, ativa com borda inferior 2px tinta
@@ -29,10 +28,13 @@ type SectionKey = (typeof SECTIONS)[number]["key"]
 
 const TABULAR_NUMS_KEY = "gm_tabular_nums"
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
 export default function MinhaContaPage() {
   const [section, setSection] = useState<SectionKey>("empresa")
-  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -47,11 +49,13 @@ export default function MinhaContaPage() {
 
   // User Data
   const [userEmail, setUserEmail] = useState("")
-  const [planName, setPlanName] = useState("")
+  const [planName, setPlanName] = useState("Starter")
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [instancesCount, setInstancesCount] = useState(0)
   const [clientsCount, setClientsCount] = useState(0)
+  const [clientsLimit, setClientsLimit] = useState<number | null>(100)
+  const [whatsappInstancesLimit, setWhatsappInstancesLimit] = useState(1)
 
   // States - PIN
   const [hasPin, setHasPin] = useState(false)
@@ -75,19 +79,10 @@ export default function MinhaContaPage() {
   // Aparência - números tabulares (preferência do dispositivo)
   const [tabularNums, setTabularNums] = useState(true)
 
-  useEffect(() => {
-    setMounted(true)
-    setTabularNums(localStorage.getItem(TABULAR_NUMS_KEY) !== "off")
-    checkUserMetadata()
-  }, [])
-
-  const checkUserMetadata = async () => {
+  const checkUserMetadata = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       setUserEmail(user.email || "")
-      setPlanName(user.user_metadata?.plan_name || "Free")
-      setPlanExpiresAt(user.user_metadata?.plan_expires_at || null)
-
       if (user.user_metadata?.security_pin) {
         setHasPin(true)
         setSavedPin(user.user_metadata.security_pin)
@@ -104,28 +99,44 @@ export default function MinhaContaPage() {
         setPinLockout(user.user_metadata.security_pin_lockout !== false)
       }
 
-      // Check admin status dynamically
+      // Plano, limites e consumo vêm do entitlement oficial da organização.
       try {
-        const res = await fetch('/api/admin/check')
-        const data = await res.json()
-        setIsAdmin(data.isAdmin)
-      } catch (e) {
+        const [adminResponse, entitlementResponse] = await Promise.all([
+          fetch('/api/admin/check', { cache: 'no-store' }),
+          fetch('/api/entitlements', { cache: 'no-store' }),
+        ])
+        const adminData = await adminResponse.json().catch(() => ({ isAdmin: false }))
+        setIsAdmin(Boolean(adminData.isAdmin))
+
+        if (entitlementResponse.ok) {
+          const entitlement = await entitlementResponse.json() as {
+            plan: 'starter' | 'pro' | 'master'
+            expiresAt: string | null
+            limits: { clients: number | null; whatsappInstances: number }
+            usage: { clients: number; whatsappInstances: number }
+          }
+          setPlanName(entitlement.plan.charAt(0).toUpperCase() + entitlement.plan.slice(1))
+          setPlanExpiresAt(entitlement.expiresAt)
+          setClientsLimit(entitlement.limits.clients)
+          setWhatsappInstancesLimit(entitlement.limits.whatsappInstances)
+          setClientsCount(entitlement.usage.clients)
+          setInstancesCount(entitlement.usage.whatsappInstances)
+        }
+      } catch {
         setIsAdmin(false)
       }
 
-      // Fetch Usage Counts
-      try {
-        const [{ count: instCount }, { count: cliCount }] = await Promise.all([
-          supabase.from('evolution_instances').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-        ])
-        setInstancesCount(instCount || 0)
-        setClientsCount(cliCount || 0)
-      } catch (error) {
-        console.error("Erro ao buscar estatísticas", error)
-      }
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setMounted(true)
+      setTabularNums(localStorage.getItem(TABULAR_NUMS_KEY) !== "off")
+      void checkUserMetadata()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [checkUserMetadata])
 
   // Handlers - Password
   const handlePasswordChange = async () => {
@@ -150,8 +161,8 @@ export default function MinhaContaPage() {
       setOldPassword("")
       setNewPassword("")
       setConfirmPassword("")
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, "Erro ao alterar a senha."))
     } finally {
       setIsChangingPassword(false)
     }
@@ -176,7 +187,7 @@ export default function MinhaContaPage() {
       setOldPin("")
       setNewPin("")
       setConfirmPin("")
-    } catch (error: any) {
+    } catch {
       toast.error("Erro ao salvar o PIN de segurança.")
     } finally {
       setIsSavingPin(false)
@@ -208,8 +219,8 @@ export default function MinhaContaPage() {
       })
       if (error) throw error
       toast.success("Dados da empresa atualizados com sucesso!")
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao salvar dados da empresa.")
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, "Erro ao salvar dados da empresa."))
     } finally {
       setIsSavingProfile(false)
     }
@@ -228,8 +239,8 @@ export default function MinhaContaPage() {
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao abrir o portal de faturamento.")
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, "Erro ao abrir o portal de faturamento."))
     } finally {
       setIsPortalLoading(false)
     }
@@ -262,8 +273,10 @@ export default function MinhaContaPage() {
   }
 
   const { score: passScore, text: passText, color: passColor } = getPasswordStrength()
-  const instancesLimit = isAdmin ? 999 : planName === "Plus" ? 5 : planName === "Pro" ? 3 : 0
-  const instancesPercentage = instancesLimit === 999 ? 0 : Math.min((instancesCount / (instancesLimit || 1)) * 100, 100)
+  const instancesLimit = isAdmin ? null : whatsappInstancesLimit
+  const effectiveClientsLimit = isAdmin ? null : clientsLimit
+  const instancesPercentage = instancesLimit === null ? 0 : Math.min((instancesCount / Math.max(instancesLimit, 1)) * 100, 100)
+  const clientsPercentage = effectiveClientsLimit === null ? 0 : Math.min((clientsCount / Math.max(effectiveClientsLimit, 1)) * 100, 100)
 
   const inputHint = (v: string) => (
     <p className="num text-[10px] text-muted-foreground">{v}</p>
@@ -292,7 +305,7 @@ export default function MinhaContaPage() {
         ))}
       </div>
 
-      {/* ═══ EMPRESA & PIX (5f) ═══ */}
+      {/* --- EMPRESA & PIX (5f) --- */}
       {section === "empresa" && (
         <div className="grid gap-4 pt-1 lg:grid-cols-[1fr_300px] lg:items-start">
           <div className="rounded-lg border border-border bg-card">
@@ -420,16 +433,16 @@ export default function MinhaContaPage() {
                 <div>
                   <div className="flex items-center justify-between text-[11.5px]">
                     <span className="text-muted-foreground">Clientes</span>
-                    <span className="num">{clientsCount} / ∞</span>
+                    <span className="num">{clientsCount} / {effectiveClientsLimit ?? "Ilimitado"}</span>
                   </div>
                   <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full rounded-full bg-interactive" style={{ width: `${Math.min(clientsCount / 5, 40)}%` }} />
+                    <div className="h-full rounded-full bg-interactive" style={{ width: `${clientsPercentage}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between text-[11.5px]">
                     <span className="text-muted-foreground">Instâncias WhatsApp</span>
-                    <span className="num">{instancesCount} / {instancesLimit === 999 ? "∞" : instancesLimit}</span>
+                    <span className="num">{instancesCount} / {instancesLimit ?? "Ilimitado"}</span>
                   </div>
                   <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
                     <div
@@ -471,7 +484,7 @@ export default function MinhaContaPage() {
         </div>
       )}
 
-      {/* ═══ SEGURANÇA (senha) ═══ */}
+      {/* --- SEGURANÇA (senha) --- */}
       {section === "seguranca" && (
         <div className="max-w-md rounded-lg border border-border bg-card pt-1">
           <div className="border-b border-border px-5 py-4">
@@ -543,7 +556,7 @@ export default function MinhaContaPage() {
         </div>
       )}
 
-      {/* ═══ COFRE PIN (11e) ═══ */}
+      {/* --- COFRE PIN (11e) --- */}
       {section === "pin" && (
         <div className="max-w-md rounded-lg border border-border bg-card pt-1">
           <div className="px-5 py-4">
@@ -612,7 +625,7 @@ export default function MinhaContaPage() {
         </div>
       )}
 
-      {/* ═══ APARÊNCIA (11e) ═══ */}
+      {/* --- APARÊNCIA (11e) --- */}
       {section === "aparencia" && (
         <div className="max-w-md rounded-lg border border-border bg-card pt-1">
           <div className="px-5 py-4">
@@ -670,7 +683,7 @@ export default function MinhaContaPage() {
         </div>
       )}
 
-      {/* ═══ PLANO & CONSUMO (5f) ═══ */}
+      {/* --- PLANO & CONSUMO (5f) --- */}
       {section === "plano" && (
         <div className="max-w-md rounded-lg border border-border bg-card pt-1">
           <div className="border-b border-border px-5 py-4">
@@ -688,17 +701,17 @@ export default function MinhaContaPage() {
             <div>
               <div className="flex items-center justify-between text-[11.5px]">
                 <span className="text-muted-foreground">Clientes cadastrados</span>
-                <span className="num">{clientsCount} / ∞</span>
+                <span className="num">{clientsCount} / {effectiveClientsLimit ?? "Ilimitado"}</span>
               </div>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
-                <div className="h-full rounded-full bg-interactive" style={{ width: `${Math.min(clientsCount / 5, 40)}%` }} />
+                <div className="h-full rounded-full bg-interactive" style={{ width: `${clientsPercentage}%` }} />
               </div>
-              <p className="mt-1 text-[10.5px] text-muted-foreground">Clientes ilimitados no seu plano atual.</p>
+              <p className="mt-1 text-[10.5px] text-muted-foreground">{effectiveClientsLimit === null ? 'Clientes ilimitados no plano atual.' : `Limite oficial do plano: ${effectiveClientsLimit} clientes.`}</p>
             </div>
             <div>
               <div className="flex items-center justify-between text-[11.5px]">
                 <span className="text-muted-foreground">Instâncias WhatsApp</span>
-                <span className="num">{instancesCount} / {instancesLimit === 999 ? "∞" : instancesLimit}</span>
+                <span className="num">{instancesCount} / {instancesLimit ?? "Ilimitado"}</span>
               </div>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
                 <div
@@ -722,14 +735,11 @@ export default function MinhaContaPage() {
               {isPortalLoading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
               Gerenciar assinatura
             </Button>
-            <Button size="sm" onClick={() => setIsPricingModalOpen(true)} className="h-8 px-4 text-xs">
-              Fazer upgrade
-            </Button>
+            <Button size="sm" onClick={() => { window.location.href = "/planos" }} className="h-8 px-4 text-xs">Ver planos e fazer upgrade</Button>
           </div>
         </div>
       )}
 
-      <PricingModal open={isPricingModalOpen} onOpenChange={setIsPricingModalOpen} />
     </div>
   )
 }

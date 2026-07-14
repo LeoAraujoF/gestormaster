@@ -81,14 +81,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true, status })
     }
 
-    // Validação de org via external_reference
+    // A cobrança local é a fonte de verdade. Referências sem o ID da cobrança
+    // nunca podem criar pagamentos ou renovar clientes.
     const extRef = paymentData.external_reference as string | undefined
-    if (extRef?.includes('|')) {
-      const refOrg = extRef.split('|')[0]
-      if (refOrg && refOrg !== orgId) {
-        console.warn(`[Webhook MP] org mismatch: query=${orgId} ref=${refOrg}`)
-        return NextResponse.json({ received: true, error: 'org_mismatch' })
-      }
+    const refParts = extRef?.split('|') || []
+    if (refParts.length < 8 || refParts[0] !== orgId || !refParts[7]) {
+      return NextResponse.json({ received: true, error: 'invalid_reference' }, { status: 400 })
     }
 
     const result = await processApprovedPixPayment({
@@ -113,8 +111,8 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('[Webhook MP] Erro Interno:', error)
-    // 200 para o MP não retentar em loop em erros nossos de parsing
-    return NextResponse.json({ received: true, error: 'internal' })
+    // Erros internos devem ser repetidos pelo provedor e também reconciliados.
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
   }
 }
 

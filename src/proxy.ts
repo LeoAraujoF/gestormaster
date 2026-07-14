@@ -1,11 +1,13 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-export async function middleware(request: NextRequest) {
+/**
+ * Proxy do Next.js 16: renova a sessão e aplica proteções de navegação.
+ * A autorização de dados continua sendo validada nas rotas e no banco.
+ */
+export async function proxy(request: NextRequest) {
   const response = await updateSession(request)
 
-  // Security Headers Básicos
-  response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')

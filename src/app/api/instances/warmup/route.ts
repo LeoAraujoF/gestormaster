@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { getCapabilityMembership } from '@/lib/plan-access'
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +10,9 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+    if (!(await getCapabilityMembership(supabase, user.id, 'warmup'))) {
+      return NextResponse.json({ error: 'Recurso disponível nos planos Pro e Master', upgrade_required: true }, { status: 403 })
     }
 
     const { instance_id, is_warming_up } = await req.json()

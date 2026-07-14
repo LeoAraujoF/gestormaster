@@ -27,7 +27,7 @@ export default function ResellerDetailsPage() {
   const { id } = useParams()
   const router = useRouter()
   const supabase = createClient()
-  
+
   const [reseller, setReseller] = useState<any>(null)
   const [services, setServices] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -79,7 +79,7 @@ export default function ResellerDetailsPage() {
     try {
       const basePrice = parseFloat(newBasePrice.replace(",", "."))
       const profitMargin = parseFloat(newProfitMargin.replace(",", "."))
-      
+
       if (isNaN(basePrice) || isNaN(profitMargin)) {
         toast.error("Valores inválidos")
         return
@@ -132,7 +132,7 @@ export default function ResellerDetailsPage() {
 
   function copyResellerLink() {
     // The public link for the reseller
-    const url = `${window.location.origin}/revendedor/${id}`
+    const url = `${window.location.origin}/revendedor/${id}?token=${reseller.public_token}`
     navigator.clipboard.writeText(url)
     toast.success("Link do Painel do Revendedor copiado!")
   }
@@ -146,8 +146,8 @@ export default function ResellerDetailsPage() {
     }
 
     setIsUpdatingDebt(true)
-    const newDebt = isAdding 
-      ? Number(reseller.current_debt || 0) + amount 
+    const newDebt = isAdding
+      ? Number(reseller.current_debt || 0) + amount
       : Math.max(0, Number(reseller.current_debt || 0) - amount)
 
     try {
@@ -158,7 +158,7 @@ export default function ResellerDetailsPage() {
 
       if (error) throw error
       logAuditClient({ action: 'reseller.update_debt', resource: 'resellers', resource_id: id as string, details: { new_debt: newDebt } })
-      
+
       setReseller({ ...reseller, current_debt: newDebt })
       setDebtAmount("")
       toast.success("Débito atualizado!")
@@ -179,7 +179,7 @@ export default function ResellerDetailsPage() {
 
   if (!reseller) return <div className="p-8">Revendedor não encontrado.</div>
 
-  const publicLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/revendedor/${id}`
+  const publicLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/revendedor/${id}?token=${reseller?.public_token || ''}`
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -207,7 +207,7 @@ export default function ResellerDetailsPage() {
               <Label className="text-muted-foreground">E-mail</Label>
               <p className="font-medium">{reseller.email || "Não informado"}</p>
             </div>
-            
+
             <div className="pt-4 border-t border-border/50">
               <Label className="text-muted-foreground mb-2 block">Link de Recarga (Área do Revendedor)</Label>
               <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ export default function ResellerDetailsPage() {
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">Envie este link para ele pedir créditos.</p>
             </div>
-            
+
             <div className="pt-4 border-t border-border/50">
               <Label className="text-muted-foreground mb-2 block">Gestão de Débitos</Label>
               <div className="bg-secondary/30 p-3 rounded-lg border border-border/50 text-center mb-3">
@@ -231,9 +231,9 @@ export default function ResellerDetailsPage() {
                 </span>
               </div>
               <div className="flex gap-2">
-                <Input 
-                  placeholder="0.00" 
-                  value={debtAmount} 
+                <Input
+                  placeholder="0.00"
+                  value={debtAmount}
                   onChange={(e) => setDebtAmount(e.target.value)}
                   className="w-full text-right"
                   type="number"
@@ -241,17 +241,17 @@ export default function ResellerDetailsPage() {
                 />
               </div>
               <div className="flex gap-2 mt-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="w-full text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 border-emerald-500/20"
                   onClick={() => handleUpdateDebt(false)}
                   disabled={isUpdatingDebt}
                 >
                   Abater (-)
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-500/20"
                   onClick={() => handleUpdateDebt(true)}

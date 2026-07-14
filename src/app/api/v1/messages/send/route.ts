@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
 import crypto from 'crypto'
 import { redisConnection } from '@/lib/redis'
+import { organizationHasCapability } from '@/lib/plan-catalog'
 
 // Throttling configuration
 const MAX_REQUESTS_PER_MINUTE = 60
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     }
 
     const plainToken = authHeader.split(' ')[1]
-    
+
     // 2. Validação Criptográfica e Busca no Banco
     const hash = crypto.createHash('sha256').update(plainToken).digest('hex')
 
@@ -33,32 +34,40 @@ export async function POST(request: Request) {
     }
 
     const orgId = apiKeyData.organization_id
+    if (!(await organizationHasCapability(orgId, 'developer_api'))) {
+      return NextResponse.json({ error: 'A API está disponível somente no plano Master.' }, { status: 403 })
+    }
 
     // 3. Rate Limiting (Throttling) via Redis
     try {
       const rateLimitKey = `rate_limit:api:${orgId}`
       const currentRequests = await redisConnection.incr(rateLimitKey)
-      
+
       if (currentRequests === 1) {
         await redisConnection.expire(rateLimitKey, 60) // Reseta após 60 segundos
       }
 
       if (currentRequests > MAX_REQUESTS_PER_MINUTE) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Limite de requisições excedido (Too Many Requests).',
           retry_after: 60
         }, { status: 429 })
       }
     } catch (redisError) {
-      console.warn("Redis Indisponível para Throttling. Ignorando limitação de segurança.", redisError)
+      console.error("Redis indisponível para throttling da API.", redisError)
+      return NextResponse.json({ error: 'Serviço temporariamente indisponível.' }, { status: 503 })
     }
 
     // 4. Validação de Payload
     const body = await request.json()
     const { phone, message, media_url, instance_id } = body
 
-    if (!phone || !message) {
+    if (typeof phone !== 'string' || typeof message !== 'string' || !phone || !message || message.length > 4_000) {
       return NextResponse.json({ error: 'Os campos "phone" e "message" são obrigatórios.' }, { status: 400 })
+    }
+
+    if (media_url && (typeof media_url !== 'string' || !/^https:\/\//i.test(media_url) || media_url.length > 2_000)) {
+      return NextResponse.json({ error: 'media_url deve ser uma URL HTTPS válida.' }, { status: 400 })
     }
 
     const cleanPhone = phone.replace(/\D/g, '')
@@ -86,8 +95,8 @@ export async function POST(request: Request) {
       backoff: { type: 'exponential', delay: 5000 }
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Mensagem enfileirada com sucesso.',
       job_id: job.id
     }, { status: 202 }) // 202 Accepted

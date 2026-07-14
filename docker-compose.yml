@@ -112,8 +112,8 @@ services:
     image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution_api
     restart: always
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     environment:
       - SERVER_URL=${EVOLUTION_EXTERNAL_URL:-http://localhost:8080}
       - AUTH_TYPE=apikey
@@ -122,7 +122,7 @@ services:
       - DATABASE_CONNECTION_URI=postgresql://postgres:${EVOLUTION_DB_PASS}@evolution-db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://:${REDIS_PASSWORD}@redis-queue:6379/1 
+      - CACHE_REDIS_URI=redis://:${REDIS_PASSWORD}@redis-queue:6379/1
       - CACHE_REDIS_PREFIX_KEY=evocache
       - RABBITMQ_ENABLED=false
       - WEBSOCKET_ENABLED=true

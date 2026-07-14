@@ -10,24 +10,31 @@ const supabaseAdmin = createClient(
 export async function GET(request: Request) {
   try {
     // Rota pública (sem login) — limita enumeração de revendedores por IP.
-    const rl = await rateLimit(`revendas:public:${getClientIp(request)}`, 60, 60)
+    const rl = await rateLimit(`revendas:public:${getClientIp(request)}`, 60, 60, { failOpen: false })
+    if (rl.unavailable) {
+      return NextResponse.json({ error: 'Serviço temporariamente indisponível' }, { status: 503 })
+    }
     if (!rl.ok) return tooManyRequests()
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
+    const token = searchParams.get("token")
 
-    if (!id) {
-      return NextResponse.json({ error: "ID não fornecido" }, { status: 400 })
+    if (!id || !token) {
+      return NextResponse.json({ error: "Link de acesso inválido" }, { status: 400 })
     }
 
     // Buscar revendedor
     const { data: reseller, error: resErr } = await supabaseAdmin
       .from("resellers")
-      .select("id, name, whatsapp, user_id, current_debt")
+      .select("id, name, user_id")
       .eq("id", id)
+      .eq("public_token", token)
       .single()
 
-    if (resErr || !reseller) throw resErr || new Error("Revendedor não encontrado")
+    if (resErr || !reseller) {
+      return NextResponse.json({ error: "Link de acesso inválido" }, { status: 404 })
+    }
 
     // Buscar PIX key
     let pixData = null
@@ -37,7 +44,7 @@ export async function GET(request: Request) {
         .select("pix_key, pix_type")
         .eq("user_id", reseller.user_id)
         .single()
-      
+
       if (settings?.pix_key) {
         pixData = { key: settings.pix_key, type: settings.pix_type || 'PIX' }
       }
@@ -68,7 +75,13 @@ export async function GET(request: Request) {
       data: {
         reseller,
         gestorPix: pixData,
-        services: services || [],
+        // A margem é informação interna do gestor. A área pública recebe
+        // somente o preço final por crédito.
+        services: (services || []).map((service) => ({
+          id: service.id,
+          service_name: service.service_name,
+          unit_price: Number(service.base_price) + Number(service.profit_margin),
+        })),
         pendingRequests: pendingRequests || []
       }
     })

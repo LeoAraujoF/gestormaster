@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { getAuthorizedOrganizationId } from '@/lib/access-control'
 
 /**
  * GET /api/pix/charges
@@ -18,6 +19,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const organizationId = await getAuthorizedOrganizationId(supabase, user.id)
+    if (!organizationId) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+
     const url = new URL(req.url)
     const status = url.searchParams.get('status')
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50))
@@ -29,6 +33,7 @@ export async function GET(req: Request) {
       .select(
         'id, organization_id, user_id, client_id, provider, provider_payment_id, purpose, status, amount, description, phone, instance_name, months_to_renew, plan_name, expires_at, paid_at, payment_id, created_at, updated_at'
       )
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -52,19 +57,25 @@ export async function GET(req: Request) {
 
     let metrics = emptyMetrics()
     if (withMetrics) {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc('get_pix_charge_metrics')
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('get_pix_charge_metrics', { p_organization_id: organizationId })
       if (!rpcErr && rpcData) {
         metrics = normalizeMetrics(rpcData)
       } else {
-        // Fallback em JS se a RPC ainda não existir
-        metrics = computeMetricsLocal(user.id)
-        // tenta via admin se RLS ok
-        const { data: all } = await supabaseAdmin
+        // Fallback se a RPC ainda não existir (tabela + RLS do usuário)
+        const { data: all } = await supabase
           .from('pix_charges')
           .select('status, amount, paid_at, expires_at')
-          .eq('user_id', user.id)
+          .eq('organization_id', organizationId)
 
         if (all) metrics = computeMetricsFromRows(all)
+        else {
+          // fallback service-role (ex.: user_id legado diferente)
+          const { data: adminRows } = await supabaseAdmin
+            .from('pix_charges')
+            .select('status, amount, paid_at, expires_at')
+            .eq('organization_id', organizationId)
+          if (adminRows) metrics = computeMetricsFromRows(adminRows)
+        }
       }
     }
 
@@ -83,6 +94,10 @@ function emptyMetrics() {
     paid_today_amount: 0,
     paid_month_count: 0,
     paid_month_amount: 0,
+    overdue_count: 0,
+    overdue_amount: 0,
+    paid_total_count: 0,
+    paid_total_amount: 0,
   }
 }
 
@@ -95,6 +110,10 @@ function normalizeMetrics(raw: any) {
     paid_today_amount: Number(raw.paid_today_amount || 0),
     paid_month_count: Number(raw.paid_month_count || 0),
     paid_month_amount: Number(raw.paid_month_amount || 0),
+    overdue_count: Number(raw.overdue_count || 0),
+    overdue_amount: Number(raw.overdue_amount || 0),
+    paid_total_count: Number(raw.paid_total_count || 0),
+    paid_total_amount: Number(raw.paid_total_amount || 0),
   }
 }
 
@@ -112,6 +131,10 @@ function computeMetricsFromRows(
   let paid_today_amount = 0
   let paid_month_count = 0
   let paid_month_amount = 0
+  let overdue_count = 0
+  let overdue_amount = 0
+  let paid_total_count = 0
+  let paid_total_amount = 0
 
   for (const r of rows) {
     const amount = Number(r.amount || 0)
@@ -119,9 +142,14 @@ function computeMetricsFromRows(
       if (!r.expires_at || new Date(r.expires_at) > now) {
         pending_count++
         pending_amount += amount
+      } else {
+        overdue_count++
+        overdue_amount += amount
       }
     }
     if (r.status === 'paid' && r.paid_at) {
+      paid_total_count++
+      paid_total_amount += amount
       const paidLocal = new Date(r.paid_at).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
       const paidDate = new Date(paidLocal)
       const paidStr = paidDate.toISOString().slice(0, 10)
@@ -143,9 +171,9 @@ function computeMetricsFromRows(
     paid_today_amount,
     paid_month_count,
     paid_month_amount,
+    overdue_count,
+    overdue_amount,
+    paid_total_count,
+    paid_total_amount,
   }
-}
-
-function computeMetricsLocal(_userId: string) {
-  return emptyMetrics()
 }

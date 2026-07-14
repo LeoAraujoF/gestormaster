@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "YOUR_GLOBAL_APIKEY" 
-const INSTANCE_NAME = "GestorMaster" 
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "YOUR_GLOBAL_APIKEY"
+const INSTANCE_NAME = "GestorMaster"
 
 // Cliente admin para salvar no banco ignorando RLS publico
 const supabaseAdmin = createSupabaseClient(
@@ -15,9 +14,10 @@ const supabaseAdmin = createSupabaseClient(
 
 export async function POST(request: Request) {
   try {
-    const { requestId, newStatus, actionType } = await request.json()
+    const { requestId, actionType } = await request.json()
+    const accessToken = request.headers.get('x-reseller-access-token')
 
-    if (!requestId || !newStatus) {
+    if (!requestId || !actionType) {
       return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 })
     }
 
@@ -32,34 +32,41 @@ export async function POST(request: Request) {
 
     const reseller = requestData.resellers
 
-    // Verificação de Segurança (RLS MANUAL)
-    if (newStatus === "completed") {
-      const cookieStore = await cookies()
-      const supabaseUser = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() { return cookieStore.getAll() },
-            setAll(cookiesToSet) {} // API route, can't set easily, just for checking
-          }
-        }
-      )
-      
-      const { data: { user } } = await supabaseUser.auth.getUser()
-      
-      if (!user || user.id !== reseller.user_id) {
-        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    if (actionType === 'notify_gestor_payment') {
+      // A área pública pode apenas informar que o pagamento foi realizado.
+      // Ela não confirma pagamento nem altera o estado financeiro do pedido.
+      const { data: authorizedReseller } = await supabaseAdmin
+        .from('resellers')
+        .select('id')
+        .eq('id', reseller.id)
+        .eq('public_token', accessToken || '')
+        .maybeSingle()
+
+      if (!authorizedReseller || requestData.status !== 'pending_payment') {
+        return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
       }
+    } else if (actionType === 'notify_reseller_completed') {
+      // Apenas o gestor dono do revendedor pode liberar créditos.
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || user.id !== reseller.user_id) {
+        return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+      }
+
+      if (!['pending_payment', 'paid'].includes(requestData.status)) {
+        return NextResponse.json({ error: 'Transição de status inválida' }, { status: 409 })
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('credit_requests')
+        .update({ status: 'completed' })
+        .eq('id', requestId)
+        .in('status', ['pending_payment', 'paid'])
+
+      if (updateErr) throw updateErr
+    } else {
+      return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
     }
-
-    // 2. Atualizar no banco
-    const { error: updateErr } = await supabaseAdmin
-      .from("credit_requests")
-      .update({ status: newStatus })
-      .eq("id", requestId)
-
-    if (updateErr) throw updateErr
 
     // 2. Notificar via Evolution API
     if (actionType === "notify_gestor_payment") {
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
 
       if (gestorNumber && EVOLUTION_API_URL) {
         const message = `💰 *Pagamento de Revenda*\nO revendedor *${reseller.name}* acaba de confirmar o pagamento de *${requestData.credits_amount}x créditos* para o serviço *${requestData.service_name}*.\n\nValor: R$ ${requestData.total_value}\n\nAcesse o Gestor para liberar o crédito!`
-        
+
         await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
           method: "POST",
           headers: {
@@ -95,7 +102,7 @@ export async function POST(request: Request) {
 
       if (resellerNumber && EVOLUTION_API_URL) {
         const message = `✅ *Créditos Liberados!*\nOlá *${reseller.name}*, sua recarga foi concluída com sucesso.\n\n*Serviço:* ${requestData.service_name}\n*Quantidade:* ${requestData.credits_amount} créditos\n*Valor Pago:* R$ ${requestData.total_value}\n\nSeus créditos já estão disponíveis para uso! 🚀`
-        
+
         await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
           method: "POST",
           headers: {
@@ -112,7 +119,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, data: requestData })
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("Erro na rota de notificação:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })

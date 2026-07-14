@@ -3,9 +3,9 @@ import crypto from 'crypto'
 /**
  * Valida se uma requisição de cron/serviço interno está autorizada.
  *
- * Aceita o padrão da Vercel Cron (header `Authorization: Bearer <CRON_SECRET>`,
- * injetado automaticamente quando a env var CRON_SECRET existe) e, por
- * compatibilidade, o parâmetro de query `?key=<CRON_SECRET>`.
+ * Aceita exclusivamente o padrão da Vercel Cron (header
+ * `Authorization: Bearer <CRON_SECRET>`). Segredos em query strings vazam em
+ * logs, histórico e cabeçalhos Referer.
  *
  * IMPORTANTE: o segredo NÃO deve ficar versionado (não colocar em vercel.json).
  * Configure CRON_SECRET no painel da Vercel / variáveis de ambiente do servidor.
@@ -19,13 +19,6 @@ export function isAuthorizedCron(req: Request): boolean {
   const authHeader = req.headers.get('authorization') || ''
   const expected = `Bearer ${secret}`
   if (safeEqual(authHeader, expected)) return true
-
-  try {
-    const key = new URL(req.url).searchParams.get('key') || ''
-    if (key && safeEqual(key, secret)) return true
-  } catch {
-    // URL inválida — ignora
-  }
 
   return false
 }

@@ -271,7 +271,12 @@
 .lp .dep-who span { font: 400 11.5px var(--mono); color: var(--mut); }
 
 /* ─────────── preços ─────────── */
-.lp .price-card { max-width: 520px; margin: 0 auto; background: #fffdf7; border: 1.5px solid var(--ink); border-radius: 14px; padding: 40px 40px 34px; position: relative; box-shadow: 8px 8px 0 var(--paper-2); }
+.lp .price-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; align-items: stretch; }
+.lp .price-card { background: #fffdf7; border: 1.5px solid var(--line); border-radius: 14px; padding: 34px 28px 28px; position: relative; display: flex; flex-direction: column; }
+.lp .price-card.featured { border-color: var(--ink); box-shadow: 8px 8px 0 var(--paper-2); }
+.lp .price-card .pc-cta { margin-top: auto; }
+.lp .pc-coming { font-size: 34px; }
+@media (max-width: 860px) { .lp .price-grid { grid-template-columns: 1fr; max-width: 540px; margin: 0 auto; } }
 @media (max-width: 560px) { .lp .price-card { padding: 30px 24px; } }
 .lp .pc-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--amber-bg); color: var(--amber); border: 1px solid #e4d3a8; font: 600 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; padding: 5px 14px; border-radius: 99px; }
 .lp .pc-name { font: 420 22px var(--serif); letter-spacing: -.015em; }

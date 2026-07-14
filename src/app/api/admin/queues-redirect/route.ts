@@ -1,28 +1,38 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server"
+
+import { getIpFromRequest, logAudit } from "@/lib/audit"
+import { adminErrorResponse, requireMasterAdmin } from "@/lib/admin-security"
+import { getBullBoardAvailability } from "@/app/api/admin/queues/bull-board-url"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const admin = await requireMasterAdmin({ recentAuth: true })
+    const board = getBullBoardAvailability()
+    if (!board.url) {
+      return NextResponse.json(
+        { error: { code: "BULL_BOARD_UNAVAILABLE", message: "Bull Board não está disponível em modo seguro de somente leitura" } },
+        { status: 503, headers: { "Cache-Control": "private, no-store, max-age=0" } },
+      )
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL || ''
-    const isAdmin = user.email === adminEmail
+    await logAudit({
+      user_id: admin.userId,
+      action: "admin.queues.board_access",
+      resource: "bull_board",
+      details: { read_only: true },
+      outcome: "success",
+      ip_address: getIpFromRequest(request),
+    })
 
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Acesso restrito ao Administrador.' }, { status: 403 })
-    }
-
-    // Variáveis sem o prefixo NEXT_PUBLIC_ são lidas em TEMPO REAL pelo servidor
-    const queuesUrl = process.env.QUEUES_URL || 'https://queue.roboajuda.site/admin/queues'
-    
-    return NextResponse.redirect(queuesUrl)
+    const response = NextResponse.redirect(board.url, 307)
+    response.headers.set("Cache-Control", "private, no-store, max-age=0")
+    response.headers.set("Referrer-Policy", "no-referrer")
+    return response
   } catch (error) {
-    console.error('Redirect Error:', error)
-    return NextResponse.json({ error: 'Falha ao redirecionar' }, { status: 500 })
+    const response = adminErrorResponse(error)
+    response.headers.set("Cache-Control", "private, no-store, max-age=0")
+    return response
   }
 }

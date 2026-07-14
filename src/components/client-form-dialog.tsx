@@ -40,8 +40,9 @@ interface ClientFormDialogProps {
 export function ClientFormDialog({ open, onOpenChange, client, servicesList, onSuccess }: ClientFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [revealed, setRevealed] = useState<Record<string, boolean>>({})
+  const [localVal, setLocalVal] = useState<string | null>(null)
   const supabase = createClient()
-  
+
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
@@ -152,7 +153,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
         const selectedServicesCost = servicesList
           .filter(s => data.selected_services.includes(s.id))
           .reduce((acc, s) => acc + s.cost, 0)
-          
+
         const totalCost = selectedServicesCost * data.screens
 
         const { data: latestPayment } = await supabase
@@ -191,7 +192,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
         const selectedServicesCost = servicesList
           .filter(s => data.selected_services.includes(s.id))
           .reduce((acc, s) => acc + s.cost, 0)
-          
+
         const totalCost = selectedServicesCost * data.screens
         const netProfit = data.plan_value - totalCost
 
@@ -204,7 +205,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             net_profit: netProfit,
             months_renewed: 1
           })
-        
+
         if (paymentError) console.error("Erro ao registrar o primeiro pagamento:", paymentError)
       }
 
@@ -216,11 +217,11 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           username: (access as Record<string, any>)[serviceId]?.username?.trim() || null,
           password: (access as Record<string, any>)[serviceId]?.password || null,
         }))
-        
+
         const { error: serviceError } = await supabase
           .from('client_services')
           .insert(servicesToInsert)
-          
+
         if (serviceError) throw serviceError
       }
 
@@ -230,7 +231,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .from('automations')
           .select('*')
           .eq('user_id', user.id)
-          .in('alert_type', ['activation', 'welcome', 'quick_message'])
+          .in('alert_type', ['activation', 'welcome'])
           .eq('is_active', true)
 
         if (rules && rules.length > 0) {
@@ -276,7 +277,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[640px] sm:max-w-[640px] data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
         >
           <div className="modal-2a max-h-[90vh] flex flex-col">
-            
+
             {/* HEADER */}
             <div className="modal-header-2a flex-shrink-0">
               <span className="w-[34px] h-[34px] rounded-[9px] bg-secondary flex items-center justify-center text-[15px]">
@@ -290,18 +291,18 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   {client ? 'Atualize os dados e os acessos do assinante.' : 'Cadastre o assinante e os acessos de cada serviço.'}
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => onOpenChange(false)}
                 className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
               >
                 ✕
               </button>
             </div>
-            
+
             {/* BODY */}
             <form id="client-form" onSubmit={handleSubmit(onSubmit)} className="p-[20px_22px] overflow-y-auto flex-1">
-              
+
               {/* DADOS PESSOAIS */}
               <div className="microlabel mb-[10px]">DADOS PESSOAIS</div>
               <div className="flex flex-col sm:flex-row gap-[12px] mb-[8px]">
@@ -309,9 +310,9 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Nome completo <span className="text-danger">*</span>
                   </div>
-                  <input 
+                  <input
                     {...register("name")}
-                    placeholder="Ex: João da Silva" 
+                    placeholder="Ex: João da Silva"
                     className="input-2a"
                   />
                   {errors.name && <p className="text-[10px] text-danger mt-1">{errors.name.message}</p>}
@@ -320,10 +321,10 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     WhatsApp
                   </div>
-                  <input 
+                  <input
                     {...register("phone")}
                     onChange={(e) => e.target.value = phoneMask(e.target.value)}
-                    placeholder="(11) 99999-9999" 
+                    placeholder="(11) 99999-9999"
                     className="input-2a"
                   />
                 </div>
@@ -334,7 +335,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                 <span className="microlabel m-0">SERVIÇOS E ACESSOS <span className="text-danger">*</span></span>
                 <span className="font-mono text-[9.5px] font-medium text-muted-foreground">usuário e senha são opcionais</span>
               </div>
-              
+
               <div className="space-y-[8px]">
                 {servicesList.length === 0 ? (
                   <p className="text-[12px] text-muted-foreground py-2">Nenhum serviço cadastrado no sistema ainda.</p>
@@ -446,12 +447,15 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                       type="text"
                       inputMode="decimal"
                       placeholder="0,00"
-                      value={planValue === 0 ? "" : String(planValue).replace('.', ',')}
+                      value={localVal !== null ? localVal : (planValue === 0 ? "" : String(planValue).replace('.', ','))}
                       onChange={(e) => {
-                        const raw = e.target.value.replace(',', '.')
+                        let rawStr = e.target.value.replace(/[^0-9.,]/g, '')
+                        setLocalVal(rawStr)
+                        const raw = rawStr.replace(',', '.')
                         const num = parseFloat(raw)
                         setValue("plan_value", isNaN(num) ? 0 : num, { shouldValidate: true })
                       }}
+                      onBlur={() => setLocalVal(null)}
                       className="flex-1 min-w-0 py-[9px] pr-[11px] font-mono text-[12px] bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
@@ -462,11 +466,11 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Telas <span className="text-danger">*</span>
                   </div>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="10" 
-                    {...register("screens", { valueAsNumber: true })} 
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    {...register("screens", { valueAsNumber: true })}
                     className="input-2a font-mono text-[12px]"
                   />
                   {errors.screens && <p className="text-[10px] text-danger mt-1">{errors.screens.message}</p>}
@@ -476,9 +480,9 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Vencimento <span className="text-danger">*</span>
                   </div>
-                  <input 
-                    type="date" 
-                    {...register("due_date")} 
+                  <input
+                    type="date"
+                    {...register("due_date")}
                     className="input-2a text-[12px]"
                   />
                   {errors.due_date && <p className="text-[10px] text-danger mt-1">{errors.due_date.message}</p>}
@@ -499,13 +503,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                           onClick={() => field.onChange(st.value)}
                           className={cn(
                             "flex-1 flex items-center justify-center gap-[6px] rounded-[5px] py-[6px] text-[11.5px] font-medium transition-all",
-                            field.value === st.value 
-                              ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]" 
+                            field.value === st.value
+                              ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
                               : "text-muted-foreground hover:text-secondary-foreground"
                           )}
                         >
-                          <span 
-                            className="w-[6px] h-[6px] rounded-full" 
+                          <span
+                            className="w-[6px] h-[6px] rounded-full"
                             style={{ backgroundColor: st.color }}
                           />
                           {st.label}
@@ -518,25 +522,25 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
               {/* OBSERVAÇÃO */}
               <div className="microlabel mt-[20px] mb-[8px]">OBSERVAÇÃO</div>
-              <textarea 
+              <textarea
                 {...register("observation")}
                 placeholder="Anotações internas sobre o cliente (opcional)…"
                 className="input-2a min-h-[64px] resize-none leading-[1.55]"
               />
 
             </form>
-            
+
             {/* FOOTER */}
             <div className="modal-footer-2a flex-shrink-0">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => onOpenChange(false)}
                 className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground hover:bg-muted"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 form="client-form"
                 disabled={isSubmitting}
                 className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] hover:bg-foreground disabled:opacity-70"
@@ -545,7 +549,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                 {client ? 'Salvar cliente' : 'Criar cliente'}
               </button>
             </div>
-            
+
           </div>
         </DialogContent>
     </Dialog>

@@ -1,179 +1,163 @@
-import { NextResponse } from "next/server"
-import Stripe from "stripe"
-import { createClient } from "@supabase/supabase-js"
-import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { getIpFromRequest, logAudit } from '@/lib/audit'
+import { stripePriceIdForPlan } from '@/lib/plan-catalog'
+import type { PlanId } from '@/lib/plan-types'
+import {
+  isStripeEntitlementActive,
+  planIdFromStripePrice,
+  stripeSubscriptionExpiresAt,
+} from '@/lib/stripe-subscription'
+import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { claimWebhookEvent, releaseWebhookEvent } from '@/lib/webhook-events'
+
+function configuredPrices(): Partial<Record<PlanId, string | undefined>> {
+  return {
+    starter: stripePriceIdForPlan('starter') || undefined,
+    pro: stripePriceIdForPlan('pro') || undefined,
+    master: stripePriceIdForPlan('master') || undefined,
+  }
+}
+
+function stripeObjectId(value: string | { id: string } | Stripe.DeletedCustomer | null): string | null {
+  return typeof value === 'string' ? value : value?.id || null
+}
+
+async function syncSubscription(subscription: Stripe.Subscription, eventCreated: number) {
+  const organizationId = subscription.metadata.organizationId
+  const userId = subscription.metadata.userId
+  if (!organizationId || !userId) throw new Error('Assinatura sem vínculo local confiável')
+
+  const { data: membership, error: membershipError } = await supabaseAdmin
+    .from('organization_members')
+    .select('organization_id')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (membershipError || !membership) throw new Error('Vínculo da assinatura não corresponde à organização')
+
+  const priceIds = subscription.items.data.map((item) => item.price.id)
+  const plans = [...new Set(priceIds.map((priceId) => planIdFromStripePrice(priceId, configuredPrices())).filter(Boolean))]
+  if (plans.length !== 1) throw new Error('Assinatura não corresponde a um único plano configurado')
+  const planId = plans[0] as PlanId
+  const customerId = stripeObjectId(subscription.customer)
+  if (!customerId) throw new Error('Assinatura sem cliente Stripe')
+  const active = isStripeEntitlementActive(subscription.status)
+  const expiresAt = stripeSubscriptionExpiresAt(subscription.items.data)
+
+  const { data: applied, error } = await supabaseAdmin.rpc('sync_stripe_organization_entitlement', {
+    p_organization_id: organizationId,
+    p_plan: planId,
+    p_is_active: active,
+    p_provider_customer_id: customerId,
+    p_provider_subscription_id: subscription.id,
+    p_provider_status: subscription.status,
+    p_expires_at: expiresAt,
+    p_updated_by: userId,
+    p_event_created_at: new Date(eventCreated * 1000).toISOString(),
+  })
+  if (error) throw error
+
+  if (applied) {
+    const { data: members, error: membersError } = await supabaseAdmin
+      .from('organization_members')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+    if (membersError) throw membersError
+    await Promise.all((members || []).map(async ({ user_id: memberId }) => {
+      const { data: member, error: memberError } = await supabaseAdmin.auth.admin.getUserById(memberId)
+      if (memberError || !member.user) throw memberError || new Error('Membro da organização não encontrado')
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(memberId, {
+        app_metadata: {
+          ...member.user.app_metadata,
+          has_active_subscription: active,
+          stripe_customer_id: customerId,
+        },
+      })
+      if (updateError) throw updateError
+    }))
+  }
+
+  return { organizationId, userId, planId, active, applied: Boolean(applied) }
+}
 
 export async function POST(request: Request) {
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return new NextResponse('Webhook não configurado', { status: 503 })
+  }
+
   const payload = await request.text()
-  const signature = request.headers.get("Stripe-Signature")
+  const signature = request.headers.get('Stripe-Signature')
+  if (!signature) return new NextResponse('Assinatura Stripe ausente', { status: 400 })
 
-  if (!signature) {
-    return new NextResponse("Missing stripe signature", { status: 400 })
-  }
-
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-04-22.dahlia",
-  })
-
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-04-22.dahlia' })
   let event: Stripe.Event
-
   try {
-    event = stripe.webhooks.constructEvent(
-      payload,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
-  } catch (err: any) {
-    console.error("Webhook signature verification failed.", err.message)
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
+    event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET)
+  } catch (error) {
+    console.error('[Stripe Webhook] assinatura inválida', error instanceof Error ? error.message : '')
+    return new NextResponse('Assinatura inválida', { status: 400 })
   }
 
-  // Inicializa o Supabase no modo Administrador (Service Role)
-  // Isso permite alterar os metadados de um usuário passando por cima de regras de segurança front-end
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
+  let claimed = false
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session
-        
-        const userId = session.client_reference_id
-        if (!userId) {
-          console.error("No client_reference_id found in session")
-          break
-        }
+    claimed = await claimWebhookEvent('stripe', event.id)
+    if (!claimed) return new NextResponse('Evento já processado', { status: 200 })
 
-        const planName = session.metadata?.planName || "Desconhecido"
+    let result: Awaited<ReturnType<typeof syncSubscription>> | null = null
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session
+      if (session.mode !== 'subscription' || !session.subscription) throw new Error('Checkout não contém assinatura recorrente')
+      const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] })
+      result = await syncSubscription(subscription, event.created)
 
-        // Busca o usuário para verificar o vencimento atual
-        const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
-        if (userError || !user) {
-          console.error("Erro ao buscar usuário no Supabase", userError)
-          break
-        }
-
-        const currentExpiresAt = user.user_metadata?.plan_expires_at
-        let newExpiresAt = new Date()
-
-        if (currentExpiresAt) {
-          const expiresDate = new Date(currentExpiresAt)
-          // Se ainda não venceu, soma em cima da data futura
-          if (expiresDate > new Date()) {
-            newExpiresAt = expiresDate
-          }
-        }
-
-        // Adiciona 30 dias (1 mês)
-        newExpiresAt.setDate(newExpiresAt.getDate() + 30)
-
-        // Cliente pagou! has_active_subscription vai em app_metadata (seguro, só o servidor grava);
-        // demais campos de exibição continuam em user_metadata.
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          app_metadata: {
-            ...user.app_metadata,
-            has_active_subscription: true
-          },
-          user_metadata: {
-            ...user.user_metadata,
-            plan_name: planName,
-            plan_expires_at: newExpiresAt.toISOString(),
-            stripe_customer_id: session.customer as string
-          }
+      const { data: affiliateUser } = await supabaseAdmin.auth.admin.getUserById(result.userId)
+      const referredBy = affiliateUser.user?.user_metadata?.referred_by
+      const commissionAmount = session.amount_total ? (session.amount_total / 100) * 0.30 : 0
+      if (referredBy && commissionAmount > 0) {
+        const { error: affiliateError } = await supabaseAdmin.from('affiliate_earnings').insert({
+          referrer_id: referredBy,
+          referred_user_id: result.userId,
+          amount: commissionAmount,
+          status: 'pending',
+          source_event_id: event.id,
         })
-
-        if (error) {
-          console.error("Erro ao atualizar o Supabase após pagamento:", error)
-          throw error
+        if (affiliateError && affiliateError.code !== '23505') {
+          console.error('[Stripe Webhook] falha ao registrar comissão', affiliateError.message)
         }
-        
-        console.log(`[Webhook] Assinatura ativada com sucesso para o usuário: ${userId}`)
-
-        // --- Lógica de Afiliados ---
-        const referredBy = user.user_metadata?.referred_by;
-        if (referredBy) {
-          const amountTotal = session.amount_total ? session.amount_total / 100 : 0;
-          const commissionAmount = amountTotal * 0.30; // 30% de comissão fixa
-
-          if (commissionAmount > 0) {
-            const { error: affiliateError } = await supabaseAdmin.from('affiliate_earnings').insert({
-              referrer_id: referredBy,
-              referred_user_id: userId,
-              amount: commissionAmount,
-              status: 'pending' // Pendente para análise de reembolso/chargeback
-            });
-            
-            if (affiliateError) {
-               console.error("Erro ao inserir comissão de afiliado:", affiliateError)
-            } else {
-               console.log(`[Webhook] Comissão de R$ ${commissionAmount} gerada para o afiliado ${referredBy}`)
-            }
-          }
-        }
-
-        await logAudit({
-          user_id: userId,
-          action: 'stripe.payment_success',
-          resource: 'payments',
-          resource_id: session.id,
-          details: { event_type: 'checkout.session.completed', plan: planName },
-          ip_address: getIpFromRequest(request)
-        })
-
-        break
       }
-
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
-
-        if (!customerId) {
-          console.error("No customer ID found in subscription")
-          break
-        }
-
-        // Encontrar o usuário que possui esse stripe_customer_id
-        const { data: usersData, error: searchError } = await supabaseAdmin.auth.admin.listUsers()
-        if (searchError) {
-           console.error("Erro ao buscar usuários para cancelamento:", searchError)
-           break
-        }
-        
-        const user = usersData.users.find(u => u.user_metadata?.stripe_customer_id === customerId)
-
-        if (user) {
-          // Atualiza o usuário para remover o plano ativo (app_metadata: só o servidor grava)
-          await supabaseAdmin.auth.admin.updateUserById(user.id, {
-            app_metadata: {
-              ...user.app_metadata,
-              has_active_subscription: false
-            }
-          })
-          console.log(`[Webhook] Assinatura cancelada processada para o usuário: ${user.id}`)
-
-          await logAudit({
-            user_id: user.id,
-            action: 'stripe.subscription_cancelled',
-            resource: 'payments',
-            resource_id: subscription.id,
-            details: { event_type: 'customer.subscription.deleted', customer_id: customerId },
-            ip_address: getIpFromRequest(request)
-          })
-        } else {
-          console.log("Assinatura cancelada, mas customer_id não foi encontrado nos metadados:", customerId)
-        }
-        break
-      }
-
-      default:
-        console.log(`Unhandled event type ${event.type}`)
+    } else if (
+      event.type === 'customer.subscription.created'
+      || event.type === 'customer.subscription.updated'
+      || event.type === 'customer.subscription.deleted'
+    ) {
+      const eventSubscription = event.data.object as Stripe.Subscription
+      const currentSubscription = await stripe.subscriptions.retrieve(eventSubscription.id, { expand: ['items.data.price'] })
+      result = await syncSubscription(currentSubscription, event.created)
     }
 
-    return new NextResponse("Webhook recebido com sucesso", { status: 200 })
-  } catch (err: any) {
-    console.error("Stripe Webhook processing error:", err)
-    return new NextResponse("Internal Server Error", { status: 500 })
+    if (result) {
+      await logAudit({
+        organization_id: result.organizationId,
+        user_id: result.userId,
+        action: 'stripe.subscription_sync',
+        resource: 'subscriptions',
+        resource_id: event.id,
+        details: {
+          event_type: event.type,
+          plan: result.planId,
+          active: result.active,
+          applied: result.applied,
+        },
+        ip_address: getIpFromRequest(request),
+      })
+    }
+
+    return new NextResponse('Webhook recebido com sucesso', { status: 200 })
+  } catch (error) {
+    console.error('[Stripe Webhook]', error instanceof Error ? error.message : 'erro interno')
+    if (claimed) await releaseWebhookEvent('stripe', event.id)
+    return new NextResponse('Internal Server Error', { status: 500 })
   }
 }

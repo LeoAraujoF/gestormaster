@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Zap, Send, TrendingUp, TrendingDown, Users, Wallet, AlertTriangle, CheckCircle2, RotateCw } from "lucide-react"
+import { Plus, Zap, Send, CheckCircle2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -10,22 +10,13 @@ import { toast } from "sonner"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { ClientFormDialog } from "@/components/client-form-dialog"
 import { RenewDialog } from "@/components/client-action-dialogs"
-import type { AdvancedDashboardMetrics } from "@/types/database"
+import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
 import { usePrivacy } from "@/hooks/use-privacy"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
-import { 
-  AIAssistantBanner, 
-  MonthlyGoalBar, 
-  FinancialScore, 
-  SystemHealth, 
-  AutomationSavings, 
-  TopClients, 
-  ReceiptDistribution, 
-  RevenueEvolutionChart,
-  TrendIndicator
-} from "./components/dashboard-widgets"
+import { ExecutiveDashboardView, ExecutiveUpgrade } from "@/components/executive-dashboard-view"
+import { usePlanCapability } from "@/components/providers/plan-provider"
 
 type QueueFilter = "vencidos" | "hoje" | "7dias"
 
@@ -45,10 +36,13 @@ const UNDO_DELAY_MS = 6000
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
-  const [metrics, setMetrics] = useState<AdvancedDashboardMetrics | null>(null)
+  const [executive, setExecutive] = useState<ExecutiveDashboardDTO | null>(null)
+  const [executivePeriod, setExecutivePeriod] = useState<ExecutivePeriod>("month")
+  const [upgradeRequired, setUpgradeRequired] = useState(false)
   const [clientsList, setClientsList] = useState<QueueClient[]>([])
   const [servicesList, setServicesList] = useState<any[]>([])
   const [automations, setAutomations] = useState<{ id: string; alert_type: string }[]>([])
+  const [basicPayments, setBasicPayments] = useState({ count: 0, total: 0 })
 
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("vencidos")
   const [chargingIds, setChargingIds] = useState<Set<string>>(new Set())
@@ -60,15 +54,27 @@ export default function DashboardPage() {
   const [actionClient, setActionClient] = useState<any | null>(null)
 
   const { displayValue } = usePrivacy()
+  const hasAdvancedFinance = usePlanCapability('finance_advanced')
   const confirm = useConfirm()
   const supabase = createClient()
   const router = useRouter()
 
   const loadDashboardData = async () => {
     try {
-      // Novas métricas premium
-      const { data: metricsData } = await supabase.rpc("get_advanced_dashboard_metrics")
-      if (metricsData) setMetrics(metricsData as AdvancedDashboardMetrics)
+      if (hasAdvancedFinance) {
+        const executiveResponse = await fetch(`/api/executive-dashboard?period=${executivePeriod}`)
+        const executivePayload = await executiveResponse.json()
+        if (executiveResponse.ok) {
+          setExecutive(executivePayload as ExecutiveDashboardDTO)
+          setUpgradeRequired(false)
+        } else if (executiveResponse.status === 403 && executivePayload.upgrade_required) {
+          setExecutive(null)
+          setUpgradeRequired(true)
+        }
+      } else {
+        setExecutive(null)
+        setUpgradeRequired(true)
+      }
 
       // Clientes para a fila de cobrança
       const { data: clientsData } = await supabase
@@ -88,6 +94,16 @@ export default function DashboardPage() {
             diffDays: diffInDays(today, c.due_date),
           }))
         )
+      }
+
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const { data: paymentsData } = await supabase.from('payments')
+        .select('amount_paid').gte('created_at', firstDayOfMonth)
+      if (paymentsData) {
+        setBasicPayments({
+          count: paymentsData.length,
+          total: paymentsData.reduce((total, payment) => total + Number(payment.amount_paid || 0), 0),
+        })
       }
 
       // Serviços (para o dialog de novo cliente)
@@ -115,12 +131,14 @@ export default function DashboardPage() {
     return () => {
       pending.forEach((t) => clearTimeout(t))
     }
-  }, [])
+  }, [executivePeriod, hasAdvancedFinance])
 
   // --- Fila de cobrança ---
   const vencidos = clientsList.filter((c) => c.diffDays < 0)
   const vencemHoje = clientsList.filter((c) => c.diffDays === 0)
   const proximos7 = clientsList.filter((c) => c.diffDays > 0 && c.diffDays <= 7)
+  const overdueTotal = vencidos.reduce((total, client) => total + Number(client.plan_value || 0), 0)
+  const upcomingTotal = proximos7.reduce((total, client) => total + Number(client.plan_value || 0), 0)
 
   const queueMap: Record<QueueFilter, QueueClient[]> = {
     vencidos,
@@ -261,7 +279,7 @@ export default function DashboardPage() {
     { key: "7dias", label: "7 dias", count: proximos7.length },
   ]
 
-  if (isLoading || !metrics) {
+  if (isLoading) {
     return (
       <div className="space-y-6 pb-10">
         <Skeleton className="h-8 w-64" />
@@ -283,66 +301,41 @@ export default function DashboardPage() {
             Centro de Controle Financeiro
           </p>
         </div>
-        <div className="w-full sm:w-64">
-          <MonthlyGoalBar metrics={metrics} onUpdate={loadDashboardData} />
-        </div>
       </div>
 
       <OnboardingProgress />
-      <AIAssistantBanner metrics={metrics} />
-
-      {/* Régua Premium */}
-      <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-5 md:divide-x md:divide-border">
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <RotateCw className="size-3.5 text-muted-foreground" />
-            <p className="microlabel">MRR</p>
+      {hasAdvancedFinance ? (
+        upgradeRequired ? <ExecutiveUpgrade /> : executive ? <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} /> : null
+      ) : (
+        <>
+          <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
+            <div className="p-4">
+              <p className="microlabel">Recebido no mês</p>
+              <p className="num mt-1 text-[18px] font-semibold text-money">{displayValue(formatCurrency(basicPayments.total))}</p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{basicPayments.count} pagamentos</p>
+            </div>
+            <div className="p-4">
+              <p className="microlabel">A receber (7d)</p>
+              <p className="num mt-1 text-[18px] font-semibold text-warning">{displayValue(formatCurrency(upcomingTotal))}</p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{proximos7.length} renovações</p>
+            </div>
+            <div className="p-4">
+              <p className="microlabel">Valor vencido</p>
+              <p className="num mt-1 text-[18px] font-semibold text-danger">{displayValue(formatCurrency(overdueTotal))}</p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{vencidos.length} clientes</p>
+            </div>
+            <div className="p-4">
+              <p className="microlabel">Vencem hoje</p>
+              <p className="num mt-1 text-[18px] font-semibold">{vencemHoje.length}</p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">clientes para acompanhar</p>
+            </div>
           </div>
-          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
-            {displayValue(formatCurrency(metrics.mrr))}
-          </p>
-          <TrendIndicator current={metrics.mrr} last={metrics.mrr * 0.95} /> {/* mock last month */}
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="size-3.5 text-muted-foreground" />
-            <p className="microlabel">Recebido (Mês)</p>
+          <div className="flex flex-col gap-2 rounded-lg border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
+            <p className="flex-1 text-[11.5px] text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> Previsões, comparativos, MRR e indicadores de saúde financeira estão no Pro.</p>
+            <Button variant="outline" size="sm" onClick={() => router.push('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
           </div>
-          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-money">
-            {displayValue(formatCurrency(metrics.received_month))}
-          </p>
-          <TrendIndicator current={metrics.received_month} last={metrics.received_last_month} />
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="size-3.5 text-muted-foreground" />
-            <p className="microlabel">Receita Prevista</p>
-          </div>
-          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
-            {displayValue(formatCurrency(metrics.expected_revenue))}
-          </p>
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="size-3.5 text-muted-foreground" />
-            <p className="microlabel">Inadimplência</p>
-          </div>
-          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-danger">
-            {displayValue(formatCurrency(metrics.default_amount))}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">{metrics.default_clients} clientes</p>
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="size-3.5 text-muted-foreground" />
-            <p className="microlabel">Ticket Médio</p>
-          </div>
-          <p className="num mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">
-            {displayValue(formatCurrency(metrics.active_clients > 0 ? metrics.mrr / metrics.active_clients : 0))}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">{metrics.active_clients} ativos</p>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Ações Rápidas */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -358,19 +351,14 @@ export default function DashboardPage() {
           </button>
         </PixRapidoModal>
         <button
-          onClick={() => router.push("/leads")}
+          onClick={() => router.push("/automacao")}
           className="flex h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-input text-xs font-medium text-secondary-foreground transition-colors hover:border-foreground/30 hover:bg-muted"
         >
           <Send className="size-3.5" /> Disparo em massa
         </button>
       </div>
 
-      {/* Layout Principal: 2/3 para gráficos/fila, 1/3 para métricas focadas */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        
-        {/* Coluna da Esquerda (Principal) */}
-        <div className="lg:col-span-2 space-y-6">
-          <RevenueEvolutionChart metrics={metrics} />
+      <div>
 
           {/* Fila Operacional */}
           <div className="flex flex-col rounded-lg border border-border bg-card">
@@ -454,16 +442,6 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Coluna da Direita (Insights) */}
-        <div className="space-y-6">
-          <FinancialScore metrics={metrics} />
-          <AutomationSavings metrics={metrics} />
-          <TopClients metrics={metrics} />
-          <ReceiptDistribution metrics={metrics} />
-          <SystemHealth />
-        </div>
       </div>
 
       {/* Dialogs */}

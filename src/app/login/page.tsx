@@ -48,7 +48,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
@@ -60,14 +60,25 @@ export default function LoginPage() {
         return
       }
 
+      if (!authData.session || !authData.user) {
+        toast.error("Login sem sessão ativa. Confirme o e-mail da conta e tente novamente.")
+        return
+      }
+
       if (rememberMe) {
         localStorage.setItem("gestor_master_email", data.email)
       } else {
         localStorage.removeItem("gestor_master_email")
       }
 
+      // The middleware is the server-authoritative source for entitlements. Do
+      // not decide the plan in the browser from potentially stale JWT claims.
+      // Sending the user to a protected route lets the middleware resolve the
+      // current organization entitlement and redirect to /planos when needed.
+      const onboardingCompleted = authData.user?.user_metadata?.onboarding_completed === true
+      const destination = onboardingCompleted ? "/painel" : "/onboarding"
       toast.success("Login realizado com sucesso!")
-      window.location.href = "/painel"
+      window.location.assign(destination)
     } catch (err) {
       toast.error("Ocorreu um erro inesperado.")
     } finally {
@@ -88,7 +99,7 @@ export default function LoginPage() {
         <h1 className="text-[15px] font-semibold tracking-[-0.02em]">Entrar no painel</h1>
         <p className="mt-1 text-xs text-muted-foreground">Digite suas credenciais para acessar.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
+        <form method="post" onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs">E-mail</Label>
             <Input

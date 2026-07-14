@@ -6,6 +6,9 @@ import { supabaseAdmin } from '../lib/supabase/service-role';
 import { EvolutionWhatsAppProvider } from '../providers/whatsapp/EvolutionWhatsAppProvider';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { SecretsManager } from '../lib/encryption';
+import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+
+startOperationalHeartbeat('health_worker');
 
 logger.info('🩺 Health Monitor Worker iniciado e aguardando jobs...');
 
@@ -34,7 +37,7 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
       const baseUrl = inst.connection_mode === 'external' && inst.base_url ? inst.base_url : globalBaseUrl;
       const rawApiKey = inst.connection_mode === 'external' && inst.api_key ? inst.api_key : globalApiKey;
       const apiKey = SecretsManager.decrypt(rawApiKey);
-      
+
       const groupKey = `${baseUrl}|${apiKey}`;
 
       if (!providerGroups[groupKey]) {
@@ -53,11 +56,11 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
       try {
         // Fetch all instances from this Evolution API server
         const evoInstances = await provider.fetchAllInstances();
-        
+
         // Mapeia o array recebido para um formato fácil de ler
         // evoInstances é geralmente um array de objetos: [{ name: 'TESTE', connectionStatus: 'open' }]
         const statusMap: Record<string, string> = {};
-        
+
         if (Array.isArray(evoInstances)) {
           evoInstances.forEach(evo => {
             statusMap[evo.name] = evo.connectionStatus || evo.status || 'disconnected';
@@ -68,17 +71,17 @@ const healthWorker = new Worker(HEALTH_QUEUE_NAME, async (job: Job) => {
         for (const localInstance of instances) {
           const currentDbInst = dbInstances.find(i => i.instance_name === localInstance);
           const evoStatus = statusMap[localInstance] || 'disconnected';
-          
+
           let mappedStatus = 'disconnected';
           if (evoStatus === 'open' || evoStatus === 'connected') mappedStatus = 'connected';
           else if (evoStatus === 'connecting') mappedStatus = 'connecting';
-          
+
           if (currentDbInst && currentDbInst.status !== mappedStatus) {
             await supabaseAdmin
               .from('evolution_instances')
               .update({ status: mappedStatus, updated_at: new Date().toISOString() })
               .eq('instance_name', localInstance);
-            
+
             logger.info(`[HealthMonitor] 🔄 Instância '${localInstance}' atualizada: ${currentDbInst.status} -> ${mappedStatus}`);
             totalUpdated++;
           }

@@ -9,4 +9,12 @@ export const redisConnection = new Redis({
   port: redisPort,
   password: redisPassword,
   maxRetriesPerRequest: null,
+  retryStrategy: (times) => {
+    // Tenta reconectar a cada 5 segundos se falhar, mas sem travar a aplicação
+    return Math.min(times * 100, 5000);
+  }
+});
+
+redisConnection.on('error', (err) => {
+  console.warn('[Redis] Conexão falhou (provavelmente ambiente local):', err.message);
 });

@@ -1,8 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { getSupabasePublicConfig } from './config'
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const config = getSupabasePublicConfig()
+  if (!config) throw new Error('Configuração pública do Supabase indisponível.')
+
+  return createBrowserClient(config.url, config.key)
 }

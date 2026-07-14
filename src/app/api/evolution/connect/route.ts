@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redisConnection } from '@/lib/redis'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { getOrganizationMembership } from '@/lib/access-control'
+import { getOrganizationPlanContext } from '@/lib/plan-catalog'
+import { SecretsManager } from '@/lib/encryption'
+import { EvolutionWhatsAppProvider } from '@/providers/whatsapp/EvolutionWhatsAppProvider'
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Falha ao conectar'
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +20,10 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
+    const membership = await getOrganizationMembership(supabase, user.id)
+    if (!membership) return NextResponse.json({ error: 'Organização não autorizada' }, { status: 403 })
+    const planContext = await getOrganizationPlanContext(membership.organizationId)
+    if (!planContext.active) return NextResponse.json({ error: 'Plano inativo', upgrade_required: true }, { status: 403 })
 
     // --- KILL SWITCH CHECK ---
     const isBanned = await redisConnection.sismember('global:banned_users', user.id)
@@ -55,14 +67,10 @@ export async function POST(request: Request) {
       connectionMode = 'external'
     }
 
-    // --- PLAN LIMITS CHECK ---
-    const { data: userData } = await supabase.from('users').select('plan_name').eq('id', user.id).single()
-    const userPlan = userData?.plan_name || user.user_metadata?.plan_name || 'Lite'
-
     const { count: currentInstances } = await supabase
       .from('evolution_instances')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('organization_id', membership.organizationId)
 
     const { data: existingInstance } = await supabase
       .from('evolution_instances')
@@ -73,8 +81,7 @@ export async function POST(request: Request) {
 
     if (!isAdmin && !existingInstance) {
       const instancesCount = currentInstances || 0
-      
-      const instanceLimit = 5 // Limite global (Atualmente apenas 1 plano)
+      const instanceLimit = planContext.limits.whatsappInstances
 
       if (instancesCount >= instanceLimit) {
         return NextResponse.json({ error: `Limite atingido! Você só pode conectar até ${instanceLimit} instâncias.` }, { status: 403 })
@@ -83,8 +90,6 @@ export async function POST(request: Request) {
     // --------------------------
 
     // Initialize Evolution API client
-    const { EvolutionWhatsAppProvider } = require('@/providers/whatsapp/EvolutionWhatsAppProvider')
-    const { SecretsManager } = require('@/lib/encryption')
     const client = new EvolutionWhatsAppProvider(finalBaseUrl, finalApiKey)
 
     // Criptografa a API Key antes de salvar no banco se for externa
@@ -95,6 +100,7 @@ export async function POST(request: Request) {
       .from('evolution_instances')
       .upsert({
         user_id: user.id,
+        organization_id: membership.organizationId,
         instance_name: finalInstanceName,
         base_url: connectionMode === 'external' ? finalBaseUrl : null,
         api_key: apiKeyToSave,
@@ -111,8 +117,11 @@ export async function POST(request: Request) {
       // Monta a URL do Webhook usando o Host da requisição
       const host = request.headers.get('host');
       const protocol = host?.includes('localhost') || host?.match(/^[0-9.]+:[0-9]+$/) ? 'http' : 'https';
-      const webhookSecretToken = process.env.WEBHOOK_SECRET || '';
-      const webhookUrl = `${protocol}://${host}/api/evolution/webhook${webhookSecretToken ? `?token=${webhookSecretToken}` : ''}`;
+      const webhookUrl = `${protocol}://${host}/api/evolution/webhook`;
+      const webhookToken = (process.env.WEBHOOK_SECRETS || process.env.WEBHOOK_SECRET || '')
+        .split(',')
+        .map((secret) => secret.trim())
+        .find(Boolean);
 
       // Busca a chave HMAC atual do sistema para enviar no header do webhook
       const { data: secSettings } = await supabaseAdmin
@@ -120,25 +129,25 @@ export async function POST(request: Request) {
         .select('hmac_secret, require_signature')
         .limit(1)
         .single();
-      
+
       let hmacSecretToPass: string | undefined = undefined;
       if (secSettings?.require_signature && secSettings?.hmac_secret) {
         try {
           hmacSecretToPass = SecretsManager.decrypt(secSettings.hmac_secret);
-        } catch (e) {}
+        } catch {}
       }
 
       // 2. Create the instance in Evolution API
       // Evolution v2.2.1 retorna o QR Code AQUI na criação se passarmos qrcode: true
-      const createData = await client.createInstance(finalInstanceName, webhookUrl, hmacSecretToPass)
+      const createData = await client.createInstance(finalInstanceName, webhookUrl, hmacSecretToPass, webhookToken)
       if (createData?.qrcode?.base64) {
          qrCodeValue = createData.qrcode.base64;
       } else if (createData?.hash?.qrcode) {
          // Fallback Evolution v1.x ou v2.0
          qrCodeValue = createData.hash.qrcode;
       }
-    } catch (e: any) {
-      console.log('Instance creation note (already exists?):', e.message)
+    } catch (error: unknown) {
+      console.log('Instance creation note (already exists?):', errorMessage(error))
     }
 
     // 3. Se não pegou no create, solicita via GET (connect endpoint)
@@ -149,14 +158,15 @@ export async function POST(request: Request) {
         try {
           await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos
           const qrData = await client.getQR(finalInstanceName);
-          qrCodeValue = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || qrData?.qrcode || null;
-          
+          const nestedQrCode = typeof qrData.qrcode === 'object' ? qrData.qrcode?.base64 : qrData.qrcode
+          qrCodeValue = qrData.base64 || nestedQrCode || qrData.code || null;
+
           if (qrCodeValue && qrCodeValue !== '[object Object]') {
             console.log('QR Code capturado com sucesso!');
             break;
           }
-        } catch (e: any) {
-          console.log(`Tentativa ${i+1} falhou:`, e.message);
+        } catch (error: unknown) {
+          console.log(`Tentativa ${i+1} falhou:`, errorMessage(error));
         }
       }
     }
@@ -178,15 +188,15 @@ export async function POST(request: Request) {
       ip_address: getIpFromRequest(request)
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      base64: qrCodeValue, 
-      instanceName: finalInstanceName 
+    return NextResponse.json({
+      success: true,
+      base64: qrCodeValue,
+      instanceName: finalInstanceName
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Connect Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Falha ao conectar' },
+      { error: errorMessage(error) },
       { status: 500 }
     )
   }

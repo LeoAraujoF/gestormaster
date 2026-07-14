@@ -21,26 +21,28 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { ClickableKPI, BaseGrowthChart, ClientsByStatusChart, ClientsByPlanChart } from "./components/client-widgets"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
+import { usePlan } from '@/components/providers/plan-provider'
 
 type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "new" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
 
 export default function ClientesPage() {
+  const planContext = usePlan()
   const [clients, setClients] = useState<EnrichedClient[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [metrics, setMetrics] = useState<ClientsManagementMetrics | null>(null)
-  
+
   // Modals
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isRenewDialogOpen, setIsRenewDialogOpen] = useState(false)
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false)
-  
+
   const [editingClient, setEditingClient] = useState<any | null>(null)
   const [deletingClient, setDeletingClient] = useState<any | null>(null)
   const [renewingClient, setRenewingClient] = useState<any | null>(null)
   const [promoClient, setPromoClient] = useState<any | null>(null)
-  
+
   // Seleção e Bulk
   const [selectedClients, setSelectedClients] = useState<string[]>([])
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
@@ -50,7 +52,7 @@ export default function ClientesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all")
-  
+
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterService, setFilterService] = useState<string>("all")
   const [filterDateFrom, setFilterDateFrom] = useState<string>("")
@@ -135,25 +137,37 @@ export default function ClientesPage() {
 
   const filteredClients = clients.filter((c) => {
     const q = searchTerm.toLowerCase()
-    const matchesSearch = c.name.toLowerCase().includes(q) 
-      || (c.phone && c.phone.includes(searchTerm))
+
+    // Helper to sanitize phone for search (only digits)
+    const cleanPhone = (p: string) => p.replace(/\D/g, '')
+    const qPhone = cleanPhone(searchTerm)
+    // Se a busca tiver 55 no começo, tentamos buscar também sem o 55 para ser mais flexível
+    const qPhoneLenient = qPhone.startsWith('55') ? qPhone.substring(2) : qPhone
+    const cPhone = c.phone ? cleanPhone(c.phone) : ''
+
+    const matchesSearch = c.name.toLowerCase().includes(q)
+      || (qPhoneLenient.length > 0 && cPhone.includes(qPhoneLenient))
       || (c.id.includes(q))
       || (c.observation && c.observation.toLowerCase().includes(q))
-      || (c.client_services && c.client_services.some((cs:any) => cs.services?.name.toLowerCase().includes(q)))
+      || (c.client_services && c.client_services.some((cs:any) =>
+            cs.services?.name.toLowerCase().includes(q) ||
+            (cs.username && cs.username.toLowerCase().includes(q)) ||
+            (cs.password && cs.password.toLowerCase().includes(q))
+         ))
 
     let matchesStatus = true
     if (filterStatus !== 'all') {
       matchesStatus = c.status === filterStatus
     }
-    
+
     const matchesService = filterService === 'all' || (c.client_services && c.client_services.some((cs: any) => cs.service_id === filterService))
-    
+
     let matchesDate = true
     if (filterDateFrom || filterDateTo) {
       if (!c.due_date) matchesDate = false
-      else { 
+      else {
         if (filterDateFrom && c.due_date < filterDateFrom) matchesDate = false
-        if (filterDateTo && c.due_date > filterDateTo) matchesDate = false 
+        if (filterDateTo && c.due_date > filterDateTo) matchesDate = false
       }
     }
 
@@ -256,15 +270,40 @@ export default function ClientesPage() {
     })
     if (!ok) return
     let sent = 0, failed = 0
+    const recentContacts: Array<{ client: any; lastContactAt: string | null }> = []
     for (const client of targets) {
       try {
         const res = await fetch("/api/evolution/send-instant", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ clientId: client.id, ruleId: quickMessage.id }),
         })
+        const data = await res.json()
+        if (res.status === 409 && data.requires_confirmation) {
+          recentContacts.push({ client, lastContactAt: data.last_contact_at })
+          continue
+        }
         if (!res.ok) throw new Error()
         sent++
       } catch { failed++ }
+    }
+    if (recentContacts.length > 0) {
+      const latest = recentContacts.map((item) => item.lastContactAt).filter(Boolean).sort().at(-1)
+      const override = await confirm({
+        title: `${recentContacts.length} cliente(s) contatado(s) recentemente`,
+        description: `O contato mais recente foi ${latest ? new Date(latest).toLocaleString('pt-BR') : 'nas últimas 24 horas'}. Deseja enviar mesmo assim?`,
+      })
+      if (override) {
+        for (const item of recentContacts) {
+          try {
+            const res = await fetch("/api/evolution/send-instant", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ clientId: item.client.id, ruleId: quickMessage.id, confirmRecentContact: true }),
+            })
+            if (!res.ok) throw new Error()
+            sent++
+          } catch { failed++ }
+        }
+      }
     }
     setSelectedClients([])
     if (failed === 0) toast.success(`${sent} mensagens enviadas.`)
@@ -296,9 +335,10 @@ export default function ClientesPage() {
   }
 
   const openProfile = async (client: EnrichedClient) => {
-    setProfileClient(client)
     setIsProfileLoading(true)
     try {
+      const services = await fetchClientServices(client.id)
+      setProfileClient({ ...client, client_services: services })
       const { data } = await supabase.from('payments').select('*').eq('client_id', client.id).order('created_at', { ascending: false })
       setProfilePayments(data || [])
     } catch (e) { console.error(e) } finally { setIsProfileLoading(false) }
@@ -339,7 +379,7 @@ export default function ClientesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
           <h1 className="text-[19px] font-semibold tracking-[-0.02em]">Gestão de Clientes</h1>
-          <span className="num rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">{clients.length}</span>
+          <span className="num rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">{clients.length}{planContext.limits.clients === null ? '' : ` / ${planContext.limits.clients}`}</span>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => exportCSV(sortedClients)} className="h-8 gap-1.5 text-xs">
@@ -347,8 +387,9 @@ export default function ClientesPage() {
           </Button>
           <Button size="sm" onClick={() => {
             if (services.length === 0) { toast.warning("Cadastre um Serviço primeiro."); return }
+            if (planContext.limits.clients !== null && clients.length >= planContext.limits.clients) { toast.error(`Limite de ${planContext.limits.clients} clientes atingido no plano ${planContext.plan}.`); return }
             setEditingClient(null); setIsDialogOpen(true)
-          }} className="h-8 gap-1.5 text-xs">
+          }} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="h-8 gap-1.5 text-xs">
             <Plus className="size-3.5" /> Adicionar cliente
           </Button>
         </div>
@@ -386,7 +427,7 @@ export default function ClientesPage() {
       {/* Tabela de Gestão */}
       <div className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Carteira de Clientes</h2>
-        
+
         {/* Busca + segmentados + filtros */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px] flex-1">
@@ -395,7 +436,7 @@ export default function ClientesPage() {
           </div>
           <div className="flex items-center gap-0.5 overflow-x-auto rounded-md bg-secondary p-0.5">
             {[
-              { key: "all", label: "Todos" }, { key: "new", label: "Novos do Mês" }, { key: "7days", label: "Vencem em 7d" }, 
+              { key: "all", label: "Todos" }, { key: "new", label: "Novos do Mês" }, { key: "7days", label: "Vencem em 7d" },
               { key: "suspended", label: "Suspensos" }, { key: "canceled", label: "Cancelados" }
             ].map((s) => (
               <button key={s.key} onClick={() => setQuickFilter(s.key as QuickFilter)}
@@ -520,9 +561,11 @@ export default function ClientesPage() {
                         <TableCell>
                           <div className="flex flex-col gap-0.5">
                             {client.client_services?.slice(0,1).map((cs: any) => (
-                              <span key={cs.service_id} className="text-[11px] text-foreground font-medium">{cs.services?.name}</span>
+                              <span key={cs.service_id} className="text-[11px] text-foreground font-medium">
+                                {cs.services?.name} {client.screens ? ` · ${client.screens} tela${client.screens > 1 ? 's' : ''}` : ''}
+                              </span>
                             ))}
-                            {(!client.client_services || client.client_services.length === 0) && <span className="text-[10px] text-muted-foreground">Nenhum</span>}
+                            {(!client.client_services || client.client_services.length === 0) && <span className="text-[10px] text-muted-foreground">Nenhum {client.screens ? ` · ${client.screens} tela${client.screens > 1 ? 's' : ''}` : ''}</span>}
                             <span className="text-[10px] text-muted-foreground">{client.days_as_client} dias na base</span>
                           </div>
                         </TableCell>
@@ -612,7 +655,7 @@ export default function ClientesPage() {
                   <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-secondary text-secondary-foreground">{profileClient.days_as_client} dias na base</span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border border-border bg-muted p-3">
                   <p className="microlabel text-[9px]">LTV Acumulado</p>
@@ -623,6 +666,31 @@ export default function ClientesPage() {
                   <p className="num mt-1 text-[16px] font-semibold text-foreground">{profilePayments.length}</p>
                 </div>
               </div>
+
+              {/* Serviços e Acessos */}
+              {profileClient.client_services && profileClient.client_services.length > 0 && (
+                <div className="rounded-lg border border-border bg-card p-3 space-y-3 mt-4">
+                  <p className="microlabel mb-1">Serviços Contratados</p>
+                  {profileClient.client_services.map((cs: any, idx: number) => (
+                    <div key={idx} className="flex flex-col gap-1 text-sm border-b border-border pb-2 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-foreground">{cs.services?.name || 'Serviço'}</span>
+                        <span className="text-xs text-muted-foreground">{profileClient.screens || 1} {profileClient.screens === 1 ? 'tela' : 'telas'}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Usuário</p>
+                          <p className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground inline-block mt-0.5 select-all">{cs.username || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Senha</p>
+                          <p className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground inline-block mt-0.5 select-all">{cs.password || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div>
                 <p className="microlabel mb-2">Histórico Financeiro</p>

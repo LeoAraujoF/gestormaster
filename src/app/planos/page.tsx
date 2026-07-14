@@ -1,299 +1,124 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, QrCode, Copy, Check, LayoutDashboard, LogOut } from "lucide-react"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Copy, LayoutDashboard, Loader2, LockKeyhole, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
+import type { PlanCatalogItem, PlanId } from '@/lib/plan-types'
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
+type CheckoutPlan = PlanCatalogItem & { checkout: { stripe: boolean; pix: boolean; affiliateCredit: boolean } }
+type PayMethod = 'pix' | 'card' | 'credit'
 
-type PayMethod = "pix" | "card" | "credit"
-
-const PLAN_PRICE = 20
-const FEATURES: { label: string; value: string; money?: boolean }[] = [
-  { label: "Gestão de clientes", value: "Ilimitada" },
-  { label: "Conexões WhatsApp", value: "3 números" },
-  { label: "Automação de cobrança", value: "Ilimitada" },
-  { label: "Anti-ban / aquecimento", value: "Incluso", money: true },
-  { label: "Disparos em massa", value: "Incluso" },
-]
+const PLAN_FEATURES: Record<PlanId, string[]> = {
+  starter: ['Até 100 clientes', '1 WhatsApp conectado', 'Painel e financeiro básico', 'Automação básica', 'Promoções'],
+  pro: ['Até 500 clientes', '2 WhatsApps conectados', 'Cobrança Inteligente e Autoatendimento', 'Analytics e Portal do Cliente', 'Promoções'],
+  master: ['Clientes ilimitados', '3 WhatsApps conectados', 'Todos os recursos do Pro', 'GestorMaster Intelligence', 'Revendas, API e Promoções'],
+}
 
 export default function PlanosPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [pixData, setPixData] = useState<{ qr_code: string; qr_image_url: string } | null>(null)
-  const [isCopied, setIsCopied] = useState(false)
-  const [affiliateBalance, setAffiliateBalance] = useState<number | null>(null)
-  const [method, setMethod] = useState<PayMethod>("pix")
-  const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null)
-
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
-  const supabase = createClient()
+  const [plans, setPlans] = useState<CheckoutPlan[]>([])
+  const [currentPlan, setCurrentPlan] = useState<PlanId | null>(null)
+  const [selectedId, setSelectedId] = useState<PlanId>('pro')
+  const [method, setMethod] = useState<PayMethod>('pix')
+  const [affiliateBalance, setAffiliateBalance] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [pixData, setPixData] = useState<{ qr_code: string; qr_image_url: string } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setPlanExpiresAt(user.user_metadata?.plan_expires_at || null)
-        supabase.from('affiliate_earnings').select('amount, status').eq('referrer_id', user.id).then(({ data }) => {
-          if (data) {
-            let disponivel = 0
-            data.forEach(e => {
-              if (e.status === 'available') disponivel += Number(e.amount)
-              if (e.status === 'paid' && Number(e.amount) < 0) disponivel += Number(e.amount)
-            })
-            setAffiliateBalance(disponivel)
-          }
-        })
+    let active = true
+    void Promise.all([
+      fetch('/api/plans').then((response) => response.json()),
+      fetch('/api/entitlements', { cache: 'no-store' }).then((response) => response.ok ? response.json() : null),
+      supabase.auth.getUser(),
+    ]).then(async ([catalog, entitlement, auth]) => {
+      if (!active) return
+      const loadedPlans = (catalog.plans || []) as CheckoutPlan[]
+      setPlans(loadedPlans)
+      if (entitlement?.plan) setCurrentPlan(entitlement.plan as PlanId)
+      const requested = new URLSearchParams(window.location.search).get('plan') as PlanId | null
+      if (requested && loadedPlans.some((plan) => plan.id === requested)) setSelectedId(requested)
+      if (auth.data.user) {
+        const { data } = await supabase.from('affiliate_earnings').select('amount,status').eq('referrer_id', auth.data.user.id)
+        if (active) setAffiliateBalance((data || []).reduce((total, item) => total + (item.status === 'available' || (item.status === 'paid' && Number(item.amount) < 0) ? Number(item.amount) : 0), 0))
       }
-    })
+    }).catch(() => toast.error('Não foi possível carregar os planos')).finally(() => active && setLoading(false))
+    return () => { active = false }
   }, [supabase])
 
-  // --- Stripe (cartão) ---
-  const handleCardCheckout = async () => {
-    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || "price_1TjKpNDhR1gtdDDjGOYez8LT"
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId, planName: "Gestor Pro" })
-    })
-    if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com a operadora de pagamentos")
-    const data = await res.json()
-    if (!data.url) throw new Error("URL de checkout inválida.")
-    window.location.href = data.url
-  }
+  const selected = plans.find((plan) => plan.id === selectedId) || null
+  const price = selected?.monthlyPriceCents == null ? null : selected.monthlyPriceCents / 100
+  const hasCredit = price != null && affiliateBalance >= price
+  const methods = useMemo(() => selected ? [
+    { id: 'pix' as const, label: 'PIX', hint: 'Ativação após a confirmação do gateway', enabled: selected.checkout.pix },
+    { id: 'card' as const, label: 'Cartão', hint: 'Assinatura recorrente segura pela Stripe', enabled: selected.checkout.stripe },
+    { id: 'credit' as const, label: 'Saldo de afiliado', hint: `Saldo disponível: ${money(affiliateBalance)}`, enabled: selected.checkout.affiliateCredit && hasCredit },
+  ] : [], [affiliateBalance, hasCredit, selected])
+  const effectiveMethod = methods.some((item) => item.id === method && item.enabled) ? method : methods.find((item) => item.enabled)?.id || method
 
-  // --- PIXGO (PIX instantâneo) ---
-  const handlePixCheckout = async () => {
-    const res = await fetch('/api/pixgo/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: PLAN_PRICE, planName: "Gestor Pro" })
-    })
-    if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com o gateway de PIX")
-    const data = await res.json()
-    if (!data.qr_code || !data.qr_image_url) throw new Error("Dados do PIX inválidos recebidos da API.")
-    setPixData(data)
-  }
-
-  // --- Saldo de afiliado ---
-  const handleCreditCheckout = async () => {
-    const res = await fetch('/api/afiliados/converter', { method: 'POST' })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || "Erro ao converter saldo")
-    toast.success("Plano ativado com sucesso usando R$ 20 do seu saldo!")
-    router.push("/")
-  }
-
-  const handlePay = async () => {
-    setIsSubmitting(true)
+  const pay = async () => {
+    if (!selected?.isPurchasable || price == null) return
+    setSubmitting(true)
     try {
-      if (method === "pix") await handlePixCheckout()
-      else if (method === "card") await handleCardCheckout()
-      else await handleCreditCheckout()
-    } catch (error: any) {
-      toast.error(error.message)
-    } finally {
-      setIsSubmitting(false)
-    }
+      const endpoint = effectiveMethod === 'card' ? '/api/stripe/checkout' : effectiveMethod === 'pix' ? '/api/pixgo/checkout' : '/api/afiliados/converter'
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId: selected.id }) })
+      if (!response.ok) throw new Error((await response.text()) || 'Não foi possível iniciar o pagamento')
+      const data = await response.json()
+      if (effectiveMethod === 'card') {
+        if (!data.url) throw new Error('Checkout indisponível')
+        window.open(data.url, '_self')
+      } else if (effectiveMethod === 'pix') {
+        setPixData({ qr_code: data.qr_code, qr_image_url: data.qr_image_url })
+      } else {
+        toast.success('Plano ativado com o saldo de afiliado')
+        router.push('/painel')
+        router.refresh()
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao processar pagamento')
+    } finally { setSubmitting(false) }
   }
 
-  const handleCopyPix = () => {
-    if (pixData?.qr_code) {
-      navigator.clipboard.writeText(pixData.qr_code)
-      setIsCopied(true)
-      toast.success("Código PIX copiado com sucesso!")
-      setTimeout(() => setIsCopied(false), 2000)
-    }
-  }
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-6 animate-spin" /></div>
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
+  return <div className="min-h-screen bg-background px-4 py-10">
+    <div className="mx-auto max-w-6xl">
+      <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planos</p><h1 className="mt-1 text-3xl font-bold">Escolha a estrutura ideal para sua operação</h1><p className="mt-2 text-sm text-muted-foreground">Os limites e recursos são aplicados por organização.</p></div><div className="flex gap-1"><Button variant="ghost" size="sm" onClick={() => router.push('/painel')}><LayoutDashboard className="mr-2 size-4" />Painel</Button><Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}><LogOut className="mr-2 size-4" />Sair</Button></div></div>
 
-  const hasCredit = affiliateBalance !== null && affiliateBalance >= PLAN_PRICE
-  const creditMonths = affiliateBalance ? Math.floor(affiliateBalance / PLAN_PRICE) : 0
-
-  // Dias restantes do teste grátis (banner 8a) — só quando há data de expiração
-  const trialDaysLeft = planExpiresAt
-    ? Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86_400_000)
-    : null
-
-  const methods: { key: PayMethod; label: string; hint: React.ReactNode; show: boolean }[] = [
-    { key: "pix", label: "PIX", hint: "ativação imediata · QR code na próxima etapa", show: true },
-    { key: "card", label: "Cartão de crédito", hint: "renovação automática via Stripe", show: true },
-    {
-      key: "credit",
-      label: "Saldo de afiliado",
-      hint: (
-        <>
-          você tem <span className="num font-semibold text-money">R$ {affiliateBalance?.toFixed(2).replace(".", ",") ?? "0,00"}</span>
-          {creditMonths > 0 && <> — cobre {creditMonths} {creditMonths === 1 ? "mês" : "meses"}</>}
-        </>
-      ),
-      show: hasCredit,
-    },
-  ]
-
-  return (
-    <div className="flex min-h-screen flex-col items-center bg-background px-4 py-10">
-      {/* Barra superior */}
-      <div className="mb-8 flex w-full max-w-[840px] items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-[22%] bg-primary">
-            <span className="font-mono text-[11px] font-bold leading-none text-primary-foreground">G</span>
-          </div>
-          <span className="text-[12.5px] font-semibold tracking-tight">Gestor</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="h-8 gap-1.5 text-xs text-muted-foreground">
-            <LayoutDashboard className="size-3.5" /> Já paguei
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 gap-1.5 text-xs text-muted-foreground">
-            <LogOut className="size-3.5" /> Sair
-          </Button>
-        </div>
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        {plans.map((plan) => {
+          const selectedPlan = plan.id === selectedId
+          const current = plan.id === currentPlan
+          return <button key={plan.id} onClick={() => setSelectedId(plan.id)} className={cn('relative rounded-xl border bg-card p-5 text-left transition-all', selectedPlan ? 'border-primary ring-1 ring-primary' : 'hover:border-foreground/30')}>
+            {current && <span className="absolute right-4 top-4 rounded-full bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">Plano atual</span>}
+            <h2 className="text-xl font-semibold">{plan.name}</h2><p className="mt-2 min-h-10 text-sm text-muted-foreground">{plan.description}</p>
+            <p className="mt-5 text-3xl font-bold">{plan.monthlyPriceCents == null ? 'Preço a definir' : money(plan.monthlyPriceCents / 100)}{plan.monthlyPriceCents != null && <span className="text-sm font-normal text-muted-foreground">/mês</span>}</p>
+            <ul className="mt-5 space-y-2">{PLAN_FEATURES[plan.id].map((feature) => <li key={feature} className="flex gap-2 text-sm"><Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />{feature}</li>)}</ul>
+          </button>
+        })}
       </div>
 
-      <div className="grid w-full max-w-[840px] items-start gap-4 md:grid-cols-2">
-        {/* Card resumo do plano (8a, coluna esquerda) */}
-        <div className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-[30px] items-center justify-center rounded-md bg-primary">
-                <span className="font-mono text-[13px] font-bold leading-none text-primary-foreground">G</span>
-              </div>
-              <p className="text-[14px] font-semibold tracking-[-0.01em]">Gestor Pro</p>
-            </div>
-            <span className="microlabel rounded bg-warning-bg px-1.5 py-1 !text-warning-fg">Oferta limitada</span>
-          </div>
-
-          <p className="num mt-5 text-[28px] font-semibold tracking-[-0.02em]">
-            R$ {PLAN_PRICE}<span className="text-sm font-normal text-muted-foreground"> /mês</span>
-          </p>
-          <p className="text-[10.5px] text-muted-foreground">cancele quando quiser</p>
-
-          <div className="mt-4 divide-y divide-border border-t border-border text-xs">
-            {FEATURES.map((f) => (
-              <div key={f.label} className="flex items-center justify-between py-2.5">
-                <span className="text-muted-foreground">{f.label}</span>
-                <span className={cn("font-semibold", f.money ? "text-money" : "text-foreground")}>{f.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Coluna direita: banner de trial + pagamento (8a) */}
-        <div className="space-y-4">
-          {trialDaysLeft !== null && (
-            <div className="flex items-start gap-2.5 rounded-md border border-warning-border bg-warning-bg px-3.5 py-3 text-xs text-warning-fg">
-              <span className="status-dot mt-1 bg-warning" />
-              <p>
-                {trialDaysLeft > 0 ? (
-                  <>Seu teste grátis termina em <span className="num font-semibold">{trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"}</span> — seus dados ficam salvos.</>
-                ) : (
-                  <>Seu teste grátis terminou — seus dados ficam salvos.</>
-                )}
-              </p>
-            </div>
-          )}
-
-          <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-[13px] font-semibold">Forma de pagamento</p>
-            <div className="mt-3 space-y-2">
-              {methods.filter((m) => m.show).map((m) => (
-                <button
-                  key={m.key}
-                  onClick={() => setMethod(m.key)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors",
-                    method === m.key ? "border-primary" : "border-input hover:bg-muted"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
-                      method === m.key ? "border-primary" : "border-input"
-                    )}
-                  >
-                    {method === m.key && <span className="size-1.5 rounded-full bg-primary" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold">{m.label}</span>
-                    <span className="block text-[11px] text-muted-foreground">{m.hint}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <Button onClick={handlePay} disabled={isSubmitting} className="mt-4 h-10 w-full">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" /> Processando…
-                </>
-              ) : (
-                <>Ativar por R$ {PLAN_PRICE}/mês</>
-              )}
-            </Button>
-            <p className="mt-2.5 text-center text-[11px] text-muted-foreground">
-              Pagamento seguro · suporte via WhatsApp
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* MODAL DO PIX */}
-      <Dialog open={pixData !== null} onOpenChange={(open) => !open && setPixData(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[14px] font-semibold">Pagamento via PIX</DialogTitle>
-            <DialogDescription className="text-xs">
-              Escaneie o QR Code com o app do seu banco ou copie o código.
-            </DialogDescription>
-          </DialogHeader>
-
-          {pixData && (
-            <div className="flex flex-col items-center space-y-4 py-2">
-              <div className="rounded-lg border border-border bg-white p-3">
-                <img src={pixData.qr_image_url} alt="QR Code PIX" className="h-44 w-44 object-contain" />
-              </div>
-
-              <div className="w-full space-y-1.5">
-                <p className="microlabel text-center">PIX copia e cola</p>
-                <div className="flex items-center gap-2">
-                  <div className="num line-clamp-2 flex-1 break-all rounded-md bg-secondary p-2.5 text-[10px] text-secondary-foreground">
-                    {pixData.qr_code}
-                  </div>
-                  <Button variant="outline" size="icon" className="h-auto shrink-0 px-3 py-3" onClick={handleCopyPix}>
-                    {isCopied ? <Check className="size-4 text-money" /> : <Copy className="size-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="w-full rounded-md border border-warning-border bg-warning-bg p-2.5 text-center text-xs text-warning-fg">
-                Após o pagamento, seu acesso será liberado em até 10 segundos.
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="sm:justify-between">
-            <Button variant="outline" onClick={() => setPixData(null)} className="sm:flex-1">
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                setPixData(null)
-                router.push("/")
-              }}
-              className="sm:flex-[1.4]"
-            >
-              Já paguei
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {selected && <div className="mx-auto mt-6 max-w-2xl rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between"><div><h2 className="font-semibold">Contratar {selected.name}</h2><p className="text-sm text-muted-foreground">O servidor confirma plano e valor antes de criar a cobrança.</p></div>{price != null && <strong>{money(price)}/mês</strong>}</div>
+        {!selected.isPurchasable || price == null ? <div className="mt-5 flex items-center gap-3 rounded-lg bg-muted p-4 text-sm text-muted-foreground"><LockKeyhole className="size-4" />Este plano está estruturado, mas o preço comercial ainda não foi ativado.</div> : <>
+          <div className="mt-5 grid gap-2 sm:grid-cols-3">{methods.map((item) => <button key={item.id} disabled={!item.enabled} onClick={() => setMethod(item.id)} className={cn('rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-40', effectiveMethod === item.id && item.enabled && 'border-primary bg-primary/5')}><span className="block text-sm font-semibold">{item.label}</span><span className="mt-1 block text-[11px] text-muted-foreground">{item.hint}</span></button>)}</div>
+          <Button className="mt-4 w-full" disabled={submitting || !methods.some((item) => item.id === effectiveMethod && item.enabled)} onClick={pay}>{submitting && <Loader2 className="mr-2 size-4 animate-spin" />}Contratar {selected.name}</Button>
+        </>}
+      </div>}
     </div>
-  )
+
+    <Dialog open={Boolean(pixData)} onOpenChange={(open) => !open && setPixData(null)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Pagamento via PIX</DialogTitle><DialogDescription>Escaneie o QR Code ou copie o código.</DialogDescription></DialogHeader>{pixData && <div className="flex flex-col items-center gap-4 py-2"><div className="rounded-lg border bg-white p-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={pixData.qr_image_url} alt="QR Code PIX" className="size-44" />
+    </div><div className="flex w-full gap-2"><div className="line-clamp-2 flex-1 break-all rounded-md bg-muted p-3 text-xs">{pixData.qr_code}</div><Button variant="outline" size="icon" onClick={() => { void navigator.clipboard.writeText(pixData.qr_code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>{copied ? <Check className="size-4" /> : <Copy className="size-4" />}</Button></div></div>}<DialogFooter><Button variant="outline" onClick={() => setPixData(null)}>Fechar</Button><Button onClick={() => router.push('/painel')}>Já paguei</Button></DialogFooter></DialogContent></Dialog>
+  </div>
 }
+
+function money(value: number) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) }

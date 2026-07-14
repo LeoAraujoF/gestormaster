@@ -3,21 +3,18 @@ import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { getAuthorizedOrganizationId } from '@/lib/access-control'
 import {
-  attachProviderPayment,
-  buildExternalReference,
-  createPixChargeDraft,
-  markChargeFailed,
+  createMercadoPagoPixCharge,
   type PixChargePurpose,
 } from '@/lib/pix-charges'
-
-/** Default: PIX dinâmico expira em 24h */
-const DEFAULT_EXPIRES_MINUTES = 24 * 60
+import { organizationHasCapability } from '@/lib/plan-catalog'
 
 export async function POST(req: Request) {
   try {
     let orgId: string | undefined
     let userId: string | undefined
+    let authenticatedByApiKey = false
 
     // 1. Autenticação híbrida (API key ou sessão)
     const authHeader = req.headers.get('authorization')
@@ -27,13 +24,20 @@ export async function POST(req: Request) {
       const hash = crypto.createHash('sha256').update(token).digest('hex')
       const { data: keyData } = await supabaseAdmin
         .from('api_keys')
-        .select('organization_id, user_id')
+        .select('organization_id')
         .eq('key_hash', hash)
         .single()
 
       if (keyData) {
+        authenticatedByApiKey = true
         orgId = keyData.organization_id
-        userId = keyData.user_id || keyData.organization_id
+        const { data: owner } = await supabaseAdmin
+          .from('organization_members')
+          .select('user_id')
+          .eq('organization_id', orgId)
+          .eq('role', 'owner')
+          .maybeSingle()
+        userId = owner?.user_id || orgId
         supabaseAdmin.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('key_hash', hash).then()
       }
     } else {
@@ -42,7 +46,7 @@ export async function POST(req: Request) {
         data: { user },
       } = await supabase.auth.getUser()
       if (user) {
-        orgId = (user.user_metadata?.organization_id as string) || user.id
+        orgId = await getAuthorizedOrganizationId(supabase, user.id) || undefined
         userId = user.id
       }
     }
@@ -52,6 +56,10 @@ export async function POST(req: Request) {
         { error: 'Não autorizado. Forneça um Bearer Token válido ou faça login no painel.' },
         { status: 401 }
       )
+    }
+    const requiredCapability = authenticatedByApiKey ? 'developer_api' : 'pix_manual'
+    if (!(await organizationHasCapability(orgId, requiredCapability))) {
+      return NextResponse.json({ error: authenticatedByApiKey ? 'A API está disponível somente no plano Master.' : 'Plano sem acesso ao PIX', upgrade_required: true }, { status: 403 })
     }
 
     const payload = await req.json()
@@ -92,164 +100,53 @@ export async function POST(req: Request) {
     if (client_id) {
       const { data: client } = await supabaseAdmin
         .from('clients')
-        .select('id, name, plan_value, user_id, phone')
+        .select('id, name, plan_value, user_id, phone, organization_id')
         .eq('id', client_id)
         .single()
 
-      if (!client) {
+      if (!client || (client.organization_id && client.organization_id !== orgId) || (!client.organization_id && client.user_id !== userId)) {
         return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
       }
       if (!planName) planName = client.name
     }
 
-    // Integração Mercado Pago (org ou user legado)
-    const { data: mpByOrg } = await supabaseAdmin
-      .from('integrations')
-      .select('credentials')
-      .eq('organization_id', orgId)
-      .eq('provider', 'mercadopago')
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let accessToken = (mpByOrg?.credentials?.access_token as string | undefined) || null
-
-    if (!accessToken && userId !== orgId) {
-      const { data: mpByUser } = await supabaseAdmin
-        .from('integrations')
-        .select('credentials')
-        .eq('organization_id', userId)
-        .eq('provider', 'mercadopago')
-        .eq('is_active', true)
-        .maybeSingle()
-      accessToken = (mpByUser?.credentials?.access_token as string | undefined) || null
-    }
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Integração com Mercado Pago não encontrada ou inativa' },
-        { status: 400 }
-      )
-    }
-    const expiresMinutes = Math.max(
-      5,
-      Math.min(60 * 24 * 7, parseInt(String(expires_minutes || DEFAULT_EXPIRES_MINUTES), 10) || DEFAULT_EXPIRES_MINUTES)
-    )
-    const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000)
-
-    // 2. Draft no ledger
-    const charge = await createPixChargeDraft({
-      organization_id: orgId,
-      user_id: userId,
-      client_id: client_id || null,
-      amount,
-      description: descricao || (purpose === 'renewal' ? `Renovação (${monthsToRenew} mês/es)` : 'Pagamento via Pix'),
-      phone: String(telefone_pagador).replace(/\D/g, ''),
-      instance_name,
-      purpose,
-      months_to_renew: monthsToRenew,
-      plan_name: planName,
-      expires_at: expiresAt.toISOString(),
-    })
-
-    const externalReference = buildExternalReference({
+    const centralizedCharge = await createMercadoPagoPixCharge({
       organizationId: orgId,
-      instanceName: instance_name,
-      phone: String(telefone_pagador).replace(/\D/g, ''),
-      purpose,
+      userId,
       clientId: client_id || null,
-      planName,
+      amount,
+      phone: String(telefone_pagador).replace(/\D/g, ''),
+      instanceName: instance_name,
       months: monthsToRenew,
-      chargeId: charge.id,
-    })
-
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
-    // 3. PIX dinâmico no Mercado Pago
-    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-        'X-Idempotency-Key': charge.id,
-      },
-      body: JSON.stringify({
-        transaction_amount: amount,
-        description: charge.description,
-        payment_method_id: 'pix',
-        date_of_expiration: expiresAt.toISOString(),
-        payer: {
-          email: 'pagamento@automacao.com',
-        },
-        external_reference: externalReference,
-        notification_url: `${appUrl}/api/webhooks/mercadopago?orgId=${orgId}`,
-        metadata: {
-          charge_id: charge.id,
-          purpose,
-          client_id: client_id || null,
-          months: monthsToRenew,
-        },
-      }),
-    })
-
-    const mpData = await mpResponse.json()
-
-    if (!mpResponse.ok) {
-      console.error('Erro MP:', mpData)
-      await markChargeFailed(charge.id, JSON.stringify(mpData))
-      return NextResponse.json(
-        { error: 'Falha ao processar pagamento no Mercado Pago', details: mpData },
-        { status: 500 }
-      )
-    }
-
-    const copia = mpData.point_of_interaction?.transaction_data?.qr_code || null
-    const qrBase64 = mpData.point_of_interaction?.transaction_data?.qr_code_base64 || null
-    const ticketUrl = mpData.point_of_interaction?.transaction_data?.ticket_url || null
-    // MP pode devolver expiração levemente diferente
-    const mpExpires = mpData.date_of_expiration || expiresAt.toISOString()
-
-    await attachProviderPayment(charge.id, {
-      provider_payment_id: String(mpData.id),
-      copia_e_cola: copia,
-      qr_code_base64: qrBase64,
-      ticket_url: ticketUrl,
-      external_reference: externalReference,
-      expires_at: mpExpires,
+      planName,
+      purpose,
+      description: descricao || undefined,
+      expiresMinutes: expires_minutes ? Number(expires_minutes) : undefined,
     })
 
     await logAudit({
       user_id: userId,
       action: 'pix.generate',
       resource: 'pix_charges',
-      resource_id: charge.id,
-      details: {
-        valor: amount,
-        telefone_pagador,
-        instance_name,
-        purpose,
-        client_id: client_id || null,
-        months: monthsToRenew,
-        provider_payment_id: mpData.id,
-        expires_at: mpExpires,
-      },
+      resource_id: centralizedCharge.id,
+      details: { valor: amount, client_id: client_id || null, purpose, provider_payment_id: centralizedCharge.provider_payment_id },
       ip_address: getIpFromRequest(req),
     })
 
     return NextResponse.json({
       success: true,
-      charge_id: charge.id,
-      pix_id: mpData.id,
+      charge_id: centralizedCharge.id,
+      pix_id: centralizedCharge.provider_payment_id,
       purpose,
-      status: 'pending',
-      amount,
-      months_to_renew: monthsToRenew,
-      expires_at: mpExpires,
-      copia_e_cola: copia,
-      qr_code_base64: qrBase64,
-      ticket_url: ticketUrl,
+      status: centralizedCharge.status,
+      amount: centralizedCharge.amount,
+      months_to_renew: centralizedCharge.months_to_renew,
+      expires_at: centralizedCharge.expires_at,
+      copia_e_cola: centralizedCharge.copia_e_cola,
+      qr_code_base64: centralizedCharge.qr_code_base64,
+      ticket_url: centralizedCharge.ticket_url,
     })
+
   } catch (error: any) {
     console.error('API Pix Error:', error)
     return NextResponse.json({ error: 'Erro interno', message: error.message }, { status: 500 })

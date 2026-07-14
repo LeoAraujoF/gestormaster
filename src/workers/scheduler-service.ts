@@ -4,6 +4,13 @@ import { supabaseAdmin } from '../lib/supabase/service-role';
 import { messageQueue, healthQueue, warmupQueue } from '../lib/queue';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { parseMessageTemplate } from '../lib/message-parser';
+import { prepareIntelligentCollectionData, scheduleIntelligentCollections } from '../lib/intelligent-collections';
+import { scheduleIntelligenceRuns } from '../lib/intelligence-service';
+import { captureAnalyticsSnapshots } from '../lib/analytics-service';
+import { createCoordinatedAlert, releaseDeferredContacts, reserveContact } from '../lib/contact-coordination';
+import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+
+startOperationalHeartbeat('scheduler');
 
 logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
@@ -11,7 +18,7 @@ logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 cron.schedule('*/5 * * * *', async () => {
   return runWithCorrelationId(undefined, undefined, async () => {
     logger.info(`[Scheduler] 🤖 Iniciando varredura principal (Automações & Health Monitor)... (${new Date().toISOString()})`);
-  
+
   try {
     const now = new Date();
 
@@ -19,13 +26,13 @@ cron.schedule('*/5 * * * *', async () => {
     // Utiliza o fuso horário padrão do Brasil (-03:00) como linha de corte
     const brazilDate = new Date(now.getTime() - (3 * 60 * 60 * 1000));
     const brTodayStr = brazilDate.toISOString().split('T')[0];
-    
+
     const { error: updateGlobalErr } = await supabaseAdmin
       .from('clients')
       .update({ status: 'vencido' })
       .eq('status', 'active')
       .lt('due_date', brTodayStr);
-      
+
     if (updateGlobalErr) {
       logger.error(`[Scheduler] Erro na varredura global de clientes vencidos: ${updateGlobalErr.message}`);
     }
@@ -44,18 +51,45 @@ cron.schedule('*/5 * * * *', async () => {
       logger.error(`[Scheduler] Erro na varredura global de clientes inativos: ${updateInactiveErr.message}`);
     }
 
+    // 0.2 Régua inteligente: só organizações que fizeram opt-in entram aqui.
+    const { data: intelligentSettings, error: intelligentSettingsError } = await supabaseAdmin
+      .from('collection_settings')
+      .select('organization_id, enabled');
+    if (intelligentSettingsError) throw new Error(`Erro ao buscar configurações inteligentes: ${intelligentSettingsError.message}`);
+    for (const setting of intelligentSettings || []) {
+      await prepareIntelligentCollectionData(setting.organization_id);
+    }
+    const intelligentOrganizations = new Set((intelligentSettings || []).filter((setting) => setting.enabled).map((setting) => setting.organization_id));
+    const intelligentQueued = await scheduleIntelligentCollections(now);
+    if (intelligentQueued) logger.info(`[Scheduler] ${intelligentQueued} despachos inteligentes enfileirados.`);
+    const deferredQueued = await releaseDeferredContacts(now);
+    if (deferredQueued) logger.info(`[Scheduler] ${deferredQueued} contatos adiados liberados.`);
+    try {
+      const intelligenceQueued = await scheduleIntelligenceRuns(now);
+      if (intelligenceQueued) logger.info(`[Scheduler] ${intelligenceQueued} relatórios Intelligence enfileirados.`);
+    } catch (intelligenceError: any) {
+      logger.warn(`[Scheduler] Intelligence indisponível: ${intelligenceError.message}`);
+    }
+
     // 1. Busca automações ativas
     const { data: automations, error: autoErr } = await supabaseAdmin
       .from('automations')
       .select('*')
       .eq('is_active', true)
       .in('alert_type', ['before_due', 'on_due', 'after_due']);
-      
+
     if (autoErr) throw new Error(`Erro ao buscar automações: ${autoErr.message}`);
+
+    const { data: advancedEntitlements } = await supabaseAdmin.from('organization_entitlements')
+      .select('organization_id').eq('is_active', true).in('plan', ['pro', 'master']);
+    const advancedAutomationOrganizations = new Set((advancedEntitlements || []).map((item) => item.organization_id));
 
     const processedUsersForOverdue = new Set<string>();
 
     for (const rule of automations || []) {
+      if (!rule.organization_id || !advancedAutomationOrganizations.has(rule.organization_id)) continue;
+      // A régua fixa não concorre com a inteligente após a adesão da organização.
+      if (rule.organization_id && intelligentOrganizations.has(rule.organization_id)) continue;
       if (!rule.send_time) continue;
 
       // 1.1 Busca metadados do usuário para obter o fuso horário (timezone)
@@ -75,13 +109,13 @@ cron.schedule('*/5 * * * *', async () => {
       const tzHours = parseInt(tzString.slice(1, 3)) || 3;
       const tzMins = parseInt(tzString.slice(4, 6)) || 0;
       const offsetMs = sign * (tzHours * 60 + tzMins) * 60000;
-      
+
       // Cria um Date "falso" onde a hora UTC dele é na verdade a hora local do usuário
       const localDate = new Date(now.getTime() + offsetMs);
-      
+
       const localNowMins = localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
       const localTodayStr = localDate.toISOString().split('T')[0];
-      
+
       const [h, m] = rule.send_time.split(':').map(Number);
       const ruleMins = h * 60 + m;
 
@@ -102,26 +136,26 @@ cron.schedule('*/5 * * * *', async () => {
         targetDateObj.setUTCDate(targetDateObj.getUTCDate() - offset);
       }
       // Se for 'on_due', 'renewal', 'promotion' ou 'quick_message', a targetDateObj continua sendo 'hoje local'
-      
+
       const targetDateStr = targetDateObj.toISOString().split('T')[0];
 
       // Busca os clientes que possuem esse vencimento
       let query = supabaseAdmin.from('clients')
         .select('*')
         .eq('due_date', targetDateStr);
-        
+
       if (rule.alert_type === 'after_due') {
         query = query.in('status', ['active', 'vencido']);
       } else {
         query = query.eq('status', 'active');
       }
-        
+
       if (rule.organization_id) {
         query = query.eq('organization_id', rule.organization_id);
       } else {
         query = query.eq('user_id', rule.user_id);
       }
-      
+
       const { data: clients, error: clientErr } = await query;
       if (clientErr || !clients || clients.length === 0) continue;
 
@@ -129,13 +163,13 @@ cron.schedule('*/5 * * * *', async () => {
       let instanceQuery = supabaseAdmin.from('evolution_instances')
         .select('*')
         .eq('status', 'connected');
-        
+
       if (rule.organization_id) {
         instanceQuery = instanceQuery.eq('organization_id', rule.organization_id);
       } else {
         instanceQuery = instanceQuery.eq('user_id', rule.user_id);
       }
-      
+
       const { data: instances } = await instanceQuery.limit(1);
       if (!instances || instances.length === 0) {
         logger.warn(`[Scheduler] ⚠️ Regra ${rule.id}: Nenhuma instância WhatsApp conectada para disparar.`);
@@ -155,35 +189,51 @@ cron.schedule('*/5 * * * *', async () => {
           .eq('automation_id', rule.id)
           .gte('created_at', `${localTodayStr}T00:00:00Z`)
           .limit(1);
-          
+
         if (historyCheck && historyCheck.length > 0) continue;
 
         // Construir a mensagem dinâmica com Spintax e Variáveis Duplas
         const finalMsg = parseMessageTemplate(rule.message_template || '', client, userMeta);
 
-        // Registra o Histórico como Pending
-        const historyData: any = {
-          client_id: client.id,
-          automation_id: rule.id,
-          status: 'pending',
-          message_content: finalMsg,
-          scheduled_at: now.toISOString(),
-          user_id: rule.user_id
-        };
-        if (rule.organization_id) historyData.organization_id = rule.organization_id;
+        if (!rule.organization_id) {
+          logger.warn(`[Scheduler] Regra ${rule.id} sem organização não pode usar coordenação de contato.`);
+          continue;
+        }
+        const reservation = await reserveContact({
+          organizationId: rule.organization_id,
+          clientId: client.id,
+          contactDate: localTodayStr,
+          timezone: tzString,
+          category: 'billing',
+          source: 'legacy_automation',
+          sourceId: rule.id,
+          requestedBy: rule.user_id,
+          automationId: rule.id,
+          messageContent: finalMsg,
+        });
+        if (!reservation.reservationId || !['reserved', 'idempotent'].includes(reservation.decision)) continue;
 
-        const { data: insertedAlert, error: insertErr } = await supabaseAdmin
-          .from('alert_history')
-          .insert(historyData)
-          .select()
-          .single();
-
-        if (insertErr) {
-          logger.error(`[Scheduler] ❌ Erro ao criar histórico de alerta para ${client.id}: ${insertErr.message}`);
+        let insertedAlertId: string;
+        try {
+          insertedAlertId = await createCoordinatedAlert({
+            reservationId: reservation.reservationId,
+            organizationId: rule.organization_id,
+            userId: rule.user_id,
+            clientId: client.id,
+            automationId: rule.id,
+            messageContent: finalMsg,
+            origin: 'legacy_automation',
+            category: 'billing',
+            decision: reservation.decision,
+            reason: reservation.reason,
+            scheduledAt: now.toISOString(),
+          });
+        } catch (insertErr: any) {
+          logger.error(`[Scheduler] Erro ao criar histórico coordenado para ${client.id}: ${insertErr.message}`);
           continue;
         }
 
-        if (insertedAlert) {
+        if (insertedAlertId) {
           jobsToQueue.push({
             name: 'send-automated-message',
             data: {
@@ -194,7 +244,8 @@ cron.schedule('*/5 * * * *', async () => {
               apiKey: instance.api_key,
               instanceName: instance.instance_name,
               connectionMode: instance.connection_mode,
-              alertHistoryId: insertedAlert.id,
+              alertHistoryId: insertedAlertId,
+              contactReservationId: reservation.reservationId,
               ruleId: rule.id,
               userId: rule.user_id,
               organizationId: rule.organization_id,
@@ -219,12 +270,28 @@ cron.schedule('*/5 * * * *', async () => {
     await healthQueue.add('sync-instances', { timestamp: Date.now(), correlationId: logger.bindings()?.correlationId }, {
       removeOnComplete: true,
     });
-    
+
     logger.info('[Scheduler] ✅ Varredura principal (Automações e Health) concluída.');
 
   } catch (error: any) {
     logger.error(`[Scheduler] ❌ Erro na rotina de agendamento principal: ${error.message}`);
   }
+  });
+});
+
+// --- Snapshot executivo e projeções da Fase 7 (aos 15 minutos de cada hora) ---
+// A unicidade diária faz a execução ocorrer às 00h15 locais e também recuperar
+// automaticamente o snapshot caso o scheduler estivesse indisponível nesse horário.
+cron.schedule('15 * * * *', async () => {
+  return runWithCorrelationId(undefined, undefined, async () => {
+    try {
+      const result = await captureAnalyticsSnapshots(new Date());
+      if (result.captured || result.forecasts) {
+        logger.info(`[Scheduler] Analytics diário: ${result.captured} snapshots e ${result.forecasts} projeções persistidos.`);
+      }
+    } catch (error: any) {
+      logger.error(`[Scheduler] Falha na captura diária do Analytics: ${error.message}`);
+    }
   });
 });
 

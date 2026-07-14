@@ -1,22 +1,75 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { AdvancedDashboardMetrics } from "@/types/database"
+import { AdvancedDashboardMetrics, PixChargeMetrics } from "@/types/database"
 import { formatCurrency, cn } from "@/lib/utils"
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts"
-import { TrendingUp, TrendingDown, ShieldCheck, Zap, Activity, Clock, Server, AlertCircle, Bot, Edit2, Check, X } from "lucide-react"
+import { TrendingUp, TrendingDown, ShieldCheck, Zap, Activity, Clock, Server, AlertCircle, Bot, Edit2, Check, X, QrCode } from "lucide-react"
+
+/** Régua PIX — Fase 1 (pendentes / pagos hoje / pagos no mês) */
+export function PixMetricsStrip({
+  metrics,
+  displayValue,
+}: {
+  metrics: PixChargeMetrics | null
+  displayValue: (v: string | number) => string | number
+}) {
+  if (!metrics) return null
+
+  const items = [
+    {
+      label: "PIX pendentes",
+      value: String(displayValue(formatCurrency(metrics.pending_amount))),
+      hint: `${metrics.pending_count} cobrança${metrics.pending_count === 1 ? "" : "s"}`,
+      className: "text-warning-fg",
+    },
+    {
+      label: "PIX pagos hoje",
+      value: String(displayValue(formatCurrency(metrics.paid_today_amount))),
+      hint: `${metrics.paid_today_count} pagamento${metrics.paid_today_count === 1 ? "" : "s"}`,
+      className: "text-money",
+    },
+    {
+      label: "PIX no mês",
+      value: String(displayValue(formatCurrency(metrics.paid_month_amount))),
+      hint: `${metrics.paid_month_count} pagamento${metrics.paid_month_count === 1 ? "" : "s"}`,
+      className: "text-foreground",
+    },
+  ]
+
+  return (
+    <div className="rounded-lg border border-border bg-card">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <QrCode className="size-3.5 text-muted-foreground" />
+        <p className="text-[12px] font-semibold text-foreground">Recebimentos PIX</p>
+        <span className="text-[10px] text-muted-foreground">dinâmico · renovação automática</span>
+      </div>
+      <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {items.map((item) => (
+          <div key={item.label} className="p-4">
+            <p className="microlabel">{item.label}</p>
+            <p className={cn("num mt-1 text-[18px] font-semibold tracking-[-0.02em]", item.className)}>
+              {item.value}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{item.hint}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // Componente: AI Assistant Placeholder
 export function AIAssistantBanner({ metrics }: { metrics: AdvancedDashboardMetrics }) {
   const alertsCount = (metrics.default_clients > 0 ? 1 : 0) + (metrics.alerts_sent_today > 0 ? 1 : 0);
-  
+
   return (
     <div className="flex items-center gap-3 rounded-lg border border-purple-500/20 bg-purple-500/5 px-4 py-3 text-sm text-purple-600 dark:text-purple-400">
       <Bot className="size-5 shrink-0" />
       <p>
         <strong className="font-semibold">Assistente:</strong>{" "}
-        {alertsCount > 0 
-          ? `Identifiquei ${alertsCount} pontos de atenção hoje na sua operação financeira.` 
+        {alertsCount > 0
+          ? `Identifiquei ${alertsCount} pontos de atenção hoje na sua operação financeira.`
           : "Tudo em ordem com sua operação hoje."}
       </p>
     </div>
@@ -60,8 +113,8 @@ export function MonthlyGoalBar({ metrics, onUpdate }: { metrics: AdvancedDashboa
         <div className="flex items-center gap-1.5">
           <span className="font-medium text-foreground">Meta Mensal</span>
           {!isEditing && (
-            <button 
-              onClick={() => setIsEditing(true)} 
+            <button
+              onClick={() => setIsEditing(true)}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <Edit2 className="size-3" />
@@ -75,7 +128,7 @@ export function MonthlyGoalBar({ metrics, onUpdate }: { metrics: AdvancedDashboa
         <div className="flex items-center gap-2 mt-1">
           <div className="relative flex-1">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-            <input 
+            <input
               type="number"
               value={goalValue}
               onChange={(e) => setGoalValue(e.target.value)}
@@ -84,15 +137,15 @@ export function MonthlyGoalBar({ metrics, onUpdate }: { metrics: AdvancedDashboa
               autoFocus
             />
           </div>
-          <button 
-            onClick={handleSave} 
+          <button
+            onClick={handleSave}
             disabled={isSaving}
             className="flex size-6 items-center justify-center rounded-md bg-money/10 text-money hover:bg-money/20 transition-colors"
           >
             <Check className="size-3.5" />
           </button>
-          <button 
-            onClick={() => setIsEditing(false)} 
+          <button
+            onClick={() => setIsEditing(false)}
             disabled={isSaving}
             className="flex size-6 items-center justify-center rounded-md bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
           >
@@ -102,8 +155,8 @@ export function MonthlyGoalBar({ metrics, onUpdate }: { metrics: AdvancedDashboa
       ) : (
         <>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-            <div 
-              className="h-full bg-money transition-all duration-500" 
+            <div
+              className="h-full bg-money transition-all duration-500"
               style={{ width: `${percentage}%` }}
             />
           </div>
@@ -125,7 +178,7 @@ export function FinancialScore({ metrics }: { metrics: AdvancedDashboardMetrics 
     score -= defaultRate * 100 * 2; // perde 2 pontos pra cada 1% de inadimplência
   }
   score = Math.max(0, Math.min(100, Math.round(score)));
-  
+
   let label = "Excelente";
   let color = "text-money";
   if (score < 50) { label = "Crítico"; color = "text-danger"; }
@@ -243,7 +296,7 @@ export function ReceiptDistribution({ metrics }: { metrics: AdvancedDashboardMet
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 formatter={(value: any) => formatCurrency(value)}
                 contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)' }}
               />
@@ -268,7 +321,7 @@ export function ReceiptDistribution({ metrics }: { metrics: AdvancedDashboardMet
 // Componente: Revenue Evolution Chart
 export function RevenueEvolutionChart({ metrics }: { metrics: AdvancedDashboardMetrics }) {
   const data = metrics.revenue_evolution || [];
-  
+
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-4 text-sm font-medium text-foreground">Evolução do Faturamento (30 dias)</h3>
@@ -282,30 +335,30 @@ export function RevenueEvolutionChart({ metrics }: { metrics: AdvancedDashboardM
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
-            <XAxis 
-              dataKey="date" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} 
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
               dy={10}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
+            <YAxis
+              axisLine={false}
+              tickLine={false}
               tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
               tickFormatter={(val) => `R$${val}`}
             />
-            <Tooltip 
+            <Tooltip
               formatter={(value: any) => formatCurrency(value)}
               contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)' }}
             />
-            <Area 
-              type="monotone" 
-              dataKey="amount" 
-              stroke="var(--money)" 
+            <Area
+              type="monotone"
+              dataKey="amount"
+              stroke="var(--money)"
               strokeWidth={2}
-              fillOpacity={1} 
-              fill="url(#colorAmount)" 
+              fillOpacity={1}
+              fill="url(#colorAmount)"
               isAnimationActive={false}
             />
           </AreaChart>

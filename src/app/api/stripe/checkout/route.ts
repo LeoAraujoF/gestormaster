@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return new NextResponse('Esta organização já possui uma assinatura Stripe. Use o portal para alterar o plano.', { status: 409 })
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-04-22.dahlia' })
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
     const stripePrice = await stripe.prices.retrieve(priceId)
     if (
       !stripePrice.active

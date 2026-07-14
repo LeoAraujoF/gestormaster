@@ -45,29 +45,8 @@ ENV NEXT_PUBLIC_STRIPE_PRICE_PRO=$NEXT_PUBLIC_STRIPE_PRICE_PRO
 ARG NEXT_PUBLIC_STRIPE_PRICE_PREMIUM="price_placeholder"
 ENV NEXT_PUBLIC_STRIPE_PRICE_PREMIUM=$NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
 
-# ============================================================
-# Variáveis PRIVADAS - Usadas apenas no servidor em runtime
-# Defaults de build para não travar a compilação estática
-# Os valores REAIS são injetados pelo docker-compose em runtime
-# ============================================================
-ENV SUPABASE_SERVICE_ROLE_KEY="placeholder_service_key"
-ENV OPENAI_API_KEY="placeholder_openai_key"
-
-# Variáveis que o env.ts valida e que precisam existir no momento do build
-# Serão sobrescritas em runtime pelo docker-compose
-ENV STRIPE_SECRET_KEY="sk_placeholder"
-ENV STRIPE_WEBHOOK_SECRET="whsec_placeholder"
-ENV EVOLUTION_API_URL="http://placeholder:8080"
-ENV EVOLUTION_API_KEY="placeholder"
-ENV REDIS_URL="redis://placeholder:6379"
-ENV REDIS_HOST="placeholder"
-ENV JWT_SECRET="placeholder_jwt"
-ENV NEXTAUTH_SECRET="placeholder_nextauth"
-ENV EMAIL_SERVER="smtp://placeholder:587"
-ENV EMAIL_FROM="noreply@placeholder.com"
-ENV ADMIN_EMAIL="admin@placeholder.com"
-
-# Sinalizar que estamos no Docker Build (para pular validações)
+# Segredos privados pertencem somente ao runtime e nunca são persistidos nas
+# camadas da imagem. O modo de build impede validações que dependem deles.
 ENV DOCKER_BUILD=1
 
 RUN npm run build

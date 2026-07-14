@@ -10,10 +10,19 @@ Para iniciar ou atualizar o sistema no seu Home Lab, utilize o terminal na pasta
 # 1. Atualize os arquivos (se estiver usando git)
 git pull
 
-# 2. Construa a imagem e inicie o container em background (sem derrubar o atual bruscamente)
-docker compose up -d --build
+# 2. Baixe a imagem publicada pelo GitHub Actions e recrie os serviços do Gestor
+docker compose up -d --pull always --force-recreate --remove-orphans
 ```
 *A aplicação estará rodando na porta `3000` (ex: `http://SEU_IP_LOCAL:3000`).*
+
+### Atualização pelo Portainer
+
+No Stack do Portainer, mantenha **Pull latest image** habilitado e faça **Redeploy**. O
+`pull_policy: always` verifica a imagem em cada atualização, portanto não é necessário
+parar a stack nem excluir imagens manualmente.
+
+Por padrão, o stack usa `latest`. Para fixar uma versão específica, defina a variável de
+ambiente `GESTOR_IMAGE_TAG` com a tag gerada pelo workflow, no formato `sha-<commit>`.
 
 ---
 

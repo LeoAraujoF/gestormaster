@@ -2,16 +2,17 @@ import '../env';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '';
+const isDockerBuild = process.env.DOCKER_BUILD === '1';
 
-if (!supabaseServiceKey && typeof window === 'undefined' && process.env.DOCKER_BUILD !== '1') {
+if (!supabaseServiceKey && typeof window === 'undefined' && !isDockerBuild) {
   console.warn("⚠️ SUPABASE_SERVICE_ROLE_KEY não encontrada no .env! O Worker falhará ao inserir no banco por conta do RLS.");
 }
 
 // Inicializa o cliente apenas se a URL for válida (evita crash durante Docker Build)
 let supabaseAdmin: SupabaseClient;
 
-if (supabaseUrl && supabaseUrl.startsWith('http') && !supabaseUrl.includes('placeholder')) {
+if (supabaseUrl && supabaseUrl.startsWith('http') && !supabaseUrl.includes('placeholder') && supabaseServiceKey) {
   supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,

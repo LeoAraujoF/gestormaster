@@ -90,7 +90,7 @@ export async function POST(request: Request) {
   const signature = request.headers.get('Stripe-Signature')
   if (!signature) return new NextResponse('Assinatura Stripe ausente', { status: 400 })
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-04-22.dahlia' })
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET)

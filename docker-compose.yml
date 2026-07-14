@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   # -----------------------------------------------------
   # 1. GESTOR APP (SaaS Principal)
   # -----------------------------------------------------
   gestor-app:
-    image: ghcr.io/leoaraujof/gestormaster:latest
+    image: ghcr.io/leoaraujof/gestormaster:${GESTOR_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: gestor_app
     restart: unless-stopped
     ports:
@@ -40,7 +39,8 @@ services:
   # 1.1 GESTOR WORKER (Filas em background)
   # -----------------------------------------------------
   gestor-worker:
-    image: ghcr.io/leoaraujof/gestormaster:latest
+    image: ghcr.io/leoaraujof/gestormaster:${GESTOR_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: gestor_worker
     restart: unless-stopped
     command: npm run worker:start
@@ -70,7 +70,8 @@ services:
   # 1.2 GESTOR SCHEDULER (Cron Jobs)
   # -----------------------------------------------------
   gestor-scheduler:
-    image: ghcr.io/leoaraujof/gestormaster:latest
+    image: ghcr.io/leoaraujof/gestormaster:${GESTOR_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: gestor_scheduler
     restart: unless-stopped
     command: npm run scheduler:start

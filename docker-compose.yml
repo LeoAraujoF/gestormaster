@@ -46,6 +46,7 @@ services:
     command: npm run worker:start
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--conditions=react-server
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
@@ -77,6 +78,7 @@ services:
     command: npm run scheduler:start
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--conditions=react-server
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}

@@ -9,6 +9,7 @@ import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { logAuditClient } from "@/lib/audit-client"
+import { normalizeClientPhone } from "@/lib/phone"
 
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -130,13 +131,14 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       if (!user) throw new Error("Usuário não autenticado")
 
       let clientId = client?.id
+      const normalizedPhone = normalizeClientPhone(data.phone)
 
       if (client) {
         const { error } = await supabase
           .from('clients')
           .update({
             name: data.name,
-            phone: data.phone?.replace(/\D/g, ''),
+            ...normalizedPhone,
             plan_value: data.plan_value,
             screens: data.screens,
             due_date: data.due_date,
@@ -174,7 +176,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .insert({
             user_id: user.id,
             name: data.name,
-            phone: data.phone?.replace(/\D/g, ''),
+            ...normalizedPhone,
             plan_value: data.plan_value,
             screens: data.screens,
             due_date: data.due_date,

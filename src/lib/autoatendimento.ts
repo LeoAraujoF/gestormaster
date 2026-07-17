@@ -1,4 +1,7 @@
 import crypto from 'crypto'
+import { normalizeBrazilPhone } from './phone'
+
+export { normalizeBrazilPhone } from './phone'
 
 export const BOT_STATE_TTL_SECONDS = 30 * 60
 export const PHONE_VERIFICATION_TTL_MINUTES = 10
@@ -31,13 +34,6 @@ export function resolveIncomingPhoneJid(key: EvolutionMessageKey | null | undefi
   }
 
   return null
-}
-
-export function normalizeBrazilPhone(raw: string): string | null {
-  const digits = raw.replace(/\D/g, '')
-  const local = digits.startsWith('55') ? digits.slice(2) : digits
-  if (!/^[1-9][0-9][0-9]{8,9}$/.test(local)) return null
-  return `+55${local}`
 }
 
 export function brazilPhoneE164Candidates(raw: string): string[] {

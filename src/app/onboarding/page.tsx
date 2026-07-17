@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { normalizeClientPhone } from "@/lib/phone"
 
 /* ——————————————————————————————————————————————
    Types
@@ -225,7 +226,7 @@ export default function OnboardingPage() {
       const clientData: Record<string, unknown> = {
         user_id: user.id,
         name: clientName.trim(),
-        whatsapp: clientWhatsApp.replace(/\D/g, "") || null,
+        ...normalizeClientPhone(clientWhatsApp),
         status: "active",
       }
       if (selectedService) {

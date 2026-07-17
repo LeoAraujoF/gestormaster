@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { ShieldAlert, Download, Upload, Loader2, Save, Trash2, KeyRound } from "lucide-react"
 import { toast } from "sonner"
 import { logAuditClient } from "@/lib/audit-client"
+import { normalizeClientPhone } from "@/lib/phone"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -159,6 +160,7 @@ export default function ConfiguracoesPage() {
             const name = row.Nome ?? row.nome ?? row.name ?? row.Name ?? "Sem Nome"
             const username = row.Usuario ?? row.usuario ?? row.username ?? row.Username ?? null
             const phone = row.Telefone ?? row.telefone ?? row.phone ?? row.Phone ?? null
+            const normalizedPhone = normalizeClientPhone(phone)
             
             const rawPlan = row["Valor do Plano"] ?? row.valor ?? row.plan_value ?? row.PlanValue
             const plan_value = rawPlan !== undefined && rawPlan !== null && rawPlan !== ""
@@ -189,7 +191,7 @@ export default function ConfiguracoesPage() {
               user_id: user.id,
               name,
               username,
-              phone,
+              ...normalizedPhone,
               plan_value,
               screens,
               due_date,

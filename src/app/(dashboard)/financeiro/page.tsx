@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from "recharts"
 import { ExecutiveDashboardView } from "@/components/executive-dashboard-view"
 import { usePlanCapability } from "@/components/providers/plan-provider"
+import { MetricGrid, PageHeader, PageSection, PageShell, ResponsiveDataView } from "@/components/page-layout"
 
 type Period = "hoje" | "mes" | "ano"
 
@@ -246,24 +247,26 @@ export default function FinanceiroPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 pb-10">
+      <PageShell>
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-[92px] w-full rounded-lg" />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
           <Skeleton className="h-[320px] rounded-lg" />
           <Skeleton className="h-[320px] rounded-lg" />
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-4 pb-10">
+    <PageShell>
       {/* Cabeçalho: título + período segmentado + ações */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Financeiro</h1>
-          <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5">
+      <PageHeader
+        title="Financeiro"
+        description="Acompanhe entradas, pendências e resultados do período."
+        actions={
+          <>
+          <div className="flex items-center gap-0.5 rounded-lg bg-secondary p-1">
             {([
               { key: "hoje", label: "Hoje" },
               { key: "mes", label: monthName },
@@ -272,8 +275,9 @@ export default function FinanceiroPage() {
               <button
                 key={s.key}
                 onClick={() => setPeriod(s.key)}
+                aria-pressed={period === s.key}
                 className={cn(
-                  "rounded-[5px] px-2.5 py-1 text-xs transition-colors",
+                  "min-h-8 rounded-md px-3 py-1 text-xs transition-colors",
                   period === s.key
                     ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]"
                     : "text-secondary-foreground hover:text-foreground"
@@ -283,13 +287,14 @@ export default function FinanceiroPage() {
               </button>
             ))}
           </div>
-        </div>
         {hasAdvancedFinance && (
-          <Button variant="outline" size="sm" onClick={exportCSV} disabled={reportPayments.length === 0} className="h-8 gap-1.5 text-xs">
+          <Button variant="outline" size="sm" onClick={exportCSV} disabled={reportPayments.length === 0} className="h-9 gap-1.5 text-xs">
             <Download className="size-3.5" /> Relatório
           </Button>
         )}
-      </div>
+          </>
+        }
+      />
 
       {executive && <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} compact />}
       {upgradeRequired && !hasAdvancedFinance && (
@@ -303,9 +308,9 @@ export default function FinanceiroPage() {
       )}
 
       {/* Régua de KPIs do período */}
-      <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
+      <MetricGrid columns={4}>
         {hasAdvancedFinance ? <>
-          <div className="p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
           <p className="microlabel">Lucro líquido</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-money">
             {displayValue(formatCurrency(reportNetProfit))}
@@ -314,21 +319,21 @@ export default function FinanceiroPage() {
             margem {reportRevenue > 0 ? ((reportNetProfit / reportRevenue) * 100).toFixed(0) : 0}%
           </p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
           <p className="microlabel">Receita bruta</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-foreground">
             {displayValue(formatCurrency(reportRevenue))}
           </p>
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">{reportPayments.length} pagamentos</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-danger-border bg-danger-bg/40 p-4">
           <p className="microlabel">Custos</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-danger">
             {displayValue(formatCurrency(totalCosts))}
           </p>
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">painéis + fixos</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-warning-border bg-warning-bg/40 p-4">
           <p className="microlabel">A receber (7d)</p>
           <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-warning">
             {displayValue(formatCurrency(upcoming7d.total))}
@@ -336,28 +341,28 @@ export default function FinanceiroPage() {
           <p className="mt-0.5 text-[10.5px] text-muted-foreground">{upcoming7d.count} renovações</p>
           </div>
         </> : <>
-          <div className="p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
             <p className="microlabel">Faturamento</p>
             <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-money">{displayValue(formatCurrency(reportRevenue))}</p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">no período selecionado</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
             <p className="microlabel">Pagamentos</p>
             <p className="num mt-1 text-[20px] font-semibold tracking-[-0.02em]">{reportPayments.length}</p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">recebimentos registrados</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-warning-border bg-warning-bg/40 p-4">
             <p className="microlabel">A receber (7d)</p>
             <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-warning">{displayValue(formatCurrency(upcoming7d.total))}</p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">{upcoming7d.count} renovações</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-xl border border-danger-border bg-danger-bg/40 p-4">
             <p className="microlabel">Vencido</p>
             <p className="num mt-1 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-danger">{displayValue(formatCurrency(basicOverdue.total))}</p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">{basicOverdue.count} clientes</p>
           </div>
         </>}
-      </div>
+      </MetricGrid>
 
       {/* Régua secundária: base recorrente */}
       {hasAdvancedFinance && <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
@@ -415,7 +420,7 @@ export default function FinanceiroPage() {
 
       {pixMigrationRequired && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-xs text-warning-fg">
-          Ledger PIX ainda não migrado. Execute <code className="font-mono">supabase/pix_charges.sql</code> no Supabase para ativar histórico e renovação automática.
+          Ledger PIX ainda não configurado. Em um projeto Supabase novo, execute <code className="font-mono">supabase/gestormaster_schema.sql</code> para criar o banco completo.
         </div>
       )}
 
@@ -425,7 +430,35 @@ export default function FinanceiroPage() {
             <p className="text-[13px] font-semibold">Histórico de cobranças PIX</p>
             <span className="text-[10px] text-muted-foreground">últimas {pixCharges.length}</span>
           </div>
-          <div className="overflow-x-auto">
+          <ResponsiveDataView
+            desktopFrom="md"
+            mobile={
+              <div className="divide-y divide-border">
+                {pixCharges.map((charge) => {
+                  const statusClass = charge.status === "paid" ? "bg-money/10 text-money" : charge.status === "pending" ? "bg-warning/10 text-warning-fg" : "bg-muted text-muted-foreground"
+                  const purpose = charge.purpose === "renewal" ? "Renovação" : charge.purpose === "charge" ? "Cobrança" : "Manual"
+                  return (
+                    <article key={charge.id} className="space-y-2 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary" className={cn("text-[10px] font-medium", statusClass)}>{charge.status}</Badge>
+                            <span className="text-xs text-foreground">{purpose}</span>
+                          </div>
+                          <p className="num mt-2 text-[11px] text-muted-foreground">{new Date(charge.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                        <p className="num shrink-0 text-sm font-semibold text-foreground">{displayValue(formatCurrency(Number(charge.amount)))}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                        <span className="font-mono">{charge.phone || "Sem telefone"}</span>
+                        <span>{charge.expires_at ? `Expira ${new Date(charge.expires_at).toLocaleDateString("pt-BR")}` : "Sem expiração"}</span>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            }
+            desktop={
             <Table>
               <TableHeader>
                 <TableRow>
@@ -482,7 +515,8 @@ export default function FinanceiroPage() {
                 })}
               </TableBody>
             </Table>
-          </div>
+            }
+          />
         </div>
       )}
 
@@ -565,12 +599,10 @@ export default function FinanceiroPage() {
       {hasAdvancedFinance && <FixedCostsSection />}
 
       {/* Planilha de ganhos do período */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <PageSection title="Pagamentos do período" description="Todos os recebimentos individuais no período selecionado.">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div>
-            <p className="text-[13px] font-semibold">Pagamentos do período</p>
-            <p className="text-[11px] text-muted-foreground">Todos os recebimentos individuais no período filtrado.</p>
-          </div>
+          <p className="text-xs text-muted-foreground">{period === "hoje" ? "Hoje" : period === "mes" ? monthName : year}</p>
           <span className="num rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">
             {reportPayments.length}
           </span>
@@ -580,7 +612,33 @@ export default function FinanceiroPage() {
             <p className="microlabel">Nenhum ganho no período</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <ResponsiveDataView
+            desktopFrom="md"
+            mobile={
+              <div className="divide-y divide-border">
+                {reportPayments.map((payment) => {
+                  const date = new Date(payment.created_at)
+                  return (
+                    <article key={payment.id} className="space-y-2 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">{payment.clients?.name || "Desconhecido"}</p>
+                          <p className="num mt-1 text-[11px] text-muted-foreground">{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                        <p className="num shrink-0 text-sm font-semibold text-money">{displayValue(formatCurrency(payment.amount_paid))}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <Badge className={cn("rounded border-0 px-1.5 text-[10px] font-semibold", payment.amount_paid === 0 ? "bg-secondary text-muted-foreground" : "bg-success-bg text-success-fg")}>
+                          {payment.amount_paid === 0 ? "Promoção" : "Pagamento"}
+                        </Badge>
+                        {hasAdvancedFinance ? <span className="num text-[11px] text-muted-foreground">Lucro {displayValue(formatCurrency(payment.net_profit))}</span> : null}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            }
+            desktop={
             <Table>
               <TableHeader className="bg-muted">
                 <TableRow className="hover:bg-transparent">
@@ -619,9 +677,11 @@ export default function FinanceiroPage() {
                 })}
               </TableBody>
             </Table>
-          </div>
+            }
+          />
         )}
       </div>
+      </PageSection>
 
       {/* Evolução anual + distribuição por serviços */}
       {hasAdvancedFinance && <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -674,6 +734,6 @@ export default function FinanceiroPage() {
           </div>
         </div>
       </div>}
-    </div>
+    </PageShell>
   )
 }

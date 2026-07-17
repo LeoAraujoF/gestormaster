@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Code, Key, Copy, Plus, Trash2, Eye, ShieldAlert, Check, Terminal } from "lucide-react"
+import { Key, Copy, Plus, Trash2, ShieldAlert, Check, Terminal } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { useConfirm } from "@/components/providers/confirm-provider"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 export default function DesenvolvedorPage() {
   const confirm = useConfirm()
@@ -102,14 +103,8 @@ export default function DesenvolvedorPage() {
   }
 
   return (
-    <div className="flex flex-col space-y-8 p-4 md:p-8 max-w-6xl mx-auto">
-      <div>
-        <h2 className="text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
-          <Code className="w-8 h-8 text-zinc-500" />
-          API & Desenvolvedores
-        </h2>
-        <p className="text-muted-foreground mt-1">Integre o Gestor Master com seus próprios sistemas e fluxos via API REST.</p>
-      </div>
+    <PageShell width="default">
+      <PageHeader eyebrow="Integrações técnicas" title="API e desenvolvedores" description="Crie credenciais, acompanhe as chaves ativas e consulte o formato básico da API REST." badge={`${keys.length} chaves ativas`} />
 
       {missingTable && (
         <Card className="border-amber-500/50 bg-amber-500/5">
@@ -127,7 +122,7 @@ export default function DesenvolvedorPage() {
       )}
 
       {newlyCreatedToken && (
-        <Card className="border-emerald-500/50 bg-emerald-500/5 shadow-lg animate-in fade-in slide-in-from-top-4">
+        <Card className="border-emerald-500/30 bg-emerald-500/[0.05] animate-in fade-in slide-in-from-top-4">
           <CardHeader>
             <CardTitle className="text-emerald-600 flex items-center gap-2">
               <Key className="w-5 h-5" />
@@ -139,14 +134,14 @@ export default function DesenvolvedorPage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
-              <Input value={newlyCreatedToken} readOnly className="font-mono text-lg py-6 bg-background border-emerald-500/30 text-emerald-700" />
-              <Button onClick={() => handleCopy(newlyCreatedToken)} className="h-auto bg-emerald-600 hover:bg-emerald-700 px-8">
+              <Input value={newlyCreatedToken} readOnly className="bg-background py-6 font-mono text-sm" />
+              <Button onClick={() => handleCopy(newlyCreatedToken)} className="h-auto px-6">
                 {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </Button>
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" onClick={() => setNewlyCreatedToken(null)} className="w-full text-emerald-700 border-emerald-500/30">
+            <Button variant="outline" onClick={() => setNewlyCreatedToken(null)} className="w-full">
               Eu já copiei e guardei a chave
             </Button>
           </CardFooter>
@@ -178,7 +173,7 @@ export default function DesenvolvedorPage() {
                 </Button>
               </div>
 
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome da Chave</TableHead>
@@ -211,7 +206,7 @@ export default function DesenvolvedorPage() {
                     ))
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </div>
@@ -256,6 +251,6 @@ export default function DesenvolvedorPage() {
         </div>
 
       </div>
-    </div>
+    </PageShell>
   )
 }

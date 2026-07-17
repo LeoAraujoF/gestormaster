@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 // Abas internas (5f): texto 11.5px, ativa com borda inferior 2px tinta
 const SECTIONS = [
@@ -218,6 +219,7 @@ export default function MinhaContaPage() {
         }
       })
       if (error) throw error
+      window.dispatchEvent(new CustomEvent("gestor:timezone-change", { detail: { timezone } }))
       toast.success("Dados da empresa atualizados com sucesso!")
     } catch (error: unknown) {
       toast.error(errorMessage(error, "Erro ao salvar dados da empresa."))
@@ -283,8 +285,8 @@ export default function MinhaContaPage() {
   )
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-10">
-      <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Minha conta</h1>
+    <PageShell width="default">
+      <PageHeader eyebrow="Conta e assinatura" title="Minha conta" description="Gerencie empresa, segurança, aparência e os limites do seu plano." badge={planName} />
       <AccountTabs />
 
       {/* Abas internas 5f: underline, sem pills */}
@@ -294,7 +296,7 @@ export default function MinhaContaPage() {
             key={s.key}
             onClick={() => setSection(s.key)}
             className={cn(
-              "-mb-px whitespace-nowrap border-b-2 pb-2 text-[11.5px] transition-colors",
+              "-mb-px min-h-11 whitespace-nowrap border-b-2 px-1 text-xs transition-colors",
               section === s.key
                 ? "border-primary font-semibold text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -740,6 +742,6 @@ export default function MinhaContaPage() {
         </div>
       )}
 
-    </div>
+    </PageShell>
   )
 }

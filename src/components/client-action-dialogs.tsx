@@ -238,7 +238,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
 
       const { error: paymentError } = await supabase.from('payments').insert({
-        user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: netProfitForRenew, months_renewed: renewMonths
+        user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: netProfitForRenew, months_renewed: renewMonths,
+        paid_at: new Date().toISOString(),
       })
 
       if (paymentError) throw paymentError
@@ -566,7 +567,8 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const netProfitForPromo = amountPaid - totalCostForPromo
 
       const { error: paymentError } = await supabase.from('payments').insert({
-        user_id: user.id, client_id: client.id, amount_paid: amountPaid, net_profit: netProfitForPromo, months_renewed: renewMonths
+        user_id: user.id, client_id: client.id, amount_paid: amountPaid, net_profit: netProfitForPromo, months_renewed: renewMonths,
+        paid_at: new Date().toISOString(),
       })
 
       if (paymentError) throw paymentError

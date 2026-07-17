@@ -1,12 +1,16 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { Bot, ClipboardCheck, Loader2, Save, UserRoundCheck } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { PageProtector } from "@/components/page-protector"
+import { CustomerExperienceNavigation } from "@/components/customer-experience-navigation"
+import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function AutoatendimentoPage() {
   const [loading, setLoading] = useState(true)
@@ -109,33 +113,36 @@ export default function AutoatendimentoPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <PageShell><div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed"><Loader2 className="size-5 animate-spin" /><span className="ml-3 text-sm text-muted-foreground">Carregando o autoatendimento...</span></div></PageShell>
     )
   }
 
   return (
     <PageProtector>
-      <div className="mx-auto max-w-5xl space-y-6 pb-12 pt-6 px-4 md:px-8">
-        {/* HEADER Handoff */}
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">
-              Autoatendimento
-            </h1>
-            <p className="text-[10.5px] text-muted-foreground mt-0.5">
-              Configure as respostas do menu automático e os avisos de segurança do robô
-            </p>
-          </div>
-          <Button
+      <PageShell width="default">
+        <div className="rounded-xl border bg-card p-5 sm:p-6">
+          <PageHeader
+            eyebrow="Experiência e operação"
+            title="Autoatendimento"
+            description="Acompanhe pendências humanas primeiro e configure as respostas automáticas que orientam seus clientes."
+            badge={enabled ? "Robô ativo" : "Robô inativo"}
+            actions={<Button
             onClick={handleSave}
             disabled={saving}
-            className="h-8 px-4 text-[13px] rounded-[6px]"
           >
+            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
             {saving ? "Salvando..." : "Salvar alterações"}
-          </Button>
+          </Button>}
+          />
         </div>
+
+        <CustomerExperienceNavigation active="self-service" />
+
+        <MetricGrid columns={3}>
+          <Card className={enabled ? "border-emerald-500/20 bg-emerald-500/[0.06]" : "border-muted bg-muted/20"}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><Bot className="size-5" /></span><div><p className="text-xs text-muted-foreground">Operação</p><p className="text-lg font-semibold">{enabled ? "Atendimento ativo" : "Atendimento pausado"}</p></div></CardContent></Card>
+          <Card className={pausedClients.length ? "border-amber-500/25 bg-amber-500/[0.07]" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><UserRoundCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Atendimento humano</p><p className="text-lg font-semibold">{pausedClients.length} em pausa</p></div></CardContent></Card>
+          <Card className={changeRequests.length ? "border-sky-500/25 bg-sky-500/[0.07]" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><ClipboardCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Decisão necessária</p><p className="text-lg font-semibold">{changeRequests.length} solicitações</p></div></CardContent></Card>
+        </MetricGrid>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* COLUNA ESQUERDA - CONFIGURAÇÕES E MENUS */}
@@ -330,7 +337,7 @@ export default function AutoatendimentoPage() {
           </div>
 
         </div>
-      </div>
+      </PageShell>
     </PageProtector>
   )
 }

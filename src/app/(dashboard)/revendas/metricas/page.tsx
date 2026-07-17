@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Loader2, DollarSign, TrendingUp, TrendingDown, Users, CheckCircle2, Clock } from "lucide-react"
+import { Loader2, DollarSign, TrendingUp, Users, Clock } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 import { formatCurrency } from "@/lib/utils"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -18,9 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
+import { ResellerNavigation } from "@/components/reseller-navigation"
 
 export default function RevendasMetricsPage() {
-  const router = useRouter()
   const supabase = createClient()
   
   const [isLoading, setIsLoading] = useState(true)
@@ -111,18 +110,11 @@ export default function RevendasMetricsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.push('/revendas')}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Métricas de Revenda</h1>
-          <p className="text-muted-foreground mt-1">Acompanhe seu faturamento e volume de solicitações da sua rede.</p>
-        </div>
-      </div>
+    <PageShell className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader eyebrow="Rede de parceiros" title="Métricas de Revenda" description="Acompanhe lucro, movimentação e solicitações que exigem atenção." badge={metrics.pendingRequests ? `${metrics.pendingRequests} pendentes` : "Atualizado"} />
+      <ResellerNavigation active="metrics" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricGrid columns={4}>
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Lucro Líquido (Hoje)</CardTitle>
@@ -168,7 +160,7 @@ export default function RevendasMetricsPage() {
             <p className="text-xs text-muted-foreground mt-1">Requerem sua atenção.</p>
           </CardContent>
         </Card>
-      </div>
+      </MetricGrid>
 
       <Card>
         <CardHeader>
@@ -179,7 +171,7 @@ export default function RevendasMetricsPage() {
           {recentRequests.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">Nenhuma movimentação registrada.</div>
           ) : (
-            <div className="rounded-md border border-border/50">
+            <div className="overflow-x-auto rounded-md border border-border/50">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-secondary/30">
@@ -220,6 +212,6 @@ export default function RevendasMetricsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

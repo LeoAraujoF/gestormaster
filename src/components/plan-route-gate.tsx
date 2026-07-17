@@ -30,6 +30,6 @@ export function PlanRouteGate({ children }: { children: React.ReactNode }) {
     <LockKeyhole className="mx-auto size-10 text-muted-foreground" />
     <h1 className="mt-4 text-2xl font-semibold">Recurso disponível no plano {rule[2]}</h1>
     <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">Seu plano atual é {plan.plan.charAt(0).toUpperCase() + plan.plan.slice(1)}. Compare os recursos e escolha o plano adequado para sua operação.</p>
-    <Button className="mt-6" render={<Link href={`/planos?upgrade=${rule[1]}`} />}>Comparar planos</Button>
+    <Button nativeButton={false} className="mt-6" render={<Link href={`/planos?upgrade=${rule[1]}`} />}>Comparar planos</Button>
   </div>
 }

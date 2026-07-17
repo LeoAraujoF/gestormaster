@@ -94,10 +94,10 @@ export default function ResetPasswordPage() {
             <div className="w-12 h-12 rounded-xl bg-sky-500/15 border border-sky-500/20 flex items-center justify-center">
               <span className="text-xl font-black text-sky-400 tracking-tighter">GM</span>
             </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Gestor Master</h1>
+            <h1 className="text-3xl font-bold text-white tracking-tight">lembrado.</h1>
           </div>
           <p className="text-lg text-zinc-300 leading-relaxed mb-8">
-            Crie sua nova senha para acessar o painel do <span className="text-sky-300">Gestor Master</span>.
+            Crie sua nova senha para acessar o painel da <span className="text-sky-300">Lembrado</span>.
           </p>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />

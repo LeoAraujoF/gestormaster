@@ -8,6 +8,8 @@ import { QuickActions } from "@/components/quick-actions"
 import { WhatsAppStatus } from "@/components/whatsapp-status"
 import { CampaignHeaderStatus } from "@/components/campaign-header-status"
 import { CommandPalette } from "@/components/command-palette"
+import { DashboardPageTitle } from "@/components/dashboard-page-title"
+import { UserTimezoneClock } from "@/components/user-timezone-clock"
 import { WhatsAppBanner } from "@/components/whatsapp-banner"
 import { OrganizationProvider } from "@/components/providers/organization-provider"
 import { PlanProvider } from '@/components/providers/plan-provider'
@@ -31,17 +33,19 @@ export default async function DashboardLayout({
     <PrivacyProvider>
       <OrganizationProvider>
        <PlanProvider value={plan}>
-        <SidebarProvider defaultOpen={true}>
+        <SidebarProvider defaultOpen={true} className="saas-dashboard">
           <AppSidebar />
-          <main className="flex-1 w-full flex flex-col bg-background min-w-0 overflow-x-hidden">
-              <header className="h-14 flex items-center gap-3 px-4 md:px-6 border-b border-border bg-background sticky top-0 z-50">
-                <SidebarTrigger />
-                <div className="flex-1 max-w-[280px]">
+          <main className="flex min-w-0 flex-1 flex-col overflow-x-clip bg-background [--dashboard-header-left:0px] md:peer-data-[state=expanded]:[--dashboard-header-left:var(--sidebar-width)]">
+              <header className="fixed inset-x-0 top-0 z-50 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-3 shadow-xs backdrop-blur-sm transition-[left] duration-200 ease-linear supports-[backdrop-filter]:bg-background/80 sm:gap-3 sm:px-5 md:left-[var(--dashboard-header-left)] md:px-6">
+                <SidebarTrigger className="shrink-0" />
+                <DashboardPageTitle />
+                <div className="hidden min-w-0 max-w-[280px] flex-1 md:block">
                   <CommandPalette />
                 </div>
-                <div className="flex-1"></div>
-                <div className="flex items-center gap-1 md:gap-2">
-                  <CampaignHeaderStatus />
+                <div className="hidden min-w-0 flex-1 md:block" />
+                <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2">
+                  <UserTimezoneClock initialTimezone={user?.user_metadata?.timezone} />
+                  <div className="hidden xl:block"><CampaignHeaderStatus /></div>
                   <WhatsAppStatus />
                   <QuickActions />
                   <div className="h-5 w-px bg-border hidden md:block"></div>
@@ -50,7 +54,8 @@ export default async function DashboardLayout({
                   <PrivacyToggle />
                 </div>
               </header>
-              <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+              <div className="h-14 shrink-0" aria-hidden="true" />
+              <div className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 px-3 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 lg:px-8 lg:py-8">
                 <WhatsAppBanner />
                 <PageProtector>
                   <PlanRouteGate>{children}</PlanRouteGate>

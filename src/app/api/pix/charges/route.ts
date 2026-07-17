@@ -49,7 +49,7 @@ export async function GET(req: Request) {
           charges: [],
           metrics: emptyMetrics(),
           migration_required: true,
-          message: 'Execute supabase/pix_charges.sql no Supabase para habilitar o ledger PIX.',
+          message: 'Em um projeto Supabase novo, execute supabase/gestormaster_schema.sql para criar o banco completo.',
         })
       }
       return NextResponse.json({ error: error.message }, { status: 500 })

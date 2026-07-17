@@ -203,7 +203,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             client_id: clientId,
             amount_paid: data.plan_value,
             net_profit: netProfit,
-            months_renewed: 1
+            months_renewed: 1,
+            paid_at: new Date().toISOString(),
           })
 
         if (paymentError) console.error("Erro ao registrar o primeiro pagamento:", paymentError)

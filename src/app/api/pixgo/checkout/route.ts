@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     // Preparar carga de dados (Payload) para a PIXGO
     const pixgoPayload = {
       amount: Number(amount),
-      description: `Assinatura Gestor Master - ${plan.id}`,
-      customer_name: user.user_metadata?.full_name || "Cliente Gestor",
+      description: `Assinatura Lembrado - ${plan.id}`,
+      customer_name: user.user_metadata?.full_name || "Cliente Lembrado",
       customer_email: user.email,
       external_id: `${user.id}:${plan.id}`
     }

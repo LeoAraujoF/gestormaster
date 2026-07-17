@@ -15,7 +15,8 @@ const pageFlags: Record<string, string> = {
   '/servicos': 'page_servicos',
   '/aquecimento': 'page_aquecimento',
   '/configuracoes': 'page_configuracoes',
-  '/integracoes': 'page_integracoes',
+  '/conexoes/gateways': 'page_integracoes',
+  '/conexoes/paineis': 'page_integracoes_paineis',
   '/desenvolvedor': 'page_desenvolvedor',
   '/suporte': 'page_suporte',
   '/revendas': 'page_revendas',
@@ -27,8 +28,9 @@ export function PageProtector({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] animate-pulse">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex min-h-[50vh] items-center justify-center animate-pulse" role="status" aria-live="polite">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-hidden="true" />
+        <span className="sr-only">Verificando disponibilidade da página…</span>
       </div>
     )
   }

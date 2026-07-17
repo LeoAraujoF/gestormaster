@@ -168,7 +168,10 @@ export function NotificationBell() {
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger className="relative inline-flex items-center justify-center h-10 w-10 hover:bg-muted/50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <DropdownMenuTrigger
+        aria-label="Abrir notificações"
+        className="relative inline-flex items-center justify-center h-10 w-10 hover:bg-muted/50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <BellRing className="h-5 w-5 text-muted-foreground" />
         {totalNotifications > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full bg-red-500 border-2 border-background text-[10px] text-white">

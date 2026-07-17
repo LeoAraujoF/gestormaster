@@ -1,13 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import dynamic from 'next/dynamic'
 import { AlertTriangle, BarChart3, Calculator, Loader2, Save, Trash2, TrendingUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { InsightsNavigation } from '@/components/insights-navigation'
+import { MetricGrid, PageHeader, PageSection, PageShell } from '@/components/page-layout'
 import { usePrivacy } from '@/hooks/use-privacy'
 import { cn, formatCurrency } from '@/lib/utils'
 import type { AnalyticsDashboardDTO, AnalyticsHorizon, AnalyticsScenarioDTO, PriceSimulationResult } from '@/lib/analytics-types'
@@ -20,6 +22,10 @@ const horizons: Array<{ value: AnalyticsHorizon; label: string }> = [
 ]
 
 const coverageLabels = { insufficient: 'Insuficiente', partial: 'Parcial', full: 'Completa' }
+
+const AnalyticsForecastChart = dynamic(() => import('@/components/analytics-forecast-chart').then((module) => module.AnalyticsForecastChart), {
+  loading: () => <div className="h-full animate-pulse rounded-lg bg-muted" />,
+})
 
 export function AnalyticsView({ initialData, initialScenarios, initialCursor }: {
   initialData: AnalyticsDashboardDTO | null
@@ -125,16 +131,19 @@ export function AnalyticsView({ initialData, initialScenarios, initialCursor }: 
     { label: 'Realização esperada', value: data.forecast.expected_cash, hint: 'Aplicando a taxa histórica de pagamento' },
   ]
 
-  return <div className="space-y-6 pb-12">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="text-xl font-semibold">Analytics Avançado</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Projeções determinísticas e simulações que nunca alteram sua operação.</p>
-      </div>
-      <div className="flex rounded-lg bg-muted p-1">
+  return <PageShell>
+    <div className="rounded-xl border bg-card p-5 sm:p-6">
+      <PageHeader
+        eyebrow="Insights financeiros"
+        title="Analytics avançado"
+        description="Antecipe o fechamento, compare cenários e simule reajustes sem modificar sua operação real."
+        actions={<div className="flex w-full rounded-xl border bg-background/80 p-1 shadow-sm backdrop-blur sm:w-auto">
         {horizons.map((item) => <button key={item.value} onClick={() => loadHorizon(item.value)} className={cn('rounded-md px-3 py-1.5 text-xs', horizon === item.value ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground')}>{item.label}</button>)}
-      </div>
+        </div>}
+      />
     </div>
+
+    <InsightsNavigation active="analytics" />
 
     <div className={cn('rounded-lg border p-4', data.coverage.level === 'full' && !data.coverage.stale ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5')}>
       <div className="flex items-start gap-3">
@@ -143,6 +152,7 @@ export function AnalyticsView({ initialData, initialScenarios, initialCursor }: 
       </div>
     </div>
 
+    <PageSection title="Pulso financeiro" description="Os números essenciais para decidir com segurança neste horizonte.">
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Metric label="MRR ativo" value={money(data.summary.mrr)} />
       <Metric label="Contratual do mês" value={money(data.summary.month_contractual)} />
@@ -150,13 +160,16 @@ export function AnalyticsView({ initialData, initialScenarios, initialCursor }: 
       <Metric label="Fechamento estimado" value={data.summary.month_close_estimate === null ? 'Indisponível' : money(data.summary.month_close_estimate)} />
       <Metric label="Realização" value={data.summary.realization_rate === null ? 'Indisponível' : `${data.summary.realization_rate.toFixed(1)}%`} />
     </div>
+    </PageSection>
 
+    <PageSection title="Projeção e contexto" description="Visualize a trajetória esperada e compare com o desempenho recente.">
     <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">Projeção por horizonte</CardTitle></CardHeader><CardContent><div className="h-72">{loading ? <div className="flex h-full items-center justify-center"><Loader2 className="size-5 animate-spin" /></div> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" /><XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(value) => `R$${value}`} /><Tooltip formatter={(value: any) => formatCurrency(Number(value))} /><Area type="monotone" dataKey="contractual" name="Contratual" stroke="var(--foreground)" fill="var(--muted)" fillOpacity={0.35} /><Area type="monotone" dataKey="expected_cash" name="Realização esperada" stroke="var(--money)" fill="var(--money)" fillOpacity={0.15} /></AreaChart></ResponsiveContainer>}</div></CardContent></Card>
+      <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">Projeção por horizonte</CardTitle></CardHeader><CardContent><div className="h-72">{loading ? <div className="flex h-full items-center justify-center"><Loader2 className="size-5 animate-spin" /></div> : <AnalyticsForecastChart data={chartData} />}</div></CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Comparações</CardTitle></CardHeader><CardContent className="space-y-4"><Comparison label="Mês anterior" value={money(data.comparisons.previous_month_confirmed)} hint={data.comparisons.confirmed_change_pct === null ? 'Sem base comparável' : `${data.comparisons.confirmed_change_pct >= 0 ? '+' : ''}${data.comparisons.confirmed_change_pct.toFixed(1)}% no mês atual`} /><Comparison label="Últimos 12 meses" value={money(data.comparisons.rolling_12m_confirmed)} hint="Receita efetivamente recebida" /><Comparison label="Novos clientes" value={String(data.comparisons.new_clients_month)} hint="No mês atual" /></CardContent></Card>
     </div>
+    </PageSection>
 
-    <div className="grid gap-3 md:grid-cols-3">{scenarioCards.map((card) => <Card key={card.label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{card.label}</p><p className="mt-1 text-xl font-semibold">{card.value === null ? 'Indisponível' : money(card.value)}</p><p className="mt-1 text-[11px] text-muted-foreground">{card.hint}</p></CardContent></Card>)}</div>
+    <MetricGrid columns={3}>{scenarioCards.map((card, index) => <Card key={card.label} className={cn("overflow-hidden", index === 2 && "border-emerald-500/25 bg-emerald-500/[0.06]")}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{card.label}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{card.value === null ? 'Indisponível' : money(card.value)}</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{card.hint}</p></CardContent></Card>)}</MetricGrid>
 
     <Card><CardHeader><CardTitle className="flex items-center gap-2 text-base"><Calculator className="size-4" />Simulador de reajuste</CardTitle></CardHeader><CardContent className="space-y-5">
       <div className="grid gap-3 md:grid-cols-3">
@@ -169,7 +182,7 @@ export function AnalyticsView({ initialData, initialScenarios, initialCursor }: 
     </CardContent></Card>
 
     <Card><CardHeader><CardTitle className="text-base">Cenários salvos</CardTitle></CardHeader><CardContent><div className="space-y-3">{scenarios.length ? scenarios.map((scenario) => <div key={scenario.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="font-medium">{scenario.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatCurrency(scenario.current_price)} → {formatCurrency(scenario.new_price)} · perda {scenario.assumed_churn_pct}% · base de {scenario.eligible_clients} clientes</p></div><div className="text-left sm:text-right"><p className={cn('font-semibold', scenario.annual_delta >= 0 ? 'text-money' : 'text-danger')}>{money(scenario.annual_delta)}/ano</p><p className="text-[10px] text-muted-foreground">Base: {new Date(`${scenario.source_snapshot_date}T12:00:00`).toLocaleDateString('pt-BR')}</p></div>{data.permissions.can_manage_scenarios && <Button size="icon" variant="ghost" aria-label="Excluir cenário" onClick={() => deleteScenario(scenario.id)}><Trash2 className="size-4" /></Button>}</div>) : <div className="py-8 text-center text-sm text-muted-foreground">Nenhum cenário salvo.</div>}{cursor && <Button variant="outline" className="w-full" onClick={loadMore}>Carregar mais</Button>}</div></CardContent></Card>
-  </div>
+  </PageShell>
 }
 
 function Metric({ label, value, compact = false, tone }: { label: string; value: React.ReactNode; compact?: boolean; tone?: 'positive' | 'negative' }) {
@@ -181,5 +194,5 @@ function Comparison({ label, value, hint }: { label: string; value: React.ReactN
 }
 
 function Upgrade() {
-  return <div className="mx-auto max-w-3xl py-16 text-center"><BarChart3 className="mx-auto size-10 text-muted-foreground" /><h1 className="mt-4 text-2xl font-semibold">Analytics Avançado</h1><p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Projeções financeiras, comparações históricas e simulações de reajuste estão disponíveis nos planos Pro e Master.</p><Button className="mt-6" onClick={() => window.location.assign('/planos')}>Conhecer o plano Pro</Button></div>
+  return <PageShell width="compact"><InsightsNavigation active="analytics" /><div className="rounded-xl border bg-card px-6 py-16 text-center"><BarChart3 className="mx-auto size-10 text-muted-foreground" /><h1 className="mt-4 text-2xl font-semibold">Decisões financeiras com visão de futuro</h1><p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Projeções financeiras, comparações históricas e simulações de reajuste estão disponíveis nos planos Pro e Master.</p><Button className="mt-6" onClick={() => window.location.assign('/planos')}>Conhecer o plano Pro</Button></div></PageShell>
 }

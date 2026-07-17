@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       parsedPhone = '55' + parsedPhone
     }
 
-    const testMessage = "✅ *Conexão Gestor Master x Evolution* estabelecida com sucesso!\n\nSeu motor de envios está pronto para funcionar."
+    const testMessage = "✅ *Conexão Lembrado x Evolution* estabelecida com sucesso!\n\nSeu motor de envios está pronto para funcionar."
 
     const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`
     const apiReq = await fetch(url, {

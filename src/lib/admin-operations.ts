@@ -45,7 +45,7 @@ const COMPONENTS: Array<Omit<OperationalComponentState, 'status' | 'lastSeenAt' 
   { id: 'warmup_worker', name: 'Aquecimento', description: 'Executa ciclos de aquecimento configurados.', staleAfterSeconds: 180, severity: 'warning' },
   { id: 'bull_board', name: 'Bull Board', description: 'Disponibiliza inspeção protegida das filas.', staleAfterSeconds: 180, severity: 'warning' },
   { id: 'ai_worker', name: 'IA conversacional', description: 'Processa respostas do assistente multi-LLM.', staleAfterSeconds: 180, severity: 'warning' },
-  { id: 'intelligence_worker', name: 'Intelligence', description: 'Processa relatórios do GestorMaster Intelligence.', staleAfterSeconds: 180, severity: 'warning' },
+  { id: 'intelligence_worker', name: 'Intelligence', description: 'Processa relatórios da Lembrado Intelligence.', staleAfterSeconds: 180, severity: 'warning' },
 ]
 
 export function buildOperationalComponentStates(

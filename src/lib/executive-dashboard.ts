@@ -13,7 +13,11 @@ export async function getExecutiveDashboard(organizationId: string, period: Exec
   const oldest = range.previousStart
   const [cyclesResult, paymentsResult, clientsResult, lifecycleResult, snapshotsResult, assignmentsResult] = await Promise.all([
     supabaseAdmin.from('billing_cycles').select('id, client_id, due_date, amount, status, paid_at, created_at').eq('organization_id', organizationId).gte('due_date', oldest).lte('due_date', range.end),
-    supabaseAdmin.from('payments').select('amount_paid, payment_method, paid_at, created_at').eq('organization_id', organizationId).gte('paid_at', `${oldest}T00:00:00Z`).lte('paid_at', `${range.end}T23:59:59Z`),
+    supabaseAdmin
+      .from('payments')
+      .select('amount_paid, payment_method, paid_at, created_at')
+      .eq('organization_id', organizationId)
+      .or(`and(paid_at.gte.${oldest}T00:00:00Z,paid_at.lte.${range.end}T23:59:59Z),and(paid_at.is.null,created_at.gte.${oldest}T00:00:00Z,created_at.lte.${range.end}T23:59:59Z)`),
     supabaseAdmin.from('clients').select('id, status, plan_value, created_at').eq('organization_id', organizationId),
     supabaseAdmin.from('client_lifecycle_events').select('event_type, created_at').eq('organization_id', organizationId).gte('created_at', `${oldest}T00:00:00Z`).lte('created_at', `${range.end}T23:59:59Z`),
     supabaseAdmin.from('executive_daily_snapshots').select('snapshot_date, mrr, active_clients').eq('organization_id', organizationId).lte('snapshot_date', range.end).order('snapshot_date'),

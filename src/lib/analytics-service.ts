@@ -57,7 +57,11 @@ async function readAnalyticsInput(
   const [clients, cycles, payments, snapshots] = await Promise.all([
     supabaseAdmin.from('clients').select('id, status, plan_value, created_at').eq('organization_id', organizationId),
     supabaseAdmin.from('billing_cycles').select('id, due_date, amount, status').eq('organization_id', organizationId).gte('due_date', startDate),
-    supabaseAdmin.from('payments').select('amount_paid, paid_at, created_at').eq('organization_id', organizationId).gte('paid_at', `${startDate}T00:00:00Z`),
+    supabaseAdmin
+      .from('payments')
+      .select('amount_paid, paid_at, created_at')
+      .eq('organization_id', organizationId)
+      .or(`paid_at.gte.${startDate}T00:00:00Z,and(paid_at.is.null,created_at.gte.${startDate}T00:00:00Z)`),
     supabaseAdmin.from('executive_daily_snapshots')
       .select('snapshot_date, mrr, active_clients, confirmed_month, due_cycles, paid_cycles, due_amount, paid_due_amount, new_clients, cancelled_clients, captured_at')
       .eq('organization_id', organizationId)
@@ -224,7 +228,11 @@ async function captureOrganizationSnapshot(organizationId: string, now: Date, fo
   const [clients, cycles, payments, lifecycle] = await Promise.all([
     supabaseAdmin.from('clients').select('status, plan_value, created_at').eq('organization_id', organizationId),
     supabaseAdmin.from('billing_cycles').select('status, amount, due_date').eq('organization_id', organizationId).gte('due_date', monthStart).lt('due_date', nextMonthStart),
-    supabaseAdmin.from('payments').select('amount_paid, paid_at, created_at').eq('organization_id', organizationId).gte('paid_at', `${monthStart}T00:00:00Z`),
+    supabaseAdmin
+      .from('payments')
+      .select('amount_paid, paid_at, created_at')
+      .eq('organization_id', organizationId)
+      .or(`paid_at.gte.${monthStart}T00:00:00Z,and(paid_at.is.null,created_at.gte.${monthStart}T00:00:00Z)`),
     supabaseAdmin.from('client_lifecycle_events').select('event_type, created_at').eq('organization_id', organizationId).gte('created_at', `${monthStart}T00:00:00Z`),
   ])
   const error = clients.error || cycles.error || payments.error || lifecycle.error

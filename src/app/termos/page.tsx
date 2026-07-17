@@ -37,14 +37,14 @@ export default function TermosPage() {
           <section>
             <h2 id="t1" className="scroll-mt-24 text-[14.5px] font-semibold mb-2 text-foreground">1. Aceitação dos Termos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Ao acessar e usar a plataforma <strong>Gestor Master</strong>, você concorda em cumprir e ser regido por estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não deverá utilizar nossos serviços.
+              Ao acessar e usar a plataforma <strong>Lembrado</strong>, você concorda em cumprir e ser regido por estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não deverá utilizar nossos serviços.
             </p>
           </section>
 
           <section>
             <h2 id="t2" className="scroll-mt-24 text-[14.5px] font-semibold mb-2 text-foreground">2. Descrição do Serviço</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O Gestor Master é uma plataforma SaaS (Software as a Service) voltada para a gestão de clientes, cobranças recorrentes e automação de mensagens via integração com a API do WhatsApp.
+              A Lembrado é uma plataforma SaaS (Software as a Service) voltada para a gestão de clientes, cobranças recorrentes e automação de mensagens via integração com a API do WhatsApp.
             </p>
           </section>
 
@@ -53,7 +53,7 @@ export default function TermosPage() {
             <div className="bg-warning-bg border border-warning-border rounded-md p-4 mb-4">
               <h3 className="font-medium text-warning-fg mb-2">Importante: Sobre Riscos de Banimento</h3>
               <p className="text-sm text-warning-fg leading-relaxed">
-                Nossa plataforma atua apenas como um intermediário técnico para o envio de mensagens automatizadas. <strong>O Gestor Master não se responsabiliza pelo banimento, suspensão ou bloqueio de números de WhatsApp</strong> por parte da Meta Inc. O usuário é o único responsável por garantir que o volume, frequência e conteúdo de suas mensagens estão em conformidade com as Políticas de Comércio e Termos de Serviço do WhatsApp.
+                Nossa plataforma atua apenas como um intermediário técnico para o envio de mensagens automatizadas. <strong>A Lembrado não se responsabiliza pelo banimento, suspensão ou bloqueio de números de WhatsApp</strong> por parte da Meta Inc. O usuário é o único responsável por garantir que o volume, frequência e conteúdo de suas mensagens estão em conformidade com as Políticas de Comércio e Termos de Serviço do WhatsApp.
               </p>
             </div>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 mt-4 ml-2">
@@ -76,14 +76,14 @@ export default function TermosPage() {
           <section>
             <h2 id="t5" className="scroll-mt-24 text-[14.5px] font-semibold mb-2 text-foreground">5. Privacidade e Proteção de Dados (LGPD)</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O Gestor Master compromete-se a proteger os dados de seus clientes, bem como os dados dos clientes de nossos clientes ("dados de terceiros"), conforme estipulado pela Lei Geral de Proteção de Dados (LGPD). Seus dados não serão vendidos ou compartilhados com terceiros para fins publicitários. Para mais detalhes, consulte nossa Política de Privacidade.
+              A Lembrado compromete-se a proteger os dados de seus clientes, bem como os dados dos clientes de nossos clientes ("dados de terceiros"), conforme estipulado pela Lei Geral de Proteção de Dados (LGPD). Seus dados não serão vendidos ou compartilhados com terceiros para fins publicitários. Para mais detalhes, consulte nossa Política de Privacidade.
             </p>
           </section>
 
           <section>
             <h2 id="t6" className="scroll-mt-24 text-[14.5px] font-semibold mb-2 text-foreground">6. Limitação de Responsabilidade</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Em nenhuma circunstância o Gestor Master será responsabilizado por lucros cessantes, perda de dados ou danos indiretos decorrentes do uso ou da incapacidade de uso de nossa plataforma, mesmo que tenhamos sido avisados da possibilidade de tais danos.
+              Em nenhuma circunstância a Lembrado será responsabilizada por lucros cessantes, perda de dados ou danos indiretos decorrentes do uso ou da incapacidade de uso de nossa plataforma, mesmo que tenhamos sido avisados da possibilidade de tais danos.
             </p>
           </section>
 

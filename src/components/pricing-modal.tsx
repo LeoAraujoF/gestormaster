@@ -63,7 +63,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId, planName: "Gestor Pro" })
+      body: JSON.stringify({ priceId, planName: "Lembrado Pro" })
     })
     if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com a operadora de pagamentos")
     const data = await res.json()
@@ -76,7 +76,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
     const res = await fetch('/api/pixgo/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: PLAN_PRICE, planName: "Gestor Pro" })
+      body: JSON.stringify({ amount: PLAN_PRICE, planName: "Lembrado Pro" })
     })
     if (!res.ok) throw new Error(await res.text() || "Erro ao conectar com o gateway de PIX")
     const data = await res.json()
@@ -140,7 +140,7 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-[14px] font-semibold">Ativar o Gestor Pro</DialogTitle>
+            <DialogTitle className="text-[14px] font-semibold">Ativar o Lembrado Pro</DialogTitle>
             <DialogDescription className="text-xs">
               Todos os recursos liberados para o seu negócio crescer.
             </DialogDescription>

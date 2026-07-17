@@ -21,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { PageHeader, PageShell } from "@/components/page-layout"
+import { ResellerNavigation } from "@/components/reseller-navigation"
 
 export default function ResellerDetailsPage() {
   const confirm = useConfirm()
@@ -182,16 +184,9 @@ export default function ResellerDetailsPage() {
   const publicLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/revendedor/${id}?token=${reseller?.public_token || ''}`
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.push('/revendas')}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{reseller.name}</h1>
-          <p className="text-muted-foreground mt-1">Configure os serviços e margens deste revendedor.</p>
-        </div>
-      </div>
+    <PageShell width="default" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader eyebrow="Detalhes do parceiro" title={reseller.name} description="Configure serviços, margens, débitos e o acesso público deste revendedor." actions={<Button variant="outline" onClick={() => router.push('/revendas')}><ArrowLeft className="mr-2 size-4" />Voltar à gestão</Button>} />
+      <ResellerNavigation active="management" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-1 h-fit">
@@ -330,6 +325,6 @@ export default function ResellerDetailsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }

@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useConfirm } from "@/components/providers/confirm-provider"
-import { Loader2, Star, MoreHorizontal, Shield, PhoneOff, Image as ImageIcon, X } from "lucide-react"
+import { Activity, CircleCheckBig, CircleX, Clock3, Image as ImageIcon, Loader2, MoreHorizontal, PhoneOff, RotateCcw, Send, Shield, Star, Trash2, Wifi, WifiOff, X } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import { z } from "zod"
@@ -22,11 +22,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { AutomationNavigation } from "@/components/automation-navigation"
+import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
 
 const externalConnectionSchema = z.object({
-  baseUrl: z.string().url("URL invÃ¡lida (ex: http://192.168.1.100:8080)"),
-  apiKey: z.string().min(5, "API Key Ã© obrigatÃ³ria"),
-  instanceName: z.string().min(2, "Nome da instÃ¢ncia obrigatÃ³rio"),
+  baseUrl: z.string().url("URL inválida (ex: http://192.168.1.100:8080)"),
+  apiKey: z.string().min(5, "API Key é obrigatória"),
+  instanceName: z.string().min(2, "Nome da instância obrigatório"),
 })
 type ExternalConnectionForm = z.infer<typeof externalConnectionSchema>
 
@@ -46,10 +48,10 @@ const getDefaultTemplate = (type: string) => {
 }
 
 // Mapa de cores por tipo (GUIA 1.7)
-const STEP_TYPES: Record<string, string> = { before_due: 'Antes do vencimento', on_due: 'No dia do vencimento', after_due: 'ApÃ³s o vencimento' }
-const TEMPLATE_TYPES: Record<string, string> = { renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', quick_message: 'Mensagem rÃ¡pida', promotion: 'PromoÃ§Ã£o' }
-const STARTER_SYSTEM_TYPES: Record<string, string> = { renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', quick_message: 'Mensagem rÃ¡pida' }
-const LOG_TYPE: Record<string, string> = { before_due: 'Aviso prÃ©vio', on_due: 'No vencimento', after_due: 'Atraso', renewal: 'RenovaÃ§Ã£o', activation: 'Boas-vindas', promotion: 'PromoÃ§Ã£o', quick_message: 'Msg rÃ¡pida' }
+const STEP_TYPES: Record<string, string> = { before_due: 'Antes do vencimento', on_due: 'No dia do vencimento', after_due: 'Após o vencimento' }
+const TEMPLATE_TYPES: Record<string, string> = { renewal: 'Renovação', activation: 'Boas-vindas', quick_message: 'Mensagem rápida', promotion: 'Promoção' }
+const STARTER_SYSTEM_TYPES: Record<string, string> = { renewal: 'Renovação', activation: 'Boas-vindas', quick_message: 'Mensagem rápida' }
+const LOG_TYPE: Record<string, string> = { before_due: 'Aviso prévio', on_due: 'No vencimento', after_due: 'Atraso', renewal: 'Renovação', activation: 'Boas-vindas', promotion: 'Promoção', quick_message: 'Msg rápida' }
 const TYPE_DOT: Record<string, string> = { before_due: 'var(--interactive)', on_due: 'var(--warning)', after_due: 'var(--danger)', renewal: 'var(--money)', activation: 'var(--money)', quick_message: 'var(--money)', promotion: '#7a5af8' }
 const VARS = ['{{primeiro_nome}}', '{{plan_value}}', '{{due_date}}', '{{pix}}', '{{titular_pix}}', '{{banco_pix}}', '{{empresa}}', '{{link_canal}}']
 
@@ -81,9 +83,9 @@ function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React
 function NumStepper({ value, onDown, onUp }: { value: number; onDown: () => void; onUp: () => void }) {
   return (
     <div className="flex items-center overflow-hidden rounded-[7px] border border-input">
-      <button type="button" onClick={onDown} className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">â€“</button>
+      <button type="button" onClick={onDown} aria-label="Diminuir valor" className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">−</button>
       <span className="num flex-1 text-center text-[12px] font-semibold">{value}</span>
-      <button type="button" onClick={onUp} className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">+</button>
+      <button type="button" onClick={onUp} aria-label="Aumentar valor" className="w-[30px] bg-muted py-[7px] text-sm text-secondary-foreground hover:bg-secondary">+</button>
     </div>
   )
 }
@@ -639,6 +641,9 @@ export default function AutomacaoPage() {
   const onlineCount = instances.filter(i => i.status === 'connected').length
   const anyOnline = onlineCount > 0
   const pendingCount = logs.filter(l => l.status === 'pending').length
+  const failedCount = logs.filter(l => l.status === 'failed').length
+  const sentCount = logs.filter(l => l.status === 'sent').length
+  const activeAutomationCount = automations.filter(rule => rule.is_active).length
   const filteredLogs = logs.filter(l => logFilter === 'all' || l.status === logFilter)
 
   const bulk = logFilter === 'failed'
@@ -654,52 +659,121 @@ export default function AutomacaoPage() {
 
   if (isAdmin === null) {
     return (
-      <div className="mx-auto max-w-[1000px] space-y-4 pb-10">
+      <PageShell>
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-10 w-96" />
         <div className="flex gap-4"><Skeleton className="h-24 flex-1" /><Skeleton className="h-24 flex-1" /></div>
         <div className="flex gap-4"><Skeleton className="h-72 flex-[1.4]" /><Skeleton className="h-72 flex-1" /></div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="mx-auto max-w-[1000px] pb-14">
+    <PageShell>
       {/* HEADER */}
-      <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        <h1 className="text-[19px] font-semibold tracking-[-0.025em]">AutomaÃ§Ã£o</h1>
-        <span className={cn("ml-1 flex items-center gap-1.5 text-[11.5px] font-medium", anyOnline ? "text-money" : "text-danger")}>
-          <span className={cn("status-dot", anyOnline ? "bg-money" : "bg-danger")} />
-          {anyOnline ? `${onlineCount} de ${instances.length} instÃ¢ncia${instances.length > 1 ? 's' : ''} online` : 'Nenhuma instÃ¢ncia online'}
-        </span>
-        <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={() => setIsTestDialogOpen(true)} className="h-8 text-[11.5px]">
-          Testar disparo
-        </Button>
-        <Button size="sm" onClick={() => setIsConnectDialogOpen(true)} className="h-8 gap-1 text-[11.5px]">
-          <span className="text-[13px] leading-none">+</span> Conectar nÃºmero
-        </Button>
-      </div>
+      <PageHeader
+        title="Automação"
+        description="Acompanhe a operação, mantenha seus canais saudáveis e aja rapidamente sobre filas e falhas."
+        eyebrow={
+          <span className={cn("flex items-center gap-1.5 font-medium", anyOnline ? "text-money" : "text-danger")}>
+            <Activity className="size-3.5" aria-hidden="true" />
+            Central de automação
+          </span>
+        }
+        badge={anyOnline ? `${onlineCount} online` : "Operação pausada"}
+        actions={
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button variant="outline" size="sm" onClick={() => setIsTestDialogOpen(true)} className="min-h-10 flex-1 sm:flex-none">
+              <Send className="size-4" aria-hidden="true" /> Testar envio
+            </Button>
+            <Button size="sm" onClick={() => setIsConnectDialogOpen(true)} className="min-h-10 flex-1 sm:flex-none">
+              <Wifi className="size-4" aria-hidden="true" /> Conectar número
+            </Button>
+          </div>
+        }
+      />
+
+      <AutomationNavigation active="central" />
 
       {isStarter && (
         <div className="mb-4 rounded-lg border border-accent bg-interactive-bg px-3.5 py-3 text-[11.5px] text-interactive-fg">
-          <b>AutomaÃ§Ã£o BÃ¡sica:</b> disparos, promoÃ§Ãµes, templates e agendamentos para atÃ© {plan.limits.clients ?? 100} clientes. RÃ©gua financeira avanÃ§ada, segmentaÃ§Ã£o e mÃ©tricas de conversÃ£o exigem Pro ou Master.
+          <b>Automação Básica:</b> disparos, promoções, templates e agendamentos para até {plan.limits.clients ?? 100} clientes. Régua financeira avançada, segmentação e métricas de conversão exigem Pro ou Master.
+        </div>
+      )}
+
+      <MetricGrid columns={4}>
+        <div className={cn("rounded-xl border bg-card p-4", anyOnline ? "border-money/30" : "border-danger-border")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="microlabel">Conexões online</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight">{onlineCount}<span className="text-base font-medium text-muted-foreground">/{instances.length}</span></p>
+              <p className="mt-1 text-xs text-muted-foreground">{anyOnline ? "Canal disponível para envios" : "Conecte um número para operar"}</p>
+            </div>
+            <span className={cn("rounded-lg p-2", anyOnline ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg")}>
+              {anyOnline ? <Wifi className="size-4" aria-hidden="true" /> : <WifiOff className="size-4" aria-hidden="true" />}
+            </span>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="microlabel">Automações ativas</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight">{activeAutomationCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">de {automations.length} configurações</p>
+            </div>
+            <span className="rounded-lg bg-interactive-bg p-2 text-interactive-fg"><Activity className="size-4" aria-hidden="true" /></span>
+          </div>
+        </div>
+        <button type="button" onClick={() => { setLogFilter('pending'); setActiveTab('logs') }} className="rounded-xl border border-warning-border bg-card p-4 text-left transition-colors hover:bg-warning-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="microlabel">Na fila</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight">{pendingCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Clique para acompanhar</p>
+            </div>
+            <span className="rounded-lg bg-warning-bg p-2 text-warning-fg"><Clock3 className="size-4" aria-hidden="true" /></span>
+          </div>
+        </button>
+        <button type="button" onClick={() => { setLogFilter('failed'); setActiveTab('logs') }} className={cn("rounded-xl border bg-card p-4 text-left transition-colors hover:bg-danger-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none", failedCount > 0 ? "border-danger-border" : "border-border")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="microlabel">Falhas recentes</p>
+              <p className={cn("mt-2 text-2xl font-semibold tracking-tight", failedCount > 0 && "text-danger-fg")}>{failedCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{failedCount > 0 ? "Exige revisão" : `${sentCount} envios concluídos`}</p>
+            </div>
+            <span className={cn("rounded-lg p-2", failedCount > 0 ? "bg-danger-bg text-danger-fg" : "bg-success-bg text-success-fg")}>
+              {failedCount > 0 ? <CircleX className="size-4" aria-hidden="true" /> : <CircleCheckBig className="size-4" aria-hidden="true" />}
+            </span>
+          </div>
+        </button>
+      </MetricGrid>
+
+      {!anyOnline && (
+        <div className="flex flex-col gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-fg sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">Os disparos estão pausados</p>
+            <p className="mt-0.5 text-xs opacity-80">Nenhuma instância está online. Suas configurações continuam preservadas.</p>
+          </div>
+          <Button size="sm" onClick={() => setIsConnectDialogOpen(true)} className="shrink-0">Conectar agora</Button>
         </div>
       )}
 
       {/* TABS segmentadas */}
-      <div className="mb-5 flex w-fit gap-0.5 rounded-lg bg-secondary p-[3px]">
+      <div className="max-w-full overflow-x-auto">
+      <div role="tablist" aria-label="Áreas da Central de Automação" className="grid min-w-[500px] grid-cols-3 gap-1 rounded-xl border border-border bg-muted/50 p-1">
         {([
-          { k: 'overview', l: 'VisÃ£o geral' },
+          { k: 'overview', l: 'Visão geral' },
           { k: 'mass', l: 'Disparo em massa' },
           { k: 'logs', l: 'Logs', badge: pendingCount > 0 ? String(pendingCount) : '' },
         ] as { k: typeof activeTab; l: string; badge?: string }[]).map(t => (
           <button
             key={t.k}
             onClick={() => setActiveTab(t.k)}
+            role="tab"
+            aria-selected={activeTab === t.k}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11.5px] font-medium transition-colors",
-              activeTab === t.k ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.08)]" : "text-muted-foreground hover:text-foreground"
+              "flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-[background-color,color,box-shadow] motion-reduce:transition-none",
+              activeTab === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
             )}
           >
             {t.l}
@@ -707,10 +781,11 @@ export default function AutomacaoPage() {
           </button>
         ))}
       </div>
+      </div>
 
       {/* ============ VISÃƒO GERAL ============ */}
       {activeTab === 'overview' && (
-        <div className="space-y-4">
+        <div role="tabpanel" className="space-y-5">
           {/* Cards de instÃ¢ncia */}
           <div className="flex flex-wrap gap-3.5">
             {instances.map((inst, idx) => {
@@ -734,7 +809,7 @@ export default function AutomacaoPage() {
                         {inst.is_primary && <Star className="size-3 shrink-0 fill-warning text-warning" />}
                       </div>
                       <div className="num truncate text-[10.5px] text-muted-foreground">
-                        {inst.phone_number ? phoneMask(inst.phone_number) : qr ? 'aguardando conexÃ£o Â· escaneie o QR' : 'â€”'}
+                        {inst.phone_number ? phoneMask(inst.phone_number) : qr ? 'aguardando conexão · escaneie o QR' : '—'}
                       </div>
                     </div>
                     <span className={cn("flex items-center gap-1.5 text-[10.5px] font-semibold", online ? "text-money" : qr ? "text-warning-fg" : "text-muted-foreground")}>
@@ -742,12 +817,12 @@ export default function AutomacaoPage() {
                       {online ? 'Online' : qr ? 'Conectando' : 'Offline'}
                     </span>
                     <DropdownMenu>
-                      <DropdownMenuTrigger className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
+                      <DropdownMenuTrigger aria-label={`Abrir ações de ${inst.instance_name}`} className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
                         <MoreHorizontal className="size-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {online && !inst.is_primary && (
-                          <DropdownMenuItem onClick={() => handleSetPrimary(inst.instance_name)}>â˜… Tornar principal</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSetPrimary(inst.instance_name)}>Tornar principal</DropdownMenuItem>
                         )}
                         {online && (
                           <DropdownMenuItem onClick={() => handleDisconnect(inst.instance_name)}>Desconectar</DropdownMenuItem>
@@ -775,7 +850,7 @@ export default function AutomacaoPage() {
                         )}
                       </div>
                       <p className="flex items-center gap-1.5 text-[10.5px] text-warning-fg">
-                        <Loader2 className="size-3 animate-spin" /> Aguardando leituraâ€¦
+                        <Loader2 className="size-3 animate-spin" /> Aguardando leitura…
                       </p>
                     </div>
                   )}
@@ -796,16 +871,16 @@ export default function AutomacaoPage() {
             {/* RÃ‰GUA */}
             {!isStarter && <div className="min-w-0 flex-[1.4] rounded-lg border border-border bg-card p-4">
               <div className="mb-0.5 flex items-center">
-                <span className="text-[13px] font-semibold">RÃ©gua de cobranÃ§a</span>
+                <span className="text-[13px] font-semibold">Régua de cobrança</span>
                 <span className={cn("ml-auto flex cursor-pointer items-center gap-1.5 text-[10.5px] font-semibold", reguaActive ? "text-money" : "text-muted-foreground")} onClick={toggleRegua}>
                   <MiniToggle on={reguaActive} onClick={() => {}} />
                   {reguaActive ? 'Ativa' : 'Pausada'}
                 </span>
               </div>
-              <p className="mb-4 text-[10.5px] text-muted-foreground">mensagens automÃ¡ticas em volta do vencimento</p>
+              <p className="mb-4 text-[10.5px] text-muted-foreground">mensagens automáticas em volta do vencimento</p>
 
               {stepRules.length === 0 ? (
-                <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhuma etapa na rÃ©gua. Adicione a primeira abaixo.</p>
+                <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhuma etapa na régua. Adicione a primeira abaixo.</p>
               ) : (
                 <div className="flex flex-col">
                   {stepRules.map((r, idx) => {
@@ -851,7 +926,7 @@ export default function AutomacaoPage() {
                   <button onClick={() => openTemplateDialog(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Novo</button>
                 </div>
                 {templates.length === 0 ? (
-                  <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhum template. Crie mensagens reutilizÃ¡veis para a rÃ©gua e o disparo em massa.</p>
+                  <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhum template. Crie mensagens reutilizáveis para a régua e o disparo em massa.</p>
                 ) : (
                   templates.map(t => (
                     <div key={t.id} onClick={() => openTemplateDialog(t)} className="mb-2 cursor-pointer rounded-[7px] border border-border p-2.5 transition-colors hover:bg-muted">
@@ -875,12 +950,12 @@ export default function AutomacaoPage() {
               {/* Mensagens automÃ¡ticas do robÃ´ (boas-vindas, renovaÃ§Ã£oâ€¦) */}
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-1 flex items-center">
-                  <span className="text-[13px] font-semibold">RobÃ´ do sistema</span>
+                  <span className="text-[13px] font-semibold">Robô do sistema</span>
                   <button onClick={() => openAuto(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Nova</button>
                 </div>
-                <p className="mb-3 text-[10.5px] text-muted-foreground">{isStarter ? 'controle bÃ¡sico de boas-vindas, renovaÃ§Ã£o e mensagem rÃ¡pida' : 'disparadas por eventos: boas-vindas, renovaÃ§Ã£o, promoÃ§Ã£oâ€¦'}</p>
+                <p className="mb-3 text-[10.5px] text-muted-foreground">{isStarter ? 'controle básico de boas-vindas, renovação e mensagem rápida' : 'disparadas por eventos: boas-vindas, renovação, promoção…'}</p>
                 {visibleAutoRules.length === 0 ? (
-                  <p className="py-3 text-center text-[11px] text-muted-foreground">Nenhuma mensagem automÃ¡tica.</p>
+                  <p className="py-3 text-center text-[11px] text-muted-foreground">Nenhuma mensagem automática.</p>
                 ) : (
                   visibleAutoRules.map(r => (
                     <div key={r.id} onClick={() => openAuto(r)} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted">
@@ -902,12 +977,12 @@ export default function AutomacaoPage() {
               <div className="mb-0.5 flex items-center gap-2">
                 <Shield className="size-3.5 text-warning" />
                 <span className="text-[12.5px] font-semibold">Antibloqueio</span>
-                <span className="num ml-auto text-[10px] font-semibold text-muted-foreground">{antiBanConfig.min_delay}â€“{antiBanConfig.max_delay}s</span>
+                <span className="num ml-auto text-[10px] font-semibold text-muted-foreground">{antiBanConfig.min_delay}–{antiBanConfig.max_delay}s</span>
               </div>
-              <p className="mb-3 text-[10.5px] text-muted-foreground">intervalo aleatÃ³rio entre cada mensagem</p>
+              <p className="mb-3 text-[10.5px] text-muted-foreground">intervalo aleatório entre cada mensagem</p>
               <div className="flex gap-2.5">
                 <div className="flex-1">
-                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">MÃ­nimo (s)</p>
+                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">Mínimo (s)</p>
                   <NumStepper
                     value={antiBanConfig.min_delay}
                     onDown={() => setAntiBanConfig(c => ({ ...c, min_delay: Math.max(5, c.min_delay - 1) }))}
@@ -915,7 +990,7 @@ export default function AutomacaoPage() {
                   />
                 </div>
                 <div className="flex-1">
-                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">MÃ¡ximo (s)</p>
+                  <p className="mb-1 text-[10px] font-medium text-secondary-foreground">Máximo (s)</p>
                   <NumStepper
                     value={antiBanConfig.max_delay}
                     onDown={() => setAntiBanConfig(c => ({ ...c, max_delay: Math.max(c.min_delay, c.max_delay - 1) }))}
@@ -933,7 +1008,7 @@ export default function AutomacaoPage() {
                 <PhoneOff className="size-3.5 text-danger" />
                 <div className="flex-1">
                   <p className="text-[12.5px] font-semibold">Bloquear chamadas</p>
-                  <p className="mt-px text-[10.5px] text-muted-foreground">recusa ligaÃ§Ãµes automaticamente</p>
+                  <p className="mt-px text-[10.5px] text-muted-foreground">recusa ligações automaticamente</p>
                 </div>
                 <MiniToggle on={rejectCalls} disabled={isSavingCallSettings} onClick={() => { const next = !rejectCalls; setRejectCalls(next); handleSaveCallSettings(next) }} />
               </div>
@@ -942,7 +1017,7 @@ export default function AutomacaoPage() {
                   <Textarea
                     value={rejectCallsMessage}
                     onChange={(e) => setRejectCallsMessage(e.target.value)}
-                    placeholder="Mensagem automÃ¡tica ao recusarâ€¦"
+                    placeholder="Mensagem automática ao recusar…"
                     className="min-h-[52px] resize-none text-[11px]"
                   />
                   <Button variant="outline" size="sm" onClick={() => handleSaveCallSettings()} disabled={isSavingCallSettings} className="h-7 w-full text-[11px]">
@@ -957,21 +1032,21 @@ export default function AutomacaoPage() {
 
       {/* ============ DISPARO EM MASSA ============ */}
       {activeTab === 'mass' && (
-        <div className="max-w-[640px]">
+        <div role="tabpanel" className="max-w-[760px]">
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="border-b border-border px-4 py-3.5">
               <p className="text-[14px] font-semibold tracking-[-0.01em]">Disparo em massa</p>
               <p className="mt-1 text-[11px] leading-normal text-muted-foreground">Envie para um grupo de clientes de uma vez, respeitando o intervalo anti-ban.</p>
             </div>
             <div className="p-4">
-              <p className="mb-1.5 text-[11px] font-medium text-secondary-foreground">PÃºblico-alvo</p>
+              <p className="mb-1.5 text-[11px] font-medium text-secondary-foreground">Público-alvo</p>
               <div className="mb-3 flex flex-wrap gap-1.5">
                 {[
                   { k: 'all', l: 'Todos os clientes' },
                   { k: 'active', l: 'Apenas ativos' },
                   { k: 'inactive', l: 'Apenas inativos' },
                   { k: 'expired', l: 'Vencimento atrasado' },
-                  ...(!isStarter ? [{ k: 'service', l: 'Por serviÃ§o' }] : []),
+                  ...(!isStarter ? [{ k: 'service', l: 'Por serviço' }] : []),
                 ].map(a => (
                   <button
                     key={a.k}
@@ -989,7 +1064,7 @@ export default function AutomacaoPage() {
                 <div className="mb-3">
                   <Select value={massServiceId} onValueChange={(v) => setMassServiceId(v ?? '')}>
                     <SelectTrigger className="h-9 w-full text-xs">
-                      <SelectValue placeholder="Escolha o serviÃ§o">{services.find(s => s.id === massServiceId)?.name || 'Escolha o serviÃ§o'}</SelectValue>
+                      <SelectValue placeholder="Escolha o serviço">{services.find(s => s.id === massServiceId)?.name || 'Escolha o serviço'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -999,7 +1074,7 @@ export default function AutomacaoPage() {
               )}
 
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-accent bg-interactive-bg px-3 py-2 text-[11.5px] text-interactive-fg">
-                â—Ž <b>PÃºblico estimado:</b> {estimatedAudience ?? 'â€¦'} clientes.
+                <b>Público estimado:</b> {estimatedAudience ?? '…'} clientes.
               </div>
 
               {activeTemplates.length > 0 && (
@@ -1023,11 +1098,11 @@ export default function AutomacaoPage() {
               <Textarea
                 value={massMessage}
                 onChange={(e) => setMassMessage(e.target.value)}
-                placeholder="Escreva a mensagemâ€¦"
+                placeholder="Escreva a mensagem…"
                 className="min-h-[100px] text-xs leading-relaxed"
               />
               <div className="my-2 rounded-lg border border-border bg-muted px-3 py-2.5">
-                <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
+                <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {VARS.map(v => (
                     <button key={v} onClick={() => insertVar(v, 'mass')} className="num rounded-[5px] border border-accent bg-interactive-bg px-1.5 py-0.5 text-[10px] font-medium text-interactive-fg hover:brightness-95">
@@ -1058,7 +1133,7 @@ export default function AutomacaoPage() {
               </div>
 
               <div className="rounded-lg border border-border bg-muted px-3.5 py-3">
-                <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-medium"><span className="text-interactive">â—·</span> Agendar (opcional)</p>
+                <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-medium"><Clock3 className="size-3.5 text-interactive" aria-hidden="true" /> Agendar (opcional)</p>
                 <Input
                   type="datetime-local"
                   onChange={(e) => setScheduledAt(e.target.value ? new Date(e.target.value) : null)}
@@ -1075,7 +1150,7 @@ export default function AutomacaoPage() {
                   anyOnline ? "bg-money hover:brightness-95" : "cursor-not-allowed bg-input text-muted-foreground"
                 )}
               >
-                {isSendingMass ? <Loader2 className="mx-auto size-4 animate-spin" /> : anyOnline ? 'Iniciar disparo em massa' : 'Conecte um nÃºmero primeiro'}
+                {isSendingMass ? <Loader2 className="mx-auto size-4 animate-spin" /> : anyOnline ? 'Iniciar disparo em massa' : 'Conecte um número primeiro'}
               </button>
             </div>
           </div>
@@ -1084,10 +1159,10 @@ export default function AutomacaoPage() {
 
       {/* ============ LOGS ============ */}
       {activeTab === 'logs' && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div role="tabpanel" className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-3">
             <div className="min-w-[160px] flex-1">
-              <p className="text-[13px] font-semibold">HistÃ³rico de disparos</p>
+              <p className="text-[13px] font-semibold">Histórico de disparos</p>
               <p className="mt-px text-[10.5px] text-muted-foreground">programados, enviados e falhas</p>
             </div>
             <div className="flex gap-0.5 rounded-[7px] bg-secondary p-0.5">
@@ -1118,17 +1193,17 @@ export default function AutomacaoPage() {
           {/* Nota anti-ban sÃ³ no filtro "Em andamento" (GUIA 1.8) */}
           {logFilter === 'pending' && filteredLogs.length > 0 && (
             <div className="border-b border-warning-border bg-warning-bg px-4 py-2 text-[10.5px] text-warning-fg">
-              O horÃ¡rio agendado Ã© o <b>inÃ­cio</b> â€” as mensagens saem gradualmente respeitando o delay anti-ban ({antiBanConfig.min_delay}â€“{antiBanConfig.max_delay}s).
+              O horário agendado é o <b>início</b> — as mensagens saem gradualmente respeitando o delay anti-ban ({antiBanConfig.min_delay}–{antiBanConfig.max_delay}s).
             </div>
           )}
 
           {/* header da tabela */}
-          <div className="microlabel flex gap-2.5 border-b border-border bg-muted px-4 py-2 !text-[9px]">
+          <div className="microlabel hidden gap-2.5 border-b border-border bg-muted px-4 py-2 !text-[9px] md:flex">
             <span className="flex-[1.2]">CLIENTE</span>
             <span className="w-[100px]">ETAPA</span>
             <span className="w-[110px]">PROGRAMADO</span>
             <span className="w-[90px]">STATUS</span>
-            <span className="w-[80px] text-right">AÃ‡Ã•ES</span>
+            <span className="w-[80px] text-right">AÇÕES</span>
           </div>
 
           {isLogsLoading ? (
@@ -1152,29 +1227,32 @@ export default function AutomacaoPage() {
               } as Record<string, [string, string]>)[displayStatus] || [displayStatus, 'bg-secondary']
               const sched = log.scheduled_at
                 ? `${new Date(log.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${new Date(log.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                : 'â€”'
+                : '—'
               return (
-                <div key={log.id} className="flex items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
-                  <div className="min-w-0 flex-[1.2]">
+                <div key={log.id} className="grid grid-cols-2 gap-x-3 gap-y-3 border-b border-border px-4 py-3 last:border-0 md:flex md:items-center md:gap-2.5 md:py-2.5">
+                  <div className="col-span-2 min-w-0 md:flex-[1.2]">
                     <p className="truncate text-xs font-medium">{log.client?.name || 'Cliente removido'}</p>
                     {log.error_message && <p className="mt-px truncate text-[10px] text-danger">{log.error_message}</p>}
-                    {displayStatus === 'deferred' && <p className="mt-px truncate text-[10px] text-interactive-fg">Adiado por uma cobranÃ§a prioritÃ¡ria</p>}
+                    {displayStatus === 'deferred' && <p className="mt-px truncate text-[10px] text-interactive-fg">Adiado por uma cobrança prioritária</p>}
                   </div>
-                  <span className="w-[100px] truncate text-[11px] text-secondary-foreground">
-                    {LOG_TYPE[log.automation?.alert_type] || 'â€”'}
+                  <span className="min-w-0 text-[11px] text-secondary-foreground md:w-[100px] md:truncate">
+                    <span className="microlabel mb-1 block md:hidden">Etapa</span>
+                    {LOG_TYPE[log.automation?.alert_type] || '—'}
                   </span>
-                  <span className="num w-[110px] text-[10.5px] text-muted-foreground">{sched}</span>
-                  <span className="w-[90px]">
+                  <span className="num text-[10.5px] text-muted-foreground md:w-[110px]"><span className="microlabel mb-1 block md:hidden">Programado</span>{sched}</span>
+                  <span className="md:w-[90px]">
+                    <span className="microlabel mb-1 block md:hidden">Status</span>
                     <span className={cn("inline-flex rounded px-2 py-0.5 text-[10px] font-semibold", st[1])}>{st[0]}</span>
                   </span>
-                  <span className="flex w-[80px] justify-end gap-1">
+                  <span className="flex items-end justify-end gap-1 md:w-[80px]">
+                    <span className="sr-only">Ações</span>
                     {displayStatus !== 'sent' && displayStatus !== 'deferred' && (
-                      <button onClick={() => handleResendLog(log.id)} title="Reenviar" className="size-[26px] rounded-md border border-input bg-card text-xs text-money hover:bg-muted">â†»</button>
+                      <button onClick={() => handleResendLog(log.id)} title="Reenviar" aria-label={`Reenviar mensagem de ${log.client?.name || 'cliente removido'}`} className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-money hover:bg-muted"><RotateCcw className="size-3.5" aria-hidden="true" /></button>
                     )}
                     {displayStatus === 'pending' && (
-                      <button onClick={() => handleCancelLog(log.id)} title="Cancelar" className="size-[26px] rounded-md border border-input bg-card text-xs text-warning hover:bg-muted">âœ•</button>
+                      <button onClick={() => handleCancelLog(log.id)} title="Cancelar" aria-label={`Cancelar mensagem de ${log.client?.name || 'cliente removido'}`} className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-warning hover:bg-muted"><X className="size-3.5" aria-hidden="true" /></button>
                     )}
-                    <button onClick={() => handleDeleteLog(log.id)} title="Excluir" className="size-[26px] rounded-md border border-input bg-card text-xs text-danger-fg hover:bg-muted">ðŸ—‘</button>
+                    <button onClick={() => handleDeleteLog(log.id)} title="Excluir" aria-label={`Excluir registro de ${log.client?.name || 'cliente removido'}`} className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-danger-fg hover:bg-muted"><Trash2 className="size-3.5" aria-hidden="true" /></button>
                   </span>
                 </div>
               )
@@ -1192,10 +1270,10 @@ export default function AutomacaoPage() {
             </span>
             <div>
               <DialogTitle className="text-[13.5px] font-semibold">
-                {editingRule ? 'Editar ' : 'Nova '}{dlgKind === 'step' ? 'etapa da rÃ©gua' : 'mensagem automÃ¡tica'}
+                {editingRule ? 'Editar ' : 'Nova '}{dlgKind === 'step' ? 'etapa da régua' : 'mensagem automática'}
               </DialogTitle>
               <DialogDescription className="mt-px text-[10.5px]">
-                {dlgKind === 'step' ? 'quando e o que o robÃ´ envia' : 'disparada por evento do sistema'}
+                {dlgKind === 'step' ? 'quando e o que o robô envia' : 'disparada por evento do sistema'}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -1217,7 +1295,7 @@ export default function AutomacaoPage() {
               <div className="flex gap-3">
                 {(ruleForm.alert_type === 'before_due' || ruleForm.alert_type === 'after_due') && (
                   <div className="flex-1 space-y-1.5">
-                    <Label className="text-[11px]">Dias de diferenÃ§a</Label>
+                    <Label className="text-[11px]">Dias de diferença</Label>
                     <NumStepper
                       value={ruleForm.days}
                       onDown={() => setRuleForm(f => ({ ...f, days: Math.max(1, f.days - 1) }))}
@@ -1226,7 +1304,7 @@ export default function AutomacaoPage() {
                   </div>
                 )}
                 <div className="flex-1 space-y-1.5">
-                  <Label className="text-[11px]">HorÃ¡rio</Label>
+                  <Label className="text-[11px]">Horário</Label>
                   <Input type="time" value={ruleForm.send_time} onChange={(e) => setRuleForm(f => ({ ...f, send_time: e.target.value }))} className="num h-9 text-xs" />
                 </div>
               </div>
@@ -1257,12 +1335,12 @@ export default function AutomacaoPage() {
               <Textarea
                 value={ruleForm.message_template}
                 onChange={(e) => setRuleForm(f => ({ ...f, message_template: e.target.value }))}
-                placeholder="Escreva o templateâ€¦"
+                placeholder="Escreva o template…"
                 className="min-h-[96px] text-xs leading-relaxed"
               />
             </div>
             <div className="rounded-lg border border-border bg-muted px-3 py-2.5">
-              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
+              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
               <div className="flex flex-wrap gap-1.5">
                 {VARS.map(v => (
                   <button key={v} type="button" onClick={() => insertVar(v, 'form')} className="num rounded-[5px] border border-accent bg-interactive-bg px-1.5 py-0.5 text-[10px] font-medium text-interactive-fg hover:brightness-95">
@@ -1275,7 +1353,7 @@ export default function AutomacaoPage() {
             <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-3 py-2.5">
               <div className="flex-1">
                 <p className="text-xs font-medium">Ativo</p>
-                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, o robÃ´ ignora este item</p>
+                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, o robô ignora este item</p>
               </div>
               <MiniToggle on={ruleForm.is_active} onClick={() => setRuleForm(f => ({ ...f, is_active: !f.is_active }))} />
             </div>
@@ -1304,7 +1382,7 @@ export default function AutomacaoPage() {
               <DialogTitle className="text-[13.5px] font-semibold">
                 {editingTemplate ? 'Editar template' : 'Novo template'}
               </DialogTitle>
-              <DialogDescription className="mt-px text-[10.5px]">mensagem reutilizÃ¡vel na rÃ©gua e no disparo em massa</DialogDescription>
+              <DialogDescription className="mt-px text-[10.5px]">mensagem reutilizável na régua e no disparo em massa</DialogDescription>
             </div>
           </DialogHeader>
 
@@ -1314,7 +1392,7 @@ export default function AutomacaoPage() {
               <Input
                 value={templateForm.title}
                 onChange={(e) => setTemplateForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Ex: CobranÃ§a padrÃ£o"
+                placeholder="Ex: Cobrança padrão"
                 className="h-9 text-xs"
               />
             </div>
@@ -1338,12 +1416,12 @@ export default function AutomacaoPage() {
               <Textarea
                 value={templateForm.message}
                 onChange={(e) => setTemplateForm(f => ({ ...f, message: e.target.value }))}
-                placeholder="Escreva o templateâ€¦"
+                placeholder="Escreva o template…"
                 className="min-h-[96px] text-xs leading-relaxed"
               />
             </div>
             <div className="rounded-lg border border-border bg-muted px-3 py-2.5">
-              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variÃ¡vel:</p>
+              <p className="mb-1.5 text-[10.5px] font-medium text-muted-foreground">Inserir variável:</p>
               <div className="flex flex-wrap gap-1.5">
                 {VARS.map(v => (
                   <button
@@ -1361,7 +1439,7 @@ export default function AutomacaoPage() {
             <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted px-3 py-2.5">
               <div className="flex-1">
                 <p className="text-xs font-medium">Ativo</p>
-                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, nÃ£o aparece nos seletores</p>
+                <p className="mt-px text-[10.5px] text-muted-foreground">se desativado, não aparece nos seletores</p>
               </div>
               <MiniToggle on={templateForm.is_active} onClick={() => setTemplateForm(f => ({ ...f, is_active: !f.is_active }))} />
             </div>
@@ -1385,7 +1463,7 @@ export default function AutomacaoPage() {
       <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
         <DialogContent className="w-[440px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
-            <DialogTitle className="text-[13.5px] font-semibold">Conectar nÃºmero</DialogTitle>
+            <DialogTitle className="text-[13.5px] font-semibold">Conectar número</DialogTitle>
             <DialogDescription className="text-[10.5px]">Gere um novo chip e escaneie o QR code com o WhatsApp.</DialogDescription>
           </DialogHeader>
 
@@ -1399,7 +1477,7 @@ export default function AutomacaoPage() {
                   connectionMode === m ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]" : "text-muted-foreground"
                 )}
               >
-                {m === 'integrated' ? 'API do sistema' : 'API prÃ³pria'}
+                {m === 'integrated' ? 'API do sistema' : 'API própria'}
               </button>
             ))}
           </div>
@@ -1407,10 +1485,10 @@ export default function AutomacaoPage() {
           {connectionMode === 'integrated' ? (
             <div className="space-y-3">
               <p className="rounded-md bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                Geramos a instÃ¢ncia automaticamente na nossa infraestrutura. Depois Ã© sÃ³ escanear o QR que aparece no card do chip.
+                Geramos a instância automaticamente na nossa infraestrutura. Depois é só escanear o QR que aparece no card do chip.
               </p>
               <Button onClick={handleIntegratedConnect} disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar instÃ¢ncia automÃ¡tica
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar instância automática
               </Button>
             </div>
           ) : (
@@ -1426,12 +1504,12 @@ export default function AutomacaoPage() {
                 {connErrs.apiKey && <p className="text-[10.5px] text-danger">{connErrs.apiKey.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px]">Nome da instÃ¢ncia</Label>
+                <Label className="text-[11px]">Nome da instância</Label>
                 <Input placeholder="ex: chip-disparos" className="h-9 text-xs" {...regConn("instanceName")} />
                 {connErrs.instanceName && <p className="text-[10.5px] text-danger">{connErrs.instanceName.message}</p>}
               </div>
               <Button type="submit" disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Conectar instÃ¢ncia
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Conectar instância
               </Button>
             </form>
           )}
@@ -1443,7 +1521,7 @@ export default function AutomacaoPage() {
         <DialogContent className="w-[400px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
             <DialogTitle className="text-[13.5px] font-semibold">Testar disparo</DialogTitle>
-            <DialogDescription className="text-[10.5px]">Envia uma mensagem de teste para conferir a conexÃ£o.</DialogDescription>
+            <DialogDescription className="text-[10.5px]">Envia uma mensagem de teste para conferir a conexão.</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
             <Label className="text-[11px]">WhatsApp de destino</Label>
@@ -1462,6 +1540,6 @@ export default function AutomacaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }

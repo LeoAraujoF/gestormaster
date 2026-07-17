@@ -29,6 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { PageHeader, PageShell } from "@/components/page-layout"
+import { ResellerNavigation } from "@/components/reseller-navigation"
 
 export default function RevendasPage() {
   const supabase = createClient()
@@ -152,28 +154,12 @@ export default function RevendasPage() {
   const pendingRequests = requests.filter(r => r.status === 'pending_payment' || r.status === 'paid')
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Gestão de Revendas</h1>
-          <p className="text-muted-foreground mt-1">Gerencie seus revendedores e aprovações de crédito (White-Label).</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.location.href = '/revendas/metricas'}>
-            Métricas
-          </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/revendas/configuracoes'}>
-            Configurações
-          </Button>
-          <Button onClick={() => setIsAddModalOpen(true)} className="bg-primary hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Revendedor
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader eyebrow="Rede de parceiros" title="Gestão de Revendas" description="Resolva solicitações pendentes e acompanhe seus revendedores em um único lugar." badge={pendingRequests.length ? `${pendingRequests.length} pendentes` : "Sem pendências"} actions={<Button onClick={() => setIsAddModalOpen(true)}><Plus className="mr-2 size-4" />Novo revendedor</Button>} />
+      <ResellerNavigation active="management" />
 
       <Tabs defaultValue="solicitacoes" className="space-y-6">
-        <TabsList className="bg-secondary/50 border border-border/50">
+        <TabsList className="h-auto w-full justify-start overflow-x-auto border bg-card p-1 sm:w-auto">
           <TabsTrigger value="solicitacoes" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Clock className="w-4 h-4 mr-2" /> Solicitações Pendentes
             {pendingRequests.length > 0 && (
@@ -203,7 +189,7 @@ export default function RevendasPage() {
                   <p className="text-muted-foreground">Nenhuma solicitação de crédito pendente.</p>
                 </div>
               ) : (
-                <div className="rounded-md border border-border/50">
+                <div className="overflow-x-auto rounded-md border border-border/50">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30">
@@ -345,6 +331,6 @@ export default function RevendasPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }

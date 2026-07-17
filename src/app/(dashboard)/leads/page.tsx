@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Upload, Download, Search, FileText, Phone, Trash2, UserPlus, Lock, Zap, Loader2, Edit, ChevronLeft, ChevronRight, Play, Square, Settings2, Image as ImageIcon, AlertCircle, CheckCircle2, Info, X, ArrowRight, Columns3, Tag, ListChecks, Wand2, Star, MoreHorizontal, BarChart3, Users } from "lucide-react"
-import Papa from "papaparse"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { phoneMask } from "@/lib/utils"
@@ -76,6 +75,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
 
 interface Lead {
   id: string
@@ -539,6 +539,7 @@ export default function LeadsPage() {
     const file = event.target.files?.[0]
     if (!file || !userId) return
 
+    const Papa = (await import("papaparse")).default
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -680,7 +681,7 @@ export default function LeadsPage() {
     })
   }
 
-  const exportToCSV = () => {
+  const exportToCSV = async () => {
     if (leads.length === 0) {
       toast.warning("Nenhum lead para exportar.")
       return
@@ -690,6 +691,7 @@ export default function LeadsPage() {
       ...rest,
       ...(custom_fields || {})
     }))
+    const Papa = (await import("papaparse")).default
     const csv = Papa.unparse(exportData)
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement("a")
@@ -1003,13 +1005,14 @@ export default function LeadsPage() {
   const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Gestão de Leads</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Importe, gerencie e dispare mensagens em massa para seus leads.</p>
-        </div>
-        <div className="flex gap-2">
+    <PageShell className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="rounded-xl border bg-card p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Aquisição e relacionamento"
+          title="Gestão de Leads"
+          description="Encontre quem precisa de atenção, organize sua base e transforme contatos em próximas ações claras."
+          badge={`${statusCounts.novo} novos`}
+          actions={<>
           <input 
             type="file" 
             accept=".csv" 
@@ -1026,13 +1029,14 @@ export default function LeadsPage() {
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
-        </div>
+          </>}
+        />
       </div>
 
       {/* Mini-Dashboard Premium */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card className="bg-background/50 border-border/50 shadow-sm backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center gap-4">
+      <MetricGrid columns={3}>
+        <Card className="border-sky-500/20 bg-sky-500/[0.06] shadow-sm">
+          <CardContent className="p-5 flex items-center gap-4">
             <div className="p-3 bg-primary/10 rounded-xl text-primary">
               <Users className="w-5 h-5" />
             </div>
@@ -1042,8 +1046,8 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-background/50 border-border/50 shadow-sm backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center gap-4">
+        <Card className="border-amber-500/20 bg-amber-500/[0.05] shadow-sm">
+          <CardContent className="p-5 flex items-center gap-4">
             <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
               <BarChart3 className="w-5 h-5" />
             </div>
@@ -1053,8 +1057,8 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-background/50 border-border/50 shadow-sm backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center gap-4">
+        <Card className="border-emerald-500/20 bg-emerald-500/[0.05] shadow-sm">
+          <CardContent className="p-5 flex items-center gap-4">
             <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500">
               <CheckCircle2 className="w-5 h-5" />
             </div>
@@ -1064,12 +1068,12 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </MetricGrid>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="base" disabled={isSending}>Base de Contatos</TabsTrigger>
-          <TabsTrigger value="disparo">Campanha</TabsTrigger>
+        <TabsList className="mb-4 h-auto w-full justify-start rounded-xl border bg-card p-1 sm:w-auto">
+          <TabsTrigger className="min-h-10 flex-1 px-5 sm:flex-none" value="base" disabled={isSending}>Base de Contatos</TabsTrigger>
+          <TabsTrigger className="min-h-10 flex-1 px-5 sm:flex-none" value="disparo">Campanha</TabsTrigger>
         </TabsList>
 
         <TabsContent value="base" className="space-y-4 mt-0">
@@ -1736,7 +1740,7 @@ export default function LeadsPage() {
                             <div className="w-[200px] h-[150px] flex items-center justify-center bg-muted">Video Selecionado</div>
                           )}
                           {!isSending && (
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                               <Button variant="destructive" size="sm" onClick={removeMedia}>
                                 <Trash2 className="w-4 h-4 mr-2" /> Remover
                               </Button>
@@ -2160,6 +2164,6 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-    </div>
+    </PageShell>
   )
 }

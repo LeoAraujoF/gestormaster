@@ -91,7 +91,7 @@ export default function LoginPage() {
       {/* Logo */}
       <Link href="/" className="mb-8 flex items-center gap-2">
         <BrandMark size={26} />
-        <span className="text-[15px] font-semibold tracking-tight text-foreground">Gestor</span>
+        <span className="text-[15px] font-semibold tracking-tight text-foreground">lembrado.</span>
       </Link>
 
       {/* Card único */}

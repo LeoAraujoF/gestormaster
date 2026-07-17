@@ -28,7 +28,7 @@ export default function PrivacidadePage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
-            Gestor
+            Lembrado
           </div>
           <Link 
             href="/login" 
@@ -58,7 +58,7 @@ export default function PrivacidadePage() {
           
           <h2 id="p1" className="scroll-mt-24 text-[14.5px] font-semibold mt-10 mb-2 text-foreground">Quem somos</h2>
           <p className="text-muted-foreground leading-relaxed mb-6">
-            O <strong>Gestor</strong> é um sistema de gestão e notificações via WhatsApp que auxilia empresas a automatizar comunicações com seus clientes, incluindo lembretes de cobrança, confirmações e avisos operacionais.
+            A <strong>Lembrado</strong> é um sistema de gestão e notificações via WhatsApp que auxilia empresas a automatizar comunicações com seus clientes, incluindo lembretes de cobrança, confirmações e avisos operacionais.
           </p>
 
           <h2 id="p2" className="scroll-mt-24 text-[14.5px] font-semibold mt-10 mb-2 text-foreground">Dados que coletamos</h2>
@@ -72,7 +72,7 @@ export default function PrivacidadePage() {
 
           <h2 id="p3" className="scroll-mt-24 text-[14.5px] font-semibold mt-10 mb-2 text-foreground">Como usamos os dados</h2>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-6">
-            <li>Operar o Gestor, autenticar usuários e manter o funcionamento seguro.</li>
+            <li>Operar a Lembrado, autenticar usuários e manter o funcionamento seguro.</li>
             <li>Enviar notificações automatizadas via WhatsApp conforme as regras configuradas pelo usuário.</li>
             <li>Gerar relatórios e estatísticas internas para melhoria do serviço.</li>
             <li>Prestar suporte, comunicação administrativa e processamento de assinaturas.</li>
@@ -85,7 +85,7 @@ export default function PrivacidadePage() {
 
           <h2 id="p5" className="scroll-mt-24 text-[14.5px] font-semibold mt-10 mb-2 text-foreground">Base legal</h2>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-6">
-            <li>Execução de contrato ao fornecer o serviço do Gestor.</li>
+            <li>Execução de contrato ao fornecer o serviço da Lembrado.</li>
             <li>Consentimento para integrações e comunicações específicas.</li>
             <li>Interesse legítimo para segurança, prevenção a fraudes e melhoria contínua.</li>
           </ul>
@@ -131,7 +131,7 @@ export default function PrivacidadePage() {
 
       {/* Footer simples */}
       <footer className="border-t border-border/50 py-8 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Gestor. Todos os direitos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Lembrado. Todos os direitos reservados.</p>
       </footer>
     </div>
   )

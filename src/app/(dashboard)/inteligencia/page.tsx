@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { InsightsNavigation } from "@/components/insights-navigation"
+import { MetricGrid, PageHeader, PageSection, PageShell } from "@/components/page-layout"
 import type { IntelligenceAgent, IntelligenceDashboardDTO, IntelligenceFinding } from "@/lib/intelligence-types"
 
 const agents: Array<{ key: IntelligenceAgent; label: string }> = [
@@ -144,33 +146,46 @@ export default function IntelligencePage() {
     if (response.ok) await load(true)
   }
 
-  if (loading) return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+  if (loading) return <PageShell><div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed"><Loader2 className="size-6 animate-spin text-muted-foreground" /><span className="ml-3 text-sm text-muted-foreground">Preparando suas recomendações...</span></div></PageShell>
 
   if (upgrade) return (
-    <div className="mx-auto max-w-3xl py-16 text-center">
+    <PageShell width="compact">
+      <InsightsNavigation active="intelligence" />
+      <div className="rounded-xl border bg-card px-6 py-16 text-center">
       <BrainCircuit className="mx-auto size-10 text-muted-foreground" />
-      <h1 className="mt-4 text-2xl font-semibold">GestorMaster Intelligence</h1>
+      <h1 className="mt-4 text-2xl font-semibold">Transforme dados em prioridades claras</h1>
       <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Consultoria financeira, comercial, de cobrança, executiva e operacional baseada nos dados reais da sua organização.</p>
       <Button className="mt-6" onClick={() => window.location.assign("/planos")}>Conhecer o plano Master</Button>
-    </div>
+      </div>
+    </PageShell>
   )
 
   if (!data) return null
   if (!data.settings.enabled) return (
-    <div className="mx-auto max-w-3xl py-16 text-center">
+    <PageShell width="compact">
+      <InsightsNavigation active="intelligence" />
+      <div className="rounded-xl border bg-card px-6 py-16 text-center">
       <ShieldCheck className="mx-auto size-10 text-emerald-600" />
       <h1 className="mt-4 text-2xl font-semibold">Ative sua central de inteligência</h1>
       <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">A simulação usa somente fatos calculados pelas Fases três e quatro. Nenhuma recomendação executa ações automaticamente.</p>
       <Button className="mt-6" disabled={saving} onClick={activate}>{saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}Ativar e preparar relatório</Button>
-    </div>
+      </div>
+    </PageShell>
   )
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><h1 className="text-xl font-semibold">GestorMaster Intelligence</h1><p className="mt-1 text-sm text-muted-foreground">Recomendações somente leitura, sustentadas por evidências financeiras reais.</p></div>
-        <div className="flex gap-2"><Button variant="outline" onClick={() => setShowSettings(!showSettings)}><Settings2 className="mr-2 size-4" />Configurar</Button><Button disabled={running || data.run?.status === "processing"} onClick={runNow}>{running ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}Gerar agora</Button></div>
+    <PageShell>
+      <div className="rounded-xl border bg-card p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Consultoria orientada por dados"
+          title="Lembrado Intelligence"
+          description="Veja primeiro o que exige atenção, entenda as evidências e decida o próximo passo. Nenhuma recomendação executa ações automaticamente."
+          badge={data.run?.status === "completed" ? "Relatório atualizado" : data.run?.status || "Pendente"}
+          actions={<><Button variant="outline" className="bg-background/70" onClick={() => setShowSettings(!showSettings)}><Settings2 className="mr-2 size-4" />Configurar</Button><Button disabled={running || data.run?.status === "processing"} onClick={runNow}>{running ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}Gerar agora</Button></>}
+        />
       </div>
+
+      <InsightsNavigation active="intelligence" />
 
       {showSettings && <Card><CardHeader><CardTitle className="text-base">Configurações</CardTitle></CardHeader><CardContent className="grid gap-5 md:grid-cols-2">
         <label className="space-y-1.5 text-sm"><span>Horário diário</span><Input type="time" value={reportTime} onChange={(event) => setReportTime(event.target.value)} /></label>
@@ -180,20 +195,20 @@ export default function IntelligencePage() {
         <div className="md:col-span-2 flex justify-end"><Button disabled={saving || enabledAgents.length === 0} onClick={saveSettings}>{saving && <Loader2 className="mr-2 size-4 animate-spin" />}Salvar</Button></div>
       </CardContent></Card>}
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Cota da plataforma</p><p className="mt-1 text-2xl font-semibold">{data.usage.remaining}</p><p className="text-xs text-muted-foreground">de {data.usage.limit} restantes</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Cobertura</p><p className="mt-1 text-2xl font-semibold">{data.run?.coverage.partial ? "Parcial" : "Completa"}</p><p className="text-xs text-muted-foreground">{data.run?.coverage.cycles || 0} ciclos analisados</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Relatório</p><p className="mt-1 text-2xl font-semibold capitalize">{data.run?.status || "Pendente"}</p><p className="text-xs text-muted-foreground">{data.run?.report_date || "Ainda não gerado"}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Narrativa</p><p className="mt-1 text-2xl font-semibold">{data.run?.narrative_status === "completed" ? "IA validada" : "Determinística"}</p><p className="text-xs text-muted-foreground">{data.run?.model || "Sem modelo"}</p></CardContent></Card>
-      </div>
+      <MetricGrid columns={4}>
+        <Card className="border-violet-500/20 bg-violet-500/[0.05]"><CardContent className="p-5"><p className="text-xs text-muted-foreground">Cota da plataforma</p><p className="mt-1 text-2xl font-semibold">{data.usage.remaining}</p><p className="text-xs text-muted-foreground">de {data.usage.limit} restantes</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Cobertura</p><p className="mt-1 text-2xl font-semibold">{data.run?.coverage.partial ? "Parcial" : "Completa"}</p><p className="text-xs text-muted-foreground">{data.run?.coverage.cycles || 0} ciclos analisados</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Relatório</p><p className="mt-1 text-2xl font-semibold capitalize">{data.run?.status || "Pendente"}</p><p className="text-xs text-muted-foreground">{data.run?.report_date || "Ainda não gerado"}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Narrativa</p><p className="mt-1 text-2xl font-semibold">{data.run?.narrative_status === "completed" ? "IA validada" : "Determinística"}</p><p className="text-xs text-muted-foreground">{data.run?.model || "Sem modelo"}</p></CardContent></Card>
+      </MetricGrid>
 
       {data.run && ["pending", "processing"].includes(data.run.status) && <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-sm"><Loader2 className="size-4 animate-spin text-blue-600" />O relatório está sendo processado. Os fatos determinísticos já permanecem salvos.</div>}
 
-      <Card><CardHeader><CardTitle className="text-base">Prioridades de hoje</CardTitle></CardHeader><CardContent className="grid gap-3 lg:grid-cols-3">{priorities.map((finding) => <div key={finding.id || `${finding.agent_type}-${finding.priority}`} className="rounded-lg border p-4"><Badge variant="outline" className={severity[finding.severity].className}>{severity[finding.severity].label}</Badge><h2 className="mt-3 font-medium">{finding.title}</h2><p className="mt-1 text-sm text-muted-foreground">{finding.summary}</p><Evidence finding={finding} /></div>)}</CardContent></Card>
+      <PageSection title="Prioridades de hoje" description="Os três pontos de maior impacto, ordenados para orientar sua próxima decisão."><div className="grid gap-3 lg:grid-cols-3">{priorities.map((finding, index) => <div key={finding.id || `${finding.agent_type}-${finding.priority}`} className="relative overflow-hidden rounded-xl border bg-card p-5 shadow-sm"><span className="absolute right-4 top-4 text-3xl font-semibold text-muted/70">0{index + 1}</span><Badge variant="outline" className={severity[finding.severity].className}>{severity[finding.severity].label}</Badge><h2 className="mt-4 pr-8 font-semibold">{finding.title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{finding.summary}</p><Evidence finding={finding} /></div>)}</div></PageSection>
 
       <Tabs defaultValue="executive"><TabsList className="max-w-full overflow-x-auto">{agents.map((agent) => <TabsTrigger key={agent.key} value={agent.key}>{agent.label}</TabsTrigger>)}</TabsList>{agents.map((agent) => <TabsContent key={agent.key} value={agent.key} className="space-y-3">{data.findings[agent.key].filter((finding) => finding.state !== "dismissed").map((finding) => <Card key={finding.id || `${agent.key}-${finding.priority}`}><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><Badge variant="outline" className={severity[finding.severity].className}>{severity[finding.severity].label}</Badge>{finding.source === "ai" && <Badge variant="secondary"><BrainCircuit className="mr-1 size-3" />IA</Badge>}</div><h3 className="mt-3 font-semibold">{finding.title}</h3></div><div className="flex gap-1"><Button size="icon" variant="ghost" title="Marcar como lido" onClick={() => markFinding(finding, "read")}><CheckCircle2 className="size-4" /></Button><Button size="icon" variant="ghost" title="Descartar" onClick={() => markFinding(finding, "dismissed")}><X className="size-4" /></Button></div></div><p className="mt-2 text-sm text-muted-foreground">{finding.summary}</p><Evidence finding={finding} /><div className="mt-4 rounded-md bg-muted/50 p-3 text-sm"><strong>Recomendação:</strong> {finding.recommendation}</div>{finding.action_url && <Button variant="link" className="mt-2 h-auto p-0" onClick={() => window.location.assign(finding.action_url!)}>Abrir área relacionada</Button>}</CardContent></Card>)}{!data.findings[agent.key].some((finding) => finding.state !== "dismissed") && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhum finding ativo deste agente.</div>}</TabsContent>)}</Tabs>
 
       <Card><CardHeader><CardTitle className="text-base">Histórico recente</CardTitle></CardHeader><CardContent className="divide-y">{history.slice(0, 10).map((run) => <div key={run.id} className="flex items-center justify-between py-3 text-sm"><div className="flex items-center gap-3"><Clock3 className="size-4 text-muted-foreground" /><div><p className="font-medium">Relatório de {run.report_date}</p><p className="text-xs text-muted-foreground">{run.model || "Somente fatos determinísticos"}</p></div></div><Badge variant="outline" className="capitalize">{run.status}</Badge></div>)}{history.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">O histórico aparecerá após a primeira execução.</p>}</CardContent></Card>
-    </div>
+    </PageShell>
   )
 }

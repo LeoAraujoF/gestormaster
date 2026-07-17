@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import type { ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Zap, Send, CheckCircle2 } from "lucide-react"
+import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, CircleDollarSign, LayoutDashboard, Plus, Send, WalletCards, Zap } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { ExecutiveDashboardView, ExecutiveUpgrade } from "@/components/executive-dashboard-view"
 import { usePlanCapability } from "@/components/providers/plan-provider"
+import { MetricGrid, PageSection, PageShell } from "@/components/page-layout"
 
 type QueueFilter = "vencidos" | "hoje" | "7dias"
 
@@ -43,10 +45,12 @@ export default function DashboardPage() {
   const [servicesList, setServicesList] = useState<any[]>([])
   const [automations, setAutomations] = useState<{ id: string; alert_type: string }[]>([])
   const [basicPayments, setBasicPayments] = useState({ count: 0, total: 0 })
+  const [todayConfirmed, setTodayConfirmed] = useState(0)
 
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("vencidos")
   const [chargingIds, setChargingIds] = useState<Set<string>>(new Set())
   const pendingCharges = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const queueSectionRef = useRef<HTMLDivElement>(null)
 
   // Dialogs
   const [isAddClientOpen, setIsAddClientOpen] = useState(false)
@@ -65,7 +69,11 @@ export default function DashboardPage() {
         const executiveResponse = await fetch(`/api/executive-dashboard?period=${executivePeriod}`)
         const executivePayload = await executiveResponse.json()
         if (executiveResponse.ok) {
-          setExecutive(executivePayload as ExecutiveDashboardDTO)
+          const executiveData = executivePayload as ExecutiveDashboardDTO
+          setExecutive(executiveData)
+          if (executivePeriod === "month" || executivePeriod === "30d") {
+            setTodayConfirmed(executiveData.series.find((item) => item.date === localDateKey())?.confirmed ?? 0)
+          }
           setUpgradeRequired(false)
         } else if (executiveResponse.status === 403 && executivePayload.upgrade_required) {
           setExecutive(null)
@@ -146,6 +154,15 @@ export default function DashboardPage() {
     "7dias": proximos7,
   }
   const queue = queueMap[queueFilter]
+
+  const revealRiskClients = () => {
+    setQueueFilter("vencidos")
+    window.requestAnimationFrame(() => {
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+      queueSectionRef.current?.scrollIntoView({ behavior, block: "start" })
+      queueSectionRef.current?.focus({ preventScroll: true })
+    })
+  }
 
   const prazoLabel = (diff: number) => {
     if (diff === -1) return "ontem"
@@ -281,134 +298,158 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 pb-10">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full rounded-lg" />
-        <Skeleton className="h-96 w-full rounded-lg" />
-      </div>
+      <PageShell>
+        <Skeleton className="h-52 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-2xl" />)}
+        </div>
+        <Skeleton className="h-[380px] w-full rounded-2xl" />
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* Bloco 1: Visão Geral Premium */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-3">
-        <div>
-          <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-foreground">
-            {weekday}, {dayMonth}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Centro de Controle Financeiro
-          </p>
+    <PageShell>
+      <section className="animate-in fade-in slide-in-from-bottom-2 overflow-hidden rounded-2xl border border-border bg-card shadow-sm duration-500" aria-labelledby="dashboard-title">
+        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
+                <LayoutDashboard className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="microlabel">{weekday}, {dayMonth}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                  <h1 id="dashboard-title" className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">Painel da operação</h1>
+                  {hasAdvancedFinance ? <span className="rounded-md bg-interactive-bg px-2 py-1 text-[10px] font-semibold text-interactive-fg">PRO</span> : null}
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Resultado financeiro, carteira e prioridades em uma leitura rápida para decidir o próximo passo.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <PixRapidoModal>
+              <Button variant="outline" className="min-h-10 gap-2">
+                <Zap className="size-4" aria-hidden="true" /> Gerar PIX
+              </Button>
+            </PixRapidoModal>
+            <Button onClick={() => setIsAddClientOpen(true)} className="min-h-10 gap-2">
+              <Plus className="size-4" aria-hidden="true" /> Novo cliente
+            </Button>
+          </div>
         </div>
-      </div>
+
+        <div className="grid border-t border-border sm:grid-cols-2 xl:grid-cols-4">
+          <HeroSignal
+            icon={CircleDollarSign}
+            label="Arrecadado hoje"
+            value={hasAdvancedFinance ? displayValue(formatCurrency(todayConfirmed)) : "—"}
+            hint={hasAdvancedFinance ? "Pagamentos confirmados hoje" : "Disponível na visão avançada"}
+            tone="success"
+          />
+          <HeroSignal
+            icon={WalletCards}
+            label="Recebido neste mês"
+            value={displayValue(formatCurrency(basicPayments.total))}
+            hint={`${basicPayments.count} pagamentos neste mês`}
+            tone="success"
+          />
+          <HeroSignal
+            icon={CircleAlert}
+            label="Exige atenção agora"
+            value={displayValue(formatCurrency(overdueTotal))}
+            hint={`${vencidos.length} cliente${vencidos.length === 1 ? "" : "s"} vencido${vencidos.length === 1 ? "" : "s"}`}
+            tone={vencidos.length > 0 ? "danger" : "success"}
+            onClick={vencidos.length > 0 ? revealRiskClients : undefined}
+            actionLabel="Ver clientes vencidos em exige atenção agora"
+          />
+          <HeroSignal
+            icon={CalendarClock}
+            label="Próximos 7 dias"
+            value={displayValue(formatCurrency(upcomingTotal))}
+            hint={proximos7.length === 1 ? "1 renovação prevista" : `${proximos7.length} renovações previstas`}
+            tone="warning"
+          />
+        </div>
+      </section>
 
       <OnboardingProgress />
-      {hasAdvancedFinance ? (
-        upgradeRequired ? <ExecutiveUpgrade /> : executive ? <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} /> : null
-      ) : (
-        <>
-          <div className="grid grid-cols-2 rounded-lg border border-border bg-card md:grid-cols-4 md:divide-x md:divide-border">
-            <div className="p-4">
-              <p className="microlabel">Recebido no mês</p>
-              <p className="num mt-1 text-[18px] font-semibold text-money">{displayValue(formatCurrency(basicPayments.total))}</p>
-              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{basicPayments.count} pagamentos</p>
-            </div>
-            <div className="p-4">
-              <p className="microlabel">A receber (7d)</p>
-              <p className="num mt-1 text-[18px] font-semibold text-warning">{displayValue(formatCurrency(upcomingTotal))}</p>
-              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{proximos7.length} renovações</p>
-            </div>
-            <div className="p-4">
-              <p className="microlabel">Valor vencido</p>
-              <p className="num mt-1 text-[18px] font-semibold text-danger">{displayValue(formatCurrency(overdueTotal))}</p>
-              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{vencidos.length} clientes</p>
-            </div>
-            <div className="p-4">
-              <p className="microlabel">Vencem hoje</p>
-              <p className="num mt-1 text-[18px] font-semibold">{vencemHoje.length}</p>
-              <p className="mt-0.5 text-[10.5px] text-muted-foreground">clientes para acompanhar</p>
-            </div>
+
+      <div ref={queueSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
+      <PageSection
+        title="Fila de ação"
+        description="Resolva primeiro o que afeta receita e relacionamento com o cliente."
+        actions={
+          queue.length > 0 ? (
+            <Button variant="outline" size="sm" onClick={handleCobrarTodos} className="h-9 gap-2 text-xs">
+              <Send className="size-3.5" aria-hidden="true" /> Cobrar todos ({queue.filter((client) => client.phone).length})
+            </Button>
+          ) : null
+        }
+      >
+        {queueFilter === "vencidos" && executive && Math.abs(executive.summary.at_risk - overdueTotal) > 0.01 ? (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg" role="note">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p className="leading-relaxed">
+              <strong>{displayValue(formatCurrency(executive.summary.at_risk))} em risco executivo</strong> considera ciclos financeiros vencidos. A fila abaixo soma <strong>{displayValue(formatCurrency(overdueTotal))}</strong> em mensalidades atuais dos clientes vencidos; a diferença pode representar ciclos anteriores ou valores históricos ainda não conciliados.
+            </p>
           </div>
-          <div className="flex flex-col gap-2 rounded-lg border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
-            <p className="flex-1 text-[11.5px] text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> Previsões, comparativos, MRR e indicadores de saúde financeira estão no Pro.</p>
-            <Button variant="outline" size="sm" onClick={() => router.push('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
-          </div>
-        </>
-      )}
-
-      {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <button
-          onClick={() => setIsAddClientOpen(true)}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-input text-xs font-medium text-secondary-foreground transition-colors hover:border-foreground/30 hover:bg-muted"
-        >
-          <Plus className="size-3.5" /> Novo cliente
-        </button>
-        <PixRapidoModal>
-          <button className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-input text-xs font-medium text-secondary-foreground transition-colors hover:border-foreground/30 hover:bg-muted">
-            <Zap className="size-3.5" /> PIX rápido
-          </button>
-        </PixRapidoModal>
-        <button
-          onClick={() => router.push("/automacao")}
-          className="flex h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-input text-xs font-medium text-secondary-foreground transition-colors hover:border-foreground/30 hover:bg-muted"
-        >
-          <Send className="size-3.5" /> Disparo em massa
-        </button>
-      </div>
-
-      <div>
-
-          {/* Fila Operacional */}
-          <div className="flex flex-col rounded-lg border border-border bg-card">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5">
+        ) : null}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.65fr)]">
+          <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <div className="overflow-x-auto border-b border-border p-2">
+              <div className="flex min-w-max items-center gap-1 rounded-xl bg-muted p-1 sm:min-w-0 sm:w-fit">
                 {segments.map((s) => (
                   <button
                     key={s.key}
+                    type="button"
                     onClick={() => setQueueFilter(s.key)}
+                    aria-pressed={queueFilter === s.key}
                     className={cn(
-                      "rounded-[5px] px-2.5 py-1 text-xs transition-colors",
+                      "min-h-9 rounded-lg px-3 py-1.5 text-xs transition-all duration-200",
                       queueFilter === s.key
                         ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]"
-                        : "text-secondary-foreground hover:text-foreground"
+                        : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
                     )}
                   >
                     {s.label} · <span className="num">{s.count}</span>
                   </button>
                 ))}
               </div>
-              {queue.length > 0 && (
-                <button
-                  onClick={handleCobrarTodos}
-                  className="text-xs font-medium text-interactive hover:underline"
-                >
-                  Cobrar todos →
-                </button>
-              )}
             </div>
 
-            <div className="max-h-[420px] divide-y divide-border overflow-y-auto">
+            <div className="max-h-[460px] divide-y divide-border overflow-y-auto">
               {queue.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-14 text-center">
-                  <p className="microlabel">
-                    {queueFilter === "vencidos" ? "Sem vencidos" : queueFilter === "hoje" ? "Nada vence hoje" : "Nada nos próximos 7 dias"}{" "}
-                    <CheckCircle2 className="size-4 text-money inline ml-1" />
+                <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                  <span className="flex size-11 items-center justify-center rounded-2xl bg-success-bg text-success-fg">
+                    <CheckCircle2 className="size-5" aria-hidden="true" />
+                  </span>
+                  <p className="text-sm font-semibold text-foreground">
+                    {queueFilter === "vencidos" ? "Nenhuma cobrança vencida" : queueFilter === "hoje" ? "Nenhum vencimento hoje" : "Nenhum vencimento nos próximos 7 dias"}
                   </p>
+                  <p className="max-w-sm text-xs text-muted-foreground">Esta fila está em dia. Selecione outro período para continuar acompanhando.</p>
                 </div>
               ) : (
                 queue.map((client) => (
                   <div
                     key={client.id}
-                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted"
+                    className="group flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-muted/70 sm:flex-row sm:items-center"
                   >
-                    <span className={cn("status-dot", dotColor(client.diffDays))} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
-                        {client.name}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground">{clientSubtitle(client)}</p>
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl", client.diffDays < 0 ? "bg-danger-bg text-danger-fg" : client.diffDays === 0 ? "bg-warning-bg text-warning-fg" : "bg-secondary text-secondary-foreground")}>
+                        <span className={cn("status-dot", dotColor(client.diffDays))} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold leading-tight text-foreground">{client.name}</p>
+                        <p className="mt-1 truncate text-xs text-muted-foreground">{clientSubtitle(client)}</p>
+                      </div>
+                      <div className="shrink-0 text-right sm:hidden">
+                        <p className="num whitespace-nowrap text-xs font-semibold text-foreground">{displayValue(formatCurrency(client.plan_value))}</p>
+                        <p className={cn("mt-1 text-[11px] font-medium", prazoColor(client.diffDays))}>{prazoLabel(client.diffDays)}</p>
+                      </div>
                     </div>
                     <span className={cn("hidden shrink-0 text-[11px] font-medium sm:block", prazoColor(client.diffDays))}>
                       {prazoLabel(client.diffDays)}
@@ -416,12 +457,12 @@ export default function DashboardPage() {
                     <span className="num shrink-0 whitespace-nowrap text-xs font-medium text-foreground">
                       {displayValue(formatCurrency(client.plan_value))}
                     </span>
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
                       <Button
                         size="sm"
                         onClick={() => handleCobrar(client)}
                         disabled={chargingIds.has(client.id)}
-                        className="h-7 rounded-md px-2.5 text-xs"
+                        className="h-9 rounded-lg px-3 text-xs sm:h-8"
                       >
                         {chargingIds.has(client.id) ? "Enviando…" : "Cobrar"}
                       </Button>
@@ -432,7 +473,7 @@ export default function DashboardPage() {
                           setActionClient(client)
                           setIsRenewDialogOpen(true)
                         }}
-                        className="h-7 rounded-md px-2.5 text-xs"
+                        className="h-9 rounded-lg px-3 text-xs sm:h-8"
                       >
                         Renovar
                       </Button>
@@ -442,7 +483,88 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          <aside className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <p className="microlabel">Ações rápidas</p>
+            <h3 className="mt-1 text-sm font-semibold text-foreground">Continue a operação</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Atalhos para as tarefas mais frequentes do dia.</p>
+
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                onClick={() => setIsAddClientOpen(true)}
+                className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg"><Plus className="size-4" aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Adicionar cliente</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Cadastre uma nova assinatura</span></span>
+                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </button>
+              <PixRapidoModal>
+                <button className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-success-bg text-success-fg"><Zap className="size-4" aria-hidden="true" /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Gerar PIX rápido</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Crie uma cobrança avulsa</span></span>
+                  <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </button>
+              </PixRapidoModal>
+              <button
+                type="button"
+                onClick={() => router.push("/automacao")}
+                className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning-bg text-warning-fg"><Send className="size-4" aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Abrir automação</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Revise regras e entregas</span></span>
+                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Resumo da fila</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {segments.map((segment) => (
+                  <button key={segment.key} type="button" onClick={() => setQueueFilter(segment.key)} className="rounded-lg bg-muted p-2 text-center transition-colors hover:bg-secondary" aria-label={`Ver ${segment.label.toLowerCase()}`}>
+                    <span className="num block text-base font-semibold text-foreground">{segment.count}</span>
+                    <span className="mt-0.5 block text-[9px] text-muted-foreground">{segment.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </PageSection>
       </div>
+
+      {hasAdvancedFinance ? (
+        upgradeRequired ? <ExecutiveUpgrade /> : executive ? <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} onRiskOpen={revealRiskClients} /> : null
+      ) : (
+        <>
+          <MetricGrid columns={4}>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="microlabel">Recebido no mês</p>
+              <p className="num mt-2 text-xl font-semibold text-money">{displayValue(formatCurrency(basicPayments.total))}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{basicPayments.count} pagamentos confirmados</p>
+            </div>
+            <div className="rounded-xl border border-danger-border bg-danger-bg/50 p-4">
+              <p className="microlabel">Valor vencido</p>
+              <p className="num mt-2 text-xl font-semibold text-danger">{displayValue(formatCurrency(overdueTotal))}</p>
+              <p className="mt-1 text-xs text-danger-fg">{vencidos.length} clientes exigem atenção</p>
+            </div>
+            <div className="rounded-xl border border-warning-border bg-warning-bg/40 p-4">
+              <p className="microlabel">A receber em 7 dias</p>
+              <p className="num mt-2 text-xl font-semibold text-warning-fg">{displayValue(formatCurrency(upcomingTotal))}</p>
+              <p className="mt-1 text-xs text-warning-fg">{proximos7.length} renovações previstas</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="microlabel">Vencem hoje</p>
+              <p className="num mt-2 text-xl font-semibold">{vencemHoje.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">clientes para acompanhar</p>
+            </div>
+          </MetricGrid>
+          <div className="flex flex-col gap-3 rounded-xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
+            <p className="flex-1 text-xs leading-relaxed text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
+            <Button variant="outline" size="sm" onClick={() => router.push('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
+          </div>
+        </>
+      )}
 
       {/* Dialogs */}
       <ClientFormDialog
@@ -458,8 +580,51 @@ export default function DashboardPage() {
         client={actionClient}
         onSuccess={loadDashboardData}
       />
-    </div>
+    </PageShell>
   )
+}
+
+function HeroSignal({ icon: Icon, label, value, hint, tone, onClick, actionLabel }: {
+  icon: typeof WalletCards
+  label: string
+  value: ReactNode
+  hint: string
+  tone: "success" | "danger" | "warning"
+  onClick?: () => void
+  actionLabel?: string
+}) {
+  const toneClasses = {
+    success: "bg-success-bg text-success-fg",
+    danger: "bg-danger-bg text-danger-fg",
+    warning: "bg-warning-bg text-warning-fg",
+  }
+  const valueClasses = {
+    success: "text-money",
+    danger: "text-danger",
+    warning: "text-warning-fg",
+  }
+
+  const content = (
+    <>
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneClasses[tone])}>
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-[10px] font-medium uppercase tracking-[0.07em] text-muted-foreground">{label}</p>
+        <p className={cn("num mt-1 truncate text-base font-semibold", valueClasses[tone])}>{value}</p>
+        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{hint}</p>
+      </div>
+      {onClick ? <ArrowRight className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
+    </>
+  )
+
+  const className = "group flex min-w-0 items-center gap-3 border-b border-border p-4 text-left last:border-b-0 transition-colors sm:px-5 xl:border-b-0 xl:border-r xl:last:border-r-0"
+
+  if (onClick) {
+    return <button type="button" onClick={onClick} aria-label={actionLabel || label} className={cn(className, "hover:bg-muted/70")}>{content}</button>
+  }
+
+  return <div className={className}>{content}</div>
 }
 
 function startOfToday() {
@@ -471,4 +636,11 @@ function startOfToday() {
 function diffInDays(today: Date, dueDateStr: string) {
   const due = new Date(dueDateStr + "T00:00:00")
   return Math.round((due.getTime() - today.getTime()) / 86400000)
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }

@@ -16,7 +16,7 @@ type PayMethod = 'pix' | 'card' | 'credit'
 const PLAN_FEATURES: Record<PlanId, string[]> = {
   starter: ['Até 100 clientes', '1 WhatsApp conectado', 'Painel e financeiro básico', 'Automação básica', 'Promoções'],
   pro: ['Até 500 clientes', '2 WhatsApps conectados', 'Cobrança Inteligente e Autoatendimento', 'Analytics e Portal do Cliente', 'Promoções'],
-  master: ['Clientes ilimitados', '3 WhatsApps conectados', 'Todos os recursos do Pro', 'GestorMaster Intelligence', 'Revendas, API e Promoções'],
+  master: ['Clientes ilimitados', '3 WhatsApps conectados', 'Todos os recursos do Pro', 'Lembrado Intelligence', 'Revendas, API e Promoções'],
 }
 
 export default function PlanosPage() {

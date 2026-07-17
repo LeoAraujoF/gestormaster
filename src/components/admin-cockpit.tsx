@@ -632,7 +632,7 @@ export function AdminCockpit() {
             eyebrow="Volume dos tenants"
             title="Receita gerenciada"
             value={metrics?.managedRevenue ?? null}
-            description={`Mensalidades de ${formatNumber(metrics?.managedEndClients ?? null)} clientes finais ativos administrados pelos tenants. Não são clientes SaaS e não compõem a receita do GestorMaster.`}
+            description={`Mensalidades de ${formatNumber(metrics?.managedEndClients ?? null)} clientes finais ativos administrados pelos tenants. Não são clientes SaaS e não compõem a receita da Lembrado.`}
           />
         </div>
       </section>

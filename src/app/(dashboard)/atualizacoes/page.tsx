@@ -1,6 +1,6 @@
 "use client"
 
-import ReactMarkdown from 'react-markdown'
+import dynamic from 'next/dynamic'
 import { useState, useEffect, Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Plus } from "lucide-react"
@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 // Badges de tipo (11b): NOVO verde / MELHORIA azul / CORREÇÃO cinza
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -23,6 +24,8 @@ const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
   bugfix: { label: "CORREÇÃO", cls: "bg-secondary text-secondary-foreground" },
   maintenance: { label: "MANUTENÇÃO", cls: "bg-warning-bg text-warning-fg" },
 }
+
+const ReactMarkdown = dynamic(() => import('react-markdown'))
 
 function AtualizacoesContent() {
   const [updates, setUpdates] = useState<any[]>([])
@@ -175,8 +178,8 @@ function AtualizacoesContent() {
   }
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-10">
-      <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Minha conta</h1>
+    <PageShell width="default">
+      <PageHeader eyebrow="Central de novidades" title="Atualizações" description="Consulte mudanças do produto e alertas que exigem atenção na sua operação." badge={alerts.length ? `${alerts.length} alertas` : "Tudo em dia"} />
       <AccountTabs />
 
       {/* Cabeçalho: título + segmentado Novidades/Alertas (11b) */}
@@ -352,7 +355,7 @@ function AtualizacoesContent() {
           </div>
         )
       )}
-    </div>
+    </PageShell>
   )
 }
 

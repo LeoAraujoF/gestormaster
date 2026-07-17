@@ -157,6 +157,21 @@
   --chart-5: #6e6f75;
 }
 
+/* Contraste reforçado apenas na área autenticada do SaaS. */
+.saas-dashboard {
+  --muted-foreground: #6f6e69;
+  --input: #8a8983;
+  --warning: #8a5f0e;
+  --warning-fg: #715815;
+}
+
+.dark .saas-dashboard {
+  --muted-foreground: #8a8c93;
+  --input: #6c707c;
+  --warning: #dfb35c;
+  --warning-fg: #dfb35c;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -173,6 +188,32 @@
     @apply bg-background text-foreground;
     overflow-x: hidden;
     max-width: 100vw;
+    min-width: 320px;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

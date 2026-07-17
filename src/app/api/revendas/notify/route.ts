@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       const gestorNumber = config?.notification_number
 
       if (gestorNumber && EVOLUTION_API_URL) {
-        const message = `💰 *Pagamento de Revenda*\nO revendedor *${reseller.name}* acaba de confirmar o pagamento de *${requestData.credits_amount}x créditos* para o serviço *${requestData.service_name}*.\n\nValor: R$ ${requestData.total_value}\n\nAcesse o Gestor para liberar o crédito!`
+        const message = `💰 *Pagamento de Revenda*\nO revendedor *${reseller.name}* acaba de confirmar o pagamento de *${requestData.credits_amount}x créditos* para o serviço *${requestData.service_name}*.\n\nValor: R$ ${requestData.total_value}\n\nAcesse a Lembrado para liberar o crédito!`
 
         await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
           method: "POST",

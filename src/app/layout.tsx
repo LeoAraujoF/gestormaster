@@ -19,7 +19,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Gestor Master - Sistema de Clientes",
+  title: "Lembrado - Gestão de clientes e cobranças",
   description: "Gestão inteligente de clientes com automação",
 };
 

@@ -262,7 +262,7 @@ export default function OnboardingPage() {
         return
       }
 
-      toast.success("Tudo pronto! Bem-vindo ao Gestor Master.")
+      toast.success("Tudo pronto! Boas-vindas à Lembrado.")
       window.location.href = "/planos"
     } catch {
       toast.error("Erro inesperado")
@@ -312,7 +312,7 @@ export default function OnboardingPage() {
             Conecte seu WhatsApp
           </h2>
           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            É por ele que o Gestor cobra seus clientes. Abra o WhatsApp →{" "}
+            É por ele que a Lembrado cobra seus clientes. Abra o WhatsApp →{" "}
             <strong className="text-foreground">Aparelhos conectados</strong>{" "}
             → escaneie o código.
           </p>

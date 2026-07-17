@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { MetricGrid, PageHeader, PageSection, PageShell } from "@/components/page-layout"
 
 const MONTHLY_COST = 20.00
 const MIN_WITHDRAWAL = 50.00
@@ -188,7 +189,7 @@ export default function AfiliadosPage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || "Erro ao converter saldo")
 
-      toast.success("Sucesso! Você ganhou +30 dias de acesso ao Gestor Pro.")
+      toast.success("Sucesso! Você ganhou +30 dias de acesso ao Lembrado Pro.")
       setIsConvertOpen(false)
       loadData()
     } catch (error: any) {
@@ -207,15 +208,9 @@ export default function AfiliadosPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-10">
-      <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Minha conta</h1>
+    <PageShell width="default">
+      <PageHeader eyebrow="Programa de indicação" title="Afiliados" description="Acompanhe comissões, saldo disponível e seu histórico de movimentações." badge="30% recorrente" actions={<Button variant="outline" onClick={() => setIsPixOpen(true)}>Solicitar saque</Button>} />
       <AccountTabs />
-
-      {/* Cabeçalho 5g: título + comissão recorrente */}
-      <div className="flex flex-wrap items-baseline gap-2.5 pt-2">
-        <h2 className="text-[15px] font-semibold tracking-[-0.02em]">Afiliados</h2>
-        <span className="text-[11px] text-muted-foreground">30% de comissão recorrente</span>
-      </div>
 
       {/* Link de indicação */}
       <div className="rounded-lg border border-border bg-card px-4 py-4">
@@ -230,11 +225,11 @@ export default function AfiliadosPage() {
 
       {/* KPIs (5g): cards hairline com microlabel + valor mono */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <MetricGrid columns={4}>
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[72px] rounded-lg" />)}
-        </div>
+        </MetricGrid>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <MetricGrid columns={4}>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="microlabel">Indicados ativos</p>
             <p className="num mt-1 text-[18px] font-semibold tracking-[-0.02em]">{stats.totalIndicados}</p>
@@ -257,10 +252,11 @@ export default function AfiliadosPage() {
               {formatCurrency(stats.saldoDisponivel)}
             </p>
           </div>
-        </div>
+        </MetricGrid>
       )}
 
       {/* Extrato: linhas flat hairline, valor mono à direita */}
+      <PageSection title="Extrato de comissões" description="Entradas, liberações, conversões e saques registrados na sua conta.">
       <div className="rounded-lg border border-border bg-card">
         {isLoading ? (
           <div className="px-4 py-8 text-center text-[11.5px] text-muted-foreground">Carregando…</div>
@@ -303,6 +299,7 @@ export default function AfiliadosPage() {
           </div>
         )}
       </div>
+      </PageSection>
 
       {/* Ações do extrato */}
       <div className="flex items-center justify-end gap-3">
@@ -373,7 +370,7 @@ export default function AfiliadosPage() {
           <DialogHeader>
             <DialogTitle>Trocar por mês grátis</DialogTitle>
             <DialogDescription>
-              Usar <strong className="num text-foreground">{formatCurrency(MONTHLY_COST)}</strong> do seu saldo para assinar o Gestor Pro por +30 dias?
+              Usar <strong className="num text-foreground">{formatCurrency(MONTHLY_COST)}</strong> do seu saldo para assinar o Lembrado Pro por +30 dias?
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -393,6 +390,6 @@ export default function AfiliadosPage() {
         </DialogContent>
       </Dialog>
 
-    </div>
+    </PageShell>
   )
 }

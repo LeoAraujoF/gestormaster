@@ -100,8 +100,8 @@ export default function RegisterPage() {
       {/* Painel esquerdo: tinta sólida com pitch + provas */}
       <div className="hidden flex-col justify-between bg-[#191a1e] p-10 lg:flex lg:w-[44%]">
         <Link href="/" className="flex items-center gap-2">
-          <BrandMark size={26} g="#faf8f2" check="#3ecf8e" />
-          <span className="text-[15px] font-semibold tracking-tight text-white">Gestor</span>
+          <BrandMark size={26} />
+          <span className="text-[15px] font-semibold tracking-tight text-white">lembrado.</span>
         </Link>
 
         <div className="max-w-sm">
@@ -109,7 +109,7 @@ export default function RegisterPage() {
             Pare de cobrar cliente um por um.
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-white/60">
-            O Gestor cobra, renova e organiza seu caixa enquanto você cuida do negócio.
+            A Lembrado cobra, renova e organiza seu caixa enquanto você cuida do negócio.
           </p>
           <ul className="mt-8 space-y-3.5">
             {PROVAS.map((prova) => (
@@ -131,7 +131,7 @@ export default function RegisterPage() {
         {/* Logo mobile */}
         <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
           <BrandMark size={26} />
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">Gestor</span>
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">lembrado.</span>
         </Link>
 
         <div className="w-full max-w-[360px]">

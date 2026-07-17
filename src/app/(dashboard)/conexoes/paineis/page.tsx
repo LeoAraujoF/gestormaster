@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GlobalDeleteDialog } from "@/components/global-delete-dialog"
+import { ConnectionsNavigation } from "@/components/connections-navigation"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 export default function PaineisPage() {
   const supabase = createClient()
@@ -100,17 +102,9 @@ export default function PaineisPage() {
   }
 
   return (
-    <div className="pb-10 max-w-5xl mx-auto space-y-6">
-      
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Painéis IPTV</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Gerencie a conexão com seus painéis de serviço.</p>
-        </div>
-        <Button onClick={() => handleOpenPanelModal()} className="h-8 gap-1.5 text-xs bg-foreground text-background hover:bg-foreground/90">
-          <Plus className="size-3.5" /> Conectar painel
-        </Button>
-      </div>
+    <PageShell width="default">
+      <PageHeader eyebrow="Integrações" title="Painéis IPTV" description="Veja o estado das conexões e os serviços vinculados antes de cadastrar ou reconectar um painel." badge={`${panels.length} conectados`} actions={<Button onClick={() => handleOpenPanelModal()}><Plus className="mr-2 size-4" />Conectar painel</Button>} />
+      <ConnectionsNavigation active="panels" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {isLoading ? (
@@ -236,6 +230,6 @@ export default function PaineisPage() {
         description="Esta ação removerá a integração permanentemente." 
         onSuccess={loadData} 
       />
-    </div>
+    </PageShell>
   )
 }

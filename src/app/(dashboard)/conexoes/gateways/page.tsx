@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useConfirm } from "@/components/providers/confirm-provider"
+import { ConnectionsNavigation } from "@/components/connections-navigation"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 const AVAILABLE_INTEGRATIONS = [
   {
@@ -178,12 +180,9 @@ export default function GatewaysPage() {
   const mpIntegration = getIntegrationData("mercadopago")
 
   return (
-    <div className="pb-10 max-w-4xl mx-auto space-y-6">
-      
-      <div className="mb-6">
-        <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Gateways & API</h1>
-        <p className="text-[13px] text-muted-foreground mt-1">Conecte métodos de pagamento e integrações de automação.</p>
-      </div>
+    <PageShell width="default">
+      <PageHeader eyebrow="Integrações" title="Gateways e API" description="Acompanhe conexões, identifique configurações pendentes e gerencie credenciais com segurança." badge={`${integrations.filter((item) => item.is_active).length} ativas`} />
+      <ConnectionsNavigation active="gateways" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
@@ -390,6 +389,6 @@ export default function GatewaysPage() {
         </DialogContent>
       </Dialog>
       
-    </div>
+    </PageShell>
   )
 }

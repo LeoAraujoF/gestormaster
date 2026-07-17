@@ -25,8 +25,8 @@ const NAV_DESTINATIONS = [
   { title: "Automação", url: "/automacao" },
   { title: "Aquecimento", url: "/aquecimento" },
   { title: "Leads", url: "/leads" },
-  { title: "Integrações", url: "/integracoes" },
-  { title: "Painéis IPTV", url: "/integracoes/paineis" },
+  { title: "Integrações", url: "/conexoes/gateways" },
+  { title: "Painéis IPTV", url: "/conexoes/paineis" },
   { title: "Configurações", url: "/configuracoes" },
   { title: "Minha conta", url: "/minha-conta" },
   { title: "Suporte", url: "/suporte" },
@@ -45,8 +45,10 @@ export function CommandPalette() {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const [clients, setClients] = React.useState<ClientHit[]>([])
+  const [isSearching, setIsSearching] = React.useState(false)
+  const [searchError, setSearchError] = React.useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = React.useMemo(() => createClient(), [])
 
   // Atalhos globais: ⌘K abre; ⌘1–⌘4 navegam
   React.useEffect(() => {
@@ -68,21 +70,42 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down)
   }, [router])
 
-  // Busca de clientes (debounce 250ms) quando há 2+ caracteres
+  // Mostra os clientes mais recentes ao abrir e pesquisa por nome ou telefone.
   React.useEffect(() => {
-    if (!open || query.trim().length < 2) {
-      setClients([])
-      return
-    }
+    if (!open) return
+
+    let cancelled = false
+    const term = query.trim()
+    const digits = term.replace(/\D/g, "")
+    const isPhoneQuery = term.length > 0 && /^[\d\s()+-]+$/.test(term)
+
     const t = setTimeout(async () => {
-      const { data } = await supabase
+      setIsSearching(true)
+      setSearchError(null)
+
+      let request = supabase
         .from("clients")
         .select("id, name, status, phone")
-        .ilike("name", `%${query.trim()}%`)
         .limit(6)
-      setClients(data || [])
-    }, 250)
-    return () => clearTimeout(t)
+
+      request = term
+        ? isPhoneQuery
+          ? request.ilike("phone", `%${digits}%`).order("name")
+          : request.ilike("name", `%${term}%`).order("name")
+        : request.order("created_at", { ascending: false })
+
+      const { data, error } = await request
+      if (cancelled) return
+
+      setClients(error ? [] : data || [])
+      setSearchError(error ? "Não foi possível consultar os clientes." : null)
+      setIsSearching(false)
+    }, term ? 250 : 0)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
   }, [query, open, supabase])
 
   const go = (url: string) => {
@@ -121,12 +144,22 @@ export function CommandPalette() {
             onValueChange={setQuery}
           />
           <CommandList>
-            {clients.length === 0 && navFiltered.length === 0 && (
-              <CommandEmpty>Nada encontrado.</CommandEmpty>
+            {isSearching && (
+              <div role="status" className="px-3 py-4 text-center text-xs text-muted-foreground">
+                Buscando clientes…
+              </div>
             )}
-            {clients.length > 0 && (
+            {!isSearching && searchError && (
+              <div role="alert" className="px-3 py-4 text-center text-xs text-danger">
+                {searchError}
+              </div>
+            )}
+            {!isSearching && !searchError && clients.length === 0 && navFiltered.length === 0 && (
+              <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+            )}
+            {!isSearching && !searchError && clients.length > 0 && (
               <>
-                <CommandGroup heading="Clientes">
+                <CommandGroup heading={query.trim() ? "Clientes" : "Clientes recentes"}>
                   {clients.map((c) => (
                     <CommandItem key={c.id} value={`cliente-${c.id}`} onSelect={() => go(`/clientes?q=${encodeURIComponent(c.name)}`)}>
                       <span className={`status-dot ${statusDot(c.status)}`} />

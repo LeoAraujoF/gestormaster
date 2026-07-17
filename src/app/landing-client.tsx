@@ -30,10 +30,10 @@ const CHAT: ChatMsg[] = [
   { who: "out", t: "22:41", body: <>Quer renovar agora e garantir mais 30 dias sem cortar o sinal?</> },
   { who: "in", t: "22:44", body: <>opa! quanto tá mesmo?</> },
   { who: "out", t: "22:44", body: <>R$ 35,00 — igual mês passado 😉 Segue o PIX copia e cola:</> },
-  { who: "out", pix: true, t: "22:44", body: <>00020126360014BR.GOV.BCB.PIX0114+5511988001234520400005303986540535.005802BR5912GESTORMASTER6009SAO PAULO62070503***6304A1B2<span className="copy-tag">TOCAR PARA COPIAR</span></> },
+  { who: "out", pix: true, t: "22:44", body: <>00020126360014BR.GOV.BCB.PIX0114+5511988001234520400005303986540535.005802BR5912LEMBRADO6009SAO PAULO62070503***6304A1B2<span className="copy-tag">TOCAR PARA COPIAR</span></> },
   { who: "in", t: "22:46", body: <>paguei ✅</> },
   { who: "out", t: "22:46", body: <>Pagamento confirmado, Carlos! 🎉 Acesso renovado até <b>05/08</b>. Qualquer coisa é só chamar!</> },
-  { who: "sys", body: <>GESTOR · RENOVAÇÃO REGISTRADA · +R$ 35,00</> },
+  { who: "sys", body: <>LEMBRADO · RENOVAÇÃO REGISTRADA · +R$ 35,00</> },
 ]
 
 export function LandingClient() {
@@ -165,12 +165,14 @@ export function LandingClient() {
     <div ref={rootRef} className={`lp ${fraunces.variable} ${plexMono.variable}`}>
       <div className="grain" aria-hidden="true" />
 
-      {/* símbolo da marca: o "G" que confirma (cores via --mk-g / --mk-c) */}
+      {/* símbolo da marca: conversa enviada e confirmação recebida */}
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
         <defs>
-          <symbol id="gm-mark" viewBox="0 0 96 96">
-            <path d="M 66.5 24.4 A 30 30 0 1 0 77.1 55.3" fill="none" stroke="var(--mk-g,#171610)" strokeWidth="12" strokeLinecap="round" />
-            <path d="M 44 54 L 55 65 L 76 40" fill="none" stroke="var(--mk-c,#1e6b47)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+          <symbol id="lembrado-mark" viewBox="0 0 132 132">
+            <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D" />
+            <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2" />
+            <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" strokeWidth="5" />
           </symbol>
         </defs>
       </svg>
@@ -178,9 +180,9 @@ export function LandingClient() {
       {/* ═══ NAV ═══ */}
       <nav className={scrolled ? "scrolled" : undefined}>
         <div className="wrap nav-in">
-          <a className="logo" href="#topo" aria-label="Gestor Master — início">
-            <svg width="26" height="26" viewBox="0 0 96 96" aria-hidden="true"><use href="#gm-mark" /></svg>
-            <b>Gestor Master</b>
+          <a className="logo" href="#topo" aria-label="Lembrado — início">
+            <svg width="26" height="26" viewBox="0 0 132 132" aria-hidden="true"><use href="#lembrado-mark" /></svg>
+            <b>lembrado.</b>
           </a>
           <div className="nav-links">
             <a href="#como-funciona">Como funciona</a>
@@ -200,7 +202,7 @@ export function LandingClient() {
           <div>
             <span className="pill rv"><span className="dot" />Cobrança automática no WhatsApp</span>
             <h1 className="rv d1">Avisar tarde é o jeito mais caro de <em>perder um cliente.</em></h1>
-            <p className="sub rv d2">O Gestor Master lembra, cobra e confirma o pagamento pelo WhatsApp — <b>sozinho</b>. Sua carteira registra cada centavo que entra e sai. Você só vê o PIX cair.</p>
+            <p className="sub rv d2">A Lembrado avisa, cobra e confirma o pagamento pelo WhatsApp — <b>sozinha</b>. Sua carteira registra cada centavo que entra e sai. Você só vê o PIX cair.</p>
             <div className="hero-cta rv d3">
               <Link className="btn magnetic" href="/cadastro">Testar grátis por 7 dias <span className="arr">→</span></Link>
               <span className="cta-note">sem cartão · cancele quando quiser</span>
@@ -349,7 +351,7 @@ export function LandingClient() {
             <div className="feat-txt rv">
               <span className="microlabel">Cobrança automática</span>
               <h3>Uma fila que trabalha <em>de madrugada</em></h3>
-              <p>Todo dia, o Gestor varre sua carteira, monta a fila de quem vence e dispara as mensagens no horário certo — com intervalos humanos para proteger seu número.</p>
+              <p>Todo dia, a Lembrado varre sua carteira, monta a fila de quem vence e dispara as mensagens no horário certo — com intervalos humanos para proteger seu número.</p>
               <ul>
                 <li>Régua D-5, D-1 e dia do vencimento, no tom da sua marca</li>
                 <li>PIX copia-e-cola dentro da própria conversa</li>
@@ -405,7 +407,7 @@ export function LandingClient() {
           <div className="feat alt">
             <div className="feat-txt rv">
               <span className="microlabel">Confirmação automática</span>
-              <h3>O PIX caiu? O Gestor <em>já sabe</em></h3>
+              <h3>O PIX caiu? A Lembrado <em>já sabe</em></h3>
               <p>Integrado ao seu gateway, ele reconhece o pagamento em segundos, agradece o cliente, renova o acesso e registra tudo na carteira. Zero conferência manual.</p>
               <ul>
                 <li>Baixa automática e recibo na conversa</li>
@@ -476,22 +478,22 @@ export function LandingClient() {
             <div className="price-card rv">
               <div className="pc-name">Starter</div>
               <p className="pc-desc">Organização essencial para começar.</p>
-              <div className="pc-price"><span className="pc-val pc-coming">Em breve</span></div>
+              <div className="pc-price"><span className="pc-cur">R$</span><span className="pc-val num">20</span><span className="pc-per">/mês</span></div>
               <ul className="pc-feats"><li>Até <b>100 clientes</b></li><li><b>1</b> WhatsApp conectado</li><li>Painel e financeiro básico</li><li>Automação básica</li><li>Promoções <b className="g">Incluso</b></li></ul>
               <Link href="/cadastro" className="btn pc-cta magnetic">Criar conta <span className="arr">→</span></Link>
             </div>
             <div className="price-card featured rv d1">
-              <span className="pc-badge">Preço de lançamento</span>
+              <span className="pc-badge">Mais escolhido</span>
               <div className="pc-name">Pro</div>
               <p className="pc-desc">Automação e crescimento para operações em escala.</p>
-              <div className="pc-price"><span className="pc-cur">R$</span><span className="pc-val num">20</span><span className="pc-per">/mês</span></div>
+              <div className="pc-price"><span className="pc-cur">R$</span><span className="pc-val num">30</span><span className="pc-per">/mês</span></div>
               <ul className="pc-feats"><li>Até <b>500 clientes</b></li><li><b>2</b> WhatsApps conectados</li><li>Cobrança Inteligente e Analytics</li><li>Portal do Cliente</li><li>Promoções <b className="g">Incluso</b></li></ul>
               <Link href="/cadastro" className="btn pc-cta magnetic">Testar grátis por 7 dias <span className="arr">→</span></Link>
             </div>
             <div className="price-card rv d2">
               <div className="pc-name">Master</div>
               <p className="pc-desc">Inteligência e recursos para alto volume.</p>
-              <div className="pc-price"><span className="pc-val pc-coming">Em breve</span></div>
+              <div className="pc-price"><span className="pc-cur">R$</span><span className="pc-val num">40</span><span className="pc-per">/mês</span></div>
               <ul className="pc-feats"><li>Clientes <b>Ilimitados</b></li><li><b>3</b> WhatsApps conectados</li><li>Todos os recursos do Pro</li><li>Intelligence, Revendas e API</li><li>Promoções <b className="g">Incluso</b></li></ul>
               <Link href="/cadastro" className="btn pc-cta magnetic">Criar conta <span className="arr">→</span></Link>
             </div>
@@ -524,7 +526,7 @@ export function LandingClient() {
         <div className="wrap">
           <span className="microlabel">Última linha do balanço</span>
           <h2 className="rv">Seu próximo vencimento pode <em>se pagar sozinho.</em></h2>
-          <p className="sub rv d1">O preço de lançamento de <b>R$ 20/mês congela para sempre</b> para quem assinar este mês. Depois, sobe — para os próximos, não para você.</p>
+          <p className="sub rv d1">Planos a partir de <b>R$ 20/mês</b>, com 7 dias grátis para começar sem cartão e escolher o nível certo para sua operação.</p>
           <div className="final-cta rv d2">
             <Link className="btn paper magnetic" href="/cadastro">Testar grátis por 7 dias <span className="arr">→</span></Link>
             <span className="cta-note">sem cartão · configuração em 10 minutos</span>
@@ -543,8 +545,8 @@ export function LandingClient() {
           <div className="ft">
             <div>
               <a className="logo" href="#topo">
-                <svg width="26" height="26" viewBox="0 0 96 96" style={{ "--mk-g": "#faf8f2", "--mk-c": "#3ecf8e" } as React.CSSProperties} aria-hidden="true"><use href="#gm-mark" /></svg>
-                <b>Gestor Master</b>
+                <svg width="26" height="26" viewBox="0 0 132 132" aria-hidden="true"><use href="#lembrado-mark" /></svg>
+                <b>lembrado.</b>
               </a>
               <p style={{ font: "400 12px var(--mono)", marginTop: 12, maxWidth: 230 }}>Cobrança automática no WhatsApp e carteira para negócios de assinatura.</p>
             </div>
@@ -563,7 +565,7 @@ export function LandingClient() {
             </div>
           </div>
           <div className="ft-legal">
-            <span>© 2026 Gestor Master · todos os direitos reservados</span>
+            <span>© 2026 Lembrado · todos os direitos reservados</span>
             <span>feito no Brasil</span>
           </div>
         </div>
@@ -579,15 +581,15 @@ const FAQS = [
   },
   {
     q: "Meu número corre risco de ser banido?",
-    a: "O Gestor Master envia com intervalos humanos, limite diário progressivo e aquecimento automático de chip — o mesmo protocolo usado por operações com milhares de clientes. Cobrança para a sua própria base tem risco muito menor que disparo frio, e nosso anti-ban cuida do resto.",
+    a: "A Lembrado envia com intervalos humanos, limite diário progressivo e aquecimento automático de chip — o mesmo protocolo usado por operações com milhares de clientes. Cobrança para a sua própria base tem risco muito menor que disparo frio, e nosso anti-ban cuida do resto.",
   },
   {
     q: "Funciona para o meu tipo de negócio?",
-    a: "Se você cobra mensalidade, sim: IPTV e streaming, recargas, academias e personal trainers, mensalistas de serviços, aluguéis de equipamentos, clubes de assinatura. Se tem vencimento e WhatsApp, o Gestor cobra.",
+    a: "Se você cobra mensalidade, sim: IPTV e streaming, recargas, academias e personal trainers, mensalistas de serviços, aluguéis de equipamentos, clubes de assinatura. Se tem vencimento e WhatsApp, a Lembrado cobra.",
   },
   {
     q: "Como funciona o teste grátis de 7 dias?",
-    a: "Você cria a conta sem informar cartão, conecta o WhatsApp e usa tudo, sem limite de recursos. No fim dos 7 dias, se quiser continuar, paga R$ 20/mês. Se não quiser, não paga nada — e seus dados ficam salvos caso volte depois.",
+    a: "Você cria a conta sem informar cartão e testa a plataforma por 7 dias. Ao final, escolhe entre Starter por R$ 20/mês, Pro por R$ 30/mês ou Master por R$ 40/mês. Se não quiser continuar, não paga nada.",
   },
   {
     q: "Consigo importar meus clientes da planilha?",

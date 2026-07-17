@@ -1,30 +1,31 @@
-/**
- * Marca "G que confirma" (identidade em logo/): G geométrico cuja barra
- * é o tique de confirmação em verde-dinheiro.
- * Por padrão usa tokens do tema (foreground + money), então se adapta
- * ao dark mode sozinha; passe `g`/`check` para versões fixas (ex.: painel tinta).
- */
+/** Marca Lembrado: conversa enviada, confirmação recebida e atividade contínua. */
 export function BrandMark({
   size = 24,
-  g = "var(--foreground)",
-  check = "var(--money)",
+  background = "#176B4D",
+  accent = "#45D49A",
   className,
 }: {
   size?: number
-  g?: string
-  check?: string
+  background?: string
+  accent?: string
   className?: string
 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 96 96" className={className} aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 132 132" className={className} aria-hidden="true">
+      <rect x="9" y="9" width="114" height="114" rx="34" fill={background} />
       <path
-        d="M 66.5 24.4 A 30 30 0 1 0 77.1 55.3"
-        fill="none" stroke={g} strokeWidth="12" strokeLinecap="round"
+        d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z"
+        fill="#FAF8F2"
       />
       <path
-        d="M 44 54 L 55 65 L 76 40"
-        fill="none" stroke={check} strokeWidth="12" strokeLinecap="round" strokeLinejoin="round"
+        d="m47 70 14 14 27-31"
+        fill="none"
+        stroke={background}
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
+      <circle cx="104" cy="31" r="9" fill={accent} stroke={background} strokeWidth="5" />
     </svg>
   )
 }

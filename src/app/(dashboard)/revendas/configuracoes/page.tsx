@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Save, Shield, Smartphone, CreditCard, Loader2 } from "lucide-react"
+import { Save, Shield, Smartphone, CreditCard, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
@@ -12,9 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PageHeader, PageShell } from "@/components/page-layout"
+import { ResellerNavigation } from "@/components/reseller-navigation"
 
 export default function RevendasConfigPage() {
-  const router = useRouter()
   const supabase = createClient()
   
   const [isLoading, setIsLoading] = useState(true)
@@ -98,16 +98,9 @@ export default function RevendasConfigPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.push('/revendas')}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Configurações de Revenda</h1>
-          <p className="text-muted-foreground mt-1">Conecte seus meios de pagamento e notificações do WhatsApp.</p>
-        </div>
-      </div>
+    <PageShell width="default" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader eyebrow="Rede de parceiros" title="Configurações de Revenda" description="Defina notificações e meios de pagamento usados na operação dos revendedores." actions={<Button onClick={handleSaveSettings} disabled={isSaving}>{isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}Salvar configurações</Button>} />
+      <ResellerNavigation active="settings" />
 
       <div className="grid grid-cols-1 gap-6">
         <Card>
@@ -213,6 +206,6 @@ export default function RevendasConfigPage() {
           </CardFooter>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }

@@ -1,40 +1,96 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Plus, Edit2, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { BadgePercent, CalendarClock, CalendarDays, CheckCircle2, CirclePause, Edit2, Plus, TicketPercent, Trash2, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
-import { formatCurrency } from "@/lib/utils"
+
+import { CatalogNavigation } from "@/components/catalog-navigation"
+import { GlobalDeleteDialog } from "@/components/global-delete-dialog"
+import { MetricGrid, PageHeader, PageSection, PageShell } from "@/components/page-layout"
+import { QuickAddPromoDialog } from "@/components/quick-add-dialogs"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { createClient } from "@/lib/supabase/client"
+import { cn, formatCurrency } from "@/lib/utils"
 import type { Promotion } from "@/types/database"
 
-import { Button } from "@/components/ui/button"
-import { QuickAddPromoDialog } from "@/components/quick-add-dialogs"
-import { GlobalDeleteDialog } from "@/components/global-delete-dialog"
-import { Skeleton } from "@/components/ui/skeleton"
+type PromotionState = {
+  key: "active" | "scheduled" | "ended" | "paused"
+  label: string
+  badgeClass: string
+  detail: string
+}
+
+function formatDate(date: string | null) {
+  return date ? new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR") : null
+}
+
+function getPromotionState(promotion: Promotion, today: Date): PromotionState {
+  if (!promotion.is_active) {
+    return { key: "paused", label: "Pausada", badgeClass: "border-border bg-muted text-muted-foreground", detail: "Desativada manualmente" }
+  }
+
+  const startDate = promotion.start_date ? new Date(`${promotion.start_date}T00:00:00`) : null
+  const endDate = promotion.end_date ? new Date(`${promotion.end_date}T00:00:00`) : null
+
+  if (endDate && endDate < today) {
+    return { key: "ended", label: "Encerrada", badgeClass: "border-danger-border bg-danger-bg text-danger", detail: `Encerrada em ${formatDate(promotion.end_date)}` }
+  }
+  if (startDate && startDate > today) {
+    return { key: "scheduled", label: "Agendada", badgeClass: "border-warning-border bg-warning-bg text-warning-fg", detail: `Inicia em ${formatDate(promotion.start_date)}` }
+  }
+  return { key: "active", label: "Ativa", badgeClass: "border-success-border bg-success-bg text-success-fg", detail: "Disponível para aplicação nas renovações" }
+}
+
+function PromotionMetric({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  emphasis = false,
+}: {
+  icon: LucideIcon
+  label: string
+  value: ReactNode
+  hint: string
+  emphasis?: boolean
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", emphasis ? "bg-success-bg text-success-fg" : "bg-secondary text-secondary-foreground")}>
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="microlabel text-[9px]">{label}</p>
+          <p className={cn("num mt-1 break-words text-[17px] font-semibold leading-tight tracking-tight sm:text-xl", emphasis ? "text-success-fg" : "text-foreground")}>{value}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{hint}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function PromocoesPage() {
+  const supabase = useMemo(() => createClient(), [])
   const [promotions, setPromotions] = useState<Promotion[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false)
   const [isDeletePromoOpen, setIsDeletePromoOpen] = useState(false)
-  
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null)
   const [deletingPromo, setDeletingPromo] = useState<Promotion | null>(null)
-  
-  const supabase = createClient()
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       const { data, error } = await supabase
-        .from('promotions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("promotions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
 
       if (error) throw error
       setPromotions(data || [])
@@ -44,121 +100,127 @@ export default function PromocoesPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
 
   useEffect(() => {
-    loadData()
-  }, [])
+    const timer = window.setTimeout(() => void loadData(), 0)
+    return () => window.clearTimeout(timer)
+  }, [loadData])
 
-  const getPromoStatus = (promo: Promotion) => {
-    if (!promo.is_active) return { label: 'Pausada', color: 'bg-muted text-muted-foreground border-muted-foreground/30' }
-    
-    const today = new Date()
-    today.setHours(0,0,0,0)
-    
-    const startDate = promo.start_date ? new Date(promo.start_date + "T00:00:00") : null
-    const endDate = promo.end_date ? new Date(promo.end_date + "T00:00:00") : null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const promotionStates = promotions.map((promotion) => ({ promotion, state: getPromotionState(promotion, today) }))
+  const activeCount = promotionStates.filter(({ state }) => state.key === "active").length
+  const scheduledCount = promotionStates.filter(({ state }) => state.key === "scheduled").length
+  const endedCount = promotionStates.filter(({ state }) => state.key === "ended").length
+  const pausedCount = promotionStates.filter(({ state }) => state.key === "paused").length
+  const averageDiscount = promotions.length > 0
+    ? promotions.reduce((total, promotion) => total + Number(promotion.discount_value || 0), 0) / promotions.length
+    : 0
 
-    if (endDate && endDate < today) return { label: 'Encerrada', color: 'bg-red-500/10 text-red-500 border-red-500/30', dot: 'bg-red-500' }
-    if (startDate && startDate > today) return { label: 'Agendada', color: 'bg-blue-500/10 text-blue-500 border-blue-500/30', dot: 'bg-blue-500' }
-    
-    return { label: 'Ativa', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold', dot: 'bg-emerald-500' }
+  const openCreatePromo = () => {
+    setEditingPromo(null)
+    setIsPromoDialogOpen(true)
   }
 
-  const openCreatePromo = () => { setEditingPromo(null); setIsPromoDialogOpen(true) }
-  const openEditPromo = (p: Promotion) => { setEditingPromo(p); setIsPromoDialogOpen(true) }
-  const openDeletePromo = (p: Promotion) => { setDeletingPromo(p); setIsDeletePromoOpen(true) }
+  const openEditPromo = (promotion: Promotion) => {
+    setEditingPromo(promotion)
+    setIsPromoDialogOpen(true)
+  }
+
+  const openDeletePromo = (promotion: Promotion) => {
+    setDeletingPromo(promotion)
+    setIsDeletePromoOpen(true)
+  }
 
   return (
-    <div className="pb-10 max-w-7xl mx-auto space-y-6">
-      
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-[-0.02em]">Promoções</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Crie descontos temporários ou estenda planos para atrair mais clientes.</p>
-        </div>
-        <Button onClick={openCreatePromo} className="h-8 gap-1.5 text-xs bg-foreground text-background hover:bg-foreground/90">
-          <Plus className="size-3.5" /> Nova promoção
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+    <PageShell width="wide">
+      <PageHeader
+        eyebrow="Catálogo"
+        title="Promoções"
+        description="Crie ofertas com objetivo claro, acompanhe a vigência e mantenha disponíveis apenas as condições relevantes para sua carteira."
+        badge={isLoading ? "…" : `${promotions.length} cadastrada${promotions.length === 1 ? "" : "s"}`}
+        actions={
+          <Button onClick={openCreatePromo} className="min-h-10 gap-2">
+            <Plus className="size-4" aria-hidden="true" /> Nova promoção
+          </Button>
+        }
+      />
+
+      <CatalogNavigation active="promotions" />
+
+      <section aria-label="Resumo das promoções">
         {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-[120px] w-full rounded-xl" />
-            ))
-        ) : promotions.length === 0 ? (
-            <div className="col-span-full rounded-xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center bg-card/50">
-              <p className="text-sm font-medium text-muted-foreground mb-4">Nenhuma promoção ativa no momento.</p>
-              <Button variant="outline" size="sm" onClick={openCreatePromo} className="text-xs">
-                + Criar Promoção
-              </Button>
-            </div>
+          <MetricGrid columns={4}>
+            {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[116px] rounded-2xl" />)}
+          </MetricGrid>
         ) : (
-          promotions.map((promo) => {
-            const status = getPromoStatus(promo)
-            const uses = (promo as any).uses_count || 0
-            
-            return (
-              <div key={promo.id} className="group relative rounded-xl border border-border bg-card p-4 transition-colors hover:border-border/80 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-[15px] text-foreground pr-4 truncate">{promo.name}</span>
-                    <span className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${status.label === 'Ativa' ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                      {status.label === 'Ativa' && <span className={`size-1.5 rounded-full ${status.dot}`} />}
-                      {status.label}
-                    </span>
-                  </div>
-                  
-                  <div className="text-[12px] text-muted-foreground mb-4 line-clamp-2">
-                    {promo.description || `Desconto de ${formatCurrency(promo.discount_value)}`}
-                    {promo.end_date ? ` · até ${new Date(promo.end_date + "T00:00:00").toLocaleDateString('pt-BR')}` : ''}
-                  </div>
-                </div>
-                
-                {status.label === 'Ativa' && (
-                  <div className="space-y-2 mt-auto">
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Usos</span>
-                      <span className="num font-medium text-foreground">{uses} / ∞</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min((uses / 50) * 100, 100)}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions overlay - appears on hover */}
-                <div className="absolute right-2.5 top-2.5 flex opacity-0 group-hover:opacity-100 transition-opacity bg-card rounded-md shadow-sm border border-border">
-                    <Button variant="ghost" size="icon" onClick={() => openEditPromo(promo)} className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                      <Edit2 className="size-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openDeletePromo(promo)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                </div>
-              </div>
-            )
-          })
+          <MetricGrid columns={4}>
+            <PromotionMetric icon={BadgePercent} label="Promoções" value={promotions.length} hint={`${pausedCount} pausada${pausedCount === 1 ? "" : "s"} · ${endedCount} encerrada${endedCount === 1 ? "" : "s"}`} />
+            <PromotionMetric icon={CheckCircle2} label="Ativas agora" value={activeCount} hint="Disponíveis para aplicação" emphasis />
+            <PromotionMetric icon={CalendarClock} label="Agendadas" value={scheduledCount} hint="Começam em uma data futura" />
+            <PromotionMetric icon={TicketPercent} label="Desconto médio" value={formatCurrency(averageDiscount)} hint="Média das promoções cadastradas" />
+          </MetricGrid>
         )}
-      </div>
+      </section>
 
-      <QuickAddPromoDialog
-        open={isPromoDialogOpen}
-        onOpenChange={setIsPromoDialogOpen}
-        promo={editingPromo}
-        onSuccess={loadData}
-      />
+      <PageSection
+        title="Campanhas promocionais"
+        description="Desconto, disponibilidade e vigência em uma leitura rápida para decidir o que manter no catálogo."
+      >
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-[310px] rounded-2xl" />)}
+          </div>
+        ) : promotions.length === 0 ? (
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><BadgePercent className="size-5" aria-hidden="true" /></span>
+            <h3 className="mt-4 text-sm font-semibold text-foreground">Crie sua primeira promoção</h3>
+            <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Defina um desconto e uma vigência para usar a oferta nas renovações dos clientes.</p>
+            <Button onClick={openCreatePromo} className="mt-5 min-h-10 gap-2"><Plus className="size-4" aria-hidden="true" /> Criar promoção</Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {promotionStates.map(({ promotion, state }) => (
+              <article key={promotion.id} className="flex min-h-[310px] flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><BadgePercent className="size-4" aria-hidden="true" /></span>
+                  <span className={cn("inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold", state.badgeClass)}>{state.label}</span>
+                </div>
 
-      <GlobalDeleteDialog 
-        open={isDeletePromoOpen} 
-        onOpenChange={setIsDeletePromoOpen} 
-        item={deletingPromo} 
-        table="promotions" 
-        title="Excluir Promoção" 
-        description="Todos os dados desta promoção serão apagados definitivamente." 
-        onSuccess={loadData} 
-      />
-    </div>
+                <div className="mt-5 min-w-0">
+                  <h3 className="truncate text-base font-semibold tracking-tight text-foreground">{promotion.name}</h3>
+                  <p className="mt-1 min-h-10 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{promotion.description || "Promoção sem descrição cadastrada."}</p>
+                </div>
+
+                <div className="mt-5 flex items-end justify-between gap-4 border-y border-border py-4">
+                  <div><p className="microlabel text-[9px]">Desconto</p><p className="num mt-1 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(promotion.discount_value)}</p></div>
+                  <TicketPercent className="size-6 text-muted-foreground" aria-hidden="true" />
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  <div className="flex items-start gap-2.5 text-xs">
+                    <CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <div className="min-w-0"><p className="font-medium text-foreground">Vigência</p><p className="mt-0.5 text-[11px] text-muted-foreground">{formatDate(promotion.start_date) || "Início imediato"} — {formatDate(promotion.end_date) || "Sem data final"}</p></div>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs">
+                    {state.key === "paused" ? <CirclePause className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", state.key === "active" ? "text-success-fg" : "text-muted-foreground")} aria-hidden="true" />}
+                    <p className="leading-relaxed text-muted-foreground">{state.detail}</p>
+                  </div>
+                </div>
+
+                <div className="mt-auto grid grid-cols-2 gap-2 pt-5">
+                  <Button variant="outline" onClick={() => openEditPromo(promotion)} aria-label={`Editar ${promotion.name}`} className="min-h-10 gap-2 text-xs"><Edit2 className="size-3.5" aria-hidden="true" /> Editar</Button>
+                  <Button variant="outline" onClick={() => openDeletePromo(promotion)} aria-label={`Excluir ${promotion.name}`} className="min-h-10 gap-2 text-xs text-danger hover:bg-danger-bg hover:text-danger"><Trash2 className="size-3.5" aria-hidden="true" /> Excluir</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </PageSection>
+
+      <QuickAddPromoDialog open={isPromoDialogOpen} onOpenChange={setIsPromoDialogOpen} promo={editingPromo} onSuccess={loadData} />
+      <GlobalDeleteDialog open={isDeletePromoOpen} onOpenChange={setIsDeletePromoOpen} item={deletingPromo} table="promotions" title="Excluir Promoção" description="Todos os dados desta promoção serão apagados definitivamente." onSuccess={loadData} />
+    </PageShell>
   )
 }

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ShieldAlert, Download, Upload, Loader2, Save, Trash2, KeyRound } from "lucide-react"
 import { toast } from "sonner"
-import Papa from "papaparse"
 import { logAuditClient } from "@/lib/audit-client"
 
 import { Button } from "@/components/ui/button"
@@ -21,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { PageHeader, PageShell } from "@/components/page-layout"
 
 export default function ConfiguracoesPage() {
   const supabase = createClient()
@@ -116,6 +116,7 @@ export default function ConfiguracoesPage() {
         "Descricao": c.description || ""
       }))
 
+      const Papa = (await import("papaparse")).default
       const csv = Papa.unparse(mappedClients)
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -144,6 +145,7 @@ export default function ConfiguracoesPage() {
     if (!file) return
 
     setIsImporting(true)
+    const Papa = (await import("papaparse")).default
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -242,11 +244,8 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
-      <div>
-        <h1 className="text-[17px] font-semibold tracking-[-0.02em] mb-2">Configurações & Dados</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Gerencie a segurança da sua conta, backups e migração de dados.</p>
-      </div>
+    <PageShell width="default" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader eyebrow="Segurança e portabilidade" title="Configurações e dados" description="Proteja ações sensíveis e controle backups, importações e exclusões." badge={hasPin ? "PIN configurado" : "PIN pendente"} />
 
       {!hasPin ? (
         <Card className="border-amber-500/20">
@@ -277,7 +276,7 @@ export default function ConfiguracoesPage() {
         </Card>
       ) : (
         <Tabs defaultValue="backup" className="w-full">
-          <TabsList className="bg-background/50 border border-border/50 p-1 mb-6">
+          <TabsList className="mb-6 h-auto w-full justify-start border bg-card p-1 sm:w-auto">
             <TabsTrigger value="backup" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Exportar & Importar</TabsTrigger>
             <TabsTrigger value="danger" className="data-[state=active]:bg-red-500/10 data-[state=active]:text-red-500">Zona de Perigo</TabsTrigger>
           </TabsList>
@@ -297,7 +296,7 @@ export default function ConfiguracoesPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Recomendamos fazer a exportação semanalmente como backup ou para usar os dados em outras ferramentas.
                   </p>
-                  <Button onClick={handleExport} disabled={isExporting} className="w-full bg-blue-600 hover:bg-blue-700">
+                  <Button onClick={handleExport} disabled={isExporting} className="w-full">
                     {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                     Baixar Backup CSV
                   </Button>
@@ -311,7 +310,7 @@ export default function ConfiguracoesPage() {
                     Importar de CSV
                     {userPlan === "Lite" && !isAdmin && <span className="text-lg ml-auto">🔒</span>}
                   </CardTitle>
-                  <CardDescription>Traga sua base de clientes de outro sistema para o Gestor Master.</CardDescription>
+                  <CardDescription>Traga sua base de clientes de outro sistema para a Lembrado.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -388,6 +387,6 @@ export default function ConfiguracoesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }

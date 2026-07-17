@@ -30,5 +30,18 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".agents/**",
+    ".ai/**",
+    ".claude/**",
+    ".junie/**",
+    "design_handoff_gestor_master/**",
+    "logo/**",
+    "scripts/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
 }

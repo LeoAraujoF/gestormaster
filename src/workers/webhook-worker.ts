@@ -13,6 +13,7 @@ startOperationalHeartbeat('webhook_worker')
 import {
   BOT_STATE_TTL_SECONDS,
   brazilPhoneE164Candidates,
+  brazilPhoneLegacyCandidates,
   buildMainMenu,
   generateVerificationCode,
   isMenuCommand,
@@ -104,6 +105,7 @@ async function handleInboundMessage(payload: any) {
 
   if (!remoteJid || !instanceName || message?.key?.fromMe || !text) return
   const phoneCandidates = brazilPhoneE164Candidates(remoteJid.split('@')[0])
+  const legacyPhoneCandidates = brazilPhoneLegacyCandidates(remoteJid.split('@')[0])
   const normalizedPhone = phoneCandidates[0]
   if (!normalizedPhone) return
 
@@ -115,15 +117,27 @@ async function handleInboundMessage(payload: any) {
   if (!instance?.organization_id) return
 
   const organizationId = instance.organization_id
-  const { data: clients, error: clientError } = await supabaseAdmin
-    .from('clients')
-    .select('id, user_id, name, plan_value, phone_e164, client_services(services(name, plans))')
-    .eq('organization_id', organizationId)
-    .in('phone_e164', phoneCandidates)
+  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, client_services(services(name, plans))'
+  const [e164Result, legacyResult] = await Promise.all([
+    supabaseAdmin
+      .from('clients')
+      .select(clientSelect)
+      .eq('organization_id', organizationId)
+      .in('phone_e164', phoneCandidates),
+    supabaseAdmin
+      .from('clients')
+      .select(clientSelect)
+      .eq('organization_id', organizationId)
+      .in('phone', legacyPhoneCandidates),
+  ])
 
-  if (clientError) throw clientError
+  if (e164Result.error) throw e164Result.error
+  if (legacyResult.error) throw legacyResult.error
+  const clients = [...(e164Result.data || []), ...(legacyResult.data || [])]
   const client = phoneCandidates
-    .map((candidate) => clients?.find((item) => item.phone_e164 === candidate))
+    .map((candidate) => clients.find((item) => (
+      item.phone_e164 === candidate || normalizeBrazilPhone(item.phone || '') === candidate
+    )))
     .find(Boolean)
 
   if (!client) {
@@ -132,7 +146,11 @@ async function handleInboundMessage(payload: any) {
     return
   }
 
-  const deliveryPhone = client.phone_e164 || normalizedPhone
+  if (!client.phone_e164) {
+    logger.warn('[Webhook] Cliente localizado pelo telefone legado; phone_e164 ainda não preenchido.')
+  }
+
+  const deliveryPhone = client.phone_e164 || normalizeBrazilPhone(client.phone || '') || normalizedPhone
 
   const pauseKey = `bot_pause:${organizationId}:${normalizedPhone}`
   if (await redisConnection.get(pauseKey)) return

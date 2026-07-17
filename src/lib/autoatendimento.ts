@@ -60,6 +60,13 @@ export function brazilPhoneE164Candidates(raw: string): string[] {
   return [...new Set(candidates)]
 }
 
+export function brazilPhoneLegacyCandidates(raw: string): string[] {
+  return brazilPhoneE164Candidates(raw).flatMap((candidate) => {
+    const digits = candidate.replace(/\D/g, '')
+    return [digits, digits.slice(2)]
+  }).filter((candidate, index, values) => values.indexOf(candidate) === index)
+}
+
 export function isMenuCommand(text: string): boolean {
   const value = text.trim().toLowerCase()
   return ['0', 'menu', 'sair', 'cancelar', 'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'renovar'].includes(value)

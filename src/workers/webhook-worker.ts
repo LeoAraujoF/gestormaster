@@ -18,6 +18,7 @@ import {
   normalizeBrazilPhone,
   parseDueDate,
   PHONE_VERIFICATION_TTL_MINUTES,
+  resolveIncomingPhoneJid,
   verifyCode,
 } from '../lib/autoatendimento'
 
@@ -96,11 +97,11 @@ async function handleConnectionUpdate(payload: any) {
 
 async function handleInboundMessage(payload: any) {
   const message = payload.data?.messages?.[0] || payload.data
-  const remoteJid = message?.key?.remoteJid as string | undefined
+  const remoteJid = resolveIncomingPhoneJid(message?.key)
   const text = message?.message?.conversation || message?.message?.extendedTextMessage?.text || message?.message?.imageMessage?.caption
   const instanceName = payload.instance as string | undefined
 
-  if (!remoteJid || !instanceName || message?.key?.fromMe || !text || !remoteJid.endsWith('@s.whatsapp.net')) return
+  if (!remoteJid || !instanceName || message?.key?.fromMe || !text) return
   const normalizedPhone = normalizeBrazilPhone(remoteJid.split('@')[0])
   if (!normalizedPhone) return
 

@@ -12,6 +12,27 @@ export type AutoState =
   | { step: 'awaiting_new_phone'; clientId: string }
   | { step: 'awaiting_phone_code'; clientId: string; verificationId: string }
 
+type EvolutionMessageKey = {
+  remoteJid?: unknown
+  remoteJidAlt?: unknown
+}
+
+export function resolveIncomingPhoneJid(key: EvolutionMessageKey | null | undefined): string | null {
+  if (!key) return null
+
+  const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid.trim() : ''
+  if (remoteJid.endsWith('@g.us')) return null
+
+  for (const candidate of [key.remoteJidAlt, key.remoteJid]) {
+    if (typeof candidate !== 'string') continue
+    const jid = candidate.trim()
+    const match = jid.match(/^(\d+)(?::\d+)?@s\.whatsapp\.net$/)
+    if (match) return `${match[1]}@s.whatsapp.net`
+  }
+
+  return null
+}
+
 export function normalizeBrazilPhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, '')
   const local = digits.startsWith('55') ? digits.slice(2) : digits

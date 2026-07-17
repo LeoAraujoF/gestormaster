@@ -40,6 +40,26 @@ export function normalizeBrazilPhone(raw: string): string | null {
   return `+55${local}`
 }
 
+export function brazilPhoneE164Candidates(raw: string): string[] {
+  const normalized = normalizeBrazilPhone(raw)
+  if (!normalized) return []
+
+  const local = normalized.slice(3)
+  const candidates = [normalized]
+  const subscriber = local.slice(2)
+
+  // O WhatsApp pode representar celulares brasileiros pelo JID legado, sem o
+  // nono dígito inserido após o DDD. Consulte as duas formas, preservando a
+  // correspondência exata como primeira opção.
+  if (local.length === 10 && /^[6-9]/.test(subscriber)) {
+    candidates.push(`+55${local.slice(0, 2)}9${subscriber}`)
+  } else if (local.length === 11 && subscriber.startsWith('9') && /^[6-9]/.test(subscriber[1] || '')) {
+    candidates.push(`+55${local.slice(0, 2)}${subscriber.slice(1)}`)
+  }
+
+  return [...new Set(candidates)]
+}
+
 export function isMenuCommand(text: string): boolean {
   const value = text.trim().toLowerCase()
   return ['0', 'menu', 'sair', 'cancelar', 'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'renovar'].includes(value)

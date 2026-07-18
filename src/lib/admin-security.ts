@@ -20,6 +20,21 @@ export type MasterAdminSession = {
   sessionId: string | null
 }
 
+function getPasswordAuthTime(claims: Record<string, unknown>): number {
+  const legacyAuthTime = Number(claims.auth_time || 0)
+  const amr = Array.isArray(claims.amr) ? claims.amr : []
+  const passwordAuthTimes = amr
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object')
+    .filter((entry) => entry.method === 'password')
+    .map((entry) => Number(entry.timestamp || 0))
+    .filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)
+
+  return Math.max(
+    Number.isFinite(legacyAuthTime) && legacyAuthTime > 0 ? legacyAuthTime : 0,
+    ...passwordAuthTimes,
+  )
+}
+
 export async function requireMasterAdmin(options: { recentAuth?: boolean } = {}): Promise<MasterAdminSession> {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.getClaims()
@@ -30,8 +45,9 @@ export async function requireMasterAdmin(options: { recentAuth?: boolean } = {})
   const email = String(claims.email).trim().toLowerCase()
   if (!adminEmail || email !== adminEmail) throw new AdminAccessError(403, 'ADMIN_FORBIDDEN', 'Acesso restrito')
 
-  const authTime = Number(claims.auth_time || 0)
-  if (options.recentAuth && (!authTime || Math.floor(Date.now() / 1000) - authTime > 300)) {
+  const authTime = getPasswordAuthTime(claims)
+  const authAgeSeconds = Math.floor(Date.now() / 1000) - authTime
+  if (options.recentAuth && (!authTime || authAgeSeconds < -60 || authAgeSeconds > 300)) {
     throw new AdminAccessError(403, 'ADMIN_REAUTH_REQUIRED', 'Confirme sua senha novamente')
   }
 

@@ -15,6 +15,17 @@ import { Skeleton } from "@/components/ui/skeleton"
 type Step = { id: string; sequence: number; relative_day: number; send_time: string; message_template: string; is_active: boolean }
 type Profile = { id: string; code: string; name: string; min_score: number | null; max_score: number | null; steps: Step[] }
 type Score = { client_id: string; score: number; confidence: string; profile: string; profile_source?: string; tags?: string[]; clients?: { name?: string } | null }
+type EligibilityReason = 'CLIENT_PLAN_VALUE_NOT_POSITIVE' | 'CLIENT_PHONE_NOT_FOUND'
+type Eligibility = {
+  tracked: number
+  billable: number
+  readyForSend: number
+  withoutPositiveValue: number
+  withoutPhone: number
+  ineligible: Array<{ clientId: string; name: string; reasons: EligibilityReason[] }>
+}
+
+const EMPTY_ELIGIBILITY: Eligibility = { tracked: 0, billable: 0, readyForSend: 0, withoutPositiveValue: 0, withoutPhone: 0, ineligible: [] }
 
 export default function IntelligentCollectionsPage() {
   const [loading, setLoading] = useState(true)
@@ -24,6 +35,7 @@ export default function IntelligentCollectionsPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [scores, setScores] = useState<Score[]>([])
   const [cycles, setCycles] = useState<any[]>([])
+  const [eligibility, setEligibility] = useState<Eligibility>(EMPTY_ELIGIBILITY)
 
   const load = async () => {
     try {
@@ -35,6 +47,7 @@ export default function IntelligentCollectionsPage() {
       setProfiles(data.profiles || [])
       setScores(data.scores || [])
       setCycles(data.cycles || [])
+      setEligibility(data.eligibility || EMPTY_ELIGIBILITY)
     } catch (error: any) {
       toast.error(error.message || "Não foi possível carregar a cobrança inteligente")
     } finally {
@@ -90,7 +103,6 @@ export default function IntelligentCollectionsPage() {
 
   const totalSteps = profiles.reduce((sum, profile) => sum + profile.steps.length, 0)
   const activeSteps = profiles.reduce((sum, profile) => sum + profile.steps.filter(step => step.is_active).length, 0)
-  const highConfidenceScores = scores.filter(score => score.confidence === "high").length
 
   if (loading) return (
     <PageProtector>
@@ -145,16 +157,42 @@ export default function IntelligentCollectionsPage() {
 
         <MetricGrid columns={4}>
           <CollectionMetric icon={Clock3} label="Ciclos pendentes" value={String(cycles.length)} hint={cycles.length > 0 ? "Aguardando processamento" : "Nenhum ciclo na fila"} tone={cycles.length > 0 ? "warning" : "neutral"} />
-          <CollectionMetric icon={Users} label="Em acompanhamento" value={String(scores.length)} hint={`${highConfidenceScores} com confiança alta`} />
+          <CollectionMetric icon={Users} label="Prontos para envio" value={String(eligibility.readyForSend)} hint={`${eligibility.billable} com valor de cobrança`} />
+          <CollectionMetric icon={ShieldCheck} label="Inelegíveis" value={String(Math.max(0, eligibility.tracked - eligibility.readyForSend))} hint={`${eligibility.withoutPositiveValue} sem valor · ${eligibility.withoutPhone} sem telefone`} tone={eligibility.tracked > eligibility.readyForSend ? "warning" : "success"} />
           <CollectionMetric icon={Gauge} label="Etapas ativas" value={`${activeSteps}/${totalSteps}`} hint={`${profiles.length} perfis configurados`} />
-          <CollectionMetric icon={ShieldCheck} label="Proteção de contato" value="Ativa" hint="1/dia · 4/ciclo · 08h–20h" tone="success" />
         </MetricGrid>
+
+        {enabled && (
+          <div className="flex items-start gap-3 rounded-xl border border-money/25 bg-success-bg px-4 py-3 text-success-fg">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold">Operação híbrida ativa</p>
+              <p className="mt-0.5 text-xs leading-relaxed opacity-90">A cobrança inteligente controla os avisos antes e no vencimento. Regras após o vencimento continuam na Central como recuperação complementar; se houver coincidência no mesmo dia, a etapa inteligente prevalece. Planos de R$ 0,00 não geram cobrança.</p>
+            </div>
+          </div>
+        )}
 
         {!enabled && (
           <div className="flex items-start gap-3 rounded-xl border border-interactive/20 bg-interactive-bg px-4 py-3 text-interactive-fg">
             <BrainCircuit className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div><p className="text-sm font-semibold">Você está em modo de simulação</p><p className="mt-0.5 text-xs opacity-80">Revise perfis, horários e mensagens abaixo. Ativar a régua é uma decisão separada e explícita.</p></div>
           </div>
+        )}
+
+        {eligibility.ineligible.length > 0 && (
+          <PageSection title="Clientes inelegíveis" description="Estes clientes permanecem fora dos disparos até que os dados indicados sejam corrigidos.">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {eligibility.ineligible.map(client => (
+                <article key={client.clientId} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <p className="truncate text-sm font-semibold">{client.name || "Cliente sem nome"}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {client.reasons.includes('CLIENT_PLAN_VALUE_NOT_POSITIVE') && <span className="rounded-md bg-warning-bg px-2 py-1 text-[11px] font-medium text-warning-fg">Plano sem valor positivo</span>}
+                    {client.reasons.includes('CLIENT_PHONE_NOT_FOUND') && <span className="rounded-md bg-danger-bg px-2 py-1 text-[11px] font-medium text-danger-fg">Telefone não cadastrado</span>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </PageSection>
         )}
 
         <PageSection title="Perfis e etapas" description="Cada perfil seleciona automaticamente uma régua. Ajuste texto, momento e horário sem perder a visão do conjunto.">

@@ -4,11 +4,12 @@ import { supabaseAdmin } from '../lib/supabase/service-role';
 import { messageQueue, healthQueue, warmupQueue } from '../lib/queue';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { parseMessageTemplate } from '../lib/message-parser';
-import { prepareIntelligentCollectionData, scheduleIntelligentCollections } from '../lib/intelligent-collections';
+import { prepareIntelligentCollectionData, resolveIntelligentRecoveryCoverage, scheduleIntelligentCollections } from '../lib/intelligent-collections';
 import { scheduleIntelligenceRuns } from '../lib/intelligence-service';
 import { captureAnalyticsSnapshots } from '../lib/analytics-service';
 import { createCoordinatedAlert, releaseDeferredContacts, reserveContact } from '../lib/contact-coordination';
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+import { decideFixedBillingRule, type FixedBillingAlertType } from '../lib/collection-orchestration';
 
 startOperationalHeartbeat('scheduler');
 
@@ -88,8 +89,7 @@ cron.schedule('*/5 * * * *', async () => {
 
     for (const rule of automations || []) {
       if (!rule.organization_id || !advancedAutomationOrganizations.has(rule.organization_id)) continue;
-      // A régua fixa não concorre com a inteligente após a adesão da organização.
-      if (rule.organization_id && intelligentOrganizations.has(rule.organization_id)) continue;
+      const intelligentEnabled = intelligentOrganizations.has(rule.organization_id);
       if (!rule.send_time) continue;
 
       // 1.1 Busca metadados do usuário para obter o fuso horário (timezone)
@@ -121,6 +121,19 @@ cron.schedule('*/5 * * * *', async () => {
 
       // Checa se o horário de envio caiu na janela dos últimos 5 minutos locais
       if (ruleMins <= (localNowMins - 5) || ruleMins > localNowMins) {
+        continue;
+      }
+
+      const alertType = rule.alert_type as FixedBillingAlertType;
+      if (intelligentEnabled && alertType !== 'after_due') {
+        const decision = decideFixedBillingRule({
+          intelligentEnabled,
+          alertType,
+          planValue: 0,
+          hasPendingCycle: false,
+          intelligentStepCoversDay: false,
+        });
+        logger.info(`[Scheduler] Regra fixa ${rule.id} suprimida: ${decision.reason}.`);
         continue;
       }
 
@@ -159,6 +172,15 @@ cron.schedule('*/5 * * * *', async () => {
       const { data: clients, error: clientErr } = await query;
       if (clientErr || !clients || clients.length === 0) continue;
 
+      const intelligentCoverage = intelligentEnabled && alertType === 'after_due'
+        ? await resolveIntelligentRecoveryCoverage({
+          organizationId: rule.organization_id,
+          clientIds: clients.map((client) => client.id),
+          dueDate: targetDateStr,
+          relativeDay: offset,
+        })
+        : new Map();
+
       // Busca uma instância da Evolution conectada para disparar
       let instanceQuery = supabaseAdmin.from('evolution_instances')
         .select('*')
@@ -181,6 +203,19 @@ cron.schedule('*/5 * * * *', async () => {
 
       for (const client of clients) {
         if (!client.phone) continue;
+
+        const coverage = intelligentCoverage.get(client.id);
+        const orchestrationDecision = decideFixedBillingRule({
+          intelligentEnabled,
+          alertType,
+          planValue: Number(client.plan_value || 0),
+          hasPendingCycle: coverage?.hasPendingCycle ?? false,
+          intelligentStepCoversDay: coverage?.intelligentStepCoversDay ?? false,
+        });
+        if (!orchestrationDecision.execute) {
+          logger.info(`[Scheduler] Cliente ${client.id} suprimido na regra fixa ${rule.id}: ${orchestrationDecision.reason}.`);
+          continue;
+        }
 
         // Proteção contra envios duplicados no mesmo dia para a mesma automação
         const { data: historyCheck } = await supabaseAdmin.from('alert_history')

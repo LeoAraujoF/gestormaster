@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
 import { resolveProfileCode, type CollectionProfileCode } from '@/lib/collection-score'
 import { createCoordinatedAlert, reserveContact } from '@/lib/contact-coordination'
+import type { IntelligentRecoveryCoverage } from '@/lib/collection-orchestration'
 
 type ProfileCode = CollectionProfileCode
 
@@ -97,6 +98,91 @@ async function calculateScore(clientId: string) {
   const { data, error } = await supabaseAdmin.rpc('recalculate_collection_score', { p_client_id: clientId })
   if (error) throw new Error(error.message)
   return data as { score: number; confidence: string }
+}
+
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.slice(0, 5).split(':').map(Number)
+  return hour * 60 + minute
+}
+
+export async function resolveIntelligentRecoveryCoverage(input: {
+  organizationId: string
+  clientIds: string[]
+  dueDate: string
+  relativeDay: number
+}) {
+  const coverage = new Map<string, IntelligentRecoveryCoverage>()
+  if (input.clientIds.length === 0) return coverage
+
+  const { data: profiles, error: profilesError } = await supabaseAdmin.from('collection_profiles')
+    .select('id, code')
+    .eq('organization_id', input.organizationId)
+    .eq('is_active', true)
+  if (profilesError) throw new Error(`Falha ao buscar perfis da recuperação híbrida: ${profilesError.message}`)
+
+  const profileIds = (profiles || []).map((profile) => profile.id)
+  const [settingsResult, stepsResult, scoresResult, cyclesResult, assignmentsResult] = await Promise.all([
+    supabaseAdmin.from('collection_settings')
+      .select('send_window_start, send_window_end')
+      .eq('organization_id', input.organizationId)
+      .eq('enabled', true)
+      .maybeSingle(),
+    profileIds.length
+      ? supabaseAdmin.from('collection_profile_steps')
+        .select('profile_id, relative_day, send_time')
+        .in('profile_id', profileIds)
+        .eq('relative_day', input.relativeDay)
+        .eq('is_active', true)
+      : Promise.resolve({ data: [], error: null }),
+    supabaseAdmin.from('collection_scores')
+      .select('client_id, score, confidence')
+      .eq('organization_id', input.organizationId)
+      .in('client_id', input.clientIds),
+    supabaseAdmin.from('billing_cycles')
+      .select('client_id')
+      .eq('organization_id', input.organizationId)
+      .eq('due_date', input.dueDate)
+      .in('client_id', input.clientIds)
+      .in('status', ['open', 'overdue']),
+    supabaseAdmin.from('client_tag_assignments')
+      .select('client_id, client_tags(code)')
+      .in('client_id', input.clientIds),
+  ])
+
+  const queryError = settingsResult.error || stepsResult.error || scoresResult.error || cyclesResult.error || assignmentsResult.error
+  if (queryError) throw new Error(`Falha ao resolver cobertura da recuperação híbrida: ${queryError.message}`)
+
+  const profileCodeById = new Map((profiles || []).map((profile) => [profile.id, profile.code as ProfileCode]))
+  const windowStart = timeToMinutes(settingsResult.data?.send_window_start || '08:00')
+  const windowEnd = timeToMinutes(settingsResult.data?.send_window_end || '20:00')
+  const coveredProfiles = new Set<ProfileCode>()
+  for (const step of stepsResult.data || []) {
+    const sendMinute = timeToMinutes(step.send_time)
+    const profileCode = profileCodeById.get(step.profile_id)
+    if (profileCode && sendMinute >= windowStart && sendMinute <= windowEnd) coveredProfiles.add(profileCode)
+  }
+
+  const scoresByClient = new Map((scoresResult.data || []).map((score) => [score.client_id, score]))
+  const pendingCycles = new Set((cyclesResult.data || []).map((cycle) => cycle.client_id))
+  const tagsByClient = new Map<string, string[]>()
+  for (const assignment of assignmentsResult.data || []) {
+    const relation = assignment.client_tags as unknown as { code?: string } | { code?: string }[] | null
+    const code = Array.isArray(relation) ? relation[0]?.code : relation?.code
+    if (!code) continue
+    tagsByClient.set(assignment.client_id, [...(tagsByClient.get(assignment.client_id) || []), code])
+  }
+
+  for (const clientId of input.clientIds) {
+    const score = scoresByClient.get(clientId)
+    const profileCode = resolveProfileCode(Number(score?.score ?? 60), score?.confidence || 'low', tagsByClient.get(clientId) || [])
+    const hasPendingCycle = pendingCycles.has(clientId)
+    coverage.set(clientId, {
+      hasPendingCycle,
+      intelligentStepCoversDay: hasPendingCycle && coveredProfiles.has(profileCode),
+      profileCode,
+    })
+  }
+  return coverage
 }
 
 export async function scheduleIntelligentCollections(now = new Date()) {

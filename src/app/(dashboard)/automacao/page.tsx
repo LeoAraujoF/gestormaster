@@ -67,6 +67,11 @@ const BADGE_CLS: Record<string, string> = {
 
 const isStepType = (t: string) => ['before_due', 'on_due', 'after_due'].includes(t)
 
+type CollectionCoordination = {
+  enabled: boolean
+  eligibility: { tracked: number; billable: number; readyForSend: number; withoutPositiveValue: number; withoutPhone: number }
+}
+
 // Toggle 22Ã—12 (design Â§7)
 function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React.MouseEvent) => void; disabled?: boolean }) {
   return (
@@ -104,6 +109,7 @@ export default function AutomacaoPage() {
 
   const [automations, setAutomations] = useState<any[]>([])
   const [ruleEstimates, setRuleEstimates] = useState<Record<string, number | string>>({})
+  const [collectionCoordination, setCollectionCoordination] = useState<CollectionCoordination | null>(null)
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false)
   const [dlgKind, setDlgKind] = useState<'step' | 'auto'>('step')
   const [editingRule, setEditingRule] = useState<any | null>(null)
@@ -158,7 +164,22 @@ export default function AutomacaoPage() {
     loadTemplates()
     loadLogs()
     loadServices()
+    if (!isStarter) loadCollectionCoordination()
   }, [])
+
+  async function loadCollectionCoordination() {
+    try {
+      const response = await fetch('/api/intelligent-collections')
+      if (!response.ok) return
+      const data = await response.json()
+      setCollectionCoordination({
+        enabled: Boolean(data.settings?.enabled),
+        eligibility: data.eligibility || { tracked: 0, billable: 0, readyForSend: 0, withoutPositiveValue: 0, withoutPhone: 0 },
+      })
+    } catch (error) {
+      console.error('Falha ao carregar coordenação da cobrança inteligente:', error)
+    }
+  }
 
   /* â€”â€”â€”â€”â€” templates livres (message_templates) â€”â€”â€”â€”â€” */
   const loadTemplates = async () => {
@@ -701,6 +722,16 @@ export default function AutomacaoPage() {
         </div>
       )}
 
+      {collectionCoordination?.enabled && (
+        <div role="status" className="flex items-start gap-3 rounded-xl border border-money/25 bg-success-bg px-4 py-3 text-success-fg">
+          <Shield className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold">Cobrança inteligente coordenando esta régua</p>
+            <p className="mt-0.5 text-xs leading-relaxed opacity-90">Avisos antes e no vencimento são gerenciados pelos perfis inteligentes. Etapas após o vencimento continuam como recuperação complementar e só enviam quando não houver uma etapa inteligente no mesmo dia. {collectionCoordination.eligibility.withoutPositiveValue} cliente(s) com plano de R$ 0,00 permanecem fora das cobranças.</p>
+          </div>
+        </div>
+      )}
+
       <MetricGrid columns={4}>
         <div className={cn("rounded-xl border bg-card p-4", anyOnline ? "border-money/30" : "border-danger-border")}>
           <div className="flex items-start justify-between gap-3">
@@ -887,6 +918,8 @@ export default function AutomacaoPage() {
                     const dot = TYPE_DOT[r.alert_type]
                     const active = r.is_active
                     const impact = ruleEstimates[r.id]
+                    const managedByIntelligent = Boolean(collectionCoordination?.enabled && r.alert_type !== 'after_due')
+                    const complementaryRecovery = Boolean(collectionCoordination?.enabled && r.alert_type === 'after_due')
                     return (
                       <div key={r.id} onClick={() => openStep(r)} className="flex cursor-pointer gap-2.5">
                         <div className="flex flex-col items-center">
@@ -894,11 +927,13 @@ export default function AutomacaoPage() {
                           {idx < stepRules.length - 1 && <span className="w-px flex-1 bg-border" />}
                         </div>
                         <div className={cn("min-w-0 flex-1", idx < stepRules.length - 1 && "pb-3.5", !active && "opacity-55")}>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="num text-[10px] font-semibold" style={{ color: dot }}>{dayLabel(r)}</span>
                             <span className="text-[11.5px] font-semibold">{STEP_TYPES[r.alert_type]}</span>
                             {!active && <span className="microlabel rounded bg-secondary px-1 !text-[8.5px]">pausada</span>}
-                            {typeof impact === 'number' && impact > 0 && (
+                            {managedByIntelligent && <span className="rounded bg-interactive-bg px-1.5 py-0.5 text-[9px] font-semibold text-interactive-fg">Gerenciada pela inteligente</span>}
+                            {complementaryRecovery && <span className="rounded bg-success-bg px-1.5 py-0.5 text-[9px] font-semibold text-success-fg">Recuperação complementar</span>}
+                            {typeof impact === 'number' && impact > 0 && !managedByIntelligent && (
                               <span className="num rounded bg-interactive-bg px-1 text-[9px] font-semibold text-interactive-fg">{impact} hoje</span>
                             )}
                             <span className="num ml-auto text-[10px] text-muted-foreground">{(r.send_time || '').slice(0, 5)}</span>

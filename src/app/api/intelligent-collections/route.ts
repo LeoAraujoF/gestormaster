@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { getOrganizationMembership } from '@/lib/access-control'
 import { ensureIntelligentCollectionSetup, prepareIntelligentCollectionData, resolveProfileCode } from '@/lib/intelligent-collections'
 import { organizationHasCapability } from '@/lib/plan-catalog'
+import { getCollectionIneligibilityReasons, summarizeCollectionEligibility } from '@/lib/collection-orchestration'
 
 async function getManager() {
   const supabase = await createClient()
@@ -19,17 +20,33 @@ export async function GET() {
   const manager = await getManager()
   if (!manager) return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   try {
-    const [settingsResult, profilesResult, stepsResult, tagsResult, scoresResult, cyclesResult] = await Promise.all([
+    const [settingsResult, profilesResult, stepsResult, tagsResult, scoresResult, cyclesResult, clientsResult] = await Promise.all([
       supabaseAdmin.from('collection_settings').select('*').eq('organization_id', manager.organizationId).maybeSingle(),
       supabaseAdmin.from('collection_profiles').select('*').eq('organization_id', manager.organizationId).order('min_score', { ascending: false, nullsFirst: false }),
       supabaseAdmin.from('collection_profile_steps').select('*').order('sequence'),
       supabaseAdmin.from('client_tags').select('*').eq('organization_id', manager.organizationId).order('name'),
       supabaseAdmin.from('collection_scores').select('client_id, score, confidence, reason, calculated_at, clients(name)').eq('organization_id', manager.organizationId).order('score', { ascending: true }).limit(50),
       supabaseAdmin.from('billing_cycles').select('id, due_date, amount, status, clients(name)').eq('organization_id', manager.organizationId).in('status', ['open', 'overdue']).order('due_date').limit(50),
+      supabaseAdmin.from('clients').select('id, name, plan_value, phone, phone_e164').eq('organization_id', manager.organizationId).in('status', ['active', 'vencido']).not('due_date', 'is', null),
     ])
-    if (settingsResult.error || profilesResult.error || stepsResult.error) throw new Error(settingsResult.error?.message || profilesResult.error?.message || stepsResult.error?.message)
+    if (settingsResult.error || profilesResult.error || stepsResult.error || clientsResult.error) throw new Error(settingsResult.error?.message || profilesResult.error?.message || stepsResult.error?.message || clientsResult.error?.message)
+    const enabled = Boolean(settingsResult.data?.enabled)
+    const orchestration = {
+      mode: enabled ? 'intelligent_with_fixed_recovery' : 'fixed_rules_only',
+      precedence: 'intelligent_same_day',
+      intelligent_alert_types: enabled ? ['before_due', 'on_due'] : [],
+      fixed_alert_types: enabled ? ['after_due'] : ['before_due', 'on_due', 'after_due'],
+    }
+    const trackedClients = clientsResult.data || []
+    const eligibility = {
+      ...summarizeCollectionEligibility(trackedClients),
+      ineligible: trackedClients.flatMap((client) => {
+        const reasons = getCollectionIneligibilityReasons(client)
+        return reasons.length > 0 ? [{ clientId: client.id, name: client.name, reasons }] : []
+      }),
+    }
     if (!settingsResult.data) {
-      return NextResponse.json({ initialized: false, settings: null, profiles: [], tags: [], scores: [], cycles: [] })
+      return NextResponse.json({ initialized: false, settings: null, profiles: [], tags: [], scores: [], cycles: [], orchestration, eligibility })
     }
     const profiles = profilesResult.data || []
     const stepsByProfile = new Map<string, unknown[]>()
@@ -64,7 +81,7 @@ export async function GET() {
       initialized: true,
       settings: settingsResult.data,
       profiles: profiles.map((profile) => ({ ...profile, steps: stepsByProfile.get(profile.id) || [] })),
-      tags, scores: preview, cycles: cyclesResult.data || [],
+      tags, scores: preview, cycles: cyclesResult.data || [], orchestration, eligibility,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Falha ao carregar cobrança inteligente' }, { status: 500 })

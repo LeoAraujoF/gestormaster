@@ -11,6 +11,7 @@ export type AutoState =
   | { step: 'main_menu'; clientId: string }
   | { step: 'choosing_plan'; clientId: string; plans: Array<{ name: string; price: number }> }
   | { step: 'confirm_renewal'; clientId: string; price: number; planName: string }
+  | { step: 'confirm_cancellation'; clientId: string }
   | { step: 'awaiting_due_date'; clientId: string }
   | { step: 'awaiting_new_phone'; clientId: string }
   | { step: 'awaiting_phone_code'; clientId: string; verificationId: string }
@@ -18,6 +19,58 @@ export type AutoState =
 type EvolutionMessageKey = {
   remoteJid?: unknown
   remoteJidAlt?: unknown
+}
+
+type UnknownRecord = Record<string, unknown>
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value && typeof value === 'object' ? value as UnknownRecord : null
+}
+
+function stringField(record: UnknownRecord | null, key: string): string | null {
+  const value = record?.[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+/** Extrai texto e IDs de respostas interativas recebidas pela Evolution/Baileys. */
+export function extractIncomingMessageText(input: unknown): string | null {
+  let message = asRecord(asRecord(input)?.message)
+  for (const wrapper of ['ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2']) {
+    const wrapped = asRecord(asRecord(message?.[wrapper])?.message)
+    if (wrapped) message = wrapped
+  }
+  if (!message) return null
+
+  const direct = stringField(message, 'conversation')
+    || stringField(asRecord(message.extendedTextMessage), 'text')
+    || stringField(asRecord(message.imageMessage), 'caption')
+  if (direct) return direct
+
+  const buttonResponse = asRecord(message.buttonsResponseMessage)
+  const buttonValue = stringField(buttonResponse, 'selectedButtonId')
+    || stringField(buttonResponse, 'selectedDisplayText')
+  if (buttonValue) return buttonValue
+
+  const listReply = asRecord(asRecord(message.listResponseMessage)?.singleSelectReply)
+  const listValue = stringField(listReply, 'selectedRowId')
+  if (listValue) return listValue
+
+  const templateReply = asRecord(message.templateButtonReplyMessage)
+  const templateValue = stringField(templateReply, 'selectedId')
+    || stringField(templateReply, 'selectedDisplayText')
+  if (templateValue) return templateValue
+
+  const nativeFlow = asRecord(asRecord(message.interactiveResponseMessage)?.nativeFlowResponseMessage)
+  const paramsJson = stringField(nativeFlow, 'paramsJson')
+  if (!paramsJson) return null
+  try {
+    const params = asRecord(JSON.parse(paramsJson))
+    return stringField(params, 'id')
+      || stringField(params, 'selectedId')
+      || stringField(params, 'rowId')
+  } catch {
+    return null
+  }
 }
 
 export function resolveIncomingPhoneJid(key: EvolutionMessageKey | null | undefined): string | null {
@@ -91,5 +144,5 @@ export function verifyCode(code: string, expectedHash: string): boolean {
 }
 
 export function buildMainMenu(name: string): string {
-  return `Olá ${name.split(' ')[0]} 👋\n\n1️⃣ Renovar plano\n2️⃣ Segunda via do PIX\n3️⃣ Alterar vencimento\n4️⃣ Meu histórico\n5️⃣ Atualizar telefone\n6️⃣ Falar com atendente\n\n_Digite o número da opção desejada._`
+  return `Olá ${name.split(' ')[0]} 👋\n\n1️⃣ Renovar plano\n2️⃣ Segunda via do PIX\n3️⃣ Alterar vencimento\n4️⃣ Meu histórico\n5️⃣ Atualizar telefone\n6️⃣ Falar com atendente\n7️⃣ Não quero renovar\n\n_Digite o número da opção desejada._`
 }

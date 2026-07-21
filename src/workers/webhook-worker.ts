@@ -8,6 +8,15 @@ import { WEBHOOK_QUEUE_NAME, aiQueue, messageQueue } from '../lib/queue'
 import { logger, runWithCorrelationId } from '../lib/logger'
 import { createMercadoPagoPixCharge } from '../lib/pix-charges'
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat'
+import { cancelClientRenewalByCustomer } from '../lib/client-renewal-cancellation'
+import {
+  buildCancellationConfirmationButtons,
+  buildMainMenuList,
+  buildPlanList,
+  buildRenewalConfirmationButtons,
+  resolveBillingAction,
+} from '../lib/whatsapp-interactive'
+import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider'
 
 startOperationalHeartbeat('webhook_worker')
 import {
@@ -15,6 +24,7 @@ import {
   brazilPhoneE164Candidates,
   brazilPhoneLegacyCandidates,
   buildMainMenu,
+  extractIncomingMessageText,
   generateVerificationCode,
   isMenuCommand,
   normalizeBrazilPhone,
@@ -28,6 +38,7 @@ type BotState =
   | { step: 'main_menu'; clientId: string }
   | { step: 'choosing_plan'; clientId: string; plans: Array<{ name: string; price: number }> }
   | { step: 'confirm_renewal'; clientId: string; price: number; planName: string }
+  | { step: 'confirm_cancellation'; clientId: string }
   | { step: 'awaiting_due_date'; clientId: string }
   | { step: 'awaiting_new_phone'; clientId: string }
   | { step: 'awaiting_phone_code'; clientId: string; verificationId: string }
@@ -40,6 +51,7 @@ async function sendBotMessage(input: {
   instanceName: string
   phone: string
   message: string
+  interactiveMessage?: WhatsAppInteractiveMessage
 }) {
   await messageQueue.add('send-message', {
     organizationId: input.organizationId,
@@ -47,6 +59,7 @@ async function sendBotMessage(input: {
     instanceName: input.instanceName,
     phone: input.phone,
     finalMessage: input.message,
+    interactiveMessage: input.interactiveMessage,
     source: 'autoatendimento',
   })
 }
@@ -100,7 +113,7 @@ async function handleConnectionUpdate(payload: any) {
 async function handleInboundMessage(payload: any) {
   const message = payload.data?.messages?.[0] || payload.data
   const remoteJid = resolveIncomingPhoneJid(message?.key)
-  const text = message?.message?.conversation || message?.message?.extendedTextMessage?.text || message?.message?.imageMessage?.caption
+  const text = extractIncomingMessageText(message)
   const instanceName = payload.instance as string | undefined
 
   if (!remoteJid || !instanceName || message?.key?.fromMe || !text) return
@@ -117,7 +130,7 @@ async function handleInboundMessage(payload: any) {
   if (!instance?.organization_id) return
 
   const organizationId = instance.organization_id
-  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, client_services(services(name, plans))'
+  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, client_services(services(name, plans))'
   const [e164Result, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('clients')
@@ -153,13 +166,9 @@ async function handleInboundMessage(payload: any) {
   const deliveryPhone = client.phone_e164 || normalizeBrazilPhone(client.phone || '') || normalizedPhone
 
   const pauseKey = `bot_pause:${organizationId}:${normalizedPhone}`
-  if (await redisConnection.get(pauseKey)) return
-
   const stateKey = `bot_state:${organizationId}:${normalizedPhone}`
-  const config = await loadAutoConfig(organizationId)
-  if (!config.enabled) return
-
   const textValue = text.trim()
+  const billingAction = resolveBillingAction(textValue)
   const stateRaw = await redisConnection.get(stateKey)
   let state: BotState | null = null
   if (stateRaw) {
@@ -169,17 +178,156 @@ async function handleInboundMessage(payload: any) {
       await redisConnection.del(stateKey)
     }
   }
+  const config = await loadAutoConfig(organizationId)
+  const confirmingCancellation = state?.step === 'confirm_cancellation'
+  if (!config.enabled && !billingAction && !confirmingCancellation) return
+  if (await redisConnection.get(pauseKey) && !billingAction && !confirmingCancellation) return
 
   const openMenu = async () => {
     await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({ step: 'main_menu', clientId: client.id }))
     const greeting = typeof config.credentials.greetingMessage === 'string' ? config.credentials.greetingMessage : ''
+    const fallbackMessage = greeting
+      ? `${greeting}\n\n${buildMainMenu(client.name).split('\n\n').slice(1).join('\n\n')}`
+      : buildMainMenu(client.name)
     await sendBotMessage({
       organizationId,
       userId: client.user_id,
       instanceName,
       phone: deliveryPhone,
-      message: greeting ? `${greeting}\n\n${buildMainMenu(client.name).split('\n\n').slice(1).join('\n\n')}` : buildMainMenu(client.name),
+      message: fallbackMessage,
+      interactiveMessage: buildMainMenuList(client.name, greeting),
     })
+  }
+
+  const startRenewal = async () => {
+    if (Number(client.plan_value) > 0) {
+      const description = `Sua mensalidade é ${currency.format(Number(client.plan_value))}. Deseja gerar o PIX?`
+      await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({
+        step: 'confirm_renewal', clientId: client.id, price: Number(client.plan_value), planName: 'Mensalidade',
+      }))
+      await sendBotMessage({
+        organizationId,
+        userId: client.user_id,
+        instanceName,
+        phone: deliveryPhone,
+        message: `${description}\n\n1️⃣ Sim\n2️⃣ Cancelar`,
+        interactiveMessage: buildRenewalConfirmationButtons(description),
+      })
+      return
+    }
+
+    const plans = ((client.client_services as Array<{ services?: { plans?: Array<{ name: string; price: number }> } }> | null)
+      ?.flatMap((item) => item.services?.plans || []) || []).slice(0, 10)
+    if (!plans.length) {
+      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Não encontrei um plano ativo. Responda ATENDENTE para falar com nossa equipe.' })
+      return
+    }
+    await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({ step: 'choosing_plan', clientId: client.id, plans }))
+    await sendBotMessage({
+      organizationId,
+      userId: client.user_id,
+      instanceName,
+      phone: deliveryPhone,
+      message: `Escolha o plano:\n\n${plans.map((plan, index) => `${index + 1}. ${plan.name} — ${currency.format(plan.price)}`).join('\n')}`,
+      interactiveMessage: buildPlanList(plans),
+    })
+  }
+
+  const requestHumanSupport = async () => {
+    await redisConnection.setex(pauseKey, 12 * 60 * 60, 'paused')
+    await supabaseAdmin.from('client_change_requests').insert({ organization_id: organizationId, client_id: client.id, request_type: 'human_support', requested_from_phone: normalizedPhone })
+    const transferMessage = typeof config.credentials.transferMessage === 'string'
+      ? config.credentials.transferMessage
+      : 'Um atendente assumirá o atendimento em breve.'
+    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: transferMessage })
+    await redisConnection.del(stateKey)
+  }
+
+  const askCancellationConfirmation = async () => {
+    await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({ step: 'confirm_cancellation', clientId: client.id }))
+    await sendBotMessage({
+      organizationId,
+      userId: client.user_id,
+      instanceName,
+      phone: deliveryPhone,
+      message: 'Você deixará de receber avisos de cobrança e os PIX pendentes serão cancelados. Confirma?\n\nResponda SIM para cancelar ou NÃO para continuar recebendo.',
+      interactiveMessage: buildCancellationConfirmationButtons(),
+    })
+  }
+
+  const confirmCancellation = async () => {
+    const result = await cancelClientRenewalByCustomer({
+      organizationId,
+      clientId: client.id,
+      requestedFromPhone: normalizedPhone,
+    })
+    await redisConnection.del(stateKey)
+    await sendBotMessage({
+      organizationId,
+      userId: client.user_id,
+      instanceName,
+      phone: deliveryPhone,
+      message: result.providerCancellationFailures > 0
+        ? result.supportReviewRequested
+          ? 'Seu cadastro foi cancelado e os alertas foram interrompidos. Uma cobrança não pôde ser cancelada automaticamente no Mercado Pago; nossa equipe recebeu uma solicitação para verificar. Para voltar, responda RENOVAR.'
+          : 'Seu cadastro foi cancelado e os alertas foram interrompidos. Uma cobrança não pôde ser cancelada automaticamente no Mercado Pago; responda ATENDENTE para solicitar a verificação. Para voltar, responda RENOVAR.'
+        : result.alreadyCanceled
+          ? 'Seu cadastro já estava cancelado e os alertas de cobrança permanecem desativados. Para voltar, responda RENOVAR.'
+          : 'Pronto. Seu cadastro foi marcado como cancelado, os alertas de cobrança foram interrompidos e os PIX pendentes foram cancelados. Para voltar, responda RENOVAR.',
+    })
+  }
+
+  if (billingAction === 'generatePix') {
+    await startRenewal()
+    return
+  }
+  if (billingAction === 'humanSupport') {
+    await requestHumanSupport()
+    return
+  }
+  if (billingAction === 'cancelRenewal') {
+    await askCancellationConfirmation()
+    return
+  }
+  if (billingAction === 'confirmCancellation') {
+    if (state?.step !== 'confirm_cancellation') {
+      await askCancellationConfirmation()
+      return
+    }
+    await confirmCancellation()
+    return
+  }
+  if (billingAction === 'keepRenewal') {
+    if (state?.step !== 'confirm_cancellation') {
+      await sendBotMessage({
+        organizationId,
+        userId: client.user_id,
+        instanceName,
+        phone: deliveryPhone,
+        message: client.status === 'canceled'
+          ? 'Seu cadastro permanece cancelado. Para solicitar uma nova renovação, responda RENOVAR.'
+          : 'Não há um cancelamento aguardando confirmação. Seus avisos continuam ativos.',
+      })
+      return
+    }
+    await redisConnection.del(stateKey)
+    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Tudo certo. Você continuará recebendo os avisos de cobrança normalmente.' })
+    return
+  }
+
+  if (state?.step === 'confirm_cancellation') {
+    const confirmation = textValue.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (['sim', '1'].includes(confirmation)) {
+      await confirmCancellation()
+      return
+    }
+    if (['nao', '2'].includes(confirmation)) {
+      await redisConnection.del(stateKey)
+      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Tudo certo. Você continuará recebendo os avisos de cobrança normalmente.' })
+      return
+    }
+    await askCancellationConfirmation()
+    return
   }
 
   if (!state && isMenuCommand(textValue)) {
@@ -190,28 +338,14 @@ async function handleInboundMessage(payload: any) {
     await sendToAi(organizationId, instanceName, remoteJid, text)
     return
   }
-  if (isMenuCommand(textValue) && !['1', '2', '3', '4', '5', '6'].includes(textValue)) {
+  if (isMenuCommand(textValue) && !['1', '2', '3', '4', '5', '6', '7'].includes(textValue)) {
     await openMenu()
     return
   }
 
   if (state.step === 'main_menu') {
     if (textValue === '1') {
-      if (Number(client.plan_value) > 0) {
-        await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({
-          step: 'confirm_renewal', clientId: client.id, price: Number(client.plan_value), planName: 'Mensalidade',
-        }))
-        await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: `Sua mensalidade é ${currency.format(Number(client.plan_value))}. Confirmar geração do PIX?\n\n1️⃣ Sim\n2️⃣ Cancelar` })
-        return
-      }
-      const plans = (client.client_services as Array<{ services?: { plans?: Array<{ name: string; price: number }> } }> | null)
-        ?.flatMap((item) => item.services?.plans || []) || []
-      if (!plans.length) {
-        await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Não encontrei um plano ativo. Escolha a opção 6 para falar com o atendente.' })
-        return
-      }
-      await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({ step: 'choosing_plan', clientId: client.id, plans }))
-      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: `Escolha o plano:\n\n${plans.map((plan, index) => `${index + 1}. ${plan.name} — ${currency.format(plan.price)}`).join('\n')}` })
+      await startRenewal()
       return
     }
 
@@ -259,15 +393,16 @@ async function handleInboundMessage(payload: any) {
     }
 
     if (textValue === '6') {
-      await redisConnection.setex(pauseKey, 12 * 60 * 60, 'paused')
-      await supabaseAdmin.from('client_change_requests').insert({ organization_id: organizationId, client_id: client.id, request_type: 'human_support', requested_from_phone: normalizedPhone })
-      const message = typeof config.credentials.transferMessage === 'string' ? config.credentials.transferMessage : 'Um atendente assumirá o atendimento em breve.'
-      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message })
-      await redisConnection.del(stateKey)
+      await requestHumanSupport()
       return
     }
 
-    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Opção inválida. Digite um número de 1 a 6.' })
+    if (textValue === '7') {
+      await askCancellationConfirmation()
+      return
+    }
+
+    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Opção inválida. Digite um número de 1 a 7.' })
     return
   }
 
@@ -278,7 +413,15 @@ async function handleInboundMessage(payload: any) {
       return
     }
     await redisConnection.setex(stateKey, BOT_STATE_TTL_SECONDS, JSON.stringify({ step: 'confirm_renewal', clientId: client.id, price: selected.price, planName: selected.name }))
-    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: `Confirmar PIX de ${currency.format(selected.price)} para ${selected.name}?\n\n1️⃣ Sim\n2️⃣ Cancelar` })
+    const description = `Confirmar PIX de ${currency.format(selected.price)} para ${selected.name}?`
+    await sendBotMessage({
+      organizationId,
+      userId: client.user_id,
+      instanceName,
+      phone: deliveryPhone,
+      message: `${description}\n\n1️⃣ Sim\n2️⃣ Cancelar`,
+      interactiveMessage: buildRenewalConfirmationButtons(description),
+    })
     return
   }
 

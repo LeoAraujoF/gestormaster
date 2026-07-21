@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
 import { getTrustedAppUrl } from '@/lib/access-control'
 import { recordApprovedCollectionPayment } from '@/lib/intelligent-collections'
+import { buildMercadoPagoPixPayload } from '@/lib/mercadopago-pix-payload'
 
 export type PixChargePurpose = 'manual' | 'renewal' | 'charge'
 export type PixChargeStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'failed'
@@ -246,15 +247,14 @@ export async function createMercadoPagoPixCharge(input: CreateMercadoPagoPixChar
         Authorization: `Bearer ${accessToken}`,
         'X-Idempotency-Key': charge.id,
       },
-      body: JSON.stringify({
-        transaction_amount: input.amount,
+      body: JSON.stringify(buildMercadoPagoPixPayload({
+        amount: input.amount,
         description: charge.description,
-        payment_method_id: 'pix',
-        date_of_expiration: expiresAt.toISOString(),
-        external_reference: externalReference,
-        notification_url: `${getTrustedAppUrl()}/api/webhooks/mercadopago?orgId=${input.organizationId}`,
-        metadata: { charge_id: charge.id },
-      }),
+        expiresAt: expiresAt.toISOString(),
+        externalReference,
+        notificationUrl: `${getTrustedAppUrl()}/api/webhooks/mercadopago?orgId=${input.organizationId}`,
+        chargeId: charge.id,
+      })),
     })
     const payment = await response.json()
     if (!response.ok || !payment.id) {

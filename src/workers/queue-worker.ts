@@ -11,6 +11,8 @@ import { SecretsManager } from '../lib/encryption';
 import { dispatchFailureStatus } from '../lib/collection-dispatch';
 import { processPortalOtpJob } from '../lib/portal-otp-worker';
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
+import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
+import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
 
 startOperationalHeartbeat('message_worker');
 
@@ -24,6 +26,8 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   } = job.data;
   const collectionDispatchId = job.data.collectionDispatchId as string | undefined;
   const contactReservationId = job.data.contactReservationId as string | undefined;
+  let interactiveMessage = job.data.interactiveMessage as WhatsAppInteractiveMessage | undefined;
+  let contactCategory: string | undefined;
 
   // Compatibilidade com diferentes formatos de payload (CamelCase vs snake_case)
   let finalMessage = job.data.finalMessage || job.data.message;
@@ -40,12 +44,19 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     if (!claimed) return;
 
     const { data: reservation, error: reservationError } = await supabaseAdmin.from('contact_reservations')
-      .select('id, organization_id, client_id, requested_by, automation_id, alert_history_id, message_content, media_url')
+      .select('id, organization_id, client_id, requested_by, automation_id, alert_history_id, message_content, media_url, category, status')
       .eq('id', contactReservationId).maybeSingle();
     if (reservationError || !reservation) throw new Error('Reserva de contato não encontrada');
+    if (reservation.status === 'cancelled') return;
     const { data: client } = await supabaseAdmin.from('clients')
-      .select('id, phone_e164, phone, user_id')
+      .select('id, phone_e164, phone, user_id, status')
       .eq('id', reservation.client_id).eq('organization_id', reservation.organization_id).maybeSingle();
+    if (reservation.category === 'billing' && client?.status === 'canceled') {
+      await supabaseAdmin.from('contact_reservations')
+        .update({ status: 'cancelled', decision_reason: 'CUSTOMER_CANCELLED_RENEWAL' })
+        .eq('id', reservation.id);
+      return;
+    }
     if (!client || !(client.phone_e164 || client.phone)) {
       await supabaseAdmin.from('contact_reservations').update({ status: 'failed', decision_reason: 'CLIENT_WITHOUT_PHONE' }).eq('id', reservation.id);
       throw new Error('Cliente sem telefone para contato coordenado');
@@ -67,6 +78,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     ruleId = reservation.automation_id;
     finalMessage = reservation.message_content;
     mediaUrl = reservation.media_url || undefined;
+    contactCategory = reservation.category;
     instanceName = instance.instance_name;
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
@@ -74,6 +86,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   }
 
   if (collectionDispatchId) {
+    contactCategory = 'billing';
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_collection_dispatch', {
       p_dispatch_id: collectionDispatchId,
       p_is_retry: job.attemptsMade > 0,
@@ -90,11 +103,28 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     const { data: cycle } = await supabaseAdmin.from('billing_cycles').select('status').eq('id', dispatch.cycle_id).maybeSingle();
     if (!cycle || !['open', 'overdue'].includes(cycle.status)) {
       await supabaseAdmin.from('collection_dispatches').update({ status: 'cancelled' }).eq('id', dispatch.id).eq('status', 'processing');
+      if (contactReservationId) {
+        await supabaseAdmin.from('contact_reservations')
+          .update({ status: 'cancelled', decision_reason: 'BILLING_CYCLE_CLOSED' })
+          .eq('id', contactReservationId)
+          .eq('status', 'processing');
+      }
       return;
     }
     const { data: client } = await supabaseAdmin.from('clients')
-      .select('id, phone_e164, phone, user_id')
+      .select('id, phone_e164, phone, user_id, status')
       .eq('id', dispatch.client_id).eq('organization_id', dispatch.organization_id).maybeSingle();
+    if (client?.status === 'canceled') {
+      await supabaseAdmin.from('collection_dispatches')
+        .update({ status: 'cancelled', error_message: 'Cancelado pelo cliente via WhatsApp' })
+        .eq('id', dispatch.id);
+      if (contactReservationId) {
+        await supabaseAdmin.from('contact_reservations')
+          .update({ status: 'cancelled', decision_reason: 'CUSTOMER_CANCELLED_RENEWAL' })
+          .eq('id', contactReservationId);
+      }
+      return;
+    }
     if (!client || !(client.phone_e164 || client.phone)) {
       await supabaseAdmin.from('collection_dispatches').update({ status: 'failed', error_message: 'Cliente sem telefone para despacho inteligente' }).eq('id', dispatch.id);
       throw new Error('Cliente sem telefone para despacho inteligente');
@@ -118,6 +148,10 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
     connectionMode = instance.connection_mode;
+  }
+
+  if (!interactiveMessage && contactCategory === 'billing') {
+    interactiveMessage = buildBillingAlertButtons(finalMessage);
   }
 
   return runWithCorrelationId(correlationId, organizationId, async () => {
@@ -261,25 +295,86 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     logger.info(`[Job ${job.id}] Enviando para instância "${targetInstanceName}" → ${phone}`);
 
     try {
+      let sentMessageCount = 0;
+      if (contactCategory === 'billing' && clientId && organizationId) {
+        const { data: latestClient } = await supabaseAdmin.from('clients')
+          .select('status')
+          .eq('id', clientId)
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+        if (latestClient?.status === 'canceled') {
+          if (collectionDispatchId) {
+            await supabaseAdmin.from('collection_dispatches')
+              .update({ status: 'cancelled', error_message: 'Cancelado pelo cliente via WhatsApp' })
+              .eq('id', collectionDispatchId);
+          }
+          if (contactReservationId) {
+            await supabaseAdmin.from('contact_reservations')
+              .update({ status: 'cancelled', decision_reason: 'CUSTOMER_CANCELLED_RENEWAL' })
+              .eq('id', contactReservationId);
+          }
+          return;
+        }
+      }
+
       // 6. Normaliza o número de telefone (Adiciona 55 se for BR e estiver sem DDI)
       let normalizedPhone = phone.replace(/\D/g, '');
       if (normalizedPhone.length === 10 || normalizedPhone.length === 11) {
         normalizedPhone = `55${normalizedPhone}`;
       }
 
-      // 7. Envia a mensagem (Texto ou Mídia)
-      if (mediaUrl) {
-        // Se houver mediaUrl, envia como mídia e usa o texto como legenda (caption)
+      // 7. Envia a mensagem. Na Evolution 2.3.x os botões podem retornar 201
+      // sem aparecer no aparelho, então o texto/legenda fica como fallback visível.
+      if (interactiveMessage?.type === 'buttons') {
+        if (mediaUrl) {
+          await provider.sendMedia(targetInstanceName, normalizedPhone, mediaUrl, 'image', finalMessage, {
+            delay: 1200,
+            presence: 'composing'
+          });
+          sentMessageCount++;
+        } else {
+          await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+            delay: 1200,
+            presence: 'composing'
+          });
+          sentMessageCount++;
+        }
+        try {
+          await provider.sendButtons(targetInstanceName, normalizedPhone, interactiveMessage, {
+            delay: 600,
+            presence: 'composing'
+          });
+          sentMessageCount++;
+        } catch (interactiveError: any) {
+          logger.warn(`[Job ${job.id}] Botões interativos indisponíveis; fallback em texto já enviado: ${interactiveError.message}`);
+        }
+      } else if (interactiveMessage?.type === 'list') {
+        try {
+          await provider.sendList(targetInstanceName, normalizedPhone, interactiveMessage, {
+            delay: 1200,
+            presence: 'composing'
+          });
+          sentMessageCount++;
+        } catch (interactiveError: any) {
+          logger.warn(`[Job ${job.id}] Lista interativa indisponível; usando fallback em texto: ${interactiveError.message}`);
+          await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+            delay: 1200,
+            presence: 'composing'
+          });
+          sentMessageCount++;
+        }
+      } else if (mediaUrl) {
         await provider.sendMedia(targetInstanceName, normalizedPhone, mediaUrl, 'image', finalMessage, {
           delay: 1200,
           presence: 'composing'
         });
+        sentMessageCount++;
       } else {
-        // Se não houver, envia apenas texto
         await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
           delay: 1200,
           presence: 'composing'
         });
+        sentMessageCount++;
       }
 
       // 8. Sucesso — Atualiza o registro para "sent"
@@ -294,7 +389,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       // Incrementa a Quota do Mês no Redis
       const currentMonth = new Date().toISOString().slice(0, 7);
       const quotaKey = `usage:messages:${userId}:${currentMonth}`;
-      await redisConnection.incr(quotaKey);
+      await redisConnection.incrby(quotaKey, sentMessageCount);
       await redisConnection.expire(quotaKey, 60 * 60 * 24 * 32);
 
     } catch (err: any) {

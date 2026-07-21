@@ -1,4 +1,9 @@
-import { IWhatsAppProvider, SendMessageOptions } from './IWhatsAppProvider';
+import {
+  IWhatsAppProvider,
+  SendMessageOptions,
+  WhatsAppButtonsMessage,
+  WhatsAppListMessage,
+} from './IWhatsAppProvider';
 
 type EvolutionQrResponse = {
   base64?: string
@@ -54,6 +59,53 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
       textMessage: {
         text: text
       }
+    });
+  }
+
+  async sendButtons(instanceName: string, phone: string, message: WhatsAppButtonsMessage, options?: SendMessageOptions) {
+    if (message.buttons.length === 0 || message.buttons.length > 3) {
+      throw new Error('Mensagens interativas exigem de 1 a 3 botões de resposta.');
+    }
+
+    return this.request(`/message/sendButtons/${instanceName}`, 'POST', {
+      number: phone,
+      title: message.title,
+      description: message.description,
+      footer: message.footer,
+      thumbnailUrl: message.thumbnailUrl,
+      delay: options?.delay || 1200,
+      buttons: message.buttons.map((button) => ({
+        type: 'reply',
+        id: button.id,
+        displayText: button.displayText,
+      })),
+    });
+  }
+
+  async sendList(instanceName: string, phone: string, message: WhatsAppListMessage, options?: SendMessageOptions) {
+    const rowCount = message.sections.reduce((total, section) => total + section.rows.length, 0);
+    if (!message.sections.length || rowCount === 0) {
+      throw new Error('A mensagem de lista precisa ter ao menos uma opção.');
+    }
+    if (rowCount > 10) {
+      throw new Error('A mensagem de lista aceita no máximo 10 opções.');
+    }
+
+    return this.request(`/message/sendList/${instanceName}`, 'POST', {
+      number: phone,
+      title: message.title,
+      description: message.description,
+      footerText: message.footer || 'Responda pelo número se a lista não aparecer.',
+      buttonText: message.buttonText,
+      delay: options?.delay || 1200,
+      sections: message.sections.map((section) => ({
+        title: section.title,
+        rows: section.rows.map((row) => ({
+          title: row.title,
+          description: row.description || '',
+          rowId: row.id,
+        })),
+      })),
     });
   }
 

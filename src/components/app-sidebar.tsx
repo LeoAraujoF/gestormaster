@@ -22,7 +22,7 @@ import {
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
-import { BrandMark } from "@/components/brand-mark"
+import { BrandMark, BrandName } from "@/components/brand-mark"
 import { useFeatureFlags } from "@/components/providers/feature-flags-provider"
 import { usePlan } from "@/components/providers/plan-provider"
 import {
@@ -339,7 +339,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="px-4 pb-2 pt-4">
         <Link href="/painel" onClick={closeMobileNavigation} className="flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
           <BrandMark size={22} />
-          <span className="text-[12.5px] font-semibold tracking-tight text-foreground">lembrado.</span>
+          <BrandName className="text-[12.5px] font-semibold tracking-tight text-foreground" />
         </Link>
       </SidebarHeader>
 

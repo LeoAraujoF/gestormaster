@@ -1,17 +1,37 @@
-import { LandingClient } from "./landing-client"
-import "./landing.css"
+import type { Metadata } from "next"
+import { LandingTwo } from "./landing-two"
 
-export const metadata = {
-  title: "Lembrado — Cobrança automática no WhatsApp",
+export const metadata: Metadata = {
+  title: "Lembrado — Sua operação no piloto inteligente",
   description:
-    "A Lembrado avisa, cobra e confirma o pagamento dos seus clientes pelo WhatsApp — sozinha. Carteira completa com receitas, custos e lucro. 7 dias grátis, sem cartão.",
+    "Clientes, cobranças, WhatsApp, PIX, financeiro e decisões em um único fluxo. Teste a Lembrado por 7 dias, sem cartão.",
+  openGraph: {
+    title: "Lembrado — A operação que lembra por você",
+    description:
+      "Pare de administrar lembretes. Organize clientes, automatize cobranças e decida com clareza em um só lugar.",
+    type: "website",
+    locale: "pt_BR",
+    images: [
+      {
+        url: "https://lembrado.com.br/og.png",
+        width: 1730,
+        height: 909,
+        alt: "Lembrado — A operação que lembra por você",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lembrado — A operação que lembra por você",
+    description: "Clientes. Cobranças. Decisões. No mesmo ritmo.",
+    images: ["https://lembrado.com.br/og.png"],
+  },
 }
 
 /**
- * Landing "livro-caixa editorial" da Lembrado (portada de landing.html):
- * papel + serifa Fraunces + mono contábil, hairlines de razão,
- * conversa de WhatsApp animada como herói. Estilos escopados em .lp.
+ * A primeira landing editorial permanece arquivada em landing-client.tsx,
+ * landing.css e landing.html para consulta ou retomada futura.
  */
 export default function LandingPage() {
-  return <LandingClient />
+  return <LandingTwo />
 }

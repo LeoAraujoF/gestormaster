@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { BrandMark, BrandName } from "@/components/brand-mark"
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -62,10 +63,8 @@ export default function ForgotPasswordPage() {
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center bg-zinc-900 dark:bg-zinc-950">
         <div className="relative z-10 px-12 max-w-lg">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-sky-500/15 border border-sky-500/20 flex items-center justify-center">
-              <span className="text-xl font-black text-sky-400 tracking-tighter">GM</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">lembrado.</h1>
+            <BrandMark size={48} />
+            <BrandName as="h1" className="text-3xl font-bold text-white tracking-tight" />
           </div>
           <p className="text-lg text-zinc-300 leading-relaxed mb-8">
             Recupere o acesso à sua conta de forma <span className="text-sky-300">rápida</span> e <span className="text-emerald-300">segura</span>.

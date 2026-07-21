@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { BrandMark } from "@/components/brand-mark"
+import { BrandMark, BrandName } from "@/components/brand-mark"
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres" }),
@@ -101,7 +101,7 @@ export default function RegisterPage() {
       <div className="hidden flex-col justify-between bg-[#191a1e] p-10 lg:flex lg:w-[44%]">
         <Link href="/" className="flex items-center gap-2">
           <BrandMark size={26} />
-          <span className="text-[15px] font-semibold tracking-tight text-white">lembrado.</span>
+          <BrandName className="text-[15px] font-semibold tracking-tight text-white" />
         </Link>
 
         <div className="max-w-sm">
@@ -131,7 +131,7 @@ export default function RegisterPage() {
         {/* Logo mobile */}
         <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
           <BrandMark size={26} />
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">lembrado.</span>
+          <BrandName className="text-[15px] font-semibold tracking-tight text-foreground" />
         </Link>
 
         <div className="w-full max-w-[360px]">

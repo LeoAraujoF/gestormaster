@@ -1,0 +1,8 @@
+.wordmark {
+  display: inline-block;
+  font-family: var(--font-heading), "Outfit", var(--font-sans), sans-serif;
+  font-size: 1.08em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}

@@ -33,6 +33,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { createClient } from '@/lib/supabase/client'
+import { BrandName } from '@/components/brand-mark'
 
 const navigationGroups = [
   {
@@ -85,7 +86,7 @@ export function AdminSidebar(props: ComponentProps<typeof Sidebar>) {
             <ShieldCheck aria-hidden="true" className="size-4" />
           </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">lembrado.</span>
+            <BrandName className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground" />
             <span className="block truncate text-[10px] uppercase tracking-[0.08em] text-danger">Admin control</span>
           </span>
         </Link>

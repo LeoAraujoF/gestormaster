@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { BrandMark } from "@/components/brand-mark"
+import { BrandMark, BrandName } from "@/components/brand-mark"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -91,7 +91,7 @@ export default function LoginPage() {
       {/* Logo */}
       <Link href="/" className="mb-8 flex items-center gap-2">
         <BrandMark size={26} />
-        <span className="text-[15px] font-semibold tracking-tight text-foreground">lembrado.</span>
+        <BrandName className="text-[15px] font-semibold tracking-tight text-foreground" />
       </Link>
 
       {/* Card único */}

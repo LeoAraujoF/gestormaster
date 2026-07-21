@@ -1,0 +1,330 @@
+.loader {
+  --loader-bg: #0b2f25;
+  --loader-ink: #faf8f2;
+  --loader-muted: #a9c4b9;
+  --loader-accent: #45d49a;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--loader-bg);
+  color: var(--loader-ink);
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  min-height: 100svh;
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+.inline {
+  min-height: 22rem;
+  border-radius: 1.5rem;
+  padding: 2rem;
+}
+
+.frame {
+  position: absolute;
+  inset: clamp(1rem, 3vw, 2rem);
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: clamp(2.75rem, 7vw, 5rem);
+  height: clamp(2.75rem, 7vw, 5rem);
+  border-color: rgb(250 248 242 / 14%);
+  border-style: solid;
+}
+
+.cornerTopLeft {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+}
+
+.cornerTopRight {
+  top: 0;
+  right: 0;
+  border-width: 1px 1px 0 0;
+}
+
+.cornerBottomLeft {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1px 1px;
+}
+
+.cornerBottomRight {
+  right: 0;
+  bottom: 0;
+  border-width: 0 1px 1px 0;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.markStage {
+  position: relative;
+  display: grid;
+  width: clamp(8.75rem, 22vw, 11.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  margin-bottom: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(69 212 154 / 22%);
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0.72);
+  animation: orbit-in 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.orbitInner {
+  inset: 1.15rem;
+  border-color: rgb(250 248 242 / 14%);
+  animation-delay: 120ms;
+}
+
+.mark {
+  position: relative;
+  z-index: 1;
+  width: clamp(4.75rem, 13vw, 6.5rem);
+  height: auto;
+  filter: drop-shadow(0 1.25rem 2.5rem rgb(0 0 0 / 24%));
+}
+
+.mark [data-brand-part="tile"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tile-in 650ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.mark [data-brand-part="bubble"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bubble-in 480ms ease-out 180ms both;
+}
+
+.mark [data-brand-part="check"] {
+  stroke-dasharray: 68;
+  stroke-dashoffset: 68;
+  animation: check-draw 680ms cubic-bezier(0.65, 0, 0.35, 1) 420ms forwards;
+}
+
+.mark [data-brand-part="activity"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    activity-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 820ms both,
+    activity-pulse 1800ms ease-in-out 1350ms infinite;
+}
+
+.copy {
+  opacity: 0;
+  transform: translateY(0.75rem);
+  animation: copy-in 560ms cubic-bezier(0.22, 1, 0.36, 1) 720ms forwards;
+}
+
+.wordmark {
+  display: block;
+  font-family: var(--font-heading), var(--font-sans), sans-serif;
+  font-size: clamp(2.15rem, 7vw, 4.25rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+}
+
+.message {
+  margin-top: 0.85rem;
+  color: var(--loader-muted);
+  font-size: clamp(0.78rem, 2.5vw, 0.92rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progress {
+  position: relative;
+  width: clamp(8.5rem, 28vw, 11.5rem);
+  height: 2px;
+  margin-top: 1.65rem;
+  overflow: hidden;
+  background: rgb(250 248 242 / 12%);
+  opacity: 0;
+  animation: progress-in 300ms ease-out 1050ms forwards;
+}
+
+.progressLine {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 42%;
+  background: var(--loader-accent);
+  transform: translateX(-120%);
+  animation: progress-move 1400ms cubic-bezier(0.65, 0, 0.35, 1) 1100ms infinite;
+}
+
+.signature {
+  position: absolute;
+  bottom: clamp(1.5rem, 5vw, 3rem);
+  left: 50%;
+  width: min(80vw, 32rem);
+  color: rgb(250 248 242 / 48%);
+  font-size: clamp(0.72rem, 2.5vw, 0.82rem);
+  letter-spacing: 0.03em;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 0.4rem);
+  animation: signature-in 500ms ease-out 1150ms forwards;
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes activity-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes activity-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes orbit-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes copy-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progress-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes progress-move {
+  0% {
+    transform: translateX(-120%);
+  }
+  65%,
+  100% {
+    transform: translateX(340%);
+  }
+}
+
+@keyframes signature-in {
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit,
+  .mark [data-brand-part="tile"],
+  .mark [data-brand-part="bubble"],
+  .mark [data-brand-part="check"],
+  .mark [data-brand-part="activity"],
+  .copy,
+  .progress,
+  .progressLine,
+  .signature {
+    animation: none;
+  }
+
+  .orbit,
+  .copy,
+  .progress,
+  .signature {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mark [data-brand-part="check"] {
+    stroke-dashoffset: 0;
+  }
+
+  .progressLine {
+    left: 29%;
+    transform: none;
+  }
+
+  .signature {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-height: 34rem) {
+  .markStage {
+    width: 7.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .mark {
+    width: 4.5rem;
+  }
+
+  .signature {
+    display: none;
+  }
+}

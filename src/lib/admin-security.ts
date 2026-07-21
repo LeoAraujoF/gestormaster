@@ -2,6 +2,7 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import { getTrustedAppUrl } from '@/lib/access-control'
+import { isTrustedAdminMutationOrigin } from '@/lib/admin-origin'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { getClientIp, rateLimit } from '@/lib/rate-limit'
@@ -58,7 +59,16 @@ export async function protectAdminMutation(request: Request, options: { recentAu
   const origin = request.headers.get('origin')
   const expectedOrigin = getTrustedAppUrl()
   const fetchSite = request.headers.get('sec-fetch-site')
-  if ((origin && origin !== expectedOrigin) || fetchSite === 'cross-site') {
+  const trustedOrigin = isTrustedAdminMutationOrigin({
+    origin,
+    fetchSite,
+    requestUrl: request.url,
+    trustedAppUrl: expectedOrigin,
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    allowHttp: process.env.NODE_ENV !== 'production',
+  })
+  if (!trustedOrigin) {
     throw new AdminAccessError(403, 'ADMIN_ORIGIN_REJECTED', 'Origem não autorizada')
   }
 

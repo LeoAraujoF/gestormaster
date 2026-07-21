@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Fraunces, IBM_Plex_Mono } from "next/font/google"
+import { BrandName } from "@/components/brand-mark"
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -182,7 +183,7 @@ export function LandingClient() {
         <div className="wrap nav-in">
           <a className="logo" href="#topo" aria-label="Lembrado — início">
             <svg width="26" height="26" viewBox="0 0 132 132" aria-hidden="true"><use href="#lembrado-mark" /></svg>
-            <b>lembrado.</b>
+            <BrandName as="b" />
           </a>
           <div className="nav-links">
             <a href="#como-funciona">Como funciona</a>
@@ -546,7 +547,7 @@ export function LandingClient() {
             <div>
               <a className="logo" href="#topo">
                 <svg width="26" height="26" viewBox="0 0 132 132" aria-hidden="true"><use href="#lembrado-mark" /></svg>
-                <b>lembrado.</b>
+                <BrandName as="b" />
               </a>
               <p style={{ font: "400 12px var(--mono)", marginTop: 12, maxWidth: 230 }}>Cobrança automática no WhatsApp e carteira para negócios de assinatura.</p>
             </div>

@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { Shield, ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { LegalToc } from "@/components/legal-toc"
+import { BrandMark, BrandName } from "@/components/brand-mark"
 
 const TOC = [
   { id: "p1", label: "Quem somos" },
@@ -25,10 +26,8 @@ export default function PrivacidadePage() {
       <nav className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
-            Lembrado
+            <BrandMark size={32} />
+            <BrandName />
           </div>
           <Link 
             href="/login" 

@@ -13,7 +13,7 @@ import { ClientFormDialog } from "@/components/client-form-dialog"
 import { RenewDialog } from "@/components/client-action-dialogs"
 import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
 import { usePrivacy } from "@/hooks/use-privacy"
-import { Skeleton } from "@/components/ui/skeleton"
+import { BrandLoader } from "@/components/brand-loader"
 import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { ExecutiveDashboardView, ExecutiveUpgrade } from "@/components/executive-dashboard-view"
@@ -297,15 +297,7 @@ export default function DashboardPage() {
   ]
 
   if (isLoading) {
-    return (
-      <PageShell>
-        <Skeleton className="h-52 w-full rounded-2xl" />
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-2xl" />)}
-        </div>
-        <Skeleton className="h-[380px] w-full rounded-2xl" />
-      </PageShell>
-    )
+    return <BrandLoader />
   }
 
   return (

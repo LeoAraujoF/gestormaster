@@ -131,14 +131,16 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
               <BadgeDollarSign className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <p className="microlabel">Visão financeira</p>
+              <p className="microlabel">{compact ? "Ciclos financeiros" : "Visão financeira"}</p>
               <h2 id="executive-overview-title" className="mt-0.5 text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                Desempenho da operação
+                {compact ? "Previsão e risco" : "Desempenho da operação"}
               </h2>
             </div>
           </div>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            Dados reais de recebimentos, ciclos financeiros e clientes da sua organização.
+            {compact
+              ? "Compare o que os ciclos preveem, o que já entrou e o valor atualmente em risco."
+              : "Dados reais de recebimentos, ciclos financeiros e clientes da sua organização."}
           </p>
         </div>
 
@@ -177,12 +179,13 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map((item, index) => (
+      <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", compact ? "xl:grid-cols-3" : "xl:grid-cols-4")}>
+        {(compact ? summary.slice(0, 3) : summary).map((item, index) => (
           <SummaryCard key={item.label} item={item} index={index} />
         ))}
       </div>
 
+      {!compact ? <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <OperationalMetric
           label="Realização"
@@ -219,6 +222,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
           ) : null}
         </div>
       ) : null}
+      </> : null}
 
       {!compact ? (
         <>

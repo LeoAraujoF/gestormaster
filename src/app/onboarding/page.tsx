@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Loader2, Check, RefreshCw } from "lucide-react"
+import { Check, Copy, Loader2, QrCode, RefreshCw, Smartphone } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import { normalizeClientPhone } from "@/lib/phone"
    Types
 —————————————————————————————————————————————— */
 type Step = 1 | 2 | 3
+type ConnectionMethod = "pairing" | "qr"
 
 interface InstanceStatus {
   status: "connected" | "disconnected" | "error"
@@ -37,14 +38,14 @@ const steps = [
 
 function Stepper({ current }: { current: Step }) {
   return (
-    <div className="flex items-center justify-center gap-0 mb-10">
+    <div className="mb-8 flex w-full items-center sm:mb-10">
       {steps.map((step, i) => (
-        <div key={step.num} className="flex items-center">
+        <div key={step.num} className={cn("flex min-w-0 items-center", i < steps.length - 1 && "flex-1")}>
           {/* Circle + label */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <div
               className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors",
                 step.num < current
                   ? "bg-primary text-primary-foreground"
                   : step.num === current
@@ -60,7 +61,7 @@ function Stepper({ current }: { current: Step }) {
             </div>
             <span
               className={cn(
-                "text-sm whitespace-nowrap",
+                "hidden whitespace-nowrap text-sm sm:inline",
                 step.num === current
                   ? "font-semibold text-foreground"
                   : "text-muted-foreground"
@@ -72,7 +73,7 @@ function Stepper({ current }: { current: Step }) {
 
           {/* Connector line */}
           {i < steps.length - 1 && (
-            <div className="w-16 sm:w-24 h-px bg-border mx-3" />
+            <div className="mx-2 h-px min-w-4 flex-1 bg-border sm:mx-3 sm:min-w-16" />
           )}
         </div>
       ))}
@@ -91,6 +92,9 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   // Step 1 — WhatsApp state
+  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>("pairing")
+  const [pairingPhone, setPairingPhone] = useState("")
+  const [pairingCode, setPairingCode] = useState<string | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -107,12 +111,23 @@ export default function OnboardingPage() {
   /* ——— Step 1: Connect WhatsApp ——— */
 
   const connectWhatsApp = useCallback(async () => {
+    const normalizedPhone = pairingPhone.replace(/\D/g, "")
+    if (connectionMethod === "pairing" && !/^\d{10,15}$/.test(normalizedPhone)) {
+      toast.error("Informe o número com DDI e DDD, usando apenas números.")
+      return
+    }
+
     setIsConnecting(true)
     try {
       const res = await fetch("/api/evolution/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "integrated" }),
+        body: JSON.stringify({
+          mode: "integrated",
+          connectionMethod,
+          phone: connectionMethod === "pairing" ? normalizedPhone : undefined,
+          instanceName: instanceName || undefined,
+        }),
       })
       const data = await res.json()
 
@@ -121,18 +136,32 @@ export default function OnboardingPage() {
         return
       }
 
-      if (data.base64) {
-        setQrCode(data.base64)
-      }
+      setPairingCode(data.pairingCode || null)
+      setQrCode(data.base64 || null)
       if (data.instanceName) {
         setInstanceName(data.instanceName)
+      }
+      if (connectionMethod === "pairing" && !data.pairingCode && data.base64) {
+        toast.warning("O código não ficou disponível. Use o QR Code alternativo.")
+      } else if (connectionMethod === "pairing" && data.pairingCode) {
+        toast.success("Código de pareamento gerado.")
       }
     } catch {
       toast.error("Erro de rede ao conectar")
     } finally {
       setIsConnecting(false)
     }
-  }, [])
+  }, [connectionMethod, instanceName, pairingPhone])
+
+  const copyPairingCode = async () => {
+    if (!pairingCode) return
+    try {
+      await navigator.clipboard.writeText(pairingCode)
+      toast.success("Código copiado.")
+    } catch {
+      toast.error("Não foi possível copiar. Selecione o código manualmente.")
+    }
+  }
 
   const checkStatus = useCallback(async () => {
     try {
@@ -145,6 +174,7 @@ export default function OnboardingPage() {
         )
         if (inst) {
           setIsConnected(true)
+          setPairingCode(null)
           setQrCode(null)
           if (pollRef.current) {
             clearInterval(pollRef.current)
@@ -163,11 +193,6 @@ export default function OnboardingPage() {
     }
   }, [isConnected])
 
-  // Auto-connect on mount
-  useEffect(() => {
-    connectWhatsApp()
-  }, [connectWhatsApp])
-
   // Poll status every 5s
   useEffect(() => {
     if (currentStep !== 1 || isConnected) return
@@ -181,7 +206,8 @@ export default function OnboardingPage() {
     }
   }, [currentStep, isConnected, checkStatus])
 
-  const handleRegenerateQR = async () => {
+  const handleRegenerateConnection = async () => {
+    setPairingCode(null)
     setQrCode(null)
     await connectWhatsApp()
   }
@@ -312,83 +338,154 @@ export default function OnboardingPage() {
           <h2 className="text-[15px] font-semibold text-foreground leading-tight">
             Conecte seu WhatsApp
           </h2>
-          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            É por ele que a Lembrado cobra seus clientes. Abra o WhatsApp →{" "}
-            <strong className="text-foreground">Aparelhos conectados</strong>{" "}
-            → escaneie o código.
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            É por ele que a Lembrado cobra seus clientes. Conecte por código ou use o QR Code.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 mt-6">
-            {/* QR Code */}
+          {!isConnected && (
+            <div className="mt-5 space-y-4">
+              <div className="grid grid-cols-2 gap-2" aria-label="Método de conexão">
+                {([
+                  { value: "pairing" as const, label: "Código", icon: Smartphone },
+                  { value: "qr" as const, label: "QR Code", icon: QrCode },
+                ]).map(({ value, label, icon: Icon }) => (
+                  <button
+                    type="button"
+                    key={value}
+                    aria-pressed={connectionMethod === value}
+                    onClick={() => {
+                      setConnectionMethod(value)
+                      setPairingCode(null)
+                      setQrCode(null)
+                    }}
+                    className={cn(
+                      "flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      connectionMethod === value
+                        ? "border-foreground/25 bg-secondary text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4" /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {connectionMethod === "pairing" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="onboarding-pairing-phone">Número do WhatsApp</Label>
+                  <Input
+                    id="onboarding-pairing-phone"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    placeholder="5511999999999"
+                    value={pairingPhone}
+                    onChange={(event) => setPairingPhone(event.target.value.replace(/\D/g, "").slice(0, 15))}
+                  />
+                  <p className="text-xs text-muted-foreground">Informe DDI + DDD + número, sem espaços.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col gap-6 sm:flex-row">
             <div className="flex-shrink-0">
-              <div className="w-[160px] h-[160px] rounded-lg border border-border bg-white flex items-center justify-center overflow-hidden">
-                {isConnecting && !qrCode ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <div className="flex h-[160px] w-[160px] items-center justify-center overflow-hidden rounded-lg border border-border bg-white">
+                {isConnected ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success-bg)]">
+                      <Check className="h-5 w-5 text-[var(--success-fg)]" />
+                    </div>
+                    <span className="text-xs font-medium text-[var(--success-fg)]">Conectado</span>
+                  </div>
+                ) : isConnecting ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : pairingCode ? (
+                  <div className="px-3 text-center">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Seu código</p>
+                    <p className="num mt-2 select-all text-xl font-semibold tracking-[0.16em] text-foreground">
+                      {pairingCode.match(/.{1,4}/g)?.join(" ") || pairingCode}
+                    </p>
+                  </div>
                 ) : qrCode ? (
                   <Image
-                    src={
-                      qrCode.startsWith("data:")
-                        ? qrCode
-                        : `data:image/png;base64,${qrCode}`
-                    }
-                    alt="QR Code WhatsApp"
+                    src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                    alt="QR Code para conectar o WhatsApp"
                     width={148}
                     height={148}
                     className="object-contain"
                     unoptimized
                   />
-                ) : isConnected ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-[var(--success-bg)] flex items-center justify-center">
-                      <Check className="w-5 h-5 text-[var(--success-fg)]" />
-                    </div>
-                    <span className="text-xs text-[var(--success-fg)] font-medium">Conectado</span>
-                  </div>
                 ) : (
-                  <div className="w-full h-full bg-muted animate-pulse rounded" />
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    {connectionMethod === "pairing" ? <Smartphone className="h-8 w-8" /> : <QrCode className="h-8 w-8" />}
+                    <span className="text-xs">Pronto para gerar</span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Status info */}
-            <div className="flex-1 flex flex-col justify-center gap-3">
+            <div className="flex flex-1 flex-col justify-center gap-3" aria-live="polite">
               {isConnected ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <span className="w-[7px] h-[7px] rounded-full bg-[var(--money)]" />
-                    <span className="text-sm font-medium text-foreground">
-                      Conectado!
-                    </span>
+                    <span className="h-[7px] w-[7px] rounded-full bg-[var(--money)]" />
+                    <span className="text-sm font-medium text-foreground">Conectado!</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Seu WhatsApp está pronto. Continue para o próximo passo.
                   </p>
                 </>
-              ) : (
+              ) : pairingCode ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <span className="w-[7px] h-[7px] rounded-full bg-[var(--warning)]" />
-                    <span className="text-sm text-foreground">
-                      Aguardando leitura...
-                    </span>
+                    <span className="h-[7px] w-[7px] rounded-full bg-[var(--warning)]" />
+                    <span className="text-sm font-medium text-foreground">Aguardando confirmação</span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Use um número dedicado ao negócio — o aquecimento protege
-                    números novos.
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    No WhatsApp, abra Aparelhos conectados → Conectar aparelho → Conectar com número de telefone.
                   </p>
                   <button
-                    onClick={handleRegenerateQR}
-                    disabled={isConnecting}
-                    className="text-sm font-medium text-[var(--interactive)] hover:underline text-left w-fit disabled:opacity-50 flex items-center gap-1.5"
+                    type="button"
+                    onClick={copyPairingCode}
+                    className="flex min-h-11 w-fit items-center gap-1.5 text-left text-sm font-medium text-[var(--interactive)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {isConnecting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    )}
-                    Gerar novo código
+                    <Copy className="h-3.5 w-3.5" /> Copiar código
                   </button>
                 </>
+              ) : qrCode ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="h-[7px] w-[7px] rounded-full bg-[var(--warning)]" />
+                    <span className="text-sm font-medium text-foreground">Aguardando leitura</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    No WhatsApp, abra Aparelhos conectados → Conectar aparelho e escaneie o QR Code.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {connectionMethod === "pairing"
+                      ? "Use um número dedicado ao negócio. O código é temporário e não será armazenado."
+                      : "Abra o WhatsApp em Aparelhos conectados quando o QR Code aparecer."}
+                  </p>
+                  <Button type="button" onClick={connectWhatsApp} disabled={isConnecting} className="w-full sm:w-fit">
+                    {isConnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {connectionMethod === "pairing" ? "Gerar código" : "Gerar QR Code"}
+                  </Button>
+                </>
+              )}
+
+              {!isConnected && (pairingCode || qrCode) && (
+                <button
+                  type="button"
+                  onClick={handleRegenerateConnection}
+                  disabled={isConnecting}
+                  className="flex min-h-11 w-fit items-center gap-1.5 text-left text-sm font-medium text-[var(--interactive)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  {isConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Gerar novamente
+                </button>
               )}
             </div>
           </div>

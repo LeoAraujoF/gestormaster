@@ -61,7 +61,7 @@ export interface IWhatsAppProvider {
   /**
    * Gera o QR Code para conectar a instância
    */
-  getQR(instanceName: string): Promise<{
+  getQR(instanceName: string, phoneNumber?: string): Promise<{
     base64?: string
     code?: string
     qrcode?: string | { base64?: string }

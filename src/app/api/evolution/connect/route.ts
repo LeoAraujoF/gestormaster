@@ -12,6 +12,14 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Falha ao conectar'
 }
 
+type ConnectionMethod = 'qr' | 'pairing'
+
+function normalizePairingPhone(value: unknown) {
+  if (typeof value !== 'string') return null
+  const digits = value.replace(/\D/g, '')
+  return /^\d{10,15}$/.test(digits) ? digits : null
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -32,7 +40,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { mode = 'integrated', instanceName, baseUrl, apiKey } = body
+    const { mode = 'integrated', instanceName, baseUrl, apiKey, connectionMethod = 'qr', phone } = body
+
+    if (connectionMethod !== 'qr' && connectionMethod !== 'pairing') {
+      return NextResponse.json({ error: 'Método de conexão inválido' }, { status: 400 })
+    }
+
+    const selectedConnectionMethod = connectionMethod as ConnectionMethod
+    const pairingPhone = selectedConnectionMethod === 'pairing' ? normalizePairingPhone(phone) : null
+    if (selectedConnectionMethod === 'pairing' && !pairingPhone) {
+      return NextResponse.json(
+        { error: 'Informe o número com DDI e DDD, usando apenas números' },
+        { status: 400 }
+      )
+    }
 
     const adminEmail = process.env.ADMIN_EMAIL || ''
     const isAdmin = user.email === adminEmail
@@ -46,8 +67,6 @@ export async function POST(request: Request) {
       // Integrated mode: use server environment variables
       finalBaseUrl = process.env.EVOLUTION_API_URL || ''
       finalApiKey = process.env.EVOLUTION_API_KEY || ''
-      const suffix = Math.random().toString(36).substring(2, 7)
-      finalInstanceName = `gestor_${user.id.substring(0, 8)}_${suffix}`
       connectionMode = 'integrated'
 
       if (!finalBaseUrl || !finalApiKey) {
@@ -55,6 +74,25 @@ export async function POST(request: Request) {
           { error: 'Evolution API não configurada no servidor. Contate o administrador.' },
           { status: 500 }
         )
+      }
+
+      if (typeof instanceName === 'string' && instanceName.trim()) {
+        const { data: managedInstance } = await supabase
+          .from('evolution_instances')
+          .select('instance_name')
+          .eq('organization_id', membership.organizationId)
+          .eq('user_id', user.id)
+          .eq('connection_mode', 'integrated')
+          .eq('instance_name', instanceName.trim())
+          .maybeSingle()
+
+        if (!managedInstance) {
+          return NextResponse.json({ error: 'Instância gerenciada não encontrada' }, { status: 404 })
+        }
+        finalInstanceName = managedInstance.instance_name
+      } else {
+        const suffix = Math.random().toString(36).substring(2, 7)
+        finalInstanceName = `gestor_${user.id.substring(0, 8)}_${suffix}`
       }
     } else {
       // External mode: use client-provided credentials
@@ -111,7 +149,8 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError
 
-    let qrCodeValue = null;
+    let qrCodeValue: string | null = null;
+    let pairingCodeValue: string | null = null;
 
     try {
       // Monta a URL do Webhook usando o Host da requisição
@@ -139,30 +178,49 @@ export async function POST(request: Request) {
 
       // 2. Create the instance in Evolution API
       // Evolution v2.2.1 retorna o QR Code AQUI na criação se passarmos qrcode: true
-      const createData = await client.createInstance(finalInstanceName, webhookUrl, hmacSecretToPass, webhookToken)
+      const createData = await client.createInstance(
+        finalInstanceName,
+        webhookUrl,
+        hmacSecretToPass,
+        webhookToken,
+        {
+          phoneNumber: pairingPhone || undefined,
+          // Mantém o QR disponível como alternativa caso o pareamento falhe.
+          qrcode: true,
+        }
+      )
       if (createData?.qrcode?.base64) {
          qrCodeValue = createData.qrcode.base64;
+      } else if (createData?.qrcode?.code) {
+         qrCodeValue = createData.qrcode.code;
       } else if (createData?.hash?.qrcode) {
          // Fallback Evolution v1.x ou v2.0
          qrCodeValue = createData.hash.qrcode;
       }
+      pairingCodeValue = createData?.pairingCode || createData?.qrcode?.pairingCode || null
     } catch (error: unknown) {
       console.log('Instance creation note (already exists?):', errorMessage(error))
     }
 
-    // 3. Se não pegou no create, solicita via GET (connect endpoint)
-    if (!qrCodeValue) {
-      console.log('Aguardando geração do QR Code pela Evolution...');
+    // 3. Se não pegou o resultado esperado no create, solicita via GET.
+    const needsConnectionResult = selectedConnectionMethod === 'pairing'
+      ? !pairingCodeValue
+      : !qrCodeValue
+
+    if (needsConnectionResult) {
+      console.log(`Aguardando geração do ${selectedConnectionMethod === 'pairing' ? 'código de pareamento' : 'QR Code'} pela Evolution...`);
       // Faz um polling de até 10 segundos (5 tentativas a cada 2s)
       for (let i = 0; i < 5; i++) {
         try {
           await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos
-          const qrData = await client.getQR(finalInstanceName);
+          const qrData = await client.getQR(finalInstanceName, pairingPhone || undefined);
           const nestedQrCode = typeof qrData.qrcode === 'object' ? qrData.qrcode?.base64 : qrData.qrcode
-          qrCodeValue = qrData.base64 || nestedQrCode || qrData.code || null;
+          qrCodeValue = qrCodeValue || qrData.base64 || nestedQrCode || qrData.code || null;
+          pairingCodeValue = pairingCodeValue || qrData.pairingCode || null;
 
-          if (qrCodeValue && qrCodeValue !== '[object Object]') {
-            console.log('QR Code capturado com sucesso!');
+          const expectedResult = selectedConnectionMethod === 'pairing' ? pairingCodeValue : qrCodeValue
+          if (expectedResult && expectedResult !== '[object Object]') {
+            console.log(`${selectedConnectionMethod === 'pairing' ? 'Código de pareamento' : 'QR Code'} capturado com sucesso!`);
             break;
           }
         } catch (error: unknown) {
@@ -184,13 +242,19 @@ export async function POST(request: Request) {
       user_id: user.id,
       action: 'whatsapp.connect',
       resource: 'evolution_instances',
-      details: { instance_name: finalInstanceName, connection_mode: connectionMode },
+      details: {
+        instance_name: finalInstanceName,
+        connection_mode: connectionMode,
+        connection_method: selectedConnectionMethod,
+      },
       ip_address: getIpFromRequest(request)
     })
 
     return NextResponse.json({
       success: true,
       base64: qrCodeValue,
+      pairingCode: pairingCodeValue,
+      connectionMethod: pairingCodeValue ? 'pairing' : 'qr',
       instanceName: finalInstanceName
     })
   } catch (error: unknown) {

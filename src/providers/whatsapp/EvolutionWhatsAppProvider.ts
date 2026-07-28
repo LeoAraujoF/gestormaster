@@ -9,15 +9,26 @@ type EvolutionQrResponse = {
   base64?: string
   code?: string
   qrcode?: string | { base64?: string }
+  pairingCode?: string
 }
 
 type EvolutionCreateResponse = {
-  qrcode?: { base64?: string }
+  qrcode?: {
+    base64?: string
+    code?: string
+    pairingCode?: string
+  }
   hash?: { qrcode?: string }
+  pairingCode?: string
 }
 
 type EvolutionConnectionResponse = {
   instance?: { state?: string; status?: string }
+}
+
+type EvolutionCreateOptions = {
+  phoneNumber?: string
+  qrcode?: boolean
 }
 
 export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
@@ -122,9 +133,10 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     });
   }
 
-  async getQR(instanceName: string) {
-    // Evolution API: Retorna o QR em base64 se a instância estiver pendente
-    return this.request<EvolutionQrResponse>(`/instance/connect/${instanceName}`, 'GET');
+  async getQR(instanceName: string, phoneNumber?: string) {
+    // Com o número na query, a Evolution também retorna o código de pareamento.
+    const numberQuery = phoneNumber ? `?number=${encodeURIComponent(phoneNumber)}` : '';
+    return this.request<EvolutionQrResponse>(`/instance/connect/${encodeURIComponent(instanceName)}${numberQuery}`, 'GET');
   }
 
   async checkConnection(instanceName: string) {
@@ -135,12 +147,22 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
     };
   }
 
-  async createInstance(instanceName: string, webhookUrl?: string, webhookSecret?: string, webhookToken?: string) {
+  async createInstance(
+    instanceName: string,
+    webhookUrl?: string,
+    webhookSecret?: string,
+    webhookToken?: string,
+    options?: EvolutionCreateOptions
+  ) {
     const payload: Record<string, unknown> = {
       instanceName,
-      qrcode: true,
+      qrcode: options?.qrcode ?? true,
       integration: "WHATSAPP-BAILEYS"
     };
+
+    if (options?.phoneNumber) {
+      payload.number = options.phoneNumber;
+    }
 
     if (webhookUrl) {
       payload.webhook = {

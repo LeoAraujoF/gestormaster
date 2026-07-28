@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useConfirm } from "@/components/providers/confirm-provider"
-import { Activity, CircleCheckBig, CircleX, Clock3, Image as ImageIcon, Loader2, MoreHorizontal, PhoneOff, RotateCcw, Send, Shield, Star, Trash2, Wifi, WifiOff, X } from "lucide-react"
+import { Activity, CircleCheckBig, CircleX, Clock3, Copy, Image as ImageIcon, Loader2, MoreHorizontal, PhoneOff, QrCode, RotateCcw, Send, Shield, Smartphone, Star, Trash2, Wifi, WifiOff, X } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import { z } from "zod"
@@ -31,6 +31,9 @@ const externalConnectionSchema = z.object({
   instanceName: z.string().min(2, "Nome da instância obrigatório"),
 })
 type ExternalConnectionForm = z.infer<typeof externalConnectionSchema>
+type ConnectionMethod = 'pairing' | 'qr'
+
+const clientErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Erro de conexão'
 
 const getDefaultTemplate = (type: string) => {
   const base = "{OlÃ¡|Oi|Tudo bem} {{primeiro_nome}}?\\n"
@@ -103,7 +106,12 @@ export default function AutomacaoPage() {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'loading' | 'error'>('loading')
   const [isConnecting, setIsConnecting] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
-  const [connectionMode, setConnectionMode] = useState<'integrated' | 'external'>('external')
+  const [connectionMode, setConnectionMode] = useState<'integrated' | 'external'>('integrated')
+  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>('pairing')
+  const [pairingPhone, setPairingPhone] = useState('')
+  const [pairingCode, setPairingCode] = useState<string | null>(null)
+  const [pairingFallbackQr, setPairingFallbackQr] = useState<string | null>(null)
+  const [connectionInstanceName, setConnectionInstanceName] = useState<string | null>(null)
   const [instances, setInstances] = useState<any[]>([])
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false)
 
@@ -302,34 +310,105 @@ export default function AutomacaoPage() {
   }, [massAudience, massServiceId])
 
   /* â€”â€”â€”â€”â€” conexÃ£o â€”â€”â€”â€”â€” */
+  const getPairingPhone = () => {
+    if (connectionMethod !== 'pairing') return undefined
+    const digits = pairingPhone.replace(/\D/g, '')
+    if (!/^\d{10,15}$/.test(digits)) {
+      toast.error('Informe o número com DDI e DDD, usando apenas números.')
+      return null
+    }
+    return digits
+  }
+
+  const handleConnectionResponse = async (responseData: {
+    pairingCode?: string | null
+    base64?: string | null
+    instanceName?: string | null
+  }) => {
+    setConnectionInstanceName(responseData.instanceName || null)
+
+    if (connectionMethod === 'pairing') {
+      if (responseData.pairingCode) {
+        setPairingCode(responseData.pairingCode)
+        setPairingFallbackQr(responseData.base64 || null)
+        toast.success('Código de pareamento gerado.')
+      } else if (responseData.base64) {
+        setPairingFallbackQr(responseData.base64)
+        toast.warning('O código não ficou disponível. Use o QR Code alternativo.')
+      } else {
+        throw new Error('A Evolution não retornou um código de conexão. Tente novamente.')
+      }
+      await loadSettings()
+      return
+    }
+
+    toast.success("Instância gerada! Escaneie o QR Code no card do chip.")
+    setIsConnectDialogOpen(false)
+    setConnectionInstanceName(null)
+    await loadSettings()
+  }
+
+  const resetConnectionResult = () => {
+    setPairingCode(null)
+    setPairingFallbackQr(null)
+  }
+
+  const copyPairingCode = async () => {
+    if (!pairingCode) return
+    try {
+      await navigator.clipboard.writeText(pairingCode)
+      toast.success('Código copiado.')
+    } catch {
+      toast.error('Não foi possível copiar. Selecione o código manualmente.')
+    }
+  }
+
+  const handleConnectDialogChange = (open: boolean) => {
+    setIsConnectDialogOpen(open)
+    if (!open) {
+      resetConnectionResult()
+      setConnectionInstanceName(null)
+    }
+  }
+
   const handleIntegratedConnect = async () => {
+    const normalizedPhone = getPairingPhone()
+    if (normalizedPhone === null) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/connect', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'integrated' })
+        body: JSON.stringify({
+          mode: 'integrated',
+          connectionMethod,
+          phone: normalizedPhone,
+          instanceName: connectionInstanceName || undefined,
+        })
       })
       const responseData = await res.json()
-      if (!res.ok) throw new Error(responseData.error || 'Erro de conexÃ£o')
-      toast.success("InstÃ¢ncia gerada! Escaneie o QR Code no card do chip.")
-      setIsConnectDialogOpen(false)
-      loadSettings()
-    } catch (error: any) { toast.error(error.message) } finally { setIsConnecting(false) }
+      if (!res.ok) throw new Error(responseData.error || 'Erro de conexão')
+      await handleConnectionResponse(responseData)
+    } catch (error: unknown) { toast.error(clientErrorMessage(error)) } finally { setIsConnecting(false) }
   }
 
   const onExternalConnectSubmit = async (data: ExternalConnectionForm) => {
+    const normalizedPhone = getPairingPhone()
+    if (normalizedPhone === null) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/connect', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'external', ...data })
+        body: JSON.stringify({
+          mode: 'external',
+          connectionMethod,
+          phone: normalizedPhone,
+          ...data,
+        })
       })
       const responseData = await res.json()
-      if (!res.ok) throw new Error(responseData.error || 'Erro de conexÃ£o')
-      toast.success("InstÃ¢ncia conectada! Escaneie o QR Code no card do chip.")
-      setIsConnectDialogOpen(false)
-      loadSettings()
-    } catch (error: any) { toast.error(error.message) } finally { setIsConnecting(false) }
+      if (!res.ok) throw new Error(responseData.error || 'Erro de conexão')
+      await handleConnectionResponse(responseData)
+    } catch (error: unknown) { toast.error(clientErrorMessage(error)) } finally { setIsConnecting(false) }
   }
 
   const handleDisconnect = async (instanceName: string) => {
@@ -1495,20 +1574,80 @@ export default function AutomacaoPage() {
       </Dialog>
 
       {/* ============ DIÃLOGO conectar nÃºmero ============ */}
-      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+      <Dialog open={isConnectDialogOpen} onOpenChange={handleConnectDialogChange}>
         <DialogContent className="w-[440px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
             <DialogTitle className="text-[13.5px] font-semibold">Conectar número</DialogTitle>
-            <DialogDescription className="text-[10.5px]">Gere um novo chip e escaneie o QR code com o WhatsApp.</DialogDescription>
+            <DialogDescription className="text-[10.5px]">
+              {pairingCode
+                ? 'Digite este código no WhatsApp para concluir a conexão.'
+                : 'Escolha a infraestrutura e a forma de conectar seu WhatsApp.'}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex w-fit gap-0.5 rounded-md bg-secondary p-0.5">
+          {pairingCode || pairingFallbackQr ? (
+            <div className="space-y-4" aria-live="polite">
+              {pairingCode ? (
+                <>
+                  <div className="rounded-lg border border-border bg-muted/50 p-4 text-center">
+                    <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      Código de pareamento
+                    </p>
+                    <p className="num mt-2 select-all text-2xl font-semibold tracking-[0.22em] text-foreground">
+                      {pairingCode.match(/.{1,4}/g)?.join(' ') || pairingCode}
+                    </p>
+                    <Button type="button" variant="outline" size="sm" onClick={copyPairingCode} className="mt-3">
+                      <Copy className="mr-1.5 size-3.5" /> Copiar código
+                    </Button>
+                  </div>
+                  <ol className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+                    <li><strong className="text-foreground">1.</strong> Abra o WhatsApp no telefone informado.</li>
+                    <li><strong className="text-foreground">2.</strong> Acesse Aparelhos conectados e toque em Conectar aparelho.</li>
+                    <li><strong className="text-foreground">3.</strong> Escolha Conectar com número de telefone e digite o código.</li>
+                  </ol>
+                  <p className="text-[10.5px] text-muted-foreground">
+                    O código é temporário. O status do chip será atualizado automaticamente após a conexão.
+                  </p>
+                </>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-border bg-muted/50 p-5 text-center">
+                  <QrCode className="mx-auto size-8 text-muted-foreground" />
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    A Evolution não retornou o código de pareamento. Feche esta janela e use o QR Code alternativo exibido no card do chip.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                <Button type="button" variant="outline" onClick={() => handleConnectDialogChange(false)}>
+                  Fechar
+                </Button>
+                {connectionMode === 'integrated' && (
+                  <Button type="button" onClick={handleIntegratedConnect} disabled={isConnecting}>
+                    {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar outro código
+                  </Button>
+                )}
+              </div>
+              {connectionMode === 'external' && (
+                <p className="text-center text-[10.5px] text-muted-foreground">
+                  Para gerar outro código na API própria, feche e envie novamente os dados da instância.
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+          <div className="flex w-fit gap-0.5 rounded-md bg-secondary p-0.5" aria-label="Infraestrutura da conexão">
             {(['integrated', 'external'] as const).map(m => (
               <button
+                type="button"
                 key={m}
-                onClick={() => setConnectionMode(m)}
+                aria-pressed={connectionMode === m}
+                onClick={() => {
+                  setConnectionMode(m)
+                  setConnectionInstanceName(null)
+                }}
                 className={cn(
-                  "rounded-[5px] px-3 py-1.5 text-[11px] font-medium transition-colors",
+                  "rounded-[5px] px-3 py-1.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   connectionMode === m ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]" : "text-muted-foreground"
                 )}
               >
@@ -1517,13 +1656,55 @@ export default function AutomacaoPage() {
             ))}
           </div>
 
+          <div className="grid grid-cols-2 gap-2" aria-label="Método de conexão">
+            {([
+              { value: 'pairing' as const, label: 'Código', icon: Smartphone },
+              { value: 'qr' as const, label: 'QR Code', icon: QrCode },
+            ]).map(({ value, label, icon: Icon }) => (
+              <button
+                type="button"
+                key={value}
+                aria-pressed={connectionMethod === value}
+                onClick={() => {
+                  setConnectionMethod(value)
+                  resetConnectionResult()
+                }}
+                className={cn(
+                  "flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  connectionMethod === value
+                    ? "border-foreground/25 bg-secondary text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="size-4" /> {label}
+              </button>
+            ))}
+          </div>
+
+          {connectionMethod === 'pairing' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="pairing-phone" className="text-[11px]">Número do WhatsApp</Label>
+              <Input
+                id="pairing-phone"
+                inputMode="numeric"
+                autoComplete="tel"
+                placeholder="5511999999999"
+                value={pairingPhone}
+                onChange={(event) => setPairingPhone(event.target.value.replace(/\D/g, '').slice(0, 15))}
+                className="num h-9 text-xs"
+              />
+              <p className="text-[10.5px] text-muted-foreground">Informe DDI + DDD + número, sem espaços. Ex.: 5511999999999.</p>
+            </div>
+          )}
+
           {connectionMode === 'integrated' ? (
             <div className="space-y-3">
               <p className="rounded-md bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                Geramos a instância automaticamente na nossa infraestrutura. Depois é só escanear o QR que aparece no card do chip.
+                Geramos a instância automaticamente na nossa infraestrutura e acompanhamos o status até conectar.
               </p>
               <Button onClick={handleIntegratedConnect} disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Gerar instância automática
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {connectionMethod === 'pairing' ? 'Gerar código de pareamento' : 'Gerar QR Code'}
               </Button>
             </div>
           ) : (
@@ -1544,9 +1725,12 @@ export default function AutomacaoPage() {
                 {connErrs.instanceName && <p className="text-[10.5px] text-danger">{connErrs.instanceName.message}</p>}
               </div>
               <Button type="submit" disabled={isConnecting} className="w-full">
-                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />} Conectar instância
+                {isConnecting && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {connectionMethod === 'pairing' ? 'Gerar código de pareamento' : 'Gerar QR Code'}
               </Button>
             </form>
+          )}
+            </>
           )}
         </DialogContent>
       </Dialog>

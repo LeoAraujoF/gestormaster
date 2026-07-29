@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabasePublicConfig } from './config'
 
@@ -27,6 +27,13 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+  let sessionCookies: Array<{ name: string; value: string; options: CookieOptions }> = []
+
+  const redirectWithSession = (url: URL) => {
+    const response = NextResponse.redirect(url)
+    sessionCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+    return response
+  }
 
   const supabase = createServerClient(
     config.url,
@@ -37,6 +44,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
+          sessionCookies = cookiesToSet
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
@@ -76,7 +84,7 @@ export async function updateSession(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return redirectWithSession(url)
   }
 
   // 2. Bloqueio de Assinatura (Paywall) - Só ocorre se ele já estiver logado
@@ -124,21 +132,21 @@ export async function updateSession(request: NextRequest) {
     if (!hasOnboarding && !isPublicRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
-      return NextResponse.redirect(url)
+      return redirectWithSession(url)
     }
 
     // Regra 2: Se o cliente não pagou, e tentou acessar rota privada (que não seja planos, nem onboarding)
     if (!isPublicRoute && !hasSubscription && !isAdmin && request.nextUrl.pathname !== '/onboarding') {
       const url = request.nextUrl.clone()
       url.pathname = '/planos'
-      return NextResponse.redirect(url)
+      return redirectWithSession(url)
     }
 
     // Regra 3: Bloqueio do painel Master Admin
     if (request.nextUrl.pathname.startsWith('/admin') && !isAdmin) {
       const url = request.nextUrl.clone()
       url.pathname = '/painel'
-      return NextResponse.redirect(url)
+      return redirectWithSession(url)
     }
   }
 

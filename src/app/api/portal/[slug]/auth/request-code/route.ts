@@ -7,6 +7,11 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   if (!isTrustedMutation(request)) return NextResponse.json({ error: 'Origem inválida' }, { status: 403 })
   const { slug } = await context.params
   const body = await request.json().catch(() => ({}))
-  const result = await requestPortalCode(slug, String(body.phone || ''), getClientIp(request))
+  const result = await requestPortalCode(
+    slug,
+    String(body.phone || ''),
+    getClientIp(request),
+    typeof body.clientId === 'string' ? body.clientId : undefined,
+  )
   return NextResponse.json(result, { status: 202, headers: { 'Cache-Control': 'no-store' } })
 }

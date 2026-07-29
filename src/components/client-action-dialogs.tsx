@@ -7,6 +7,11 @@ import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
 import { logAuditClient } from "@/lib/audit-client"
+import {
+  deleteProtectedResource,
+  fetchSecurityPinStatus,
+  SecurityPinApiError,
+} from "@/lib/security-pin-client"
 
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -719,48 +724,56 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
 export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, client: any, onSuccess: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasPin, setHasPin] = useState(false)
-  const [savedPin, setSavedPin] = useState("")
+  const [isCheckingPin, setIsCheckingPin] = useState(false)
+  const [pinLockedUntil, setPinLockedUntil] = useState<string | null>(null)
   const [pinInput, setPinInput] = useState("")
-  const supabase = createClient()
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    let active = true
+    void Promise.resolve().then(async () => {
+      if (!active) return
       setPinInput("")
-      const checkPin = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && user.user_metadata?.security_pin) {
-          setHasPin(true)
-          setSavedPin(user.user_metadata.security_pin)
-        } else {
-          setHasPin(false)
+      setPinLockedUntil(null)
+      setIsCheckingPin(true)
+      try {
+        const status = await fetchSecurityPinStatus()
+        if (active) {
+          setHasPin(status.configured)
+          setPinLockedUntil(status.lockedUntil)
         }
+      } catch {
+        if (active) setHasPin(false)
+      } finally {
+        if (active) setIsCheckingPin(false)
       }
-      checkPin()
-    }
-  }, [open, supabase.auth])
+    })
+    return () => { active = false }
+  }, [open])
 
   const handleDelete = async () => {
     if (!client) return
-    if (hasPin && pinInput !== savedPin) {
-      return toast.error("PIN de segurança incorreto.")
-    }
+    if (!hasPin) return toast.error("Configure o Cofre PIN em Minha Conta antes de excluir clientes.")
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.from('clients').delete().eq('id', client.id)
-      if (error) throw error
+      await deleteProtectedResource({ resource: 'clients', ids: [client.id], pin: pinInput })
       toast.success("Cliente excluído!")
-      logAuditClient({ action: 'client.delete', resource: 'clients', details: { client_name: client.name } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error("Erro ao excluir cliente.")
+      setPinInput("")
+      if (error instanceof SecurityPinApiError && error.lockedUntil) {
+        setPinLockedUntil(error.lockedUntil)
+      }
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao excluir cliente.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const isComplete = !hasPin || pinInput.length === 4
+  const isPinLocked = Boolean(pinLockedUntil)
+  const isComplete = hasPin && !isPinLocked && pinInput.length === 4
   const primaryService = client?.client_services?.[0]?.services?.name || 'Vários serviços'
   const screens = client?.screens || 1
 
@@ -807,7 +820,22 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
               </div>
 
               {/* PIN Section */}
-              {hasPin && (
+              {isCheckingPin && (
+                <div className="flex items-center justify-center gap-2 py-5 text-xs text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Verificando proteção...
+                </div>
+              )}
+              {!isCheckingPin && !hasPin && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-center text-xs text-amber-700 dark:text-amber-300">
+                  Configure o Cofre PIN em Minha Conta para autorizar exclusões.
+                </div>
+              )}
+              {!isCheckingPin && hasPin && isPinLocked && (
+                <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-700 dark:text-red-300">
+                  PIN bloqueado após três erros. Tente novamente em 15 minutos.
+                </div>
+              )}
+              {!isCheckingPin && hasPin && !isPinLocked && (
                 <div className="flex flex-col items-center">
                   <div className="text-[10.5px] font-medium text-secondary-foreground mb-[12px] uppercase tracking-wider">
                     Digite seu PIN do cofre para confirmar
@@ -828,7 +856,7 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
               <button 
                 type="button" 
                 onClick={handleDelete}
-                disabled={!isComplete || isSubmitting}
+                disabled={!isComplete || isSubmitting || isCheckingPin}
                 className={cn(
                   "border-none rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] transition-colors",
                   isComplete ? "bg-danger text-primary-foreground" : "bg-danger-bg text-danger-fg"
@@ -847,49 +875,57 @@ export function DeleteDialog({ open, onOpenChange, client, onSuccess }: { open: 
 export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { open: boolean, onOpenChange: (open: boolean) => void, clients: any[], onSuccess: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasPin, setHasPin] = useState(false)
-  const [savedPin, setSavedPin] = useState("")
+  const [isCheckingPin, setIsCheckingPin] = useState(false)
+  const [pinLockedUntil, setPinLockedUntil] = useState<string | null>(null)
   const [pinInput, setPinInput] = useState("")
-  const supabase = createClient()
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    let active = true
+    void Promise.resolve().then(async () => {
+      if (!active) return
       setPinInput("")
-      const checkPin = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && user.user_metadata?.security_pin) {
-          setHasPin(true)
-          setSavedPin(user.user_metadata.security_pin)
-        } else {
-          setHasPin(false)
+      setPinLockedUntil(null)
+      setIsCheckingPin(true)
+      try {
+        const status = await fetchSecurityPinStatus()
+        if (active) {
+          setHasPin(status.configured)
+          setPinLockedUntil(status.lockedUntil)
         }
+      } catch {
+        if (active) setHasPin(false)
+      } finally {
+        if (active) setIsCheckingPin(false)
       }
-      checkPin()
-    }
-  }, [open, supabase.auth])
+    })
+    return () => { active = false }
+  }, [open])
 
   const handleDelete = async () => {
     if (!clients || clients.length === 0) return
-    if (hasPin && pinInput !== savedPin) {
-      return toast.error("PIN de segurança incorreto.")
-    }
+    if (!hasPin) return toast.error("Configure o Cofre PIN em Minha Conta antes de excluir clientes.")
 
     setIsSubmitting(true)
     try {
       const ids = clients.map(c => c.id)
-      const { error } = await supabase.from('clients').delete().in('id', ids)
-      if (error) throw error
+      await deleteProtectedResource({ resource: 'clients', ids, pin: pinInput })
       toast.success(`${clients.length} clientes excluídos!`)
-      logAuditClient({ action: 'client.bulk_delete', resource: 'clients', details: { count: clients.length } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error("Erro ao excluir clientes.")
+      setPinInput("")
+      if (error instanceof SecurityPinApiError && error.lockedUntil) {
+        setPinLockedUntil(error.lockedUntil)
+      }
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao excluir clientes.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const isComplete = !hasPin || pinInput.length === 4
+  const isPinLocked = Boolean(pinLockedUntil)
+  const isComplete = hasPin && !isPinLocked && pinInput.length === 4
   const totalValue = clients.reduce((acc, c) => acc + (c.plan_value || 0), 0)
 
   return (
@@ -935,7 +971,22 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
               </div>
 
               {/* PIN Section */}
-              {hasPin && (
+              {isCheckingPin && (
+                <div className="flex items-center justify-center gap-2 py-5 text-xs text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Verificando proteção...
+                </div>
+              )}
+              {!isCheckingPin && !hasPin && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-center text-xs text-amber-700 dark:text-amber-300">
+                  Configure o Cofre PIN em Minha Conta para autorizar exclusões.
+                </div>
+              )}
+              {!isCheckingPin && hasPin && isPinLocked && (
+                <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-700 dark:text-red-300">
+                  PIN bloqueado após três erros. Tente novamente em 15 minutos.
+                </div>
+              )}
+              {!isCheckingPin && hasPin && !isPinLocked && (
                 <div className="flex flex-col items-center">
                   <div className="text-[10.5px] font-medium text-secondary-foreground mb-[12px] uppercase tracking-wider">
                     Digite seu PIN do cofre para confirmar
@@ -956,7 +1007,7 @@ export function BulkDeleteDialog({ open, onOpenChange, clients, onSuccess }: { o
               <button 
                 type="button" 
                 onClick={handleDelete}
-                disabled={!isComplete || isSubmitting}
+                disabled={!isComplete || isSubmitting || isCheckingPin}
                 className={cn(
                   "border-none rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] transition-colors",
                   isComplete ? "bg-danger text-primary-foreground" : "bg-danger-bg text-danger-fg"

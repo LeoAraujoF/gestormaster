@@ -777,6 +777,16 @@ CREATE TABLE public.security_settings (
   hmac_previous_valid_until timestamp with time zone
 );
 
+CREATE TABLE public.user_security_credentials (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  pin_digest text NOT NULL,
+  pin_salt text NOT NULL,
+  failed_attempts smallint DEFAULT 0 NOT NULL CHECK (failed_attempts BETWEEN 0 AND 3),
+  locked_until timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE public.services (
   id uuid DEFAULT uuid_generate_v4() NOT NULL,
   user_id uuid NOT NULL,
@@ -1565,7 +1575,7 @@ CREATE INDEX idx_clients_status ON public.clients USING btree (status);
 
 CREATE INDEX idx_clients_org_id ON public.clients USING btree (organization_id);
 
-CREATE UNIQUE INDEX clients_org_phone_e164_uidx ON public.clients USING btree (organization_id, phone_e164) WHERE ((organization_id IS NOT NULL) AND (phone_e164 IS NOT NULL));
+CREATE INDEX clients_org_phone_e164_idx ON public.clients USING btree (organization_id, phone_e164) WHERE ((organization_id IS NOT NULL) AND (phone_e164 IS NOT NULL));
 
 CREATE INDEX collection_dispatches_org_client_created_idx ON public.collection_dispatches USING btree (organization_id, client_id, created_at DESC);
 
@@ -1635,6 +1645,62 @@ CREATE INDEX idx_tickets_status_updated ON public.tickets USING btree (status, u
 
 
 -- Funções
+
+CREATE OR REPLACE FUNCTION public.record_security_pin_attempt(p_user_id uuid, p_success boolean)
+ RETURNS TABLE(verified boolean, result_locked_until timestamp with time zone, remaining_attempts integer)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  credential public.user_security_credentials%ROWTYPE;
+  next_failed_attempts integer;
+BEGIN
+  SELECT * INTO credential
+    FROM public.user_security_credentials
+   WHERE user_id = p_user_id
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT false, NULL::timestamptz, 0;
+    RETURN;
+  END IF;
+
+  IF credential.locked_until IS NOT NULL AND credential.locked_until > clock_timestamp() THEN
+    RETURN QUERY SELECT false, credential.locked_until, 0;
+    RETURN;
+  END IF;
+
+  IF p_success THEN
+    UPDATE public.user_security_credentials
+       SET failed_attempts = 0, locked_until = NULL, updated_at = clock_timestamp()
+     WHERE user_id = p_user_id;
+    RETURN QUERY SELECT true, NULL::timestamptz, 3;
+    RETURN;
+  END IF;
+
+  next_failed_attempts := CASE
+    WHEN credential.locked_until IS NOT NULL AND credential.locked_until <= clock_timestamp() THEN 1
+    ELSE credential.failed_attempts + 1
+  END;
+
+  IF next_failed_attempts >= 3 THEN
+    UPDATE public.user_security_credentials
+       SET failed_attempts = 3,
+           locked_until = clock_timestamp() + interval '15 minutes',
+           updated_at = clock_timestamp()
+     WHERE user_id = p_user_id
+     RETURNING locked_until INTO credential.locked_until;
+    RETURN QUERY SELECT false, credential.locked_until, 0;
+    RETURN;
+  END IF;
+
+  UPDATE public.user_security_credentials
+     SET failed_attempts = next_failed_attempts, locked_until = NULL, updated_at = clock_timestamp()
+   WHERE user_id = p_user_id;
+  RETURN QUERY SELECT false, NULL::timestamptz, 3 - next_failed_attempts;
+END;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.activate_deferred_contact(p_reservation_id uuid)
  RETURNS TABLE(reservation_id uuid, decision text, reason text, next_attempt_date date)
@@ -1753,13 +1819,6 @@ BEGIN
     UPDATE public.phone_change_verifications SET attempts = attempts + 1 WHERE id = v_verification.id;
     RETURN jsonb_build_object('status', 'invalid', 'remaining_attempts', 4 - v_verification.attempts);
   END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM public.clients
-    WHERE organization_id = v_verification.organization_id
-      AND phone_e164 = v_verification.new_phone_e164
-      AND id <> v_verification.client_id
-  ) THEN RETURN jsonb_build_object('status', 'conflict'); END IF;
 
   UPDATE public.clients SET phone = v_verification.new_phone_e164, phone_e164 = v_verification.new_phone_e164, updated_at = now()
   WHERE id = v_verification.client_id AND organization_id = v_verification.organization_id;
@@ -3100,6 +3159,9 @@ ALTER TABLE public.saas_plan_catalog ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.security_settings ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE public.user_security_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_security_credentials FORCE ROW LEVEL SECURITY;
+
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.system_features ENABLE ROW LEVEL SECURITY;
@@ -3234,7 +3296,11 @@ USING ((organization_id IN ( SELECT organization_members.organization_id
   WHERE (organization_members.user_id = auth.uid()))));
 
 DROP POLICY IF EXISTS tenant_isolation_clients ON public.clients;
-CREATE POLICY tenant_isolation_clients ON public.clients FOR ALL TO PUBLIC
+CREATE POLICY tenant_isolation_clients_select ON public.clients FOR SELECT TO authenticated
+USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_clients_insert ON public.clients FOR INSERT TO authenticated
+WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_clients_update ON public.clients FOR UPDATE TO authenticated
 USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)))
 WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
 
@@ -3374,8 +3440,13 @@ USING ((EXISTS ( SELECT 1
   WHERE ((m.organization_id = intelligence_usage_monthly.organization_id) AND (m.user_id = ( SELECT auth.uid() AS uid))))));
 
 DROP POLICY IF EXISTS "Acesso apenas as proprias contas iptv" ON public.iptv_accounts;
-CREATE POLICY "Acesso apenas as proprias contas iptv" ON public.iptv_accounts FOR ALL TO PUBLIC
+CREATE POLICY iptv_accounts_select_own ON public.iptv_accounts FOR SELECT TO authenticated
 USING ((auth.uid() = user_id));
+CREATE POLICY iptv_accounts_insert_own ON public.iptv_accounts FOR INSERT TO authenticated
+WITH CHECK ((auth.uid() = user_id));
+CREATE POLICY iptv_accounts_update_own ON public.iptv_accounts FOR UPDATE TO authenticated
+USING ((auth.uid() = user_id))
+WITH CHECK ((auth.uid() = user_id));
 
 DROP POLICY IF EXISTS "Users can manage own leads" ON public.leads;
 CREATE POLICY "Users can manage own leads" ON public.leads FOR ALL TO authenticated
@@ -3414,7 +3485,11 @@ USING ((EXISTS ( SELECT 1
   WHERE ((member.organization_id = pix_charges.organization_id) AND (member.user_id = ( SELECT auth.uid() AS uid))))));
 
 DROP POLICY IF EXISTS tenant_isolation_promotions ON public.promotions;
-CREATE POLICY tenant_isolation_promotions ON public.promotions FOR ALL TO PUBLIC
+CREATE POLICY tenant_isolation_promotions_select ON public.promotions FOR SELECT TO authenticated
+USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_promotions_insert ON public.promotions FOR INSERT TO authenticated
+WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_promotions_update ON public.promotions FOR UPDATE TO authenticated
 USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)))
 WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
 
@@ -3433,7 +3508,11 @@ CREATE POLICY "Users can manage own settings" ON public.revenda_settings FOR ALL
 USING ((auth.uid() = user_id));
 
 DROP POLICY IF EXISTS tenant_isolation_services ON public.services;
-CREATE POLICY tenant_isolation_services ON public.services FOR ALL TO PUBLIC
+CREATE POLICY tenant_isolation_services_select ON public.services FOR SELECT TO authenticated
+USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_services_insert ON public.services FOR INSERT TO authenticated
+WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
+CREATE POLICY tenant_isolation_services_update ON public.services FOR UPDATE TO authenticated
 USING ((organization_id IN ( SELECT user_orgs() AS user_orgs)))
 WITH CHECK ((organization_id IN ( SELECT user_orgs() AS user_orgs)));
 
@@ -3678,9 +3757,7 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 REVOKE ALL ON TABLE public.clients FROM PUBLIC, anon, authenticated, service_role;
 
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.clients TO anon;
-
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.clients TO authenticated;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.clients TO authenticated;
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.clients TO service_role;
 
@@ -3824,9 +3901,7 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 REVOKE ALL ON TABLE public.iptv_accounts FROM PUBLIC, anon, authenticated, service_role;
 
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.iptv_accounts TO anon;
-
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.iptv_accounts TO authenticated;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.iptv_accounts TO authenticated;
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.iptv_accounts TO service_role;
 
@@ -3892,9 +3967,7 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 REVOKE ALL ON TABLE public.promotions FROM PUBLIC, anon, authenticated, service_role;
 
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.promotions TO anon;
-
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.promotions TO authenticated;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.promotions TO authenticated;
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.promotions TO service_role;
 
@@ -3934,11 +4007,13 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.security_settings TO service_role;
 
+REVOKE ALL ON TABLE public.user_security_credentials FROM PUBLIC, anon, authenticated, service_role;
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.user_security_credentials TO service_role;
+
 REVOKE ALL ON TABLE public.services FROM PUBLIC, anon, authenticated, service_role;
 
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.services TO anon;
-
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.services TO authenticated;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.services TO authenticated;
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.services TO service_role;
 
@@ -4109,6 +4184,10 @@ GRANT EXECUTE ON FUNCTION public.recalculate_collection_score(p_client_id uuid) 
 REVOKE ALL ON FUNCTION public.refresh_collection_score_after_client_status_change() FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT EXECUTE ON FUNCTION public.refresh_collection_score_after_client_status_change() TO service_role;
+
+REVOKE ALL ON FUNCTION public.record_security_pin_attempt(p_user_id uuid, p_success boolean) FROM PUBLIC, anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.record_security_pin_attempt(p_user_id uuid, p_success boolean) TO service_role;
 
 REVOKE ALL ON FUNCTION public.reserve_contact(p_organization_id uuid, p_client_id uuid, p_contact_date date, p_timezone text, p_category text, p_source text, p_source_id uuid, p_requested_by uuid, p_automation_id uuid, p_message_content text, p_media_url text, p_allow_manual_override boolean) FROM PUBLIC, anon, authenticated, service_role;
 

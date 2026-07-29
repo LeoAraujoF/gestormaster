@@ -36,6 +36,7 @@ services:
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
       - OPENAI_MODEL=${OPENAI_MODEL}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - PIN_PEPPER=${PIN_PEPPER}
     depends_on:
       - redis-queue
     networks:

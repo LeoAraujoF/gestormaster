@@ -51,7 +51,8 @@ export function PortalPublicView({ slug, brand, initiallyAuthenticated }: { slug
     return data
   }
   const requestCode = async () => {
-    const data = await post('/auth/request-code', { phone })
+    const clientId = new URLSearchParams(window.location.search).get('client')
+    const data = await post('/auth/request-code', { phone, clientId })
     setChallengeId(typeof data.challengeId === 'string' ? data.challengeId : '')
     setMessage(typeof data.message === 'string' ? data.message : '')
   }

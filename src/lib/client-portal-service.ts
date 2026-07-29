@@ -9,6 +9,7 @@ import { normalizeBrazilPhone, parseDueDate } from '@/lib/autoatendimento'
 import { createMercadoPagoPixCharge } from '@/lib/pix-charges'
 import { SecretsManager } from '@/lib/encryption'
 import { generatePortalCode, generatePortalToken, hashPortalCode, maskPhone, normalizePortalSlug, portalHash } from '@/lib/client-portal-crypto'
+import { selectPortalClient } from '@/lib/client-portal-auth'
 import { logAudit } from '@/lib/audit'
 
 export const PORTAL_COOKIE = 'gm_portal_session'
@@ -109,7 +110,7 @@ export async function getPublicPortalBrand(slug: string) {
   return data
 }
 
-export async function requestPortalCode(slug: string, rawPhone: string, ip: string) {
+export async function requestPortalCode(slug: string, rawPhone: string, ip: string, requestedClientId?: string) {
   const opaqueChallengeId = randomUUID()
   const generic = { accepted: true, challengeId: opaqueChallengeId, message: 'Se o telefone estiver cadastrado, o código será enviado pelo WhatsApp.' }
   const phone = normalizeBrazilPhone(rawPhone)
@@ -121,10 +122,15 @@ export async function requestPortalCode(slug: string, rawPhone: string, ip: stri
   if (!ipLimit.ok || !phoneLimit.ok || !phone) return generic
   const brand = await getPublicPortalBrand(slug)
   if (!brand) return generic
-  const { data: client } = await supabaseAdmin.from('clients').select('id').eq('organization_id', brand.organization_id).eq('phone_e164', phone).maybeSingle()
+  let clientsQuery = supabaseAdmin.from('clients').select('id')
+    .eq('organization_id', brand.organization_id).eq('phone_e164', phone)
+  if (requestedClientId) clientsQuery = clientsQuery.eq('id', requestedClientId)
+  const { data: clients } = await clientsQuery.order('created_at', { ascending: true }).limit(2)
+  const client = selectPortalClient(clients || [], requestedClientId)
   if (!client) return generic
   const { data: recent } = await supabaseAdmin.from('client_portal_auth_challenges').select('created_at')
-    .eq('organization_id', brand.organization_id).eq('phone_e164', phone).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    .eq('organization_id', brand.organization_id).eq('client_id', client.id)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (recent && Date.now() - new Date(recent.created_at).valueOf() < 60_000) return generic
 
   const id = randomUUID()
@@ -265,8 +271,6 @@ export async function requestPortalPhoneChange(session: PortalSession, rawPhone:
   if (!phone) throw new Error('PHONE_INVALID')
   const limit = await rateLimit(`portal:phone-change:${session.organizationId}:${session.clientId}`, 5, 3600, { failOpen: false })
   if (!limit.ok) throw new Error('RATE_LIMITED')
-  const { data: conflict } = await supabaseAdmin.from('clients').select('id').eq('organization_id', session.organizationId).eq('phone_e164', phone).neq('id', session.clientId).maybeSingle()
-  if (conflict) throw new Error('PHONE_IN_USE')
   const id = randomUUID(), code = generatePortalCode()
   const { error } = await supabaseAdmin.from('phone_change_verifications').insert({ id, organization_id: session.organizationId,
     client_id: session.clientId, new_phone_e164: phone, code_hash: hashPortalCode(id, code), code_ciphertext: SecretsManager.encrypt(code),

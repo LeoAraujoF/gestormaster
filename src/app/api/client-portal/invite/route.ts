@@ -12,7 +12,10 @@ export async function POST(request: Request) {
   const state = await getPortalSettingsForManager(manager.organizationId)
   if (!state.entitled || !state.settings.enabled) return NextResponse.json({ error: 'Portal inativo' }, { status: 409 })
   try {
-    await invitePortalClient(manager.organizationId, String(body.clientId || ''), `${getTrustedAppUrl()}/portal/${state.settings.slug}`)
+    const clientId = String(body.clientId || '')
+    const inviteUrl = new URL(`/portal/${state.settings.slug}`, getTrustedAppUrl())
+    inviteUrl.searchParams.set('client', clientId)
+    await invitePortalClient(manager.organizationId, clientId, inviteUrl.toString())
     return NextResponse.json({ ok: true })
   } catch { return NextResponse.json({ error: 'Não foi possível enviar o convite' }, { status: 409 }) }
 }

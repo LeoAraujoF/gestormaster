@@ -242,15 +242,10 @@ export async function DELETE(request: Request) {
     }
 
     if (provider === 'tvdc_iptv') {
-      await supabase.from('iptv_accounts').delete().eq('user_id', user.id).eq('provider', provider);
-      await logAudit({
-        user_id: user.id,
-        action: 'integration.delete',
-        resource: 'integrations',
-        details: { provider: 'tvdc_iptv' },
-        ip_address: getIpFromRequest(request)
-      })
-      return NextResponse.json({ success: true })
+      return NextResponse.json(
+        { error: 'Use a área de Painéis e confirme a exclusão com o Cofre PIN.' },
+        { status: 409 }
+      )
     }
 
     const { error } = await supabase

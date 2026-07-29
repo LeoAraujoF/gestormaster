@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/dialog"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { PageHeader, PageShell } from "@/components/page-layout"
+import {
+  deleteProtectedResource,
+  fetchSecurityPinStatus,
+  SecurityPinApiError,
+  updateSecurityPin,
+} from "@/lib/security-pin-client"
 
 export default function ConfiguracoesPage() {
   const supabase = createClient()
@@ -34,6 +40,7 @@ export default function ConfiguracoesPage() {
   // PIN States
   const [newPin, setNewPin] = useState("")
   const [isSavingPin, setIsSavingPin] = useState(false)
+  const [pinLockedUntil, setPinLockedUntil] = useState<string | null>(null)
   
   // Export States
   const [isExporting, setIsExporting] = useState(false)
@@ -53,15 +60,21 @@ export default function ConfiguracoesPage() {
       if (user) {
         setUser(user)
         setUserPlan(user.user_metadata?.plan_name || "Desconhecido")
-        if (user.user_metadata?.security_pin) {
-          setHasPin(true)
-        }
         
+        try {
+          const pinStatus = await fetchSecurityPinStatus()
+          setHasPin(pinStatus.configured)
+          setPinLockedUntil(pinStatus.lockedUntil)
+        } catch {
+          setHasPin(false)
+          setPinLockedUntil(null)
+        }
+
         try {
           const res = await fetch('/api/admin/check')
           const adminData = await res.json()
           setIsAdmin(adminData.isAdmin)
-        } catch (e) {
+        } catch {
           setIsAdmin(false)
         }
       }
@@ -74,15 +87,13 @@ export default function ConfiguracoesPage() {
     if (newPin.length !== 4) return toast.error("O PIN deve ter 4 dígitos.")
     setIsSavingPin(true)
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { security_pin: newPin }
-      })
-      if (error) throw error
+      await updateSecurityPin(newPin)
       toast.success("PIN de segurança configurado com sucesso!")
       setHasPin(true)
+      setPinLockedUntil(null)
       setNewPin("")
-    } catch (e: any) {
-      toast.error("Erro ao salvar PIN.")
+    } catch (error) {
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao salvar PIN.")
     } finally {
       setIsSavingPin(false)
     }
@@ -222,20 +233,20 @@ export default function ConfiguracoesPage() {
 
   const handleDeleteAll = async () => {
     if (dangerPin.length !== 4) return toast.error("Digite os 4 dígitos do PIN.")
-    if (dangerPin !== user.user_metadata?.security_pin) return toast.error("PIN incorreto! Acesso negado.")
 
     setIsDeletingAll(true)
     try {
-      // RLS only allows deleting own clients
-      const { error } = await supabase.from('clients').delete().eq('user_id', user.id)
-      if (error) throw error
-      logAuditClient({ action: 'config.delete_all_clients', resource: 'clients' })
+      await deleteProtectedResource({ resource: 'clients', scope: 'all', pin: dangerPin })
 
       toast.success("Banco de dados completamente zerado.")
       setIsDangerDialogOpen(false)
       setDangerPin("")
-    } catch (e: any) {
-      toast.error("Erro ao limpar banco de dados.")
+    } catch (error) {
+      setDangerPin("")
+      if (error instanceof SecurityPinApiError && error.lockedUntil) {
+        setPinLockedUntil(error.lockedUntil)
+      }
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao limpar banco de dados.")
     } finally {
       setIsDeletingAll(false)
     }
@@ -245,9 +256,11 @@ export default function ConfiguracoesPage() {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
   }
 
+  const isPinLocked = Boolean(pinLockedUntil)
+
   return (
     <PageShell width="default" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <PageHeader eyebrow="Segurança e portabilidade" title="Configurações e dados" description="Proteja ações sensíveis e controle backups, importações e exclusões." badge={hasPin ? "PIN configurado" : "PIN pendente"} />
+      <PageHeader eyebrow="Segurança e portabilidade" title="Configurações e dados" description="Proteja ações sensíveis e controle backups, importações e exclusões." badge={isPinLocked ? "PIN bloqueado" : hasPin ? "PIN configurado" : "PIN pendente"} />
 
       {!hasPin ? (
         <Card className="border-amber-500/20">
@@ -347,6 +360,11 @@ export default function ConfiguracoesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {isPinLocked && (
+                  <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">
+                    O PIN foi bloqueado após três erros. Aguarde 15 minutos para excluir novamente.
+                  </p>
+                )}
                 <Button variant="destructive" onClick={() => setIsDangerDialogOpen(true)}>
                   Apagar Todos os Clientes
                 </Button>
@@ -382,7 +400,7 @@ export default function ConfiguracoesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDangerDialogOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDeleteAll} disabled={dangerPin.length !== 4 || isDeletingAll}>
+            <Button variant="destructive" onClick={handleDeleteAll} disabled={isPinLocked || dangerPin.length !== 4 || isDeletingAll}>
               {isDeletingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Deletar Permanentemente
             </Button>

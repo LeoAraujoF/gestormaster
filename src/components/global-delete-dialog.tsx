@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { logAuditClient } from "@/lib/audit-client"
+import {
+  deleteProtectedResource,
+  fetchSecurityPinStatus,
+  SecurityPinApiError,
+} from "@/lib/security-pin-client"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -15,7 +18,7 @@ interface GlobalDeleteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   item: { id: string; name: string } | null
-  table: 'clients' | 'services' | 'promotions' | 'automations' | 'users' | 'iptv_accounts' // add more as needed
+  table: 'clients' | 'services' | 'promotions' | 'iptv_accounts'
   title?: string
   description?: string
   onSuccess: () => void
@@ -32,46 +35,60 @@ export function GlobalDeleteDialog({
 }: GlobalDeleteDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasPin, setHasPin] = useState(false)
-  const [savedPin, setSavedPin] = useState("")
+  const [isCheckingPin, setIsCheckingPin] = useState(false)
+  const [pinUnavailable, setPinUnavailable] = useState(false)
+  const [pinLockedUntil, setPinLockedUntil] = useState<string | null>(null)
   const [pinInput, setPinInput] = useState("")
-  const supabase = createClient()
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    let active = true
+    void Promise.resolve().then(async () => {
+      if (!active) return
       setPinInput("")
-      const checkPin = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && user.user_metadata?.security_pin) {
-          setHasPin(true)
-          setSavedPin(user.user_metadata.security_pin)
-        } else {
-          setHasPin(false)
+      setPinUnavailable(false)
+      setPinLockedUntil(null)
+      setIsCheckingPin(true)
+      try {
+        const status = await fetchSecurityPinStatus()
+        if (active) {
+          setHasPin(status.configured)
+          setPinLockedUntil(status.lockedUntil)
         }
+      } catch {
+        if (active) {
+          setHasPin(false)
+          setPinUnavailable(true)
+        }
+      } finally {
+        if (active) setIsCheckingPin(false)
       }
-      checkPin()
-    }
-  }, [open, supabase.auth])
+    })
+    return () => { active = false }
+  }, [open])
 
   const handleDelete = async () => {
     if (!item) return
-    if (hasPin && pinInput !== savedPin) {
-      return toast.error("PIN de segurança incorreto.")
-    }
+    if (!hasPin) return toast.error("Configure o Cofre PIN em Minha Conta antes de excluir registros.")
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.from(table).delete().eq('id', item.id)
-      if (error) throw error
+      await deleteProtectedResource({ resource: table, ids: [item.id], pin: pinInput })
       toast.success("Registro excluído com sucesso!")
-      logAuditClient({ action: 'resource.delete', resource: table, details: { item_name: item.name || item.id } })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error("Erro ao excluir registro.")
+      setPinInput("")
+      if (error instanceof SecurityPinApiError && error.lockedUntil) {
+        setPinLockedUntil(error.lockedUntil)
+      }
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao excluir registro.")
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  const isPinLocked = Boolean(pinLockedUntil)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,7 +103,27 @@ export function GlobalDeleteDialog({
           <p className="font-semibold text-danger">{item?.name}</p>
         </div>
 
-        {hasPin && (
+        {isCheckingPin && (
+          <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Verificando proteção...
+          </div>
+        )}
+
+        {!isCheckingPin && !hasPin && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+            {pinUnavailable
+              ? "Não foi possível consultar o Cofre PIN. Tente novamente."
+              : "Configure o Cofre PIN em Minha Conta para autorizar exclusões."}
+          </div>
+        )}
+
+        {!isCheckingPin && hasPin && isPinLocked && (
+          <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-700 dark:text-red-300">
+            PIN bloqueado após três erros. Tente novamente em 15 minutos.
+          </div>
+        )}
+
+        {!isCheckingPin && hasPin && !isPinLocked && (
           <div className="flex flex-col items-center gap-2.5 py-1">
             <Label className="microlabel">PIN do cofre</Label>
             <InputOTP maxLength={4} value={pinInput} onChange={setPinInput}>
@@ -111,7 +148,7 @@ export function GlobalDeleteDialog({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={isSubmitting || (hasPin && pinInput.length !== 4)}
+            disabled={isSubmitting || isCheckingPin || !hasPin || isPinLocked || pinInput.length !== 4}
             className="disabled:bg-[#f0d3d3] disabled:text-white disabled:opacity-100 dark:disabled:bg-danger/30 sm:flex-[1.4]"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Excluir

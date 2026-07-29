@@ -15,6 +15,11 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { PageHeader, PageShell } from "@/components/page-layout"
+import {
+  fetchSecurityPinStatus,
+  SecurityPinApiError,
+  updateSecurityPin,
+} from "@/lib/security-pin-client"
 
 // Abas internas (5f): texto 11.5px, ativa com borda inferior 2px tinta
 const SECTIONS = [
@@ -60,12 +65,11 @@ export default function MinhaContaPage() {
 
   // States - PIN
   const [hasPin, setHasPin] = useState(false)
-  const [savedPin, setSavedPin] = useState("")
   const [oldPin, setOldPin] = useState("")
   const [newPin, setNewPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
   const [isSavingPin, setIsSavingPin] = useState(false)
-  const [pinLockout, setPinLockout] = useState(true)
+  const [pinLockedUntil, setPinLockedUntil] = useState<string | null>(null)
 
   // States - Company Profile
   const [companyName, setCompanyName] = useState("")
@@ -84,10 +88,6 @@ export default function MinhaContaPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       setUserEmail(user.email || "")
-      if (user.user_metadata?.security_pin) {
-        setHasPin(true)
-        setSavedPin(user.user_metadata.security_pin)
-      }
 
       if (user.user_metadata) {
         setCompanyName(user.user_metadata.company_name || "")
@@ -97,7 +97,15 @@ export default function MinhaContaPage() {
         setPixBank(user.user_metadata.pix_bank || "")
         setWhatsappChannelLink(user.user_metadata.whatsapp_channel_link || "")
         setTimezone(user.user_metadata.timezone || "-03:00")
-        setPinLockout(user.user_metadata.security_pin_lockout !== false)
+      }
+
+      try {
+        const pinStatus = await fetchSecurityPinStatus()
+        setHasPin(pinStatus.configured)
+        setPinLockedUntil(pinStatus.lockedUntil)
+      } catch {
+        setHasPin(false)
+        setPinLockedUntil(null)
       }
 
       // Plano, limites e consumo vêm do entitlement oficial da organização.
@@ -171,36 +179,26 @@ export default function MinhaContaPage() {
 
   // Handlers - PIN
   const handleSavePin = async () => {
-    if (hasPin && oldPin !== savedPin) return toast.error("O PIN atual está incorreto.")
     if (!/^\d{4}$/.test(newPin)) return toast.error("O novo PIN deve ter exatos 4 dígitos numéricos.")
     if (newPin !== confirmPin) return toast.error("Os PINs não coincidem.")
 
     setIsSavingPin(true)
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { security_pin: newPin }
-      })
-      if (error) throw error
+      await updateSecurityPin(newPin, hasPin ? oldPin : undefined)
 
       toast.success(hasPin ? "PIN atualizado com sucesso!" : "PIN de segurança configurado com sucesso!")
       setHasPin(true)
-      setSavedPin(newPin)
+      setPinLockedUntil(null)
       setOldPin("")
       setNewPin("")
       setConfirmPin("")
-    } catch {
-      toast.error("Erro ao salvar o PIN de segurança.")
+    } catch (error) {
+      if (error instanceof SecurityPinApiError && error.lockedUntil) {
+        setPinLockedUntil(error.lockedUntil)
+      }
+      toast.error(error instanceof SecurityPinApiError ? error.message : "Erro ao salvar o PIN de segurança.")
     } finally {
       setIsSavingPin(false)
-    }
-  }
-
-  const handleToggleLockout = async (checked: boolean) => {
-    setPinLockout(checked)
-    const { error } = await supabase.auth.updateUser({ data: { security_pin_lockout: checked } })
-    if (error) {
-      setPinLockout(!checked)
-      toast.error("Erro ao salvar a preferência.")
     }
   }
 
@@ -279,6 +277,7 @@ export default function MinhaContaPage() {
   const effectiveClientsLimit = isAdmin ? null : clientsLimit
   const instancesPercentage = instancesLimit === null ? 0 : Math.min((instancesCount / Math.max(instancesLimit, 1)) * 100, 100)
   const clientsPercentage = effectiveClientsLimit === null ? 0 : Math.min((clientsCount / Math.max(effectiveClientsLimit, 1)) * 100, 100)
+  const isPinLocked = Boolean(pinLockedUntil)
 
   const inputHint = (v: string) => (
     <p className="num text-[10px] text-muted-foreground">{v}</p>
@@ -564,18 +563,25 @@ export default function MinhaContaPage() {
           <div className="px-5 py-4">
             <div className="flex items-center gap-2">
               <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Cofre PIN</h2>
-              {hasPin ? (
+              {isPinLocked ? (
+                <span className="num rounded bg-danger-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-danger-fg">BLOQUEADO</span>
+              ) : hasPin ? (
                 <span className="num rounded bg-success-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-success-fg">ATIVO</span>
               ) : (
                 <span className="num rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-secondary-foreground">INATIVO</span>
               )}
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Protege ações irreversíveis: exclusões, dados de pagamento e desconexão do WhatsApp.
+              Autoriza exclusões irreversíveis sem expor o PIN na sessão ou no navegador.
             </p>
           </div>
           <div className="space-y-3 px-5 pb-4">
             <p className="text-[11.5px] font-medium">{hasPin ? "Alterar PIN" : "Criar PIN"}</p>
+            {isPinLocked && (
+              <p className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2 text-[11px] text-danger-fg">
+                O PIN foi bloqueado após três erros. Aguarde 15 minutos para tentar novamente.
+              </p>
+            )}
             {hasPin && (
               <Input
                 type="password"
@@ -609,7 +615,7 @@ export default function MinhaContaPage() {
               <Button
                 size="sm"
                 onClick={handleSavePin}
-                disabled={(hasPin && oldPin.length !== 4) || newPin.length !== 4 || confirmPin.length !== 4 || isSavingPin}
+                disabled={isPinLocked || (hasPin && oldPin.length !== 4) || newPin.length !== 4 || confirmPin.length !== 4 || isSavingPin}
                 className="h-8 px-4 text-xs"
               >
                 {isSavingPin && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
@@ -621,8 +627,8 @@ export default function MinhaContaPage() {
             </div>
           </div>
           <div className="flex items-center justify-between border-t border-border px-5 py-3">
-            <span className="text-[11.5px] text-muted-foreground">Bloquear após 3 tentativas erradas</span>
-            <Switch checked={pinLockout} onCheckedChange={handleToggleLockout} />
+            <span className="text-[11.5px] text-muted-foreground">Bloqueio obrigatório após 3 erros</span>
+            <span className="rounded bg-success-bg px-2 py-1 text-[10px] font-semibold text-success-fg">15 MIN</span>
           </div>
         </div>
       )}

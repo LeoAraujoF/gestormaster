@@ -182,6 +182,14 @@ export default function DashboardPage() {
     return `${service}${telas}`
   }
 
+  const clientInitials = (name: string) => name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
   const pickRule = (diff: number) => {
     const type = diff < 0 ? "after_due" : diff === 0 ? "on_due" : "before_due"
     return automations.find((a) => a.alert_type === type) || automations[0]
@@ -302,8 +310,8 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
-      <section className="animate-in fade-in slide-in-from-bottom-2 overflow-hidden rounded-2xl border border-border bg-card shadow-sm duration-500" aria-labelledby="dashboard-title">
-        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+      <section className="animate-in fade-in slide-in-from-bottom-2 overflow-hidden rounded-[28px] border border-border bg-card shadow-sm duration-500" aria-labelledby="dashboard-title">
+        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex size-9 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
@@ -334,27 +342,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid border-t border-border sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
           <HeroSignal
             icon={CircleDollarSign}
             label="Arrecadado hoje"
             value={hasAdvancedFinance ? displayValue(formatCurrency(todayConfirmed)) : "—"}
             hint={hasAdvancedFinance ? "Pagamentos confirmados hoje" : "Disponível na visão avançada"}
-            tone="success"
+            tone="blue"
           />
           <HeroSignal
             icon={WalletCards}
             label="Recebido neste mês"
             value={displayValue(formatCurrency(basicPayments.total))}
             hint={`${basicPayments.count} pagamentos neste mês`}
-            tone="success"
+            tone="green"
           />
           <HeroSignal
             icon={CircleAlert}
             label="Exige atenção agora"
             value={displayValue(formatCurrency(overdueTotal))}
             hint={`${vencidos.length} cliente${vencidos.length === 1 ? "" : "s"} vencido${vencidos.length === 1 ? "" : "s"}`}
-            tone={vencidos.length > 0 ? "danger" : "success"}
+            tone={vencidos.length > 0 ? "danger" : "green"}
             onClick={vencidos.length > 0 ? revealRiskClients : undefined}
             actionLabel="Ver clientes vencidos em exige atenção agora"
           />
@@ -391,7 +399,7 @@ export default function DashboardPage() {
           </div>
         ) : null}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.65fr)]">
-          <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
             <div className="overflow-x-auto border-b border-border p-2">
               <div className="flex min-w-max items-center gap-1 rounded-xl bg-muted p-1 sm:min-w-0 sm:w-fit">
                 {segments.map((s) => (
@@ -431,8 +439,9 @@ export default function DashboardPage() {
                     className="group flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-muted/70 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl", client.diffDays < 0 ? "bg-danger-bg text-danger-fg" : client.diffDays === 0 ? "bg-warning-bg text-warning-fg" : "bg-secondary text-secondary-foreground")}>
-                        <span className={cn("status-dot", dotColor(client.diffDays))} />
+                      <span className={cn("relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", client.diffDays < 0 ? "bg-danger-bg text-danger-fg" : client.diffDays === 0 ? "bg-warning-bg text-warning-fg" : "bg-interactive-bg text-interactive-fg")}>
+                        {clientInitials(client.name)}
+                        <span className={cn("absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card", dotColor(client.diffDays))} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-semibold leading-tight text-foreground">{client.name}</p>
@@ -476,7 +485,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <aside className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
             <p className="microlabel">Ações rápidas</p>
             <h3 className="mt-1 text-sm font-semibold text-foreground">Continue a operação</h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Atalhos para as tarefas mais frequentes do dia.</p>
@@ -581,19 +590,27 @@ function HeroSignal({ icon: Icon, label, value, hint, tone, onClick, actionLabel
   label: string
   value: ReactNode
   hint: string
-  tone: "success" | "danger" | "warning"
+  tone: "blue" | "green" | "danger" | "warning"
   onClick?: () => void
   actionLabel?: string
 }) {
   const toneClasses = {
-    success: "bg-success-bg text-success-fg",
+    blue: "bg-card/70 text-interactive-fg",
+    green: "bg-card/70 text-success-fg",
     danger: "bg-danger-bg text-danger-fg",
     warning: "bg-warning-bg text-warning-fg",
   }
   const valueClasses = {
-    success: "text-money",
+    blue: "text-interactive-fg",
+    green: "text-money",
     danger: "text-danger",
     warning: "text-warning-fg",
+  }
+  const surfaceClasses = {
+    blue: "border-interactive/20 bg-interactive-bg/70",
+    green: "border-success-border bg-success-bg/70",
+    danger: "border-danger-border bg-danger-bg/70",
+    warning: "border-warning-border bg-warning-bg/70",
   }
 
   const content = (
@@ -610,7 +627,10 @@ function HeroSignal({ icon: Icon, label, value, hint, tone, onClick, actionLabel
     </>
   )
 
-  const className = "group flex min-w-0 items-center gap-3 border-b border-border p-4 text-left last:border-b-0 transition-colors sm:px-5 xl:border-b-0 xl:border-r xl:last:border-r-0"
+  const className = cn(
+    "group flex min-h-[112px] min-w-0 items-center gap-3 rounded-2xl border p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.03)] transition-all hover:-translate-y-0.5 hover:shadow-sm sm:px-5",
+    surfaceClasses[tone]
+  )
 
   if (onClick) {
     return <button type="button" onClick={onClick} aria-label={actionLabel || label} className={cn(className, "hover:bg-muted/70")}>{content}</button>

@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo, type ReactNode } from "react"
+import { useSearchParams } from "next/navigation"
+import { differenceInCalendarDays, subDays } from "date-fns"
 import { createClient } from "@/lib/supabase/client"
-import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { FileSpreadsheet, FileText, Loader2 } from "lucide-react"
 import { formatCurrency, cn } from "@/lib/utils"
 import type { DashboardMetrics, ClientsByService, PixCharge, PixChargeMetrics } from "@/types/database"
 import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
@@ -11,7 +13,6 @@ import { FixedCostsSection } from "@/components/fixed-costs-section"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts"
 import { ExecutiveDashboardView } from "@/components/executive-dashboard-view"
@@ -20,26 +21,22 @@ import { useOrganization } from "@/components/providers/organization-provider"
 import { PageHeader, PageSection, PageShell, ResponsiveDataView } from "@/components/page-layout"
 import { toast } from "sonner"
 import { FinancialPlanningOverview } from "./financial-planning-overview"
-
-type Period = "hoje" | "mes" | "ano" | "custom"
-type DateRange = { from: string; to: string }
-
-type ReportPayment = {
-  id: string
-  amount_paid: number
-  net_profit?: number | null
-  created_at: string
-  clients?: { name: string } | null
-}
+import { FinancialReportCharts } from "./financial-report-charts"
+import { FinancialReportFilters, currentMonthFinancialReportFilters } from "./financial-report-filters"
+import { financialReportFiltersSchema } from "./financial-report-schema"
+import { FinancialReportsTable } from "./financial-reports-table"
+import { exportFinancialReportToExcel, exportFinancialReportToPdf } from "./financial-report-exports"
+import {
+  filterFinancialReportPayments,
+  financialReportPaymentMethods,
+  financialReportServiceOptions,
+  summarizeFinancialReport,
+  summarizeFinancialReportClients,
+  type FinancialReportFilters as FinancialReportFiltersValue,
+  type FinancialReportPayment,
+} from "./financial-report-types"
 
 type AnnualCashflowItem = { name: string; Receita: number; Lucro: number }
-
-function toDateInputValue(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
 
 function dateFromInput(value: string, endOfDay = false) {
   const [year, month, day] = value.split("-").map(Number)
@@ -53,6 +50,21 @@ function formatInputDate(value: string) {
   return dateFromInput(value).toLocaleDateString("pt-BR")
 }
 
+function filtersFromSearchParams(searchParams: URLSearchParams): FinancialReportFiltersValue {
+  const defaults = currentMonthFinancialReportFilters()
+  const candidate = {
+    from: searchParams.get("from") || defaults.from,
+    to: searchParams.get("to") || defaults.to,
+    shortcut: searchParams.get("period") || defaults.shortcut,
+    status: searchParams.get("status") || defaults.status,
+    paymentMethod: searchParams.get("payment") || defaults.paymentMethod,
+    service: searchParams.get("service") || defaults.service,
+    search: searchParams.get("search") || defaults.search,
+  }
+  const parsed = financialReportFiltersSchema.safeParse(candidate)
+  return parsed.success ? parsed.data : defaults
+}
+
 const pixStatusLabels: Record<PixCharge["status"], string> = {
   paid: "Pago",
   pending: "Pendente",
@@ -62,6 +74,7 @@ const pixStatusLabels: Record<PixCharge["status"], string> = {
 }
 
 export default function FinanceiroPage() {
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [upcoming7d, setUpcoming7d] = useState<{ count: number; total: number }>({ count: 0, total: 0 })
@@ -75,27 +88,12 @@ export default function FinanceiroPage() {
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [hasFinancialError, setHasFinancialError] = useState(false)
 
-  const [period, setPeriod] = useState<Period>("mes")
-  const [customRangeDraft, setCustomRangeDraft] = useState<DateRange>(() => {
-    const today = new Date()
-    return {
-      from: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
-      to: toDateInputValue(today),
-    }
-  })
-  const [appliedCustomRange, setAppliedCustomRange] = useState<DateRange>(() => {
-    const today = new Date()
-    return {
-      from: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
-      to: toDateInputValue(today),
-    }
-  })
-  const [customRangeError, setCustomRangeError] = useState("")
-  const [reportPayments, setReportPayments] = useState<ReportPayment[]>([])
+  const [reportFilters, setReportFilters] = useState<FinancialReportFiltersValue>(() => filtersFromSearchParams(searchParams))
+  const [reportPayments, setReportPayments] = useState<FinancialReportPayment[]>([])
+  const [previousReportPayments, setPreviousReportPayments] = useState<FinancialReportPayment[]>([])
   const [isReportLoading, setIsReportLoading] = useState(false)
   const [hasReportError, setHasReportError] = useState(false)
-  const [paymentPage, setPaymentPage] = useState(1)
-  const [paymentPageSize, setPaymentPageSize] = useState(10)
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null)
   const [pixMetrics, setPixMetrics] = useState<PixChargeMetrics | null>(null)
   const [pixCharges, setPixCharges] = useState<PixCharge[]>([])
   const [pixMigrationRequired, setPixMigrationRequired] = useState(false)
@@ -263,44 +261,41 @@ export default function FinanceiroPage() {
   }, [supabase, executivePeriod, hasAdvancedFinance])
 
   // Período segmentado → intervalo de datas
-  const periodRange = useCallback((p: Period, customRange?: DateRange) => {
-    const now = new Date()
-    const start = new Date(now)
-    if (p === "hoje") start.setHours(0, 0, 0, 0)
-    else if (p === "mes") { start.setDate(1); start.setHours(0, 0, 0, 0) }
-    else if (p === "ano") { start.setMonth(0, 1); start.setHours(0, 0, 0, 0) }
-    else if (customRange) {
-      return {
-        start: dateFromInput(customRange.from),
-        end: dateFromInput(customRange.to, true),
-      }
-    }
-    return { start, end: now }
-  }, [])
-
-  const loadReport = useCallback(async (p: Period, customRange?: DateRange) => {
+  const loadReport = useCallback(async (
+    from: FinancialReportFiltersValue["from"],
+    to: FinancialReportFiltersValue["to"],
+    shortcut: FinancialReportFiltersValue["shortcut"],
+  ) => {
     setIsReportLoading(true)
     setHasReportError(false)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { start, end } = periodRange(p, customRange)
+      const start = dateFromInput(from)
+      const end = dateFromInput(to, true)
+      const periodDays = differenceInCalendarDays(dateFromInput(to), start) + 1
+      const previousEnd = subDays(start, 1)
+      previousEnd.setHours(23, 59, 59, 999)
+      const previousStart = subDays(previousEnd, periodDays - 1)
+      previousStart.setHours(0, 0, 0, 0)
       const { data, error } = await supabase
         .from('payments')
         .select(hasAdvancedFinance
-          ? `id, amount_paid, net_profit, created_at, clients(name)`
-          : `id, amount_paid, created_at, clients(name)`)
+          ? `id, client_id, amount_paid, net_profit, payment_method, paid_at, created_at, clients(id, name, status, created_at, client_services(services(id, name)))`
+          : `id, client_id, amount_paid, payment_method, paid_at, created_at, clients(id, name, status, created_at, client_services(services(id, name)))`)
         .eq('user_id', user.id)
-        .gte('created_at', start.toISOString())
+        .gte('created_at', previousStart.toISOString())
         .lte('created_at', end.toISOString())
         .order('created_at', { ascending: false })
       if (error) {
         setHasReportError(true)
       } else if (data) {
-        const payments = data as unknown as ReportPayment[]
+        const allPayments = data as unknown as FinancialReportPayment[]
+        const payments = allPayments.filter((payment) => new Date(payment.created_at) >= start)
+        const previousPayments = allPayments.filter((payment) => new Date(payment.created_at) < start)
         setReportPayments(payments)
-        setPaymentPage(1)
-        if (p === "mes") {
+        setPreviousReportPayments(previousPayments)
+        if (shortcut === "month") {
           setMonthlyReceived(payments.reduce((total, payment) => total + Number(payment.amount_paid || 0), 0))
         }
       }
@@ -310,45 +305,79 @@ export default function FinanceiroPage() {
     } finally {
       setIsReportLoading(false)
     }
-  }, [supabase, periodRange, hasAdvancedFinance])
+  }, [supabase, hasAdvancedFinance])
 
   useEffect(() => {
-    // A troca de período inicia uma nova leitura dos pagamentos persistidos.
+    // O período aplicado inicia uma nova leitura dos pagamentos persistidos.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadReport(period, period === "custom" ? appliedCustomRange : undefined)
-  }, [period, appliedCustomRange, loadReport])
+    loadReport(reportFilters.from, reportFilters.to, reportFilters.shortcut)
+  }, [reportFilters.from, reportFilters.to, reportFilters.shortcut, loadReport])
 
-  const applyCustomRange = () => {
-    if (!customRangeDraft.from || !customRangeDraft.to) {
-      setCustomRangeError("Informe as duas datas do período.")
-      return
-    }
-    if (customRangeDraft.from > customRangeDraft.to) {
-      setCustomRangeError("A data inicial deve ser anterior à data final.")
-      return
-    }
-
-    setCustomRangeError("")
-    setPeriod("custom")
-    setAppliedCustomRange({ ...customRangeDraft })
+  const applyReportFilters = (filters: FinancialReportFiltersValue) => {
+    setReportFilters(filters)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("from", filters.from)
+    params.set("to", filters.to)
+    params.set("period", filters.shortcut)
+    if (filters.status === "all") params.delete("status")
+    else params.set("status", filters.status)
+    if (filters.paymentMethod === "all") params.delete("payment")
+    else params.set("payment", filters.paymentMethod)
+    if (filters.service === "all") params.delete("service")
+    else params.set("service", filters.service)
+    if (filters.search) params.set("search", filters.search)
+    else params.delete("search")
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`)
   }
 
+  const clearReportFilters = () => applyReportFilters(currentMonthFinancialReportFilters())
+
   // --- Derivados do período ---
-  const reportRevenue = reportPayments.reduce((acc, p) => acc + Number(p.amount_paid || 0), 0)
-  const reportNetProfit = reportPayments.reduce((acc, p) => acc + Number(p.net_profit || 0), 0)
-  const reportCosts = reportRevenue - reportNetProfit
-  const paymentPageCount = Math.max(1, Math.ceil(reportPayments.length / paymentPageSize))
-  const currentPaymentPage = Math.min(paymentPage, paymentPageCount)
-  const paymentPageStart = (currentPaymentPage - 1) * paymentPageSize
-  const paginatedPayments = reportPayments.slice(paymentPageStart, paymentPageStart + paymentPageSize)
+  const filteredReportPayments = useMemo(
+    () => filterFinancialReportPayments(reportPayments, reportFilters),
+    [reportPayments, reportFilters],
+  )
+  const reportSummary = useMemo(
+    () => summarizeFinancialReport(filteredReportPayments),
+    [filteredReportPayments],
+  )
+  const reportClientSummary = useMemo(
+    () => summarizeFinancialReportClients(filteredReportPayments, reportFilters),
+    [filteredReportPayments, reportFilters],
+  )
+  const filteredPreviousReportPayments = useMemo(
+    () => filterFinancialReportPayments(previousReportPayments, reportFilters),
+    [previousReportPayments, reportFilters],
+  )
+  const previousReportSummary = useMemo(
+    () => summarizeFinancialReport(filteredPreviousReportPayments),
+    [filteredPreviousReportPayments],
+  )
+  const reportServiceOptions = useMemo(
+    () => financialReportServiceOptions(reportPayments),
+    [reportPayments],
+  )
+  const reportPaymentMethods = useMemo(
+    () => financialReportPaymentMethods(reportPayments),
+    [reportPayments],
+  )
+  const reportRevenue = reportSummary.revenue
+  const reportNetProfit = reportSummary.netProfit
+  const reportCosts = reportSummary.costs
+  const reportRevenueGrowth = previousReportSummary.revenue > 0
+    ? ((reportRevenue - previousReportSummary.revenue) / previousReportSummary.revenue) * 100
+    : null
+  const reportRevenueGrowthLabel = reportRevenueGrowth === null
+    ? "—"
+    : `${reportRevenueGrowth > 0 ? "+" : ""}${reportRevenueGrowth.toFixed(1)}%`
 
   // Lucro por dia (empilhado: líquido em verde + resto do bruto em cinza)
   const dailyData = (() => {
     const byKey: Record<string, { label: string; liquido: number; resto: number; order: number }> = {}
-    for (const p of reportPayments) {
-      const d = new Date(p.created_at)
-      const key = period === "ano" ? `${d.getFullYear()}-${d.getMonth()}` : d.toDateString()
-      const label = period === "ano"
+    for (const p of filteredReportPayments) {
+      const d = new Date(p.paid_at || p.created_at)
+      const key = reportFilters.shortcut === "year" ? `${d.getFullYear()}-${d.getMonth()}` : d.toDateString()
+      const label = reportFilters.shortcut === "year"
         ? d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase()
         : `${d.getDate()} ${d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase()}`
       if (!byKey[key]) byKey[key] = { label, liquido: 0, resto: 0, order: d.getTime() }
@@ -358,40 +387,39 @@ export default function FinanceiroPage() {
     return Object.values(byKey).sort((a, b) => a.order - b.order)
   })()
 
-  const exportCSV = () => {
-    if (reportPayments.length === 0) return
-    const headers = ["Data", "Cliente", "Tipo", "Recebido", "Lucro Liquido"]
-    const rows = reportPayments.map((p) => {
-      const date = new Date(p.created_at)
-      return [
-        `"${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}"`,
-        `"${p.clients?.name || 'Desconhecido'}"`,
-        `"${p.amount_paid === 0 ? 'Promoção' : 'Pagamento'}"`,
-        p.amount_paid,
-        p.net_profit ?? 0,
-      ].join(",")
-    })
-    const csvContent = "data:text/csv;charset=utf-8,﻿" + [headers.join(","), ...rows].join("\n")
-    const link = document.createElement("a")
-    link.setAttribute("href", encodeURI(csvContent))
-    link.setAttribute("download", `relatorio_financeiro.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
   const monthName = new Date().toLocaleDateString("pt-BR", { month: "long" }).replace(/^./, (c) => c.toUpperCase())
   const nextMonthName = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
     .toLocaleDateString("pt-BR", { month: "long" })
     .replace(/^./, (character) => character.toUpperCase())
   const year = new Date().getFullYear().toString()
-  const reportPeriodLabel = period === "hoje"
-    ? "Hoje"
-    : period === "mes"
-      ? monthName
-      : period === "ano"
-        ? year
-        : `${formatInputDate(appliedCustomRange.from)} a ${formatInputDate(appliedCustomRange.to)}`
+  const reportPeriodLabel = reportFilters.shortcut === "today"
+    ? `Hoje, ${formatInputDate(reportFilters.from)}`
+    : `${formatInputDate(reportFilters.from)} a ${formatInputDate(reportFilters.to)}`
+  const selectedServiceLabel = reportFilters.service === "all"
+    ? "Todos"
+    : reportServiceOptions.find((service) => service.id === reportFilters.service)?.name || "Serviço não encontrado"
+
+  const exportReport = async (format: "pdf" | "excel") => {
+    if (filteredReportPayments.length === 0 || exportingFormat) return
+    setExportingFormat(format)
+    try {
+      const context = {
+        filters: reportFilters,
+        periodLabel: reportPeriodLabel,
+        serviceLabel: selectedServiceLabel,
+        summary: reportSummary,
+        payments: filteredReportPayments,
+      }
+      if (format === "pdf") await exportFinancialReportToPdf(context)
+      else await exportFinancialReportToExcel(context)
+      toast.success(`Relatório ${format === "pdf" ? "PDF" : "Excel"} gerado com sucesso.`)
+    } catch (error) {
+      console.error("Error exporting financial report", error)
+      toast.error("Não foi possível gerar o relatório agora.")
+    } finally {
+      setExportingFormat(null)
+    }
+  }
 
   const COLORS = ['var(--money)', 'var(--interactive)', 'var(--warning)', 'var(--danger)', 'var(--muted-foreground)', 'var(--secondary-foreground)']
   const nextMonthPotential = metrics ? Number(metrics.monthly_revenue || 0) : null
@@ -419,8 +447,10 @@ export default function FinanceiroPage() {
   return (
     <PageShell>
       <PageHeader
+        eyebrow="Visão financeira"
         title="Financeiro"
         description="Planeje a receita, acompanhe riscos e confira cada entrada sem perder o contexto."
+        className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6 lg:p-7"
       />
 
       {hasFinancialError ? (
@@ -448,7 +478,7 @@ export default function FinanceiroPage() {
 
       {executive && <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} compact />}
       {upgradeRequired && !hasAdvancedFinance && (
-        <div className="flex flex-col gap-3 rounded-lg border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-2xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-xs font-semibold text-interactive-fg">Visão financeira básica ativa</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Previsões por ciclo, risco e comparativos históricos estão disponíveis no Pro.</p>
@@ -458,24 +488,24 @@ export default function FinanceiroPage() {
       )}
 
       {pixMetrics && (
-        <div className="grid grid-cols-1 divide-y divide-border rounded-xl border border-border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="p-4">
+        <div className="grid gap-3 rounded-[24px] border border-border bg-muted/30 p-3 shadow-sm sm:grid-cols-3">
+          <div className="rounded-2xl border border-warning-border bg-warning-bg/65 p-4">
             <p className="microlabel">PIX pendentes</p>
             <p className="num mt-1 text-[18px] font-semibold text-warning-fg">
               {displayValue(formatCurrency(pixMetrics.pending_amount))}
             </p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.pending_count} em aberto</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-2xl border border-success-border bg-success-bg/65 p-4">
             <p className="microlabel">PIX pagos hoje</p>
             <p className="num mt-1 text-[18px] font-semibold text-money">
               {displayValue(formatCurrency(pixMetrics.paid_today_amount))}
             </p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_today_count} confirmações</p>
           </div>
-          <div className="p-4">
+          <div className="rounded-2xl border border-interactive/20 bg-interactive-bg/65 p-4">
             <p className="microlabel">PIX no mês</p>
-            <p className="num mt-1 text-[18px] font-semibold text-foreground">
+            <p className="num mt-1 text-[18px] font-semibold text-interactive-fg">
               {displayValue(formatCurrency(pixMetrics.paid_month_amount))}
             </p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_month_count} pagos</p>
@@ -490,7 +520,7 @@ export default function FinanceiroPage() {
       )}
 
       {pixCharges.length > 0 && (
-        <div className="rounded-lg border border-border bg-card">
+        <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-[13px] font-semibold">Histórico de cobranças PIX</p>
             <span className="text-[10px] text-muted-foreground">últimas {pixCharges.length}</span>
@@ -586,95 +616,79 @@ export default function FinanceiroPage() {
       )}
 
       <PageSection
-        title="Movimento do período"
-        description="Filtre por hoje, mês, ano ou escolha um intervalo entre duas datas."
+        title="Dashboard e relatórios"
+        description="Filtre os dados reais, analise o período e exporte todos os registros encontrados."
         actions={
           <>
-            <div className="flex items-center gap-0.5 rounded-lg bg-secondary p-1" role="group" aria-label="Período das movimentações">
-              {([
-                { key: "hoje", label: "Hoje" },
-                { key: "mes", label: monthName },
-                { key: "ano", label: year },
-                { key: "custom", label: "Período" },
-              ] as { key: Period; label: string }[]).map((item) => (
-                <button
-                  type="button"
-                  key={item.key}
-                  onClick={() => setPeriod(item.key)}
-                  aria-pressed={period === item.key}
-                  className={cn(
-                    "min-h-9 rounded-md px-3 py-1 text-xs transition-colors",
-                    period === item.key
-                      ? "bg-card font-semibold text-foreground shadow-sm"
-                      : "text-secondary-foreground hover:text-foreground"
-                  )}
-                >
-                  {item.key === "custom" ? <CalendarDays className="mr-1 inline size-3.5" aria-hidden="true" /> : null}
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            {hasAdvancedFinance ? (
-              <Button variant="outline" size="lg" onClick={exportCSV} disabled={reportPayments.length === 0 || isReportLoading} className="gap-1.5 text-xs">
-                <Download className="size-3.5" aria-hidden="true" /> Exportar
-              </Button>
-            ) : null}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => exportReport("pdf")}
+              disabled={filteredReportPayments.length === 0 || isReportLoading || Boolean(exportingFormat)}
+              className="gap-1.5 text-xs"
+            >
+              {exportingFormat === "pdf" ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <FileText className="size-3.5" aria-hidden="true" />}
+              Exportar PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => exportReport("excel")}
+              disabled={filteredReportPayments.length === 0 || isReportLoading || Boolean(exportingFormat)}
+              className="gap-1.5 text-xs"
+            >
+              {exportingFormat === "excel" ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="size-3.5" aria-hidden="true" />}
+              Exportar Excel
+            </Button>
           </>
         }
       >
-        {period === "custom" ? (
-          <div className="mb-4 rounded-xl border border-border bg-muted/30 p-4">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-              <label className="space-y-1.5 text-xs font-medium text-foreground">
-                Data inicial
-                <Input
-                  type="date"
-                  value={customRangeDraft.from}
-                  max={customRangeDraft.to}
-                  onChange={(event) => setCustomRangeDraft((current) => ({ ...current, from: event.target.value }))}
-                  className="h-10 bg-card"
-                  aria-invalid={Boolean(customRangeError)}
-                />
-              </label>
-              <label className="space-y-1.5 text-xs font-medium text-foreground">
-                Data final
-                <Input
-                  type="date"
-                  value={customRangeDraft.to}
-                  min={customRangeDraft.from}
-                  max={toDateInputValue(new Date())}
-                  onChange={(event) => setCustomRangeDraft((current) => ({ ...current, to: event.target.value }))}
-                  className="h-10 bg-card"
-                  aria-invalid={Boolean(customRangeError)}
-                />
-              </label>
-              <Button type="button" size="lg" onClick={applyCustomRange} disabled={isReportLoading} className="h-10 px-4">
-                Aplicar período
-              </Button>
-            </div>
-            {customRangeError ? <p className="mt-2 text-xs text-danger" role="alert">{customRangeError}</p> : null}
-          </div>
-        ) : null}
+        <FinancialReportFilters
+          key={`${reportFilters.from}-${reportFilters.to}-${reportFilters.shortcut}-${reportFilters.status}-${reportFilters.paymentMethod}-${reportFilters.service}-${reportFilters.search}`}
+          values={reportFilters}
+          services={reportServiceOptions}
+          paymentMethods={reportPaymentMethods}
+          isLoading={isReportLoading}
+          onApply={applyReportFilters}
+          onClear={clearReportFilters}
+        />
 
         {hasReportError ? (
-          <div className="rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg" role="status">
-            Não foi possível carregar as movimentações deste período.
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg sm:flex-row sm:items-center sm:justify-between" role="status">
+            <span>Não foi possível carregar as movimentações deste período.</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => loadReport(reportFilters.from, reportFilters.to, reportFilters.shortcut)}
+            >
+              Tentar novamente
+            </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className={cn("grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border", hasAdvancedFinance ? "lg:grid-cols-4" : "sm:grid-cols-2")}>
-              <PeriodMetric label="Receita recebida" value={displayValue(formatCurrency(reportRevenue))} hint={`${reportPayments.length} pagamento${reportPayments.length === 1 ? "" : "s"}`} tone="success" />
-              <PeriodMetric label="Pagamentos" value={String(reportPayments.length)} hint="registros no período" />
+          <div className="mt-4 space-y-4">
+            <div className={cn("grid grid-cols-2 gap-3 rounded-[24px] border border-border bg-muted/30 p-3", hasAdvancedFinance ? "lg:grid-cols-4" : "sm:grid-cols-3")}>
+              <PeriodMetric label="Receita recebida" value={displayValue(formatCurrency(reportRevenue))} hint={`${filteredReportPayments.length} pagamento${filteredReportPayments.length === 1 ? "" : "s"}`} tone="success" />
+              <PeriodMetric label="Clientes" value={String(reportClientSummary.total)} hint="com pagamento no período" />
+              <PeriodMetric label="Novos clientes" value={String(reportClientSummary.newClients)} hint="cadastrados dentro do recorte" />
+              <PeriodMetric label="Clientes ativos" value={String(reportClientSummary.active)} hint="situação atual no recorte" />
               {hasAdvancedFinance ? (
                 <>
                   <PeriodMetric label="Lucro líquido" value={displayValue(formatCurrency(reportNetProfit))} hint={`margem ${reportRevenue > 0 ? ((reportNetProfit / reportRevenue) * 100).toFixed(0) : 0}%`} tone="success" />
                   <PeriodMetric label="Custos operacionais" value={displayValue(formatCurrency(reportCosts))} hint="registrados nos pagamentos" tone="danger" />
                 </>
               ) : null}
+              <PeriodMetric label="Ticket médio" value={displayValue(formatCurrency(reportSummary.averageTicket))} hint="por pagamento filtrado" />
+              <PeriodMetric
+                label="Crescimento da receita"
+                value={reportRevenueGrowthLabel}
+                hint={reportRevenueGrowth === null ? "sem base no período anterior" : "comparado ao período anterior"}
+                tone={reportRevenueGrowth === null || reportRevenueGrowth === 0 ? "default" : reportRevenueGrowth > 0 ? "success" : "danger"}
+              />
             </div>
 
             {hasAdvancedFinance ? (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-[24px] border border-border bg-card p-4 shadow-sm">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[13px] font-semibold">
                     Composição dos recebimentos <span className="ml-1 text-[11px] font-normal text-muted-foreground">{reportPeriodLabel.toLowerCase()}</span>
@@ -693,7 +707,7 @@ export default function FinanceiroPage() {
                   </div>
                 ) : (
                   <div className="h-[240px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 640, height: 240 }}>
                       <BarChart data={dailyData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
                         <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
                         <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fill: 'var(--muted-foreground)', fontSize: 9, fontFamily: 'var(--font-geist-mono)' }} />
@@ -711,122 +725,44 @@ export default function FinanceiroPage() {
                 )}
               </div>
             ) : null}
+
+            <FinancialReportCharts
+              filters={reportFilters}
+              payments={filteredReportPayments}
+              displayValue={displayValue}
+            />
           </div>
         )}
       </PageSection>
 
-      <PageSection title="Pagamentos do período" description="Todos os recebimentos individuais no período selecionado.">
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <p className="text-xs text-muted-foreground">{reportPeriodLabel}</p>
-          <span className="num rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">
-            {reportPayments.length}
-          </span>
-        </div>
+      <PageSection title="Movimentações detalhadas" description="Ordene, selecione e personalize as colunas da tabela com todos os resultados filtrados.">
         {hasReportError ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">Pagamentos indisponíveis</p>
-            <p className="mt-1 text-xs text-muted-foreground">Tente selecionar o período novamente.</p>
+          <div className="rounded-[24px] border border-warning-border bg-warning-bg px-4 py-10 text-center">
+            <p className="text-sm font-medium text-warning-fg">Pagamentos indisponíveis</p>
+            <p className="mt-1 text-xs text-muted-foreground">Tente aplicar os filtros novamente.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => loadReport(reportFilters.from, reportFilters.to, reportFilters.shortcut)}
+            >
+              Tentar novamente
+            </Button>
           </div>
         ) : isReportLoading ? (
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-10 w-full" />)}
-          </div>
-        ) : reportPayments.length === 0 ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">Nenhum pagamento no período</p>
-            <p className="mt-1 text-xs text-muted-foreground">As entradas aparecerão aqui quando forem registradas.</p>
+          <div className="space-y-2 rounded-[24px] border border-border bg-card p-4">
+            {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-11 w-full" />)}
           </div>
         ) : (
-          <ResponsiveDataView
-            desktopFrom="md"
-            mobile={
-              <div className="divide-y divide-border">
-                {paginatedPayments.map((payment) => {
-                  const date = new Date(payment.created_at)
-                  return (
-                    <article key={payment.id} className="space-y-2 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">{payment.clients?.name || "Desconhecido"}</p>
-                          <p className="num mt-1 text-[11px] text-muted-foreground">{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
-                        </div>
-                        <p className="num shrink-0 text-sm font-semibold text-money">{displayValue(formatCurrency(payment.amount_paid))}</p>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <Badge className={cn("rounded border-0 px-1.5 text-[10px] font-semibold", payment.amount_paid === 0 ? "bg-secondary text-muted-foreground" : "bg-success-bg text-success-fg")}>
-                          {payment.amount_paid === 0 ? "Promoção" : "Pagamento"}
-                        </Badge>
-                        {hasAdvancedFinance ? <span className="num text-[11px] text-muted-foreground">Lucro {displayValue(formatCurrency(Number(payment.net_profit || 0)))}</span> : null}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            }
-            desktop={
-            <Table>
-              <TableHeader className="bg-muted">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="microlabel pl-4 text-[9px]">Data</TableHead>
-                  <TableHead className="microlabel text-[9px]">Cliente</TableHead>
-                  <TableHead className="microlabel text-[9px]">Tipo</TableHead>
-                  <TableHead className="microlabel text-right text-[9px]">Recebido</TableHead>
-                  {hasAdvancedFinance && <TableHead className="microlabel pr-4 text-right text-[9px]">Lucro</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedPayments.map((p) => {
-                  const date = new Date(p.created_at)
-                  return (
-                    <TableRow key={p.id} className="hover:bg-muted">
-                      <TableCell className="num pl-4 text-xs text-muted-foreground">
-                        {date.toLocaleDateString('pt-BR')} {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </TableCell>
-                      <TableCell className="text-[13px] font-medium">{p.clients?.name || 'Desconhecido'}</TableCell>
-                      <TableCell>
-                        <Badge className={cn(
-                          "rounded border-0 px-1.5 text-[10px] font-semibold",
-                          p.amount_paid === 0 ? "bg-secondary text-muted-foreground" : "bg-success-bg text-success-fg"
-                        )}>
-                          {p.amount_paid === 0 ? 'Promoção' : 'Pagamento'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="num whitespace-nowrap text-right text-xs font-medium text-money">
-                        {displayValue(formatCurrency(p.amount_paid))}
-                      </TableCell>
-                      {hasAdvancedFinance && <TableCell className="num whitespace-nowrap pr-4 text-right text-xs text-muted-foreground">
-                        {displayValue(formatCurrency(Number(p.net_profit || 0)))}
-                      </TableCell>}
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-            }
-          />
+          <FinancialReportsTable data={filteredReportPayments} displayValue={displayValue} />
         )}
-        {!hasReportError && !isReportLoading && reportPayments.length > 0 ? (
-          <PaymentPagination
-            page={currentPaymentPage}
-            pageCount={paymentPageCount}
-            pageSize={paymentPageSize}
-            total={reportPayments.length}
-            start={paymentPageStart}
-            onPageChange={setPaymentPage}
-            onPageSizeChange={(size) => {
-              setPaymentPageSize(size)
-              setPaymentPage(1)
-            }}
-          />
-        ) : null}
-      </div>
       </PageSection>
 
       {hasAdvancedFinance ? <FixedCostsSection /> : null}
 
       {hasAdvancedFinance ? <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" aria-labelledby="annual-cashflow-title">
+        <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="annual-cashflow-title">
           <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
             <div>
               <h2 id="annual-cashflow-title" className="text-sm font-semibold text-foreground">Evolução de caixa</h2>
@@ -844,7 +780,7 @@ export default function FinanceiroPage() {
           </div>
           <div className="p-3 sm:p-4">
             {hasAnnualCashflow ? <div className="h-[270px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 520, height: 270 }}>
                 <LineChart data={annualCashflow} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
                   <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
@@ -862,7 +798,7 @@ export default function FinanceiroPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" aria-labelledby="service-distribution-title">
+        <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="service-distribution-title">
           <div className="border-b border-border px-4 py-4 sm:px-5">
             <h2 id="service-distribution-title" className="text-sm font-semibold text-foreground">Distribuição por serviços</h2>
             <p className="mt-1 text-xs text-muted-foreground">Participação real dos serviços nos vínculos da carteira.</p>
@@ -870,7 +806,7 @@ export default function FinanceiroPage() {
           <div className="p-4 sm:p-5">
             {serviceData.length > 0 ? <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <div className="relative h-[250px] min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 420, height: 250 }}>
                   <PieChart>
                     <Pie data={serviceData} cx="50%" cy="50%" innerRadius={67} outerRadius={96} paddingAngle={3} dataKey="client_count" nameKey="service_name" stroke="none">
                       {serviceData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
@@ -925,11 +861,17 @@ function PeriodMetric({
   hint: string
   tone?: "default" | "success" | "danger"
 }) {
+  const surfaceClasses = {
+    default: "border-interactive/15 bg-interactive-bg/55",
+    success: "border-success-border bg-success-bg/65",
+    danger: "border-danger-border bg-danger-bg/65",
+  }
+
   return (
-    <article className="min-w-0 bg-card p-4">
+    <article className={cn("min-w-0 rounded-2xl border p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)]", surfaceClasses[tone])}>
       <p className="microlabel">{label}</p>
       <p className={cn(
-        "num mt-1.5 truncate text-xl font-semibold tracking-[-0.025em] text-foreground",
+        "num mt-1.5 text-lg font-semibold tracking-[-0.025em] text-foreground sm:text-xl",
         tone === "success" && "text-money",
         tone === "danger" && "text-danger"
       )}>
@@ -937,55 +879,6 @@ function PeriodMetric({
       </p>
       <p className="mt-1 text-[10.5px] text-muted-foreground">{hint}</p>
     </article>
-  )
-}
-
-function PaymentPagination({
-  page,
-  pageCount,
-  pageSize,
-  total,
-  start,
-  onPageChange,
-  onPageSizeChange,
-}: {
-  page: number
-  pageCount: number
-  pageSize: number
-  total: number
-  start: number
-  onPageChange: (page: number) => void
-  onPageSizeChange: (size: number) => void
-}) {
-  const end = Math.min(start + pageSize, total)
-
-  return (
-    <div className="flex flex-col gap-3 border-t border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-        <p aria-live="polite">Mostrando <span className="font-medium text-foreground">{start + 1}–{end}</span> de <span className="font-medium text-foreground">{total}</span></p>
-        <label className="flex items-center gap-2">
-          Itens por página
-          <select
-            value={pageSize}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            className="h-9 rounded-lg border border-input bg-card px-2 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            aria-label="Itens por página"
-          >
-            {[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-          </select>
-        </label>
-      </div>
-
-      <div className="flex items-center justify-between gap-2 sm:justify-end">
-        <Button type="button" variant="outline" size="lg" onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="h-9 px-3 text-xs">
-          <ChevronLeft className="size-4" aria-hidden="true" /> Anterior
-        </Button>
-        <span className="num min-w-20 text-center text-xs text-muted-foreground">{page} de {pageCount}</span>
-        <Button type="button" variant="outline" size="lg" onClick={() => onPageChange(page + 1)} disabled={page >= pageCount} className="h-9 px-3 text-xs">
-          Próxima <ChevronRight className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
   )
 }
 

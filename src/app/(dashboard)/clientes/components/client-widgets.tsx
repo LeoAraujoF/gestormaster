@@ -67,9 +67,9 @@ export function ClientGrowthChart({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div><h3 className="text-base font-semibold text-foreground">Cadastros nos últimos 6 meses</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Compare quantos clientes entraram em cada mês e acompanhe o total cadastrado no período.</p></div>
         <div className="grid grid-cols-3 gap-2 sm:min-w-[300px]">
-          <div className="rounded-lg bg-muted px-3 py-2"><span className="microlabel block text-[8px]">Este mês</span><span className="num mt-1 block text-base font-semibold text-foreground">{currentMonth}</span></div>
-          <div className="rounded-lg bg-muted px-3 py-2"><span className="microlabel block text-[8px]">Mês anterior</span><span className="num mt-1 block text-base font-semibold text-foreground">{previousMonth}</span></div>
-          <div className={cn("rounded-lg px-3 py-2", difference < 0 ? "bg-danger-bg" : "bg-success-bg")}><span className="microlabel block text-[8px]">Variação</span><span className={cn("num mt-1 block text-base font-semibold", difference < 0 ? "text-danger" : "text-success-fg")}>{comparison}</span></div>
+          <div className="rounded-xl border border-interactive/15 bg-interactive-bg/55 px-3 py-2"><span className="microlabel block text-[8px]">Este mês</span><span className="num mt-1 block text-base font-semibold text-interactive-fg">{currentMonth}</span></div>
+          <div className="rounded-xl border border-border bg-muted/55 px-3 py-2"><span className="microlabel block text-[8px]">Mês anterior</span><span className="num mt-1 block text-base font-semibold text-foreground">{previousMonth}</span></div>
+          <div className={cn("rounded-xl border px-3 py-2", difference < 0 ? "border-danger-border bg-danger-bg" : "border-success-border bg-success-bg")}><span className="microlabel block text-[8px]">Variação</span><span className={cn("num mt-1 block text-base font-semibold", difference < 0 ? "text-danger" : "text-success-fg")}>{comparison}</span></div>
         </div>
       </div>
 
@@ -119,7 +119,7 @@ export function ClientRegistrationRhythmChart({
           <h3 className="text-sm font-semibold text-foreground">Cadastros por dia</h3>
           <p className="mt-1 text-xs text-muted-foreground">Movimento do mês atual.</p>
         </div>
-        <div className="rounded-lg bg-interactive-bg px-3 py-2 text-right">
+        <div className="rounded-xl border border-interactive/15 bg-interactive-bg/65 px-3 py-2 text-right">
           <span className="microlabel block text-[8px] text-interactive">No mês</span>
           <span className="num mt-0.5 block text-lg font-semibold text-interactive">{total}</span>
         </div>
@@ -153,6 +153,7 @@ export function ClientRegistrationRhythmChart({
 
 export function ClientsByStatusChart({ data }: { data: Array<{ name: string; value: number }> }) {
   if (!data || data.length === 0) return null
+  const total = data.reduce((sum, item) => sum + item.value, 0)
 
   const COLORS: Record<string, string> = {
     active: 'var(--chart-1)',
@@ -171,13 +172,17 @@ export function ClientsByStatusChart({ data }: { data: Array<{ name: string; val
   return (
     <div className="flex h-full flex-col">
       <div><h3 className="text-sm font-semibold text-foreground">Status da carteira</h3><p className="mt-1 text-xs text-muted-foreground">Distribuição atual da base.</p></div>
-      <div className="flex min-h-[160px] flex-1 items-center justify-center">
+      <div
+        className="relative flex min-h-[170px] flex-1 items-center justify-center"
+        role="img"
+        aria-label={`Distribuição por status dos ${total} clientes da carteira`}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
-              cx="50%" cy="50%" innerRadius={40} outerRadius={60}
-              paddingAngle={2} dataKey="value" nameKey="name" stroke="none"
+              cx="50%" cy="50%" innerRadius={48} outerRadius={70}
+              paddingAngle={3} cornerRadius={6} dataKey="value" nameKey="name" stroke="none"
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[entry.name] || 'var(--chart-2)'} />
@@ -189,12 +194,18 @@ export function ClientsByStatusChart({ data }: { data: Array<{ name: string; val
             />
           </PieChart>
         </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="microlabel text-[8px]">Total</span>
+          <span className="num mt-1 text-lg font-semibold text-foreground">{total}</span>
+        </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2">
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
         {data.map((entry, index) => (
-          <div key={index} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div key={index} className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
             <div className="size-2.5 rounded-full" style={{ backgroundColor: COLORS[entry.name] || 'var(--chart-2)' }} />
-            {labelMap[entry.name] || entry.name} ({entry.value})
+            <span className="min-w-0 flex-1 truncate">{labelMap[entry.name] || entry.name}</span>
+            <span className="num font-semibold text-foreground">{entry.value}</span>
+            <span className="num text-[9px]">{total > 0 ? `${((entry.value / total) * 100).toFixed(0)}%` : "0%"}</span>
           </div>
         ))}
       </div>

@@ -6,7 +6,10 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  Cell,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -124,7 +127,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
 
   return (
     <section className="space-y-4" aria-labelledby="executive-overview-title">
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
@@ -226,8 +229,8 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
 
       {!compact ? (
         <>
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,0.7fr)]">
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(300px,0.7fr)]">
+            <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
               <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">Movimento financeiro</h3>
@@ -237,7 +240,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
               </div>
               <div className="h-[300px] px-1 py-4 sm:h-[340px] sm:px-4">
                 {data.series.length ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 640, height: 260 }}>
                     <ComposedChart data={data.series} margin={{ top: 8, right: 12, left: -10, bottom: 4 }}>
                       <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
                       <XAxis
@@ -308,6 +311,19 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
               </div>
             </div>
 
+            <ServiceDonut
+              rows={data.breakdowns.services.slice(0, 5).map((item) => ({
+                label: item.service,
+                value: item.value,
+                clients: item.clients,
+              }))}
+              total={data.summary.mrr}
+              formattedTotal={money(data.summary.mrr)}
+              formatValue={money}
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.3fr)]">
             <OperationSignal
               realization={realizationRate}
               risk={riskShare}
@@ -315,9 +331,6 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
               newClients={data.growth.new_clients}
               cancellations={data.growth.cancellations}
             />
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
             <Breakdown
               title="Meios de pagamento"
               description="Como a receita confirmada entrou no período."
@@ -326,16 +339,6 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
                 value: item.value,
                 formattedValue: money(item.value),
                 hint: `${item.count} pagamento${item.count === 1 ? "" : "s"}`,
-              }))}
-            />
-            <Breakdown
-              title="Receita recorrente por serviço"
-              description="Participação dos serviços na base ativa."
-              rows={data.breakdowns.services.slice(0, 5).map((item) => ({
-                label: item.service,
-                value: item.value,
-                formattedValue: money(item.value),
-                hint: `${item.clients} cliente${item.clients === 1 ? "" : "s"}`,
               }))}
             />
           </div>
@@ -358,6 +361,12 @@ function SummaryCard({ item, index }: { item: SummaryItem; index: number }) {
     danger: "text-danger",
     interactive: "text-interactive-fg",
   }
+  const surfaceClasses = {
+    default: "border-border bg-card",
+    success: "border-success-border bg-success-bg/45",
+    danger: "border-danger-border bg-danger-bg/45",
+    interactive: "border-interactive/20 bg-interactive-bg/55",
+  }
 
   const content = (
     <>
@@ -376,7 +385,10 @@ function SummaryCard({ item, index }: { item: SummaryItem; index: number }) {
     </>
   )
 
-  const className = "group relative w-full overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md sm:p-5"
+  const className = cn(
+    "group relative w-full overflow-hidden rounded-[22px] border p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md sm:p-5",
+    surfaceClasses[item.tone]
+  )
   const style = { animationDelay: `${index * 60}ms` }
 
   if (item.onClick) {
@@ -464,7 +476,7 @@ function OperationSignal({ realization, risk, activeClients, newClients, cancell
       : "bg-danger-bg text-danger-fg"
 
   return (
-    <aside className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <aside className="flex flex-col rounded-[24px] border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="microlabel">Leitura do período</p>
@@ -485,6 +497,94 @@ function OperationSignal({ realization, risk, activeClients, newClients, cancell
         <SignalRow icon={ArrowUpRight} label="Entradas no período" value={String(newClients)} />
         <SignalRow icon={ArrowDownRight} label="Cancelamentos" value={String(cancellations)} danger={cancellations > 0} />
       </div>
+    </aside>
+  )
+}
+
+function ServiceDonut({
+  rows,
+  total,
+  formattedTotal,
+  formatValue,
+}: {
+  rows: Array<{ label: string; value: number; clients: number }>
+  total: number
+  formattedTotal: ReactNode
+  formatValue: (value: number) => ReactNode
+}) {
+  const colors = ["var(--chart-2)", "var(--chart-1)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+  const chartRows = rows.filter((row) => row.value > 0)
+
+  return (
+    <aside className="flex min-h-[380px] flex-col rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div>
+        <p className="microlabel">Composição da carteira</p>
+        <h3 className="mt-1 text-sm font-semibold text-foreground">Receita por serviço</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Participação real dos serviços na receita recorrente.</p>
+      </div>
+
+      {chartRows.length ? (
+        <>
+          <div
+            className="relative mt-3 h-[210px]"
+            role="img"
+            aria-label={`Gráfico de receita recorrente por serviço. Total ${String(formattedTotal)}`}
+          >
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 640, height: 260 }}>
+              <PieChart>
+                <Pie
+                  data={chartRows}
+                  dataKey="value"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={58}
+                  outerRadius={84}
+                  paddingAngle={3}
+                  cornerRadius={6}
+                  stroke="none"
+                >
+                  {chartRows.map((row, index) => (
+                    <Cell key={row.label} fill={colors[index % colors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [formatValue(Number(value || 0)), String(name)]}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "1px solid var(--border)",
+                    background: "var(--popover)",
+                    color: "var(--popover-foreground)",
+                    boxShadow: "0 12px 28px rgba(0,0,0,.12)",
+                    fontSize: "12px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="microlabel text-[8px]">Recorrente</span>
+              <span className="num mt-1 text-sm font-semibold text-foreground">{formattedTotal}</span>
+            </div>
+          </div>
+
+          <div className="mt-auto space-y-2.5 border-t border-border pt-4">
+            {chartRows.map((row, index) => (
+              <div key={row.label} className="flex items-center gap-2.5 text-xs">
+                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.label}</span>
+                <span className="text-[10px] text-muted-foreground">{row.clients} cliente{row.clients === 1 ? "" : "s"}</span>
+                <span className="num w-10 text-right font-semibold text-foreground">
+                  {total > 0 ? `${((row.value / total) * 100).toFixed(0)}%` : "0%"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="mt-5 flex flex-1 items-center justify-center">
+          <Empty />
+        </div>
+      )}
     </aside>
   )
 }
@@ -519,7 +619,7 @@ function Breakdown({ title, description, rows }: {
   const max = Math.max(...rows.map((row) => row.value), 0)
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+    <div className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       <div className="mt-5 space-y-4">

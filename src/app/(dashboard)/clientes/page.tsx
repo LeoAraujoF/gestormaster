@@ -29,13 +29,34 @@ type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "no_whatsa
 
 type RegistrationPeriod = "all" | "today" | "month" | "custom"
 
-type PortfolioSignalTone = "primary" | "growth" | "healthy" | "loss"
+type PortfolioSignalTone = "primary" | "today" | "growth" | "healthy" | "loss"
 
-const signalToneClasses: Record<PortfolioSignalTone, { icon: string; value: string }> = {
-  primary: { icon: "bg-secondary text-secondary-foreground", value: "text-foreground" },
-  growth: { icon: "bg-interactive-bg text-interactive", value: "text-interactive" },
-  healthy: { icon: "bg-interactive-bg text-interactive", value: "text-foreground" },
-  loss: { icon: "bg-danger-bg text-danger", value: "text-danger" },
+const signalToneClasses: Record<PortfolioSignalTone, { icon: string; value: string; surface: string }> = {
+  primary: {
+    icon: "bg-card/80 text-interactive-fg",
+    value: "text-interactive-fg",
+    surface: "border-interactive/20 bg-interactive-bg/70",
+  },
+  today: {
+    icon: "bg-card/80 text-warning-fg",
+    value: "text-warning-fg",
+    surface: "border-warning-border bg-warning-bg/70",
+  },
+  growth: {
+    icon: "bg-card/80 text-interactive-fg",
+    value: "text-interactive-fg",
+    surface: "border-interactive/20 bg-interactive-bg/55",
+  },
+  healthy: {
+    icon: "bg-card/80 text-success-fg",
+    value: "text-success-fg",
+    surface: "border-success-border bg-success-bg/70",
+  },
+  loss: {
+    icon: "bg-card/80 text-danger",
+    value: "text-danger",
+    surface: "border-danger-border bg-danger-bg/70",
+  },
 }
 
 function PortfolioSignal({
@@ -69,7 +90,10 @@ function PortfolioSignal({
     </>
   )
 
-  const className = "group flex min-h-[104px] w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+  const className = cn(
+    "group flex min-h-[112px] w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.03)] transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5",
+    signalToneClasses[tone].surface
+  )
 
   return onClick ? (
     <button type="button" onClick={onClick} aria-label={actionLabel} className={className}>{content}</button>
@@ -586,8 +610,8 @@ export default function ClientesPage() {
 
   return (
     <PageShell>
-      <section aria-labelledby="clients-page-title" className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-between">
+      <section aria-labelledby="clients-page-title" className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
+        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
           <div className="min-w-0">
             <p className="microlabel">Carteira operacional</p>
             <div className="mt-1 flex flex-wrap items-center gap-2.5">
@@ -628,18 +652,18 @@ export default function ClientesPage() {
         </div>
 
         {isLoading ? (
-          <div className="grid border-t border-border sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex min-h-[104px] items-center gap-3 border-b border-border px-5 py-4 last:border-b-0 sm:[&:nth-child(odd)]:border-r xl:border-b-0 xl:border-r xl:last:border-r-0">
+              <div key={index} className="flex min-h-[112px] items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4">
                 <Skeleton className="size-9 rounded-xl" />
                 <div className="flex-1 space-y-2"><Skeleton className="h-2.5 w-24" /><Skeleton className="h-5 w-28" /><Skeleton className="h-2.5 w-32" /></div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid border-t border-border sm:grid-cols-2 xl:grid-cols-4 [&>*]:border-b [&>*]:border-border sm:[&>*:nth-child(odd)]:border-r xl:[&>*]:border-b-0 xl:[&>*]:border-r xl:[&>*:last-child]:border-r-0">
+          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
             <PortfolioSignal icon={Users} label="Total de clientes" value={String(clients.length)} hint={`${activePortfolio.length} ativos na base`} tone="primary" onClick={clients.length > 0 ? () => applyRegistrationPeriod("all") : undefined} actionLabel="Ver todos os clientes" />
-            <PortfolioSignal icon={CalendarDays} label="Cadastrados hoje" value={String(registeredTodayPortfolio.length)} hint={registeredTodayPortfolio.length === 1 ? "novo cliente no dia" : "novos clientes no dia"} tone="growth" onClick={registeredTodayPortfolio.length > 0 ? () => applyRegistrationPeriod("today") : undefined} actionLabel="Ver clientes cadastrados hoje" />
+            <PortfolioSignal icon={CalendarDays} label="Cadastrados hoje" value={String(registeredTodayPortfolio.length)} hint={registeredTodayPortfolio.length === 1 ? "novo cliente no dia" : "novos clientes no dia"} tone="today" onClick={registeredTodayPortfolio.length > 0 ? () => applyRegistrationPeriod("today") : undefined} actionLabel="Ver clientes cadastrados hoje" />
             <PortfolioSignal icon={TrendingUp} label="Cadastrados no mês" value={String(currentMonthNewClients)} hint={previousMonthNewClients > 0 && monthlyGrowthRate !== null ? `${monthlyGrowthRate >= 0 ? "+" : ""}${monthlyGrowthRate.toFixed(1)}% vs. mês anterior` : `${previousMonthNewClients} no mês anterior`} tone="growth" onClick={currentMonthNewClients > 0 ? () => applyRegistrationPeriod("month") : undefined} actionLabel="Ver clientes cadastrados neste mês" />
             <PortfolioSignal icon={UserCheck} label="Clientes ativos" value={String(activePortfolio.length)} hint={`${activeRate.toFixed(1)}% da base total`} tone="healthy" onClick={activePortfolio.length > 0 ? () => revealPortfolio("active") : undefined} actionLabel="Ver clientes ativos" />
           </div>
@@ -648,11 +672,11 @@ export default function ClientesPage() {
 
 
       {/* Tabela de Gestão */}
-      <div ref={portfolioSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
+      <div ref={portfolioSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-[24px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
       <PageSection title="Seus clientes" description="Busque pelo nome ou telefone, filtre por cadastro e execute a próxima ação.">
 
         {/* Busca + segmentos + filtros */}
-        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+        <div className="rounded-[24px] border border-border bg-card p-3 shadow-sm sm:p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -704,7 +728,7 @@ export default function ClientesPage() {
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl border border-border bg-muted/35 p-3">
+          <div className="mt-3 rounded-2xl border border-interactive/15 bg-interactive-bg/35 p-3 sm:p-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -784,7 +808,7 @@ export default function ClientesPage() {
         )}
 
         {/* Tabela */}
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
           {isLoading ? (
             <div className="divide-y divide-border">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -812,6 +836,7 @@ export default function ClientesPage() {
           ) : (
             <>
               <ResponsiveDataView
+                className="overflow-x-auto"
                 desktopFrom="lg"
                 mobile={
                   <div className="divide-y divide-border">
@@ -857,17 +882,21 @@ export default function ClientesPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex flex-col gap-3">
                             <div><p className="microlabel mb-1 text-[8px]">Última comunicação</p>{commStatusBadge(client.last_communication_status)}</div>
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-9 px-4 text-xs">
+                            <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                              <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-9 px-2 text-[11px]">
                                 {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
                               </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-9 px-2 text-[11px]">
+                                Renovar
+                              </Button>
+                              <Button variant="secondary" size="sm" onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }} className="col-span-2 h-9 px-2 text-[11px]">
+                                Ativar promoção
+                              </Button>
                               <DropdownMenu>
-                                <DropdownMenuTrigger className="flex size-9 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
+                                <DropdownMenuTrigger className="col-start-3 row-span-2 row-start-1 flex size-9 self-center items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }}>Renovar</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }}>Ativar Promoção</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setEditingClient(client); setIsDialogOpen(true) }}>Editar / Trocar Serviço</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleWhatsApp(client)}>Conversar no WhatsApp</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openProfile(client)}>Ficha do Cliente</DropdownMenuItem>
@@ -895,7 +924,7 @@ export default function ClientesPage() {
                     <TableHead className="microlabel text-[9px]">Vencimento</TableHead>
                     <TableHead className="microlabel text-[9px]">Cadastro</TableHead>
                     <TableHead className="microlabel text-[9px]">Comunicação</TableHead>
-                    <TableHead className="microlabel pr-3 text-right text-[9px]">Ações</TableHead>
+                    <TableHead className="microlabel min-w-[292px] pr-3 text-right text-[9px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -951,15 +980,19 @@ export default function ClientesPage() {
                           </div>
                         </TableCell>
                         <TableCell className="pr-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-7 rounded-md px-2.5 text-xs">
                               {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-7 rounded-md px-2.5 text-xs">
+                              Renovar
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }} className="h-7 rounded-md px-2.5 text-xs">
+                              Ativar promoção
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }}>Renovar</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }}>Ativar Promoção</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => { setEditingClient(client); setIsDialogOpen(true) }}>Editar / Trocar Serviço</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleWhatsApp(client)}>Conversar no WhatsApp</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openProfile(client)}>Ficha do Cliente</DropdownMenuItem>
@@ -993,15 +1026,15 @@ export default function ClientesPage() {
 
       <PageSection title="Acompanhamento da base" description="Gráficos simples para acompanhar cadastros recentes e a situação atual dos clientes.">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-h-[420px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <div className="min-h-[420px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
             <ClientGrowthChart data={clientGrowthSeries} currentMonth={currentMonthNewClients} previousMonth={previousMonthNewClients} />
           </div>
           <div className="grid gap-4">
-            <div className="min-h-[260px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <div className="min-h-[260px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
               <ClientRegistrationRhythmChart data={dailyRegistrationSeries} total={currentMonthNewClients} />
             </div>
             {metrics ? (
-              <div className="min-h-[240px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <div className="min-h-[240px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
                 <ClientsByStatusChart data={metrics.chart_clients_by_status} />
               </div>
             ) : null}

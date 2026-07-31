@@ -11,12 +11,14 @@ import { CommandPalette } from "@/components/command-palette"
 import { DashboardPageTitle } from "@/components/dashboard-page-title"
 import { UserTimezoneClock } from "@/components/user-timezone-clock"
 import { WhatsAppBanner } from "@/components/whatsapp-banner"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { OrganizationProvider } from "@/components/providers/organization-provider"
 import { PlanProvider } from '@/components/providers/plan-provider'
 import { PlanRouteGate } from '@/components/plan-route-gate'
 import { createClient } from '@/lib/supabase/server'
 import { getOrganizationMembership } from '@/lib/access-control'
 import { getOrganizationPlanContext } from '@/lib/plan-catalog'
+import Link from "next/link"
 
 import { PageProtector } from "@/components/page-protector"
 
@@ -29,6 +31,14 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
   const membership = user ? await getOrganizationMembership(supabase, user.id) : null
   const plan = membership ? await getOrganizationPlanContext(membership.organizationId) : { plan: 'starter' as const, active: false, expiresAt: null, limits: { clients: 100, whatsappInstances: 1 }, capabilities: [] }
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário"
+  const userInitials = userName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part: string) => part[0])
+    .join("")
+    .toUpperCase()
   return (
     <PrivacyProvider>
       <OrganizationProvider>
@@ -52,6 +62,21 @@ export default async function DashboardLayout({
                   <NotificationBell />
                   <ThemeToggle />
                   <PrivacyToggle />
+                  <Link
+                    href="/minha-conta"
+                    aria-label={`Abrir conta de ${userName}`}
+                    className="ml-0.5 flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-1.5 transition-colors hover:border-border hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2"
+                  >
+                    <Avatar className="size-8 shadow-sm">
+                      <AvatarFallback className="bg-interactive-bg text-xs font-semibold text-interactive-fg">
+                        {userInitials || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden min-w-0 text-left 2xl:block">
+                      <span className="block max-w-32 truncate text-xs font-semibold text-foreground">{userName}</span>
+                      <span className="block max-w-32 truncate text-[10px] capitalize text-muted-foreground">Plano {plan.plan}</span>
+                    </span>
+                  </Link>
                 </div>
               </header>
               <div className="h-14 shrink-0" aria-hidden="true" />

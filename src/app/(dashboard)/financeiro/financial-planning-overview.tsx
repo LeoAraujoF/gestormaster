@@ -65,7 +65,7 @@ export function FinancialPlanningOverview({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" aria-labelledby="financial-planning-title">
+    <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm" aria-labelledby="financial-planning-title">
       <div className="flex flex-col gap-2 border-b border-border bg-muted/30 px-4 py-4 sm:px-5">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
@@ -84,7 +84,7 @@ export function FinancialPlanningOverview({
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
-        <div className="p-4 sm:p-5 lg:border-r lg:border-border">
+        <div className="p-4 sm:p-5 lg:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Recebido em {monthLabel}</p>
@@ -200,7 +200,7 @@ export function FinancialPlanningOverview({
           ) : null}
         </div>
 
-        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-1 lg:divide-x-0 lg:divide-y">
+        <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
           <PlanningSignal
             icon={TrendingUp}
             label={`Potencial de ${nextMonthLabel}`}
@@ -216,7 +216,7 @@ export function FinancialPlanningOverview({
             icon={CalendarClock}
             label="Próximos 7 dias"
             value={displayValue(formatCurrency(upcoming7d.total))}
-            hint={`${upcoming7d.count} renovação${upcoming7d.count === 1 ? "" : "ões"} prevista${upcoming7d.count === 1 ? "" : "s"}`}
+            hint={`${upcoming7d.count} ${upcoming7d.count === 1 ? "renovação prevista" : "renovações previstas"}`}
             tone="warning"
           />
           <PlanningSignal
@@ -246,15 +246,27 @@ function PlanningSignal({
   tone: "interactive" | "warning" | "danger" | "success"
 }) {
   const toneClasses = {
-    interactive: "bg-interactive-bg text-interactive-fg",
-    warning: "bg-warning-bg text-warning-fg",
-    danger: "bg-danger-bg text-danger-fg",
-    success: "bg-success-bg text-success-fg",
+    interactive: {
+      icon: "bg-card/80 text-interactive-fg",
+      surface: "border-interactive/20 bg-interactive-bg/65",
+    },
+    warning: {
+      icon: "bg-card/80 text-warning-fg",
+      surface: "border-warning-border bg-warning-bg/65",
+    },
+    danger: {
+      icon: "bg-card/80 text-danger-fg",
+      surface: "border-danger-border bg-danger-bg/65",
+    },
+    success: {
+      icon: "bg-card/80 text-success-fg",
+      surface: "border-success-border bg-success-bg/65",
+    },
   }
 
   return (
-    <article className="flex min-w-0 gap-3 p-4 sm:flex-col lg:flex-row lg:p-5">
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneClasses[tone])}>
+    <article className={cn("flex min-w-0 gap-3 rounded-2xl border p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)] sm:flex-col lg:flex-row", toneClasses[tone].surface)}>
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneClasses[tone].icon)}>
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <div className="min-w-0">

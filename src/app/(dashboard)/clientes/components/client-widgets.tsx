@@ -51,7 +51,7 @@ export function ClientGrowthChart({
   previousMonth: number
 }) {
   if (!data || data.length === 0) {
-    return <div className="flex min-h-[320px] items-center justify-center text-xs text-muted-foreground">Ainda não há histórico de aquisição.</div>
+    return <div className="flex min-h-[320px] items-center justify-center text-xs text-muted-foreground">Ainda não há histórico de cadastros.</div>
   }
 
   const difference = currentMonth - previousMonth
@@ -65,7 +65,7 @@ export function ClientGrowthChart({
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><h3 className="text-base font-semibold text-foreground">Evolução mensal da aquisição</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Barras mostram novos clientes; a linha acompanha o acumulado adquirido no período exibido.</p></div>
+        <div><h3 className="text-base font-semibold text-foreground">Cadastros nos últimos 6 meses</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Compare quantos clientes entraram em cada mês e acompanhe o total cadastrado no período.</p></div>
         <div className="grid grid-cols-3 gap-2 sm:min-w-[300px]">
           <div className="rounded-lg bg-muted px-3 py-2"><span className="microlabel block text-[8px]">Este mês</span><span className="num mt-1 block text-base font-semibold text-foreground">{currentMonth}</span></div>
           <div className="rounded-lg bg-muted px-3 py-2"><span className="microlabel block text-[8px]">Mês anterior</span><span className="num mt-1 block text-base font-semibold text-foreground">{previousMonth}</span></div>
@@ -73,8 +73,8 @@ export function ClientGrowthChart({
         </div>
       </div>
 
-      <div className="mt-5 flex items-center gap-4 text-[11px] text-muted-foreground" aria-label="Legenda do gráfico de crescimento">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[var(--chart-2)]" />Novos no mês</span>
+      <div className="mt-5 flex items-center gap-4 text-[11px] text-muted-foreground" aria-label="Legenda do gráfico de cadastros">
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[var(--chart-2)]" />Cadastros no mês</span>
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[var(--chart-1)]" />Acumulado no período</span>
       </div>
 
@@ -94,10 +94,59 @@ export function ClientGrowthChart({
         </div>
       ) : (
         <div className="mt-5 flex min-h-[250px] flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <p className="text-sm font-medium text-foreground">Sem novas aquisições nos últimos seis meses</p>
+          <p className="text-sm font-medium text-foreground">Sem novos cadastros nos últimos seis meses</p>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">O gráfico começará a comparar os meses assim que novos clientes forem cadastrados.</p>
         </div>
       )}
+    </div>
+  )
+}
+
+export function ClientRegistrationRhythmChart({
+  data,
+  total,
+}: {
+  data: Array<{ day: string; fullDate: string; registrations: number }>
+  total: number
+}) {
+  const peak = data.reduce((highest, item) => item.registrations > highest.registrations ? item : highest, data[0] || { day: "-", fullDate: "-", registrations: 0 })
+  const activeDays = data.filter((item) => item.registrations > 0).length
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Cadastros por dia</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Movimento do mês atual.</p>
+        </div>
+        <div className="rounded-lg bg-interactive-bg px-3 py-2 text-right">
+          <span className="microlabel block text-[8px] text-interactive">No mês</span>
+          <span className="num mt-0.5 block text-lg font-semibold text-interactive">{total}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 min-h-[145px] flex-1" role="img" aria-label={`Gráfico de cadastros por dia: ${total} no mês, distribuídos em ${activeDays} dias`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 8, right: 2, left: -30, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+            <XAxis dataKey="day" axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={14} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} dy={8} />
+            <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+            <Tooltip
+              labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullDate || ""}
+              formatter={(value) => [value, "Clientes cadastrados"]}
+              cursor={{ fill: "var(--muted)" }}
+              contentStyle={{ borderRadius: "10px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: "12px" }}
+            />
+            <Bar dataKey="registrations" fill="var(--chart-2)" radius={[5, 5, 0, 0]} maxBarSize={22} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="mt-3 border-t border-border pt-3 text-[11px] text-muted-foreground">
+        {total > 0
+          ? `Maior movimento: ${peak.registrations} cadastro${peak.registrations === 1 ? "" : "s"} em ${peak.fullDate}.`
+          : "Nenhum cliente foi cadastrado neste mês."}
+      </p>
     </div>
   )
 }
@@ -136,7 +185,7 @@ export function ClientsByStatusChart({ data }: { data: Array<{ name: string; val
             </Pie>
             <Tooltip
               formatter={(value, name) => [value, labelMap[String(name)] || String(name)]}
-              contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', fontSize: '12px' }}
+              contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '12px' }}
             />
           </PieChart>
         </ResponsiveContainer>

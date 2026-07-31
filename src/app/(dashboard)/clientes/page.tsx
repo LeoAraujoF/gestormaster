@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, UserCheck, AlertCircle, PhoneOff, CalendarDays, ServerOff, Zap, ArrowRight, ShieldCheck, UserMinus, TrendingUp, Lightbulb, type LucideIcon } from "lucide-react"
+import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, UserCheck, AlertCircle, CalendarDays, Zap, ArrowRight, TrendingUp, FileText, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask, cn } from "@/lib/utils"
 import type { Service, ClientService, ClientsManagementMetrics, EnrichedClient } from "@/types/database"
@@ -20,12 +20,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useConfirm } from "@/components/providers/confirm-provider"
-import { ClickableKPI, ClientGrowthChart, ClientsByStatusChart, ClientsByPlanChart } from "./components/client-widgets"
+import { ClientGrowthChart, ClientRegistrationRhythmChart, ClientsByStatusChart } from "./components/client-widgets"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { usePlan } from '@/components/providers/plan-provider'
-import { MetricGrid, PageSection, PageShell, ResponsiveDataView } from '@/components/page-layout'
+import { PageSection, PageShell, ResponsiveDataView } from '@/components/page-layout'
 
-type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "new" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
+type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
+
+type RegistrationPeriod = "all" | "today" | "month" | "custom"
 
 type PortfolioSignalTone = "primary" | "growth" | "healthy" | "loss"
 
@@ -110,6 +112,9 @@ export default function ClientesPage() {
   const [filterService, setFilterService] = useState<string>("all")
   const [filterDateFrom, setFilterDateFrom] = useState<string>("")
   const [filterDateTo, setFilterDateTo] = useState<string>("")
+  const [registrationPeriod, setRegistrationPeriod] = useState<RegistrationPeriod>("all")
+  const [registeredFrom, setRegisteredFrom] = useState<string>("")
+  const [registeredTo, setRegisteredTo] = useState<string>("")
 
   // Ficha 360
   const [profileClient, setProfileClient] = useState<EnrichedClient | null>(null)
@@ -193,16 +198,19 @@ export default function ClientesPage() {
 
   // --- Filtros e Lógica de Busca ---
   const today = new Date(); today.setHours(0, 0, 0, 0)
+  const toDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+  const todayKey = toDateKey(today)
+  const currentMonthStartKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`
+  const clientCreatedKey = (client: EnrichedClient) => client.created_at ? toDateKey(new Date(client.created_at)) : ""
   const diffDays = useCallback((s: string | null) => {
     if (!s) return null
     return Math.round((new Date(s + "T00:00:00").getTime() - today.getTime()) / 86400000)
   }, [today.getTime()])
-  const isNew = (c: EnrichedClient) => {
-    if (!c.created_at) return false
-    const createdAt = new Date(c.created_at)
-    return createdAt.getFullYear() === today.getFullYear() && createdAt.getMonth() === today.getMonth()
-  }
-
   const filteredClients = clients.filter((c) => {
     const q = searchTerm.toLowerCase()
 
@@ -239,6 +247,16 @@ export default function ClientesPage() {
       }
     }
 
+    const createdKey = clientCreatedKey(c)
+    let matchesRegistration = true
+    if (registeredFrom || registeredTo) {
+      if (!createdKey) matchesRegistration = false
+      else {
+        if (registeredFrom && createdKey < registeredFrom) matchesRegistration = false
+        if (registeredTo && createdKey > registeredTo) matchesRegistration = false
+      }
+    }
+
     let matchesQuick = true
     const d = diffDays(c.due_date)
     if (quickFilter === 'active') matchesQuick = c.status === 'active'
@@ -247,11 +265,10 @@ export default function ClientesPage() {
     else if (quickFilter === 'canceled') matchesQuick = c.status === 'canceled' || c.status === 'inactive'
     else if (quickFilter === 'today') matchesQuick = d === 0
     else if (quickFilter === '7days') matchesQuick = d !== null && d > 0 && d <= 7
-    else if (quickFilter === 'new') matchesQuick = isNew(c)
     else if (quickFilter === 'no_whatsapp') matchesQuick = !c.phone || c.phone.trim() === ''
     else if (quickFilter === 'no_service') matchesQuick = !c.client_services || c.client_services.length === 0
 
-    return matchesSearch && matchesStatus && matchesService && matchesDate && matchesQuick
+    return matchesSearch && matchesStatus && matchesService && matchesDate && matchesRegistration && matchesQuick
   })
 
   const sortedClients = [...filteredClients].sort((a, b) => {
@@ -264,25 +281,50 @@ export default function ClientesPage() {
 
   const totalPages = Math.ceil(sortedClients.length / ITEMS_PER_PAGE) || 1
   const paginatedClients = sortedClients.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-  useEffect(() => { setCurrentPage(1) }, [searchTerm, filterStatus, filterService, filterDateFrom, filterDateTo, quickFilter])
+  useEffect(() => { setCurrentPage(1) }, [searchTerm, filterStatus, filterService, filterDateFrom, filterDateTo, registeredFrom, registeredTo, quickFilter])
 
   const toggleSelectAll = (checked: boolean) => setSelectedClients(checked ? filteredClients.map((c) => c.id) : [])
   const toggleSelectClient = (id: string, checked: boolean) => setSelectedClients((prev) => (checked ? [...prev, id] : prev.filter((cid) => cid !== id)))
 
-  const exportCSV = (list: any[]) => {
-    if (list.length === 0) return
+  const exportCSV = (list: EnrichedClient[], fileName = "relatorio-clientes-completo") => {
+    if (list.length === 0) {
+      toast.info("Não há clientes nesse período para gerar o relatório.")
+      return
+    }
     const headers = ["Nome", "Telefone", "Vencimento", "Cadastro", "Valor_Plano", "Status", "Renovacoes", "Tempo_Cliente_Dias"]
     const rows = list.map((c) => [
-      `"${c.name}"`, `"${c.phone || ''}"`,
+      `"${c.name.replaceAll('"', '""')}"`, `"${c.phone || ''}"`,
       `"${c.due_date ? new Date(c.due_date + "T00:00:00").toLocaleDateString('pt-BR') : ''}"`,
       `"${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : ''}"`,
       c.plan_value, `"${c.status}"`, c.renewal_count || 0, c.days_as_client || 0
     ].join(","))
-    const csv = "data:text/csv;charset=utf-8,﻿" + [headers.join(","), ...rows].join("\n")
+    const blob = new Blob(["\uFEFF", [headers.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" })
     const link = document.createElement("a")
-    link.setAttribute("href", encodeURI(csv))
-    link.setAttribute("download", `gestao_clientes.csv`)
-    document.body.appendChild(link); link.click(); document.body.removeChild(link)
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    link.download = `${fileName}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast.success(`Relatório gerado com ${list.length} cliente${list.length === 1 ? "" : "s"}.`)
+  }
+
+  const downloadReport = (period: "day" | "month" | "complete") => {
+    const reportClients = period === "complete"
+      ? clients
+      : clients.filter((client) => {
+          const createdKey = clientCreatedKey(client)
+          return period === "day"
+            ? createdKey === todayKey
+            : createdKey >= currentMonthStartKey && createdKey <= todayKey
+        })
+    const fileName = period === "day"
+      ? `relatorio-clientes-dia-${todayKey}`
+      : period === "month"
+        ? `relatorio-clientes-mes-${todayKey.slice(0, 7)}`
+        : `relatorio-clientes-completo-${todayKey}`
+    exportCSV(reportClients, fileName)
   }
 
   // --- Ações ---
@@ -452,49 +494,69 @@ export default function ClientesPage() {
     const days = diffDays(client.due_date)
     return client.status === "active" && days !== null && days > 0 && days <= 7
   })
-  const noWhatsAppPortfolio = clients.filter((client) => !client.phone?.trim())
-  const noServicePortfolio = clients.filter((client) => !client.client_services?.length)
   const suspendedPortfolio = clients.filter((client) => client.status === "suspended")
   const canceledPortfolio = clients.filter((client) => client.status === "canceled" || client.status === "inactive")
-  const newPortfolio = clients.filter(isNew)
+  const registeredTodayPortfolio = clients.filter((client) => clientCreatedKey(client) === todayKey)
   const activeRate = clients.length > 0 ? (activePortfolio.length / clients.length) * 100 : 0
-  const lossRate = clients.length > 0 ? (canceledPortfolio.length / clients.length) * 100 : 0
-  const riskPortfolio = [...overduePortfolio, ...suspendedPortfolio]
-  const qualityGaps = noWhatsAppPortfolio.length + noServicePortfolio.length
-  let cumulativeNewClients = 0
-  const clientGrowthSeries = Array.from({ length: 6 }, (_, index) => {
+  const monthlyRegistrationCounts = Array.from({ length: 6 }, (_, index) => {
     const monthStart = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1)
     const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
-    const newClients = clients.filter((client) => {
-      const createdAt = new Date(client.created_at)
-      return createdAt >= monthStart && createdAt < nextMonth
-    }).length
-    cumulativeNewClients += newClients
     return {
       month: monthStart.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
-      new_clients: newClients,
-      cumulative: cumulativeNewClients,
+      new_clients: clients.filter((client) => {
+        const createdAt = new Date(client.created_at)
+        return createdAt >= monthStart && createdAt < nextMonth
+      }).length,
     }
   })
+  const clientGrowthSeries = monthlyRegistrationCounts.map((item, index) => ({
+    ...item,
+    cumulative: monthlyRegistrationCounts.slice(0, index + 1).reduce((sum, month) => sum + month.new_clients, 0),
+  }))
   const currentMonthNewClients = clientGrowthSeries.at(-1)?.new_clients || 0
+  const dailyRegistrationSeries = Array.from({ length: today.getDate() }, (_, index) => {
+    const day = index + 1
+    const date = new Date(today.getFullYear(), today.getMonth(), day)
+    const dateKey = toDateKey(date)
+    return {
+      day: String(day).padStart(2, "0"),
+      fullDate: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""),
+      registrations: clients.filter((client) => clientCreatedKey(client) === dateKey).length,
+    }
+  })
   const previousMonthNewClients = clientGrowthSeries.at(-2)?.new_clients || 0
   const monthlyGrowthDelta = currentMonthNewClients - previousMonthNewClients
   const monthlyGrowthRate = previousMonthNewClients > 0 ? (monthlyGrowthDelta / previousMonthNewClients) * 100 : null
-  const growthOrientation = monthlyGrowthDelta > 0
-    ? `A aquisição acelerou: ${monthlyGrowthDelta} cliente${monthlyGrowthDelta === 1 ? "" : "s"} a mais que no mês anterior.`
-    : monthlyGrowthDelta < 0
-      ? `A aquisição desacelerou: ${Math.abs(monthlyGrowthDelta)} cliente${Math.abs(monthlyGrowthDelta) === 1 ? "" : "s"} a menos que no mês anterior.`
-      : currentMonthNewClients > 0
-        ? "A aquisição está estável em relação ao mês anterior."
-        : "Ainda não houve aquisição de clientes neste mês."
-
-  const revealPortfolio = (filter: QuickFilter) => {
-    setQuickFilter(filter)
+  const focusPortfolio = () => {
     requestAnimationFrame(() => {
       const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
       portfolioSectionRef.current?.scrollIntoView({ behavior, block: "start" })
       portfolioSectionRef.current?.focus({ preventScroll: true })
     })
+  }
+
+  const applyRegistrationPeriod = (period: RegistrationPeriod) => {
+    setRegistrationPeriod(period)
+    setQuickFilter("all")
+    if (period === "today") {
+      setRegisteredFrom(todayKey)
+      setRegisteredTo(todayKey)
+    } else if (period === "month") {
+      setRegisteredFrom(currentMonthStartKey)
+      setRegisteredTo(todayKey)
+    } else if (period === "all") {
+      setRegisteredFrom("")
+      setRegisteredTo("")
+    }
+    focusPortfolio()
+  }
+
+  const revealPortfolio = (filter: QuickFilter) => {
+    setRegistrationPeriod("all")
+    setRegisteredFrom("")
+    setRegisteredTo("")
+    setQuickFilter(filter)
+    focusPortfolio()
   }
 
   const clearAllFilters = () => {
@@ -504,6 +566,9 @@ export default function ClientesPage() {
     setFilterService("all")
     setFilterDateFrom("")
     setFilterDateTo("")
+    setRegistrationPeriod("all")
+    setRegisteredFrom("")
+    setRegisteredTo("")
   }
 
   const openCreateClient = () => {
@@ -516,7 +581,8 @@ export default function ClientesPage() {
     setIsDialogOpen(true)
   }
 
-  const hasAnyFilter = quickFilter !== "all" || hasAdvanced || searchTerm.trim().length > 0
+  const hasRegistrationFilter = registrationPeriod !== "all" || registeredFrom || registeredTo
+  const hasAnyFilter = quickFilter !== "all" || hasAdvanced || hasRegistrationFilter || searchTerm.trim().length > 0
 
   return (
     <PageShell>
@@ -531,13 +597,30 @@ export default function ClientesPage() {
               </span>
             </div>
             <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
-              Crescimento, retenção, perdas e qualidade da base em uma visão focada exclusivamente nos clientes.
+              Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação.
             </p>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-            <Button variant="outline" onClick={() => exportCSV(sortedClients)} className="min-h-10 flex-1 gap-2 sm:flex-none">
-              <Download className="size-4" /> Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "min-h-10 flex-1 gap-2 sm:flex-none" })}>
+                <FileText className="size-4" aria-hidden="true" /> Relatórios
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem onClick={() => downloadReport("day")} className="items-start gap-3 py-2.5">
+                  <CalendarDays className="mt-0.5 size-4" aria-hidden="true" />
+                  <span><span className="block font-medium">Relatório do dia</span><span className="block text-[11px] text-muted-foreground">Clientes cadastrados hoje</span></span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadReport("month")} className="items-start gap-3 py-2.5">
+                  <TrendingUp className="mt-0.5 size-4" aria-hidden="true" />
+                  <span><span className="block font-medium">Relatório do mês</span><span className="block text-[11px] text-muted-foreground">Cadastros do mês atual</span></span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => downloadReport("complete")} className="items-start gap-3 py-2.5">
+                  <Download className="mt-0.5 size-4" aria-hidden="true" />
+                  <span><span className="block font-medium">Relatório completo</span><span className="block text-[11px] text-muted-foreground">Todos os clientes da base</span></span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="min-h-10 flex-1 gap-2 sm:flex-none">
               <Plus className="size-4" /> Novo cliente
             </Button>
@@ -555,35 +638,25 @@ export default function ClientesPage() {
           </div>
         ) : (
           <div className="grid border-t border-border sm:grid-cols-2 xl:grid-cols-4 [&>*]:border-b [&>*]:border-border sm:[&>*:nth-child(odd)]:border-r xl:[&>*]:border-b-0 xl:[&>*]:border-r xl:[&>*:last-child]:border-r-0">
-            <PortfolioSignal icon={Users} label="Total de clientes" value={String(clients.length)} hint={`${activePortfolio.length} ativos na base atual`} tone="primary" onClick={clients.length > 0 ? () => revealPortfolio("all") : undefined} actionLabel="Ver todos os clientes" />
-            <PortfolioSignal icon={TrendingUp} label="Novos neste mês" value={String(currentMonthNewClients)} hint={previousMonthNewClients > 0 && monthlyGrowthRate !== null ? `${monthlyGrowthRate >= 0 ? "+" : ""}${monthlyGrowthRate.toFixed(1)}% vs. mês anterior` : `${previousMonthNewClients} no mês anterior`} tone="growth" onClick={currentMonthNewClients > 0 ? () => revealPortfolio("new") : undefined} actionLabel="Ver novos clientes deste mês" />
-            <PortfolioSignal icon={ShieldCheck} label="Base ativa" value={`${activeRate.toFixed(1)}%`} hint={`${activePortfolio.length} de ${clients.length} clientes ativos`} tone="healthy" onClick={clients.length > 0 ? () => revealPortfolio("active") : undefined} actionLabel="Ver clientes ativos da base" />
-            <PortfolioSignal icon={UserMinus} label="Perdas registradas" value={String(canceledPortfolio.length)} hint={`${lossRate.toFixed(1)}% da base com status cancelado`} tone="loss" onClick={canceledPortfolio.length > 0 ? () => revealPortfolio("canceled") : undefined} actionLabel="Ver clientes cancelados ou inativos" />
+            <PortfolioSignal icon={Users} label="Total de clientes" value={String(clients.length)} hint={`${activePortfolio.length} ativos na base`} tone="primary" onClick={clients.length > 0 ? () => applyRegistrationPeriod("all") : undefined} actionLabel="Ver todos os clientes" />
+            <PortfolioSignal icon={CalendarDays} label="Cadastrados hoje" value={String(registeredTodayPortfolio.length)} hint={registeredTodayPortfolio.length === 1 ? "novo cliente no dia" : "novos clientes no dia"} tone="growth" onClick={registeredTodayPortfolio.length > 0 ? () => applyRegistrationPeriod("today") : undefined} actionLabel="Ver clientes cadastrados hoje" />
+            <PortfolioSignal icon={TrendingUp} label="Cadastrados no mês" value={String(currentMonthNewClients)} hint={previousMonthNewClients > 0 && monthlyGrowthRate !== null ? `${monthlyGrowthRate >= 0 ? "+" : ""}${monthlyGrowthRate.toFixed(1)}% vs. mês anterior` : `${previousMonthNewClients} no mês anterior`} tone="growth" onClick={currentMonthNewClients > 0 ? () => applyRegistrationPeriod("month") : undefined} actionLabel="Ver clientes cadastrados neste mês" />
+            <PortfolioSignal icon={UserCheck} label="Clientes ativos" value={String(activePortfolio.length)} hint={`${activeRate.toFixed(1)}% da base total`} tone="healthy" onClick={activePortfolio.length > 0 ? () => revealPortfolio("active") : undefined} actionLabel="Ver clientes ativos" />
           </div>
         )}
       </section>
 
-      <PageSection title="Diagnóstico da base" description="Indicadores de retenção, risco e qualidade cadastral; selecione para abrir o segmento.">
-        <MetricGrid columns={6}>
-          <ClickableKPI icon={UserCheck} label="Ativos" value={activePortfolio.length} hint={`${activeRate.toFixed(1)}% da base`} colorClass="text-success-fg" onClick={() => revealPortfolio("active")} active={quickFilter === "active"} />
-          <ClickableKPI icon={AlertCircle} label="Vencidos" value={overduePortfolio.length} hint="em risco de perda" colorClass="text-danger" onClick={() => revealPortfolio("overdue")} active={quickFilter === "overdue"} />
-          <ClickableKPI icon={UserMinus} label="Cancelados" value={canceledPortfolio.length} hint="perdas registradas" colorClass="text-danger" onClick={() => revealPortfolio("canceled")} active={quickFilter === "canceled"} />
-          <ClickableKPI icon={UserCheck} label="Suspensos" value={suspendedPortfolio.length} hint="revisar retenção" colorClass="text-warning-fg" onClick={() => revealPortfolio("suspended")} active={quickFilter === "suspended"} />
-          <ClickableKPI icon={PhoneOff} label="Sem WhatsApp" value={noWhatsAppPortfolio.length} hint="contato incompleto" colorClass="text-muted-foreground" onClick={() => revealPortfolio("no_whatsapp")} active={quickFilter === "no_whatsapp"} />
-          <ClickableKPI icon={ServerOff} label="Sem serviço" value={noServicePortfolio.length} hint="cadastro incompleto" colorClass="text-muted-foreground" onClick={() => revealPortfolio("no_service")} active={quickFilter === "no_service"} />
-        </MetricGrid>
-      </PageSection>
 
       {/* Tabela de Gestão */}
       <div ref={portfolioSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
-      <PageSection title="Fila da carteira" description="Encontre o cliente, entenda a prioridade e execute a próxima ação.">
+      <PageSection title="Seus clientes" description="Busque pelo nome ou telefone, filtre por cadastro e execute a próxima ação.">
 
         {/* Busca + segmentos + filtros */}
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <Input aria-label="Buscar clientes" placeholder="Buscar por nome, telefone, serviço ou acesso" className="h-11 border-input bg-background pl-9 text-sm lg:h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Input aria-label="Buscar clientes" placeholder="Buscar por nome, telefone ou serviço" className="h-11 border-input bg-background pl-9 text-sm lg:h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
               <Popover>
@@ -631,13 +704,56 @@ export default function ClientesPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex max-w-full items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Segmentos rápidos da carteira">
+          <div className="mt-3 rounded-xl border border-border bg-muted/35 p-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="size-4 text-interactive" aria-hidden="true" />
+                  <p className="text-xs font-semibold text-foreground">Filtrar pela data de cadastro</p>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-1.5" role="group" aria-label="Período rápido de cadastro">
+                  {[
+                    { key: "all", label: "Todos" },
+                    { key: "today", label: "Hoje" },
+                    { key: "month", label: "Este mês" },
+                  ].map((period) => (
+                    <button
+                      key={period.key}
+                      type="button"
+                      onClick={() => applyRegistrationPeriod(period.key as RegistrationPeriod)}
+                      aria-pressed={registrationPeriod === period.key}
+                      className={cn(
+                        "min-h-9 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        registrationPeriod === period.key
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-card text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:min-w-[360px]">
+                <div className="space-y-1.5">
+                  <Label htmlFor="client-created-from" className="text-[11px]">Cadastrado de</Label>
+                  <Input id="client-created-from" type="date" max={registeredTo || todayKey} className="h-9 bg-card text-xs" value={registeredFrom} onChange={(event) => { setRegisteredFrom(event.target.value); setRegistrationPeriod("custom") }} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="client-created-to" className="text-[11px]">Até</Label>
+                  <Input id="client-created-to" type="date" min={registeredFrom} max={todayKey} className="h-9 bg-card text-xs" value={registeredTo} onChange={(event) => { setRegisteredTo(event.target.value); setRegistrationPeriod("custom") }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="microlabel mt-4 text-[9px]">Situação dos clientes</p>
+          <div className="mt-2 flex max-w-full items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Situação dos clientes">
             {[
               { key: "all", label: "Todos", count: clients.length },
               { key: "overdue", label: "Vencidos", count: overduePortfolio.length },
-              { key: "today", label: "Hoje", count: dueTodayPortfolio.length },
+              { key: "today", label: "Vence hoje", count: dueTodayPortfolio.length },
               { key: "7days", label: "Próximos 7 dias", count: dueSoonPortfolio.length },
-              { key: "new", label: "Novos", count: newPortfolio.length },
               { key: "suspended", label: "Suspensos", count: suspendedPortfolio.length },
               { key: "canceled", label: "Cancelados", count: canceledPortfolio.length },
             ].map((segment) => (
@@ -649,7 +765,7 @@ export default function ClientesPage() {
             ))}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground" aria-live="polite">
-            Exibindo <strong className="font-semibold text-foreground">{sortedClients.length}</strong> de {clients.length} clientes, ordenados pelo vencimento mais urgente.
+            Exibindo <strong className="font-semibold text-foreground">{sortedClients.length}</strong> de {clients.length} clientes{registrationPeriod === "today" ? " cadastrados hoje" : registrationPeriod === "month" ? " cadastrados neste mês" : registrationPeriod === "custom" ? " no período escolhido" : ""}, ordenados pelo vencimento mais urgente.
           </p>
         </div>
 
@@ -683,7 +799,7 @@ export default function ClientesPage() {
             <div className="flex flex-col items-center gap-1.5 px-4 py-16 text-center">
               <span className="flex size-11 items-center justify-center rounded-xl bg-secondary text-muted-foreground"><Users className="size-5" /></span>
               <p className="mt-2 text-sm font-semibold text-foreground">Sua carteira ainda está vazia</p>
-              <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">Adicione o primeiro cliente para acompanhar vencimentos, receita e relacionamento.</p>
+              <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">Adicione o primeiro cliente para acompanhar cadastros, vencimentos e contatos em um só lugar.</p>
               <Button className="mt-3 gap-2" onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients}><Plus className="size-4" />Adicionar cliente</Button>
             </div>
           ) : sortedClients.length === 0 ? (
@@ -735,9 +851,9 @@ export default function ClientesPage() {
                               {client.due_date ? <p className={cn("mt-0.5 text-[10px]", prazoColor(d))}>{prazoLabel(d)}</p> : null}
                             </div>
                             <div>
-                              <p className="microlabel text-[9px]">Relacionamento</p>
-                              <p className="num mt-1 font-medium text-foreground">{client.days_as_client} dias na base</p>
-                              <p className="mt-0.5 text-[10px] text-muted-foreground">{client.renewal_count || 0} renovações</p>
+                              <p className="microlabel text-[9px]">Cadastrado em</p>
+                              <p className="num mt-1 font-medium text-foreground">{client.created_at ? new Date(client.created_at).toLocaleDateString("pt-BR") : "Sem data"}</p>
+                              <p className="mt-0.5 text-[10px] text-muted-foreground">{client.days_as_client} dias na base</p>
                             </div>
                           </div>
 
@@ -777,7 +893,7 @@ export default function ClientesPage() {
                     <TableHead className="microlabel text-[9px]">Serviço</TableHead>
                     <TableHead className="microlabel text-[9px]">Status</TableHead>
                     <TableHead className="microlabel text-[9px]">Vencimento</TableHead>
-                    <TableHead className="microlabel text-[9px]">Relacionamento</TableHead>
+                    <TableHead className="microlabel text-[9px]">Cadastro</TableHead>
                     <TableHead className="microlabel text-[9px]">Comunicação</TableHead>
                     <TableHead className="microlabel pr-3 text-right text-[9px]">Ações</TableHead>
                   </TableRow>
@@ -823,8 +939,8 @@ export default function ClientesPage() {
                           ) : <p className="text-xs text-muted-foreground">Sem venc.</p>}
                         </TableCell>
                         <TableCell>
-                          <p className="num text-xs font-semibold text-foreground">{client.days_as_client} dias</p>
-                          <p className="max-w-[90px] truncate text-[9px] text-muted-foreground">{client.renewal_count || 0} renovações</p>
+                          <p className="num text-xs font-semibold text-foreground">{client.created_at ? new Date(client.created_at).toLocaleDateString("pt-BR") : "Sem data"}</p>
+                          <p className="max-w-[100px] truncate text-[9px] text-muted-foreground">{client.days_as_client} dias na base</p>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-0.5">
@@ -875,51 +991,23 @@ export default function ClientesPage() {
       </PageSection>
       </div>
 
-      <PageSection title="Crescimento de clientes" description="Aquisição mensal real, comparação com o mês anterior e evolução acumulada nos últimos seis meses.">
+      <PageSection title="Acompanhamento da base" description="Gráficos simples para acompanhar cadastros recentes e a situação atual dos clientes.">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-h-[390px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <div className="min-h-[420px] rounded-2xl border border-border bg-card p-4 sm:p-5">
             <ClientGrowthChart data={clientGrowthSeries} currentMonth={currentMonthNewClients} previousMonth={previousMonthNewClients} />
           </div>
-          <aside className="rounded-2xl border border-border bg-card p-4 sm:p-5" aria-labelledby="client-guidance-title">
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-interactive-bg text-interactive"><Lightbulb className="size-4" aria-hidden="true" /></span>
-              <div><h3 id="client-guidance-title" className="text-sm font-semibold text-foreground">Leitura e orientações</h3><p className="mt-1 text-xs text-muted-foreground">Próximas decisões sugeridas pelos dados atuais.</p></div>
+          <div className="grid gap-4">
+            <div className="min-h-[260px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <ClientRegistrationRhythmChart data={dailyRegistrationSeries} total={currentMonthNewClients} />
             </div>
-            <div className="mt-5 space-y-3">
-              <div className="rounded-xl border border-border bg-muted/50 p-3.5">
-                <p className="microlabel text-[9px]">Aquisição mensal</p>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-foreground">{growthOrientation}</p>
+            {metrics ? (
+              <div className="min-h-[240px] rounded-2xl border border-border bg-card p-4 sm:p-5">
+                <ClientsByStatusChart data={metrics.chart_clients_by_status} />
               </div>
-              <button type="button" onClick={canceledPortfolio.length > 0 ? () => revealPortfolio("canceled") : undefined} disabled={canceledPortfolio.length === 0} className="group w-full rounded-xl border border-border bg-muted/50 p-3.5 text-left transition-colors enabled:hover:border-danger-border enabled:hover:bg-danger-bg/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default">
-                <span className="flex items-center justify-between gap-3"><span className="microlabel text-[9px]">Perdas da base</span>{canceledPortfolio.length > 0 ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /> : null}</span>
-                <span className="mt-2 block text-sm font-medium leading-relaxed text-foreground">{canceledPortfolio.length > 0 ? `${canceledPortfolio.length} cliente${canceledPortfolio.length === 1 ? " está" : "s estão"} cancelado${canceledPortfolio.length === 1 ? "" : "s"} ou inativo${canceledPortfolio.length === 1 ? "" : "s"}. Revise os motivos e oportunidades de recuperação.` : "Nenhum cliente está cancelado ou inativo na base atual."}</span>
-              </button>
-              <button type="button" onClick={riskPortfolio.length > 0 ? () => revealPortfolio(overduePortfolio.length > 0 ? "overdue" : "suspended") : undefined} disabled={riskPortfolio.length === 0} className="group w-full rounded-xl border border-border bg-muted/50 p-3.5 text-left transition-colors enabled:hover:border-warning-border enabled:hover:bg-warning-bg/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default">
-                <span className="flex items-center justify-between gap-3"><span className="microlabel text-[9px]">Risco de perda</span>{riskPortfolio.length > 0 ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /> : null}</span>
-                <span className="mt-2 block text-sm font-medium leading-relaxed text-foreground">{riskPortfolio.length > 0 ? `${riskPortfolio.length} cliente${riskPortfolio.length === 1 ? " exige" : "s exigem"} atenção por vencimento ou suspensão. Priorize contato e recuperação.` : "Nenhum cliente vencido ou suspenso exige recuperação agora."}</span>
-              </button>
-              <button type="button" onClick={qualityGaps > 0 ? () => revealPortfolio(noWhatsAppPortfolio.length > 0 ? "no_whatsapp" : "no_service") : undefined} disabled={qualityGaps === 0} className="group w-full rounded-xl border border-border bg-muted/50 p-3.5 text-left transition-colors enabled:hover:border-foreground/20 enabled:hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default">
-                <span className="flex items-center justify-between gap-3"><span className="microlabel text-[9px]">Qualidade cadastral</span>{qualityGaps > 0 ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /> : null}</span>
-                <span className="mt-2 block text-sm font-medium leading-relaxed text-foreground">{qualityGaps > 0 ? `${qualityGaps} pendência${qualityGaps === 1 ? "" : "s"} de WhatsApp ou serviço podem prejudicar o relacionamento.` : "Todos os clientes possuem WhatsApp e serviço vinculados."}</span>
-              </button>
-            </div>
-            <p className="mt-4 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground"><strong className="font-semibold text-foreground">Limite dos dados:</strong> aquisições possuem histórico mensal; perdas representam o status atual porque a base não informa a data do cancelamento.</p>
-          </aside>
+            ) : null}
+          </div>
         </div>
       </PageSection>
-
-      {metrics && (
-        <PageSection title="Composição da base" description="Distribuição atual dos clientes por status e serviço contratado.">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <ClientsByStatusChart data={metrics.chart_clients_by_status} />
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <ClientsByPlanChart data={metrics.chart_clients_by_plan} />
-            </div>
-          </div>
-        </PageSection>
-      )}
 
       {/* Dialogs */}
       <ClientFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} client={editingClient} servicesList={services} onSuccess={loadData} />

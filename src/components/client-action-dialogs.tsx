@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+import { BadgePercent, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
@@ -12,6 +12,16 @@ import {
   fetchSecurityPinStatus,
   SecurityPinApiError,
 } from "@/lib/security-pin-client"
+import {
+  addBillingDays,
+  addBillingMonths,
+  billingCreditsBetween,
+  billingMonthsFromPlanName,
+  calculateBillingTotals,
+  parseDateOnly,
+  renewalBaseDate,
+  todayDateOnly,
+} from "@/lib/billing-period"
 
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -21,10 +31,14 @@ function CustomToggle({ checked, onChange, label }: { checked: boolean; onChange
   return (
     <div className="flex items-center justify-between py-[12px]">
       <span className="text-[12px] font-medium text-foreground">{label}</span>
-      <div 
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
         onClick={onChange}
         className={cn(
-          "w-[34px] h-[18px] rounded-full p-[2px] cursor-pointer transition-colors",
+          "h-[18px] w-[34px] cursor-pointer rounded-full p-[2px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           checked ? "bg-primary" : "bg-input"
         )}
       >
@@ -34,7 +48,7 @@ function CustomToggle({ checked, onChange, label }: { checked: boolean; onChange
             checked ? "translate-x-[16px]" : "translate-x-0"
           )}
         />
-      </div>
+      </button>
     </div>
   )
 }
@@ -94,6 +108,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
   const [renewMonths, setRenewMonths] = useState(1)
   const [renewAmountStr, setRenewAmountStr] = useState("0")
   const [renewScreens, setRenewScreens] = useState(1)
+  const [renewDueDate, setRenewDueDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'money' | 'card'>('pix')
@@ -106,17 +121,13 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   const supabase = createClient()
 
-  const planNameToMonths: Record<string, number> = {
-    'mensal': 1, 'bimestral': 2, 'trimestral': 3,
-    'semestral': 6, 'anual': 12,
-  }
-
   useEffect(() => {
     if (client && open) {
       // Inicializa com os dados atuais do cliente
       setRenewAmountStr(String(client.plan_value || 0).replace('.', ','))
       setRenewMonths(1)
       setRenewScreens(client.screens || 1)
+      setRenewDueDate(addBillingMonths(renewalBaseDate(client.due_date), 1))
       setNotifyWhatsApp(true)
       setPaymentMethod('pix')
       setGeneratedPix(null)
@@ -145,7 +156,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
   // Se o serviço tem planos definidos, usa eles; senão, usa os períodos padrão com plan_value
   const periods = servicePlans.length > 0
     ? servicePlans.map(p => {
-        const months = planNameToMonths[p.name.toLowerCase()] ?? 1
+        const months = billingMonthsFromPlanName(p.name)
         return { months, label: p.name, price: p.price }
       })
     : [
@@ -157,6 +168,46 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   // Chip ativo: plano cujo preço bate exatamente com o valor atual
   const activePeriod = periods.find(p => p.price === renewAmount && p.months === renewMonths) ?? null
+  const renewalBaseDateValue = client
+    ? renewalBaseDate(client.due_date)
+    : todayDateOnly()
+  const minimumRenewDueDate = addBillingDays(renewalBaseDateValue, 1)
+  const parsedRenewDueDate = parseDateOnly(renewDueDate)
+  const newDueDate = parsedRenewDueDate ?? parseDateOnly(addBillingMonths(renewalBaseDateValue, renewMonths))!
+  const hasValidRenewDueDate = Boolean(
+    parsedRenewDueDate &&
+    parsedRenewDueDate.getTime() > (parseDateOnly(renewalBaseDateValue)?.getTime() || 0),
+  )
+  const renewalMonthlyCost = client?.client_services?.reduce(
+    (total: number, assignment: any) => total + Number(assignment.services?.cost || 0),
+    0,
+  ) || 0
+  const renewalBillingTotals = calculateBillingTotals({
+    amountPaid: renewAmount,
+    monthlyServiceCost: renewalMonthlyCost,
+    screens: renewScreens,
+    credits: renewMonths,
+  })
+
+  const priceForMonths = (months: number) =>
+    periods.find((period) => period.months === months)?.price ?? planValue * months
+
+  const selectRenewPeriod = (months: number, price: number) => {
+    setRenewMonths(months)
+    setRenewAmountStr(String(price).replace('.', ','))
+    setRenewDueDate(addBillingMonths(renewalBaseDateValue, months))
+    setGeneratedPix(null)
+  }
+
+  const selectCustomDueDate = (value: string) => {
+    setRenewDueDate(value)
+    if (!value) return
+
+    const months = billingCreditsBetween(renewalBaseDateValue, value)
+    setRenewMonths(months)
+    setRenewAmountStr(String(priceForMonths(months)).replace('.', ','))
+    setGeneratedPix(null)
+  }
 
   const handleGeneratePix = async () => {
     if (!client || !pixInstance) {
@@ -178,6 +229,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
           instance_name: pixInstance,
           client_id: client.id,
           months: renewMonths,
+          target_due_date: renewDueDate,
           purpose: 'renewal',
           plan_name: client.name,
           expires_minutes: 24 * 60,
@@ -212,38 +264,29 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   const handleRenew = async () => {
     if (!client) return
+    if (!hasValidRenewDueDate) {
+      toast.error("Escolha um novo vencimento posterior à data-base da renovação.")
+      return
+    }
+    if (renewAmount <= 0) {
+      toast.error("Informe um valor cobrado maior que zero.")
+      return
+    }
     setIsSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
-      // Usa o valor editável definido pelo usuário (renewAmount)
-
-      // Se o plano já está vencido, renova a partir de hoje; senão, a partir do vencimento atual
-      const originalDueDate = new Date(client.due_date + "T12:00:00")
-      const today = new Date()
-      today.setHours(12, 0, 0, 0)
-      const renewalBase = originalDueDate < today ? today : originalDueDate
-      const currentDueDate = new Date(renewalBase)
-      currentDueDate.setMonth(currentDueDate.getMonth() + renewMonths)
-      const newDueDateStr = currentDueDate.toISOString().split('T')[0]
-
       const { error } = await supabase.from('clients').update({
-        due_date: newDueDateStr,
+        due_date: renewDueDate,
         status: 'active',
         screens: renewScreens,
-        plan_value: renewAmount,
       }).eq('id', client.id)
       if (error) throw error
 
-      const renewingServicesCost = client.client_services?.reduce((acc: number, cs: any) => acc + (cs.services?.cost || 0), 0) || 0
-      const clientScreensRenew = renewScreens
-      const totalCostForRenewPeriod = renewingServicesCost * clientScreensRenew * renewMonths
-      const netProfitForRenew = renewAmount - totalCostForRenewPeriod
-
-
       const { error: paymentError } = await supabase.from('payments').insert({
-        user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: netProfitForRenew, months_renewed: renewMonths,
+        user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: renewalBillingTotals.netProfit, months_renewed: renewMonths,
+        payment_method: paymentMethod,
         paid_at: new Date().toISOString(),
       })
 
@@ -268,8 +311,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
         }
       }
 
-      toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${currentDueDate.toLocaleDateString('pt-BR')}`)
-      logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths } })
+      toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${newDueDate.toLocaleDateString('pt-BR')}`)
+      logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths, due_date: renewDueDate } })
       
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#2e7d54', '#4055c8', '#191a1e'] })
 
@@ -285,12 +328,6 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
   const currentDueDate = client ? new Date(client.due_date + "T12:00:00") : new Date()
   const displayDate = client ? currentDueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('. de ', '/') : ''
-  // Preview: se o plano já está vencido, mostra novo vencimento a partir de hoje
-  const today = new Date()
-  today.setHours(12, 0, 0, 0)
-  const renewalBase = currentDueDate < today ? new Date(today) : new Date(currentDueDate)
-  const newDueDate = new Date(renewalBase)
-  newDueDate.setMonth(newDueDate.getMonth() + renewMonths)
   
   const paymentMethods = [
     { id: 'pix', label: 'PIX', desc: 'Transferência instantânea' },
@@ -334,11 +371,15 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                   {/* Period grid */}
               <div className="grid grid-cols-2 gap-[8px] mb-[12px]">
                 {periods.map(p => {
-                  const isActive = activePeriod?.months === p.months && activePeriod?.price === p.price
+                  const isActive =
+                    activePeriod?.months === p.months &&
+                    activePeriod?.price === p.price &&
+                    renewDueDate === addBillingMonths(renewalBaseDateValue, p.months)
                   return (
                     <button
-                      key={p.months}
-                      onClick={() => { setRenewMonths(p.months); setRenewAmountStr(String(p.price).replace('.', ',')) }}
+                      key={`${p.label}-${p.months}`}
+                      type="button"
+                      onClick={() => selectRenewPeriod(p.months, p.price)}
                       className={cn(
                         "rounded-[8px] p-[10px] text-left transition-colors flex flex-col gap-[2px]",
                         isActive
@@ -351,6 +392,24 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                     </button>
                   )
                 })}
+              </div>
+
+              <div className="mb-[14px]">
+                <label htmlFor="renew-due-date" className="mb-[5px] block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Novo vencimento
+                </label>
+                <input
+                  id="renew-due-date"
+                  type="date"
+                  min={minimumRenewDueDate}
+                  value={renewDueDate}
+                  onChange={(event) => selectCustomDueDate(event.target.value)}
+                  className="input-2a h-[40px] font-mono text-[12px]"
+                  aria-describedby="renew-due-date-help"
+                />
+                <p id="renew-due-date-help" className="mt-[5px] text-[10px] leading-relaxed text-muted-foreground">
+                  Base: {parseDateOnly(renewalBaseDateValue)?.toLocaleDateString("pt-BR")} · o calendário ajusta automaticamente os créditos e o total.
+                </p>
               </div>
 
               {/* Telas + Valor (linha única em desktop) */}
@@ -390,13 +449,13 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       className="flex-1 min-w-0 pr-[11px] font-mono text-[13px] font-semibold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
-                  {planValue > 0 && renewAmount !== planValue && (
+                  {planValue > 0 && renewAmount !== priceForMonths(renewMonths) && (
                     <button
                       type="button"
-                      onClick={() => { setRenewAmountStr(String(planValue).replace('.', ',')); setRenewScreens(screens) }}
+                      onClick={() => { setRenewAmountStr(String(priceForMonths(renewMonths)).replace('.', ',')); setRenewScreens(screens) }}
                       className="text-[10px] text-interactive mt-[4px] hover:underline"
                     >
-                      Restaurar (R$ {planValue.toFixed(2).replace('.', ',')} · {screens} tela{screens > 1 ? 's' : ''})
+                      Restaurar total de {renewMonths} crédito{renewMonths === 1 ? "" : "s"} · {screens} tela{screens > 1 ? 's' : ''}
                     </button>
                   )}
                 </div>
@@ -407,10 +466,14 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 <div className="flex-1 p-[12px] border-r border-border min-w-0">
                   <div className="microlabel mb-[4px] truncate">NOVO VENCIMENTO</div>
                   <div className="font-mono text-[14px] font-bold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</div>
+                  <div className="mt-[2px] text-[10px] text-muted-foreground">{renewMonths} crédito{renewMonths === 1 ? "" : "s"}</div>
                 </div>
                 <div className="flex-1 p-[12px] min-w-0">
                   <div className="microlabel mb-[4px] truncate">TOTAL</div>
                   <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(renewAmount)}</div>
+                  <div className="mt-[2px] text-[10px] text-muted-foreground">
+                    Líquido estimado {formatCurrency(renewalBillingTotals.netProfit)}
+                  </div>
                 </div>
               </div>
 
@@ -421,10 +484,12 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                   {/* Payment methods */}
                   <div className="space-y-[8px] mb-[20px]">
                     {paymentMethods.map(pm => (
-                      <div 
+                      <button
+                        type="button"
                         key={pm.id}
                         onClick={() => setPaymentMethod(pm.id)}
-                        className="flex items-center gap-[12px] p-[12px] rounded-[8px] border border-input cursor-pointer hover:bg-muted transition-colors"
+                        aria-pressed={paymentMethod === pm.id}
+                        className="flex w-full items-center gap-[12px] rounded-[8px] border border-input p-[12px] text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <div className={cn(
                           "w-[15px] h-[15px] rounded-full border transition-all",
@@ -434,7 +499,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                           <div className="text-[13px] font-medium text-foreground leading-tight">{pm.label}</div>
                           <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{pm.desc}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
 
@@ -513,8 +578,8 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
               <button 
                 type="button" 
                 onClick={handleRenew}
-                disabled={isSubmitting}
-                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px]"
+                disabled={isSubmitting || !hasValidRenewDueDate || renewAmount <= 0}
+                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
                 Confirmar renovação
@@ -624,8 +689,8 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
           <div className="modal-2a">
             {/* HEADER */}
             <div className="modal-header-2a">
-              <span className="w-[34px] h-[34px] rounded-[9px] bg-accent text-interactive-fg flex items-center justify-center text-[15px]">
-                ▲
+              <span className="flex size-[34px] items-center justify-center rounded-[9px] bg-interactive-bg text-interactive-fg">
+                <BadgePercent className="size-[17px]" aria-hidden="true" />
               </span>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground truncate">

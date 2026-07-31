@@ -10,6 +10,13 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { logAuditClient } from "@/lib/audit-client"
 import { normalizeClientPhone } from "@/lib/phone"
+import {
+  addBillingMonths,
+  billingCreditsBetween,
+  billingMonthsFromPlanName,
+  calculateBillingTotals,
+  todayDateOnly,
+} from "@/lib/billing-period"
 
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -21,6 +28,7 @@ const clientSchema = z.object({
   screens: z.number().min(1, "Mínimo de 1 tela").max(10, "Máximo de 10 telas"),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
   due_time: z.string().optional(),
+  payment_method: z.enum(['pix', 'money', 'card']),
   status: z.enum(['active', 'inactive', 'pending', 'vencido']),
   observation: z.string().optional(),
   description: z.string().optional(),
@@ -53,6 +61,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       screens: 1,
       due_date: new Date().toISOString().split('T')[0],
       due_time: "23:59",
+      payment_method: 'pix',
       status: 'active',
       observation: "",
       description: "",
@@ -63,6 +72,21 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
   const selectedServices = watch("selected_services") || []
   const planValue = watch("plan_value")
+  const screens = watch("screens") || 1
+  const dueDate = watch("due_date")
+  const initialBillingCredits = client
+    ? 1
+    : billingCreditsBetween(todayDateOnly(), dueDate)
+  const monthlyServiceCost = servicesList
+    .filter((service) => selectedServices.includes(service.id))
+    .reduce((total, service) => total + Number(service.cost || 0), 0)
+  const initialAmount = Number(planValue || 0) * initialBillingCredits
+  const initialBillingTotals = calculateBillingTotals({
+    amountPaid: initialAmount,
+    monthlyServiceCost,
+    screens,
+    credits: initialBillingCredits,
+  })
 
   // Planos do primeiro serviço selecionado (se houver)
   const firstSelectedService = servicesList.find(s => selectedServices.includes(s.id))
@@ -83,6 +107,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           screens: client.screens || 1,
           due_date: client.due_date || new Date().toISOString().split('T')[0],
           due_time: client.due_time || "23:59",
+          payment_method: 'pix',
           status: client.status || 'active',
           observation: client.observation || "",
           description: client.description || "",
@@ -97,6 +122,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           screens: 1,
           due_date: new Date().toISOString().split('T')[0],
           due_time: "23:59",
+          payment_method: 'pix',
           status: 'active',
           observation: "",
           description: "",
@@ -118,7 +144,12 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
     // Ao selecionar um serviço com planos, preenche automaticamente com o primeiro plano
     const service = servicesList.find(s => s.id === serviceId)
     if (!current.includes(serviceId) && service?.plans?.length > 0) {
-      setValue("plan_value", service.plans[0].price, { shouldValidate: true })
+      const firstPlan = service.plans[0]
+      const planMonths = billingMonthsFromPlanName(firstPlan.name)
+      setValue("plan_value", Number(firstPlan.price) / planMonths, { shouldValidate: true })
+      if (!client) {
+        setValue("due_date", addBillingMonths(todayDateOnly(), planMonths), { shouldValidate: true })
+      }
     }
   }
 
@@ -195,17 +226,24 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .filter(s => data.selected_services.includes(s.id))
           .reduce((acc, s) => acc + s.cost, 0)
 
-        const totalCost = selectedServicesCost * data.screens
-        const netProfit = data.plan_value - totalCost
+        const monthsCovered = billingCreditsBetween(todayDateOnly(), data.due_date)
+        const amountPaid = data.plan_value * monthsCovered
+        const billingTotals = calculateBillingTotals({
+          amountPaid,
+          monthlyServiceCost: selectedServicesCost,
+          screens: data.screens,
+          credits: monthsCovered,
+        })
 
         const { error: paymentError } = await supabase
           .from('payments')
           .insert({
             user_id: user.id,
             client_id: clientId,
-            amount_paid: data.plan_value,
-            net_profit: netProfit,
-            months_renewed: 1,
+            amount_paid: amountPaid,
+            net_profit: billingTotals.netProfit,
+            months_renewed: monthsCovered,
+            payment_method: data.payment_method,
             paid_at: new Date().toISOString(),
           })
 
@@ -419,7 +457,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
               <div className="flex flex-col sm:flex-row gap-[12px] mb-[12px]">
                 <div className="flex-1">
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
-                    Valor cobrado <span className="text-danger">*</span>
+                    Valor mensal <span className="text-danger">*</span>
                   </div>
 
                   {/* Chips de planos do serviço selecionado */}
@@ -429,15 +467,21 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                         <button
                           key={plan.name}
                           type="button"
-                          onClick={() => setValue("plan_value", plan.price, { shouldValidate: true })}
+                          onClick={() => {
+                            const planMonths = billingMonthsFromPlanName(plan.name)
+                            setValue("plan_value", Number(plan.price) / planMonths, { shouldValidate: true })
+                            if (!client) {
+                              setValue("due_date", addBillingMonths(todayDateOnly(), planMonths), { shouldValidate: true })
+                            }
+                          }}
                           className={cn(
                             "px-[10px] py-[4px] rounded-[6px] text-[11px] font-medium border transition-all",
-                            planValue === plan.price
+                            Math.abs(planValue - (Number(plan.price) / billingMonthsFromPlanName(plan.name))) < 0.001
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-card text-secondary-foreground border-input hover:border-primary/50 hover:bg-muted"
                           )}
                         >
-                          {plan.name} · R$ {plan.price.toFixed(2).replace('.', ',')}
+                          {plan.name} · R$ {Number(plan.price).toFixed(2).replace('.', ',')} total
                         </button>
                       ))}
                     </div>
@@ -491,6 +535,59 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   {errors.due_date && <p className="text-[10px] text-danger mt-1">{errors.due_date.message}</p>}
                 </div>
               </div>
+
+              {!client && (
+                <div className="mb-[12px] space-y-[10px] rounded-[8px] border border-border bg-muted px-[12px] py-[10px]">
+                  <div role="status">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span className="text-[11px] font-medium text-foreground">
+                        Pagamento inicial · {initialBillingCredits} crédito{initialBillingCredits === 1 ? "" : "s"}
+                      </span>
+                      <span className="font-mono text-[12px] font-bold text-money">
+                        R$ {initialAmount.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                      {initialBillingCredits} × R$ {Number(planValue || 0).toFixed(2).replace(".", ",")} serão lançados agora.
+                      Lucro líquido estimado: R$ {initialBillingTotals.netProfit.toFixed(2).replace(".", ",")}.
+                    </p>
+                  </div>
+
+                  <Controller
+                    control={control}
+                    name="payment_method"
+                    render={({ field }) => (
+                      <fieldset>
+                        <legend className="mb-[6px] text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Forma de pagamento
+                        </legend>
+                        <div className="grid grid-cols-3 gap-[6px]">
+                          {[
+                            { value: 'pix' as const, label: 'PIX' },
+                            { value: 'money' as const, label: 'Dinheiro' },
+                            { value: 'card' as const, label: 'Cartão' },
+                          ].map((method) => (
+                            <button
+                              key={method.value}
+                              type="button"
+                              aria-pressed={field.value === method.value}
+                              onClick={() => field.onChange(method.value)}
+                              className={cn(
+                                "min-h-9 rounded-[7px] border px-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                field.value === method.value
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-input bg-card text-secondary-foreground hover:bg-muted",
+                              )}
+                            >
+                              {method.label}
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+                    )}
+                  />
+                </div>
+              )}
 
               {/* Segmented Control de Status */}
               <div className="bg-secondary rounded-[7px] p-[2px] flex flex-wrap sm:flex-nowrap">

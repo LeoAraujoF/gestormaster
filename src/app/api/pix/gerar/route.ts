@@ -9,6 +9,11 @@ import {
   type PixChargePurpose,
 } from '@/lib/pix-charges'
 import { organizationHasCapability } from '@/lib/plan-catalog'
+import {
+  billingCreditsBetween,
+  parseDateOnly,
+  renewalBaseDate,
+} from '@/lib/billing-period'
 
 export async function POST(req: Request) {
   try {
@@ -70,6 +75,7 @@ export async function POST(req: Request) {
       instance_name,
       client_id,
       months,
+      target_due_date,
       purpose: purposeRaw,
       expires_minutes,
       plan_name,
@@ -97,10 +103,11 @@ export async function POST(req: Request) {
 
     // Validar cliente se informado
     let planName: string | null = plan_name || null
+    let targetDueDate: string | null = null
     if (client_id) {
       const { data: client } = await supabaseAdmin
         .from('clients')
-        .select('id, name, plan_value, user_id, phone, organization_id')
+        .select('id, name, plan_value, due_date, user_id, phone, organization_id')
         .eq('id', client_id)
         .single()
 
@@ -108,6 +115,25 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
       }
       if (!planName) planName = client.name
+
+      if (target_due_date) {
+        const requestedDueDate = String(target_due_date)
+        const baseDate = renewalBaseDate(client.due_date)
+        const parsedTarget = parseDateOnly(requestedDueDate)
+        const parsedBase = parseDateOnly(baseDate)
+        if (
+          !parsedTarget ||
+          !parsedBase ||
+          parsedTarget.getTime() <= parsedBase.getTime() ||
+          billingCreditsBetween(baseDate, requestedDueDate) !== monthsToRenew
+        ) {
+          return NextResponse.json(
+            { error: 'Novo vencimento incompatível com os créditos informados.' },
+            { status: 400 },
+          )
+        }
+        targetDueDate = requestedDueDate
+      }
     }
 
     const centralizedCharge = await createMercadoPagoPixCharge({
@@ -124,12 +150,27 @@ export async function POST(req: Request) {
       expiresMinutes: expires_minutes ? Number(expires_minutes) : undefined,
     })
 
+    if (targetDueDate) {
+      const { error: metadataError } = await supabaseAdmin
+        .from('pix_charges')
+        .update({
+          metadata: {
+            ...(centralizedCharge.metadata || {}),
+            target_due_date: targetDueDate,
+          },
+        })
+        .eq('id', centralizedCharge.id)
+        .eq('organization_id', orgId)
+
+      if (metadataError) throw metadataError
+    }
+
     await logAudit({
       user_id: userId,
       action: 'pix.generate',
       resource: 'pix_charges',
       resource_id: centralizedCharge.id,
-      details: { valor: amount, client_id: client_id || null, purpose, provider_payment_id: centralizedCharge.provider_payment_id },
+      details: { valor: amount, client_id: client_id || null, purpose, provider_payment_id: centralizedCharge.provider_payment_id, target_due_date: targetDueDate },
       ip_address: getIpFromRequest(req),
     })
 

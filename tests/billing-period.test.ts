@@ -25,6 +25,19 @@ test("preserva o valor pago e multiplica apenas as despesas do período", () => 
   })
 })
 
+test("não adiciona outro crédito ao alterar apenas o dia", () => {
+  assert.equal(billingCreditsBetween("2026-08-01", "2026-09-01"), 1)
+  assert.equal(billingCreditsBetween("2026-08-01", "2026-09-02"), 1)
+  assert.equal(billingCreditsBetween("2026-09-01", "2026-09-02"), 1)
+})
+
+test("cada mês de calendário acrescenta exatamente um crédito", () => {
+  assert.equal(billingCreditsBetween("2026-08-01", "2026-10-02"), 2)
+  assert.equal(billingCreditsBetween("2026-08-31", "2026-09-01"), 1)
+  assert.equal(billingCreditsBetween("2026-12-31", "2027-01-01"), 1)
+  assert.equal(billingCreditsBetween("2026-12-31", "2027-02-01"), 2)
+})
+
 test("deriva o valor mensal sem alterar o pagamento recebido", () => {
   assert.equal(monthlyPlanValueFromPayment(45, 2), 22.5)
   assert.equal(monthlyPlanValueFromPayment(45, 0), 45)

@@ -63,16 +63,12 @@ export function billingCreditsBetween(baseValue: string, dueValue: string): numb
   const due = parseDateOnly(dueValue)
   if (!base || !due || due.getTime() <= base.getTime()) return 1
 
-  let credits =
+  const calendarMonths =
     (due.getFullYear() - base.getFullYear()) * 12 +
     due.getMonth() -
     base.getMonth()
 
-  credits = Math.max(1, credits)
-  const coveredUntil = parseDateOnly(addBillingMonths(baseValue, credits))
-  if (coveredUntil && coveredUntil.getTime() < due.getTime()) credits += 1
-
-  return credits
+  return Math.max(1, calendarMonths)
 }
 
 export function renewalBaseDate(currentDueDate: string, now = new Date()): string {

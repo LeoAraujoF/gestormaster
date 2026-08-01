@@ -118,3 +118,9 @@ export function calculateBillingTotals(input: {
     netProfit: amountPaid - totalCost,
   }
 }
+
+export function monthlyPlanValueFromPayment(amountPaid: number, credits: number): number {
+  const safeAmount = Number(amountPaid) || 0
+  const safeCredits = Math.max(1, Math.trunc(credits) || 1)
+  return safeAmount / safeCredits
+}

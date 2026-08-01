@@ -16,6 +16,7 @@ import {
   billingMonthsFromPlanName,
   calculateBillingTotals,
   todayDateOnly,
+  monthlyPlanValueFromPayment,
 } from "@/lib/billing-period"
 
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
@@ -80,7 +81,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const monthlyServiceCost = servicesList
     .filter((service) => selectedServices.includes(service.id))
     .reduce((total, service) => total + Number(service.cost || 0), 0)
-  const initialAmount = Number(planValue || 0) * initialBillingCredits
+  const initialAmount = Number(planValue || 0)
   const initialBillingTotals = calculateBillingTotals({
     amountPaid: initialAmount,
     monthlyServiceCost,
@@ -146,7 +147,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
     if (!current.includes(serviceId) && service?.plans?.length > 0) {
       const firstPlan = service.plans[0]
       const planMonths = billingMonthsFromPlanName(firstPlan.name)
-      setValue("plan_value", Number(firstPlan.price) / planMonths, { shouldValidate: true })
+      setValue("plan_value", client ? Number(firstPlan.price) / planMonths : Number(firstPlan.price), { shouldValidate: true })
       if (!client) {
         setValue("due_date", addBillingMonths(todayDateOnly(), planMonths), { shouldValidate: true })
       }
@@ -208,7 +209,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             user_id: user.id,
             name: data.name,
             ...normalizedPhone,
-            plan_value: data.plan_value,
+            plan_value: monthlyPlanValueFromPayment(data.plan_value, billingCreditsBetween(todayDateOnly(), data.due_date)),
             screens: data.screens,
             due_date: data.due_date,
             due_time: data.due_time,
@@ -227,7 +228,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .reduce((acc, s) => acc + s.cost, 0)
 
         const monthsCovered = billingCreditsBetween(todayDateOnly(), data.due_date)
-        const amountPaid = data.plan_value * monthsCovered
+        const amountPaid = data.plan_value
         const billingTotals = calculateBillingTotals({
           amountPaid,
           monthlyServiceCost: selectedServicesCost,
@@ -457,7 +458,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
               <div className="flex flex-col sm:flex-row gap-[12px] mb-[12px]">
                 <div className="flex-1">
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
-                    Valor mensal <span className="text-danger">*</span>
+                    {client ? "Valor mensal" : "Valor pago"} <span className="text-danger">*</span>
                   </div>
 
                   {/* Chips de planos do serviço selecionado */}
@@ -469,14 +470,14 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                           type="button"
                           onClick={() => {
                             const planMonths = billingMonthsFromPlanName(plan.name)
-                            setValue("plan_value", Number(plan.price) / planMonths, { shouldValidate: true })
+                            setValue("plan_value", client ? Number(plan.price) / planMonths : Number(plan.price), { shouldValidate: true })
                             if (!client) {
                               setValue("due_date", addBillingMonths(todayDateOnly(), planMonths), { shouldValidate: true })
                             }
                           }}
                           className={cn(
                             "px-[10px] py-[4px] rounded-[6px] text-[11px] font-medium border transition-all",
-                            Math.abs(planValue - (Number(plan.price) / billingMonthsFromPlanName(plan.name))) < 0.001
+                            Math.abs(planValue - (client ? Number(plan.price) / billingMonthsFromPlanName(plan.name) : Number(plan.price))) < 0.001
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-card text-secondary-foreground border-input hover:border-primary/50 hover:bg-muted"
                           )}
@@ -548,8 +549,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      {initialBillingCredits} × R$ {Number(planValue || 0).toFixed(2).replace(".", ",")} serão lançados agora.
-                      Lucro líquido estimado: R$ {initialBillingTotals.netProfit.toFixed(2).replace(".", ",")}.
+                      R$ {initialAmount.toFixed(2).replace(".", ",")} recebidos. Despesas do período: {initialBillingCredits} × R$ {(monthlyServiceCost * screens).toFixed(2).replace(".", ",")} = R$ {initialBillingTotals.totalCost.toFixed(2).replace(".", ",")}.
+                      {" "}Lucro líquido estimado: R$ {initialBillingTotals.netProfit.toFixed(2).replace(".", ",")}.
                     </p>
                   </div>
 

@@ -90,6 +90,7 @@ analyze-dump.ts
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
+!tests/mutation-origin.test.ts
 
 # unused starter assets from the Next.js scaffold
 /public/file.svg

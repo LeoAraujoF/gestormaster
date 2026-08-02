@@ -2,7 +2,8 @@ import 'server-only'
 
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { getOrganizationMembership } from '@/lib/access-control'
+import { getOrganizationMembership, getTrustedAppUrl } from '@/lib/access-control'
+import { isTrustedMutationOrigin } from '@/lib/mutation-origin'
 import { PORTAL_COOKIE, resolvePortalSession } from '@/lib/client-portal-service'
 
 export async function requireManager() {
@@ -21,5 +22,14 @@ export async function requirePortalSession(slug: string) {
 export function isTrustedMutation(request: Request) {
   const origin = request.headers.get('origin')
   if (!origin) return process.env.NODE_ENV !== 'production'
-  try { return new URL(origin).host === new URL(request.url).host } catch { return false }
+
+  return isTrustedMutationOrigin({
+    origin,
+    fetchSite: request.headers.get('sec-fetch-site'),
+    requestUrl: request.url,
+    trustedAppUrl: getTrustedAppUrl(),
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    allowHttp: process.env.NODE_ENV !== 'production',
+  })
 }

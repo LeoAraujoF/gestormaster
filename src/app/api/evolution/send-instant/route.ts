@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const { clientId, ruleId, confirmRecentContact = false } = await req.json()
     if (!clientId || !ruleId) return NextResponse.json({ error: 'Cliente e regra são obrigatórios' }, { status: 400 })
-    const [{ data: client }, { data: rule }, { data: instance }] = await Promise.all([
+    const [{ data: client }, { data: rule }, { data: instance }, { data: latestPayment }] = await Promise.all([
       supabaseAdmin.from('clients').select('id, name, phone, phone_e164, plan_value, due_date, user_id')
         .eq('id', clientId).eq('organization_id', membership.organizationId).maybeSingle(),
       supabaseAdmin.from('automations').select('id, alert_type, message_template')
@@ -40,6 +40,9 @@ export async function POST(req: Request) {
       supabaseAdmin.from('evolution_instances').select('id')
         .eq('organization_id', membership.organizationId).eq('status', 'connected')
         .order('is_primary', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('payments').select('amount_paid, created_at')
+        .eq('client_id', clientId).eq('organization_id', membership.organizationId)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
     if (!rule) return NextResponse.json({ error: 'Regra de automação não encontrada' }, { status: 404 })
@@ -49,7 +52,12 @@ export async function POST(req: Request) {
     const category = categoryForAlertType(rule.alert_type)
     const timezone = await organizationTimezone(membership.organizationId)
     const now = new Date()
-    const finalMessage = parseMessageTemplate(rule.message_template || '', client, user.user_metadata || {})
+    // plan_value é mantido como mensal no cadastro. Para ativação e renovação,
+    // a mensagem deve mostrar o valor efetivamente pago no último lançamento.
+    const messageClient = ['activation', 'renewal'].includes(rule.alert_type) && latestPayment?.amount_paid != null
+      ? { ...client, plan_value: Number(latestPayment.amount_paid) }
+      : client
+    const finalMessage = parseMessageTemplate(rule.message_template || '', messageClient, user.user_metadata || {})
     const reservation = await reserveContact({
       organizationId: membership.organizationId,
       clientId: client.id,

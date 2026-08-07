@@ -172,6 +172,7 @@ export interface Payment {
   amount_paid: number
   net_profit: number
   months_renewed: number
+  credits_consumed?: number
   created_at: string
 }
 

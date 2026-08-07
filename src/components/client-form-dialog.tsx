@@ -13,6 +13,7 @@ import { normalizeClientPhone } from "@/lib/phone"
 import {
   addBillingMonths,
   billingCreditsBetween,
+  billingCreditsForPeriod,
   billingMonthsFromPlanName,
   calculateBillingTotals,
   todayDateOnly,
@@ -75,9 +76,10 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const planValue = watch("plan_value")
   const screens = watch("screens") || 1
   const dueDate = watch("due_date")
-  const initialBillingCredits = client
+  const initialBillingMonths = client
     ? 1
     : billingCreditsBetween(todayDateOnly(), dueDate)
+  const initialBillingCredits = billingCreditsForPeriod(initialBillingMonths, screens)
   const monthlyServiceCost = servicesList
     .filter((service) => selectedServices.includes(service.id))
     .reduce((total, service) => total + Number(service.cost || 0), 0)
@@ -228,12 +230,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           .reduce((acc, s) => acc + s.cost, 0)
 
         const monthsCovered = billingCreditsBetween(todayDateOnly(), data.due_date)
+        const creditsConsumed = billingCreditsForPeriod(monthsCovered, data.screens)
         const amountPaid = data.plan_value
         const billingTotals = calculateBillingTotals({
           amountPaid,
           monthlyServiceCost: selectedServicesCost,
           screens: data.screens,
-          credits: monthsCovered,
+          credits: creditsConsumed,
         })
 
         const { error: paymentError } = await supabase
@@ -244,6 +247,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             amount_paid: amountPaid,
             net_profit: billingTotals.netProfit,
             months_renewed: monthsCovered,
+            credits_consumed: creditsConsumed,
             payment_method: data.payment_method,
             paid_at: new Date().toISOString(),
           })
@@ -278,18 +282,19 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
         if (rules && rules.length > 0) {
           for (const rule of rules) {
-            fetch(window.location.origin + '/api/evolution/send-instant', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clientId: clientId, ruleId: rule.id })
-            }).then(async (res) => {
+            try {
+              const res = await fetch(window.location.origin + '/api/evolution/send-instant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId: clientId, ruleId: rule.id })
+              })
               if (!res.ok) {
-                const errData = await res.json()
+                const errData = await res.json().catch(() => ({}))
                 toast.warning(`WhatsApp (Boas Vindas) falhou: ${errData.error}`)
               }
-            }).catch(() => {
+            } catch {
               toast.warning(`WhatsApp (Boas Vindas) bloqueado pelo navegador.`)
-            })
+            }
           }
         }
       }
@@ -549,7 +554,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      R$ {initialAmount.toFixed(2).replace(".", ",")} recebidos. Despesas do período: {initialBillingCredits} × R$ {(monthlyServiceCost * screens).toFixed(2).replace(".", ",")} = R$ {initialBillingTotals.totalCost.toFixed(2).replace(".", ",")}.
+                      R$ {initialAmount.toFixed(2).replace(".", ",")} recebidos. Despesas do período: {initialBillingCredits} créditos × R$ {monthlyServiceCost.toFixed(2).replace(".", ",")} = R$ {initialBillingTotals.totalCost.toFixed(2).replace(".", ",")}.
                       {" "}Lucro líquido estimado: R$ {initialBillingTotals.netProfit.toFixed(2).replace(".", ",")}.
                     </p>
                   </div>

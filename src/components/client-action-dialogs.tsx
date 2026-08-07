@@ -16,6 +16,7 @@ import {
   addBillingDays,
   addBillingMonths,
   billingCreditsBetween,
+  billingCreditsForPeriod,
   billingMonthsFromPlanName,
   calculateBillingTotals,
   parseDateOnly,
@@ -182,11 +183,12 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     (total: number, assignment: any) => total + Number(assignment.services?.cost || 0),
     0,
   ) || 0
+  const renewalCredits = billingCreditsForPeriod(renewMonths, renewScreens)
   const renewalBillingTotals = calculateBillingTotals({
     amountPaid: renewAmount,
     monthlyServiceCost: renewalMonthlyCost,
     screens: renewScreens,
-    credits: renewMonths,
+    credits: renewalCredits,
   })
 
   const priceForMonths = (months: number) =>
@@ -286,32 +288,49 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
 
       const { error: paymentError } = await supabase.from('payments').insert({
         user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: renewalBillingTotals.netProfit, months_renewed: renewMonths,
+        credits_consumed: renewalBillingTotals.credits,
         payment_method: paymentMethod,
         paid_at: new Date().toISOString(),
       })
 
       if (paymentError) throw paymentError
 
+      let notificationWarning: string | null = null
       if (notifyWhatsApp) {
-        const { data: rules } = await supabase
-          .from('automations')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('alert_type', 'renewal')
-          .eq('is_active', true)
-          
-        if (rules && rules.length > 0) {
-          for (const rule of rules) {
-            fetch(window.location.origin + '/api/evolution/send-instant', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clientId: client.id, ruleId: rule.id })
-            }).catch(() => {})
+        try {
+          const { data: rules } = await supabase
+            .from('automations')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('alert_type', 'renewal')
+            .eq('is_active', true)
+
+          if (rules && rules.length > 0) {
+            const notificationResults = await Promise.all(rules.map(async (rule) => {
+              const response = await fetch(window.location.origin + '/api/evolution/send-instant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId: client.id, ruleId: rule.id, confirmRecentContact: true }),
+              })
+              const result = await response.json().catch(() => ({}))
+              if (!response.ok) throw new Error(result.error || 'Falha ao enfileirar a mensagem de renovação')
+              return result
+            }))
+            if (notificationResults.some((result) => result.deferred)) {
+              notificationWarning = 'Renovação registrada; a mensagem foi programada para envio.'
+            }
+          } else {
+            notificationWarning = 'Renovação registrada, mas não há uma automação de renovação ativa.'
           }
+        } catch (notificationError) {
+          notificationWarning = notificationError instanceof Error
+            ? `Renovação registrada, mas a mensagem não foi enfileirada: ${notificationError.message}`
+            : 'Renovação registrada, mas a mensagem não foi enfileirada.'
         }
       }
 
       toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${newDueDate.toLocaleDateString('pt-BR')}`)
+      if (notificationWarning) toast.warning(notificationWarning)
       logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths, due_date: renewDueDate } })
       
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#2e7d54', '#4055c8', '#191a1e'] })
@@ -455,7 +474,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       onClick={() => { setRenewAmountStr(String(priceForMonths(renewMonths)).replace('.', ',')); setRenewScreens(screens) }}
                       className="text-[10px] text-interactive mt-[4px] hover:underline"
                     >
-                      Restaurar total de {renewMonths} crédito{renewMonths === 1 ? "" : "s"} · {screens} tela{screens > 1 ? 's' : ''}
+                      Restaurar total de {renewalCredits} crédito{renewalCredits === 1 ? "" : "s"} · {renewScreens} tela{renewScreens > 1 ? 's' : ''}
                     </button>
                   )}
                 </div>
@@ -466,7 +485,7 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                 <div className="flex-1 p-[12px] border-r border-border min-w-0">
                   <div className="microlabel mb-[4px] truncate">NOVO VENCIMENTO</div>
                   <div className="font-mono text-[14px] font-bold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</div>
-                  <div className="mt-[2px] text-[10px] text-muted-foreground">{renewMonths} crédito{renewMonths === 1 ? "" : "s"}</div>
+                  <div className="mt-[2px] text-[10px] text-muted-foreground">{renewalCredits} crédito{renewalCredits === 1 ? "" : "s"}</div>
                 </div>
                 <div className="flex-1 p-[12px] min-w-0">
                   <div className="microlabel mb-[4px] truncate">TOTAL</div>
@@ -632,12 +651,14 @@ export function PromoDialog({ open, onOpenChange, client, onSuccess }: { open: b
       const promo = promotions.find(p => p.id === selectedPromoId)
       const clientScreens = client.screens || 1
       const promoServicesCost = client.client_services?.reduce((acc: number, cs: any) => acc + (cs.services?.cost || 0), 0) || 0
-      const totalCostForPromo = promoServicesCost * clientScreens * renewMonths
+      const promoCredits = billingCreditsForPeriod(renewMonths, clientScreens)
+      const totalCostForPromo = promoServicesCost * promoCredits
       const amountPaid = promo ? Math.max(0, client.plan_value - promo.discount_value) * renewMonths : 0
       const netProfitForPromo = amountPaid - totalCostForPromo
 
       const { error: paymentError } = await supabase.from('payments').insert({
         user_id: user.id, client_id: client.id, amount_paid: amountPaid, net_profit: netProfitForPromo, months_renewed: renewMonths,
+        credits_consumed: promoCredits,
         paid_at: new Date().toISOString(),
       })
 

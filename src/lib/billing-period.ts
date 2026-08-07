@@ -71,6 +71,19 @@ export function billingCreditsBetween(baseValue: string, dueValue: string): numb
   return Math.max(1, calendarMonths)
 }
 
+/**
+ * Calcula os créditos consumidos pelo período contratado.
+ *
+ * Cada mês consome um crédito e cada tela além da primeira acrescenta
+ * somente um crédito ao período. Assim, 12 meses/2 telas = 13 créditos e
+ * 1 mês/2 telas = 2 créditos.
+ */
+export function billingCreditsForPeriod(months: number, screens: number): number {
+  const safeMonths = Math.max(1, Math.trunc(Number(months)) || 1)
+  const safeScreens = Math.max(1, Math.trunc(Number(screens)) || 1)
+  return safeMonths + safeScreens - 1
+}
+
 export function renewalBaseDate(currentDueDate: string, now = new Date()): string {
   const today = todayDateOnly(now)
   const due = parseDateOnly(currentDueDate)
@@ -104,8 +117,7 @@ export function calculateBillingTotals(input: {
 }) {
   const amountPaid = Number(input.amountPaid) || 0
   const credits = Math.max(1, Math.trunc(input.credits) || 1)
-  const screens = Math.max(1, Math.trunc(input.screens) || 1)
-  const totalCost = (Number(input.monthlyServiceCost) || 0) * screens * credits
+  const totalCost = (Number(input.monthlyServiceCost) || 0) * credits
 
   return {
     amountPaid,

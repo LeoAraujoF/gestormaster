@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, CircleDollarSign, LayoutDashboard, Plus, Send, WalletCards, Zap } from "lucide-react"
+import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, CircleDollarSign, LayoutDashboard, ListChecks, Plus, Send, Zap } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,8 @@ import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { ExecutiveDashboardView, ExecutiveUpgrade } from "@/components/executive-dashboard-view"
 import { usePlanCapability } from "@/components/providers/plan-provider"
-import { MetricGrid, PageSection, PageShell } from "@/components/page-layout"
+import { PageSection, PageShell } from "@/components/page-layout"
+import { WorkspaceHeader } from "@/components/workspace-header"
 
 type QueueFilter = "vencidos" | "hoje" | "7dias"
 
@@ -310,27 +312,17 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
-      <section className="animate-in fade-in slide-in-from-bottom-2 overflow-hidden rounded-[28px] border border-border bg-card shadow-sm duration-500" aria-labelledby="dashboard-title">
-        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
-                <LayoutDashboard className="size-4" aria-hidden="true" />
-              </span>
-              <div>
-                <p className="microlabel">{weekday}, {dayMonth}</p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                  <h1 id="dashboard-title" className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">Painel da operação</h1>
-                  {hasAdvancedFinance ? <span className="rounded-md bg-interactive-bg px-2 py-1 text-[10px] font-semibold text-interactive-fg">PRO</span> : null}
-                </div>
-              </div>
-            </div>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Resultado financeiro, carteira e prioridades em uma leitura rápida para decidir o próximo passo.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+      <WorkspaceHeader
+        id="dashboard-title"
+        icon={LayoutDashboard}
+        eyebrow={`${weekday}, ${dayMonth}`}
+        title="Painel da operação"
+        badge={hasAdvancedFinance ? "PRO" : undefined}
+        description="Resultado financeiro, carteira e prioridades em uma leitura rápida para decidir o próximo passo."
+        className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+        contentClassName="p-0"
+        actions={
+          <>
             <PixRapidoModal>
               <Button variant="outline" className="min-h-10 gap-2">
                 <Zap className="size-4" aria-hidden="true" /> Gerar PIX
@@ -339,10 +331,10 @@ export default function DashboardPage() {
             <Button onClick={() => setIsAddClientOpen(true)} className="min-h-10 gap-2">
               <Plus className="size-4" aria-hidden="true" /> Novo cliente
             </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
+          </>
+        }
+      >
+        <div className="grid gap-3 bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
           <HeroSignal
             icon={CircleDollarSign}
             label="Arrecadado hoje"
@@ -351,11 +343,11 @@ export default function DashboardPage() {
             tone="blue"
           />
           <HeroSignal
-            icon={WalletCards}
-            label="Recebido neste mês"
-            value={displayValue(formatCurrency(basicPayments.total))}
-            hint={`${basicPayments.count} pagamentos neste mês`}
-            tone="green"
+            icon={ListChecks}
+            label="Ações pendentes"
+            value={String(vencidos.length + vencemHoje.length)}
+            hint={`${vencidos.length} vencido${vencidos.length === 1 ? "" : "s"} · ${vencemHoje.length} vence${vencemHoje.length === 1 ? "" : "m"} hoje`}
+            tone={vencidos.length > 0 ? "danger" : vencemHoje.length > 0 ? "warning" : "green"}
           />
           <HeroSignal
             icon={CircleAlert}
@@ -374,7 +366,7 @@ export default function DashboardPage() {
             tone="warning"
           />
         </div>
-      </section>
+      </WorkspaceHeader>
 
       <OnboardingProgress />
 
@@ -538,30 +530,8 @@ export default function DashboardPage() {
         upgradeRequired ? <ExecutiveUpgrade /> : executive ? <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} onRiskOpen={revealRiskClients} /> : null
       ) : (
         <>
-          <MetricGrid columns={4}>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="microlabel">Recebido no mês</p>
-              <p className="num mt-2 text-xl font-semibold text-money">{displayValue(formatCurrency(basicPayments.total))}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{basicPayments.count} pagamentos confirmados</p>
-            </div>
-            <div className="rounded-xl border border-danger-border bg-danger-bg/50 p-4">
-              <p className="microlabel">Valor vencido</p>
-              <p className="num mt-2 text-xl font-semibold text-danger">{displayValue(formatCurrency(overdueTotal))}</p>
-              <p className="mt-1 text-xs text-danger-fg">{vencidos.length} clientes exigem atenção</p>
-            </div>
-            <div className="rounded-xl border border-warning-border bg-warning-bg/40 p-4">
-              <p className="microlabel">A receber em 7 dias</p>
-              <p className="num mt-2 text-xl font-semibold text-warning-fg">{displayValue(formatCurrency(upcomingTotal))}</p>
-              <p className="mt-1 text-xs text-warning-fg">{proximos7.length} renovações previstas</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="microlabel">Vencem hoje</p>
-              <p className="num mt-2 text-xl font-semibold">{vencemHoje.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">clientes para acompanhar</p>
-            </div>
-          </MetricGrid>
           <div className="flex flex-col gap-3 rounded-xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
-            <p className="flex-1 text-xs leading-relaxed text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
+            <p className="flex-1 text-xs leading-relaxed text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> {basicPayments.count} pagamento{basicPayments.count === 1 ? "" : "s"} registrado{basicPayments.count === 1 ? "" : "s"} neste mês. Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
             <Button variant="outline" size="sm" onClick={() => router.push('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
           </div>
         </>
@@ -586,7 +556,7 @@ export default function DashboardPage() {
 }
 
 function HeroSignal({ icon: Icon, label, value, hint, tone, onClick, actionLabel }: {
-  icon: typeof WalletCards
+  icon: LucideIcon
   label: string
   value: ReactNode
   hint: string

@@ -127,7 +127,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
 
   return (
     <section className="space-y-4" aria-labelledby="executive-overview-title">
-      <div className="flex flex-col gap-4 rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
+      <div className="flex flex-col gap-4 rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
@@ -230,7 +230,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
       {!compact ? (
         <>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(300px,0.7fr)]">
-            <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
+            <div className="overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
               <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">Movimento financeiro</h3>
@@ -386,7 +386,7 @@ function SummaryCard({ item, index }: { item: SummaryItem; index: number }) {
   )
 
   const className = cn(
-    "group relative w-full overflow-hidden rounded-[22px] border p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md sm:p-5",
+    "group relative w-full overflow-hidden rounded-[18px] border p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md sm:p-5",
     surfaceClasses[item.tone]
   )
   const style = { animationDelay: `${index * 60}ms` }
@@ -476,7 +476,7 @@ function OperationSignal({ realization, risk, activeClients, newClients, cancell
       : "bg-danger-bg text-danger-fg"
 
   return (
-    <aside className="flex flex-col rounded-[24px] border border-border bg-card p-5 shadow-sm">
+    <aside className="flex flex-col rounded-[20px] border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="microlabel">Leitura do período</p>
@@ -516,7 +516,7 @@ function ServiceDonut({
   const chartRows = rows.filter((row) => row.value > 0)
 
   return (
-    <aside className="flex min-h-[380px] flex-col rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
+    <aside className="flex min-h-[380px] flex-col rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-5">
       <div>
         <p className="microlabel">Composição da carteira</p>
         <h3 className="mt-1 text-sm font-semibold text-foreground">Receita por serviço</h3>
@@ -619,7 +619,7 @@ function Breakdown({ title, description, rows }: {
   const max = Math.max(...rows.map((row) => row.value), 0)
 
   return (
-    <div className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
+    <div className="rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-5">
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       <div className="mt-5 space-y-4">

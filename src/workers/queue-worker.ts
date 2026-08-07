@@ -13,27 +13,46 @@ import { processPortalOtpJob } from '../lib/portal-otp-worker';
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
 import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
 import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
+import { normalizeSendMessageJob } from '../lib/message-job-contract';
 
 startOperationalHeartbeat('message_worker');
 
 logger.info('🚀 Queue Worker iniciado e aguardando jobs...');
 
+function extractProviderMessageId(response: unknown): string | undefined {
+  if (!response || typeof response !== 'object') return undefined;
+  const value = response as Record<string, any>;
+  const candidates = [
+    value.key?.id,
+    value.data?.key?.id,
+    value.message?.key?.id,
+    value.messages?.[0]?.key?.id,
+  ];
+  return candidates.find((candidate): candidate is string => typeof candidate === 'string' && candidate.length > 0);
+}
+
 const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   if (await processPortalOtpJob(job.data)) return;
+  const normalizedJob = normalizeSendMessageJob(job.data);
   let {
     clientId, phone, instanceUrl, apiKey, connectionMode,
     alertHistoryId, ruleId, userId, correlationId
-  } = job.data;
-  const collectionDispatchId = job.data.collectionDispatchId as string | undefined;
-  const contactReservationId = job.data.contactReservationId as string | undefined;
-  let interactiveMessage = job.data.interactiveMessage as WhatsAppInteractiveMessage | undefined;
+  } = normalizedJob as typeof normalizedJob & { clientId?: string; ruleId?: string; instanceUrl?: string; apiKey?: string; connectionMode?: string };
+  userId = userId || undefined;
+  correlationId = correlationId || undefined;
+  let instanceId = normalizedJob.instanceId as string | undefined;
+  let leadId = normalizedJob.leadId as string | undefined;
+  const collectionDispatchId = normalizedJob.collectionDispatchId as string | undefined;
+  const contactReservationId = normalizedJob.contactReservationId as string | undefined;
+  let interactiveMessage = normalizedJob.interactiveMessage as WhatsAppInteractiveMessage | undefined;
   let contactCategory: string | undefined;
 
-  // Compatibilidade com diferentes formatos de payload (CamelCase vs snake_case)
-  let finalMessage = job.data.finalMessage || job.data.message;
-  let organizationId = job.data.organizationId || job.data.organization_id;
-  let instanceName = job.data.instanceName || job.data.instance_name;
-  let mediaUrl = job.data.mediaUrl as string | undefined;
+  let finalMessage = normalizedJob.finalMessage;
+  let organizationId = normalizedJob.organizationId;
+  let instanceName = normalizedJob.instanceName;
+  let mediaUrl = normalizedJob.mediaUrl || undefined;
+  const mediaBase64 = normalizedJob.mediaBase64 || undefined;
+  const mediaMimeType = normalizedJob.mediaMimeType || undefined;
 
   if (contactReservationId) {
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_contact_reservation', {
@@ -62,7 +81,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('Cliente sem telefone para contato coordenado');
     }
     const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('instance_name, base_url, api_key, connection_mode')
+      .select('id, instance_name, base_url, api_key, connection_mode')
       .eq('organization_id', reservation.organization_id).eq('status', 'connected')
       .order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!instance) {
@@ -79,6 +98,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     finalMessage = reservation.message_content;
     mediaUrl = reservation.media_url || undefined;
     contactCategory = reservation.category;
+    instanceId = instance.id;
     instanceName = instance.instance_name;
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
@@ -130,7 +150,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('Cliente sem telefone para despacho inteligente');
     }
     const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('instance_name, base_url, api_key, connection_mode')
+      .select('id, instance_name, base_url, api_key, connection_mode')
       .eq('organization_id', dispatch.organization_id).eq('status', 'connected').limit(1).maybeSingle();
     if (!instance) {
       const status = dispatchFailureStatus(job.attemptsMade, job.opts.attempts);
@@ -144,6 +164,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     organizationId = dispatch.organization_id;
     alertHistoryId = dispatch.alert_history_id;
     finalMessage = dispatch.message_content;
+    instanceId = instance.id;
     instanceName = instance.instance_name;
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
@@ -163,7 +184,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       if (alertHistoryId) {
         // Atualiza o registro existente criado pelo Scheduler
         const { error } = await supabaseAdmin.from('alert_history')
-          .update({ status: historyStatus, ...extra })
+          .update({ status: historyStatus, source_job_id: String(job.id), ...extra })
           .eq('id', alertHistoryId);
         if (error) logger.error(`[Job ${job.id}] Erro ao atualizar alert_history ${alertHistoryId}: ${error.message}`);
       } else {
@@ -173,17 +194,18 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         // Se for uma mensagem do sistema/bot sem userId, tenta buscar o dono da org
         if (!actualUserId && organizationId) {
           const { data: orgData } = await supabaseAdmin
-            .from('organizations')
-            .select('owner_id')
-            .eq('id', organizationId)
+            .from('organization_members')
+            .select('user_id')
+            .eq('organization_id', organizationId)
+            .eq('role', 'owner')
             .single();
 
-          if (orgData?.owner_id) {
-            actualUserId = orgData.owner_id;
+          if (orgData?.user_id) {
+            actualUserId = orgData.user_id;
           } else {
             // Se ainda não achar, busca qualquer usuário vinculado a essa organização
             const { data: orgUserData } = await supabaseAdmin
-              .from('organization_users')
+              .from('organization_members')
               .select('user_id')
               .eq('organization_id', organizationId)
               .limit(1)
@@ -195,34 +217,60 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
           }
         }
 
-        const { error } = await supabaseAdmin.from('alert_history').insert({
+        const { data: insertedHistory, error } = await supabaseAdmin.from('alert_history').insert({
           user_id: actualUserId,
           organization_id: organizationId,
           client_id: clientId,
+          lead_id: leadId,
+          phone,
+          instance_name: instanceName,
           automation_id: ruleId,
           status: historyStatus,
           message_content: finalMessage,
           scheduled_at: new Date().toISOString(),
+          queued_at: new Date().toISOString(),
+          source_job_id: String(job.id),
           ...extra
-        });
+        }).select('id').single();
         if (error) logger.error(`[Job ${job.id}] Erro ao inserir alert_history: ${error.message}`);
+        if (insertedHistory?.id) alertHistoryId = insertedHistory.id;
       }
       if (collectionDispatchId) {
-        const dispatchStatus = status === 'sent' ? 'sent' : status === 'failed' ? 'failed' : status;
-        const { error } = await supabaseAdmin.from('collection_dispatches')
-          .update({ status: dispatchStatus, ...(status === 'sent' ? { sent_at: new Date().toISOString() } : {}), ...extra })
-          .eq('id', collectionDispatchId);
-        if (error) logger.error(`[Job ${job.id}] Erro ao atualizar despacho inteligente ${collectionDispatchId}: ${error.message}`);
+        const dispatchStatus = status === 'sent'
+          ? 'sent'
+          : status === 'accepted'
+            ? 'processing'
+          : status === 'failed'
+            ? 'failed'
+            : ['processing', 'retryable', 'cancelled'].includes(status)
+              ? status
+              : null;
+        if (dispatchStatus) {
+          const { error } = await supabaseAdmin.from('collection_dispatches')
+            .update({ status: dispatchStatus, ...(status === 'sent' ? { sent_at: new Date().toISOString() } : {}), ...extra })
+            .eq('id', collectionDispatchId);
+          if (error) logger.error(`[Job ${job.id}] Erro ao atualizar despacho inteligente ${collectionDispatchId}: ${error.message}`);
+        }
       }
       if (contactReservationId) {
-        const reservationStatus = status === 'sent' ? 'sent' : status === 'processing' ? 'processing' : 'failed';
-        const { error } = await supabaseAdmin.from('contact_reservations').update({
-          status: reservationStatus,
-          ...(status === 'sent' ? { sent_at: new Date().toISOString(), decision_reason: 'CONTACT_SENT' } : {}),
-          ...(extra.error_message ? { decision_reason: extra.error_message } : {}),
-          updated_at: new Date().toISOString(),
-        }).eq('id', contactReservationId);
-        if (error) logger.error(`[Job ${job.id}] Erro ao atualizar reserva ${contactReservationId}: ${error.message}`);
+        const reservationStatus = status === 'sent'
+          ? 'sent'
+          : status === 'accepted'
+            ? 'processing'
+          : status === 'processing'
+            ? 'processing'
+            : status === 'failed' || status === 'retryable'
+              ? 'failed'
+              : null;
+        if (reservationStatus) {
+          const { error } = await supabaseAdmin.from('contact_reservations').update({
+            status: reservationStatus,
+            ...(status === 'sent' ? { sent_at: new Date().toISOString(), decision_reason: 'CONTACT_SENT' } : {}),
+            ...(extra.error_message ? { decision_reason: extra.error_message } : {}),
+            updated_at: new Date().toISOString(),
+          }).eq('id', contactReservationId);
+          if (error) logger.error(`[Job ${job.id}] Erro ao atualizar reserva ${contactReservationId}: ${error.message}`);
+        }
       }
     };
 
@@ -234,7 +282,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     }
 
     // 2. Kill Switch (Verifica se o usuário foi banido/suspenso)
-    const isBanned = await redisConnection.sismember('global:banned_users', userId);
+    const isBanned = userId ? await redisConnection.sismember('global:banned_users', userId) : 0;
     if (isBanned) {
       logger.error(`[Job ${job.id}] 🛑 KILL SWITCH: Usuário ${userId} está banido. Interrompendo envio definitivamente.`);
       await updateAlertStatus('failed', { error_message: 'USER_BANNED' });
@@ -251,7 +299,35 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       }
     }
 
-    // 4. Determina URL e API Key da Evolution API
+    // 4. Resolve as credenciais da instância no worker; jobs nunca carregam segredos.
+    if (instanceId || instanceName) {
+      let instanceQuery = supabaseAdmin
+        .from('evolution_instances')
+        .select('id, instance_name, base_url, api_key, connection_mode, organization_id, user_id')
+        .limit(1);
+      if (instanceId) instanceQuery = instanceQuery.eq('id', instanceId);
+      else if (instanceName) instanceQuery = instanceQuery.eq('instance_name', instanceName);
+      if (organizationId) instanceQuery = instanceQuery.eq('organization_id', organizationId);
+      else if (userId) instanceQuery = instanceQuery.eq('user_id', userId);
+
+      const { data: resolvedInstance, error: instanceError } = await instanceQuery.maybeSingle();
+      if (instanceError) throw new Error(`Falha ao resolver instância do job: ${instanceError.message}`);
+      if (instanceId && !resolvedInstance) {
+        await updateAlertStatus('failed', { error_message: 'INSTANCE_NOT_FOUND' });
+        throw new Error('Instância do job não encontrada ou não pertence à organização');
+      }
+      if (resolvedInstance) {
+        instanceId = resolvedInstance.id;
+        instanceName = resolvedInstance.instance_name;
+        instanceUrl = resolvedInstance.base_url;
+        apiKey = resolvedInstance.api_key;
+        connectionMode = resolvedInstance.connection_mode;
+        organizationId = organizationId || resolvedInstance.organization_id;
+        userId = userId || resolvedInstance.user_id;
+      }
+    }
+
+    // 5. Determina URL e API Key da Evolution API
     let finalUrl = '';
     let finalApiKey = '';
 
@@ -261,7 +337,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       finalApiKey = process.env.EVOLUTION_API_KEY || '';
       logger.info(`[Job ${job.id}] Usando conexão integrada: ${finalUrl}`);
     } else {
-      finalUrl = instanceUrl.replace(/\/message\/sendText\/.*$/, '');
+      finalUrl = (instanceUrl || '').replace(/\/message\/sendText\/.*$/, '');
       finalApiKey = apiKey ? SecretsManager.decrypt(apiKey) : '';
     }
 
@@ -278,12 +354,15 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     // Fallback: busca no banco a instância conectada
     if (!targetInstanceName) {
-      let instanceQuery = supabaseAdmin.from('evolution_instances').select('instance_name').eq('status', 'connected');
+      let instanceQuery = supabaseAdmin.from('evolution_instances').select('id, instance_name').eq('status', 'connected');
       if (organizationId) instanceQuery = instanceQuery.eq('organization_id', organizationId);
-      else instanceQuery = instanceQuery.eq('user_id', userId);
+      else if (userId) instanceQuery = instanceQuery.eq('user_id', userId);
 
-      const { data: insts } = await instanceQuery.limit(1);
-      if (insts && insts.length > 0) targetInstanceName = insts[0].instance_name;
+      const { data: insts } = await instanceQuery.order('is_primary', { ascending: false }).limit(1);
+      if (insts && insts.length > 0) {
+        targetInstanceName = insts[0].instance_name;
+        instanceId = insts[0].id;
+      }
     }
 
     if (!targetInstanceName) {
@@ -296,6 +375,12 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     try {
       let sentMessageCount = 0;
+      let providerMessageId: string | undefined;
+      const rememberProviderResponse = (response: unknown) => {
+        providerMessageId = extractProviderMessageId(response) || providerMessageId;
+      };
+      const mediaPayload = mediaUrl || mediaBase64;
+      const mediaType = mediaMimeType?.includes('/') ? mediaMimeType.split('/')[0] : (mediaMimeType || 'image');
       if (contactCategory === 'billing' && clientId && organizationId) {
         const { data: latestClient } = await supabaseAdmin.from('clients')
           .select('status')
@@ -318,6 +403,10 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       }
 
       // 6. Normaliza o número de telefone (Adiciona 55 se for BR e estiver sem DDI)
+      if (!phone) {
+        await updateAlertStatus('failed', { error_message: 'PHONE_MISSING' });
+        throw new Error('Número de telefone ausente no job');
+      }
       let normalizedPhone = phone.replace(/\D/g, '');
       if (normalizedPhone.length === 10 || normalizedPhone.length === 11) {
         normalizedPhone = `55${normalizedPhone}`;
@@ -326,71 +415,77 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       // 7. Envia a mensagem. Na Evolution 2.3.x os botões podem retornar 201
       // sem aparecer no aparelho, então o texto/legenda fica como fallback visível.
       if (interactiveMessage?.type === 'buttons') {
-        if (mediaUrl) {
-          await provider.sendMedia(targetInstanceName, normalizedPhone, mediaUrl, 'image', finalMessage, {
+        if (mediaPayload) {
+          rememberProviderResponse(await provider.sendMedia(targetInstanceName, normalizedPhone, mediaPayload, mediaType, finalMessage, {
             delay: 1200,
             presence: 'composing'
-          });
+          }));
           sentMessageCount++;
         } else {
-          await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+          rememberProviderResponse(await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
             delay: 1200,
             presence: 'composing'
-          });
+          }));
           sentMessageCount++;
         }
         try {
-          await provider.sendButtons(targetInstanceName, normalizedPhone, interactiveMessage, {
+          rememberProviderResponse(await provider.sendButtons(targetInstanceName, normalizedPhone, interactiveMessage, {
             delay: 600,
             presence: 'composing'
-          });
+          }));
           sentMessageCount++;
         } catch (interactiveError: any) {
           logger.warn(`[Job ${job.id}] Botões interativos indisponíveis; fallback em texto já enviado: ${interactiveError.message}`);
         }
       } else if (interactiveMessage?.type === 'list') {
         try {
-          await provider.sendList(targetInstanceName, normalizedPhone, interactiveMessage, {
+          rememberProviderResponse(await provider.sendList(targetInstanceName, normalizedPhone, interactiveMessage, {
             delay: 1200,
             presence: 'composing'
-          });
+          }));
           sentMessageCount++;
         } catch (interactiveError: any) {
           logger.warn(`[Job ${job.id}] Lista interativa indisponível; usando fallback em texto: ${interactiveError.message}`);
-          await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+          rememberProviderResponse(await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
             delay: 1200,
             presence: 'composing'
-          });
+          }));
           sentMessageCount++;
         }
-      } else if (mediaUrl) {
-        await provider.sendMedia(targetInstanceName, normalizedPhone, mediaUrl, 'image', finalMessage, {
+      } else if (mediaPayload) {
+        rememberProviderResponse(await provider.sendMedia(targetInstanceName, normalizedPhone, mediaPayload, mediaType, finalMessage, {
           delay: 1200,
           presence: 'composing'
-        });
+        }));
         sentMessageCount++;
       } else {
-        await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
+        rememberProviderResponse(await provider.sendMessage(targetInstanceName, normalizedPhone, finalMessage, {
           delay: 1200,
           presence: 'composing'
-        });
+        }));
         sentMessageCount++;
       }
 
-      // 8. Sucesso — Atualiza o registro para "sent"
-      await updateAlertStatus('sent', {
-        sent_at: new Date().toISOString(),
+      // 8. O provider aceitou a requisição; a entrega real chega pelo webhook.
+      await updateAlertStatus('accepted', {
+        accepted_at: new Date().toISOString(),
+        provider_message_id: providerMessageId,
+        provider_status: 'ACCEPTED',
+        instance_name: targetInstanceName,
+        phone: normalizedPhone,
         message_content: finalMessage
       });
 
-      logger.info(`[Job ${job.id}] ✅ Enviado com sucesso!`);
+      logger.info(`[Job ${job.id}] ✅ Provider aceitou o envio; aguardando status de entrega.`);
       await CircuitBreaker.recordSuccess();
 
       // Incrementa a Quota do Mês no Redis
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const quotaKey = `usage:messages:${userId}:${currentMonth}`;
-      await redisConnection.incrby(quotaKey, sentMessageCount);
-      await redisConnection.expire(quotaKey, 60 * 60 * 24 * 32);
+      if (userId) {
+        const quotaKey = `usage:messages:${userId}:${currentMonth}`;
+        await redisConnection.incrby(quotaKey, sentMessageCount);
+        await redisConnection.expire(quotaKey, 60 * 60 * 24 * 32);
+      }
 
     } catch (err: any) {
       // 8. Falha — Registra o erro

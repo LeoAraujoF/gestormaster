@@ -64,6 +64,7 @@ export async function POST(request: Request) {
       .from('api_keys')
       .insert({
         organization_id: orgId,
+        user_id: user.id,
         key_hash: hash,
         name: name || 'API Key Padrão',
       })

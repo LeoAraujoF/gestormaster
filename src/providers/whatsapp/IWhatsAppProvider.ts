@@ -4,9 +4,18 @@ export interface SendMessageOptions {
 }
 
 export interface WhatsAppReplyButton {
+  type?: 'reply';
   id: string;
   displayText: string;
 }
+
+export interface WhatsAppCopyCodeButton {
+  type: 'copyCode';
+  displayText: string;
+  copyCode: string;
+}
+
+export type WhatsAppButton = WhatsAppReplyButton | WhatsAppCopyCodeButton;
 
 export interface WhatsAppButtonsMessage {
   type: 'buttons';
@@ -14,7 +23,7 @@ export interface WhatsAppButtonsMessage {
   description?: string;
   footer?: string;
   thumbnailUrl?: string;
-  buttons: WhatsAppReplyButton[];
+  buttons: WhatsAppButton[];
 }
 
 export interface WhatsAppListRow {

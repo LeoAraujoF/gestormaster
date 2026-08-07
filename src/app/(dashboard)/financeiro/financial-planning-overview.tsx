@@ -83,8 +83,8 @@ export function FinancialPlanningOverview({
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
-        <div className="p-4 sm:p-5 lg:p-6">
+      <div className="grid items-start lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
+        <div className="min-w-0 p-4 sm:p-5 lg:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Recebido em {monthLabel}</p>
@@ -200,7 +200,7 @@ export function FinancialPlanningOverview({
           ) : null}
         </div>
 
-        <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
+        <div className="grid h-fit gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
           <PlanningSignal
             icon={TrendingUp}
             label={`Potencial de ${nextMonthLabel}`}

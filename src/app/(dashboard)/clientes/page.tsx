@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, UserCheck, AlertCircle, CalendarDays, Zap, ArrowRight, TrendingUp, FileText, type LucideIcon } from "lucide-react"
+import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, AlertCircle, CalendarDays, Zap, ArrowRight, TrendingUp, FileText, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask, cn } from "@/lib/utils"
 import type { Service, ClientService, ClientsManagementMetrics, EnrichedClient } from "@/types/database"
@@ -24,8 +24,9 @@ import { ClientGrowthChart, ClientRegistrationRhythmChart, ClientsByStatusChart 
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { usePlan } from '@/components/providers/plan-provider'
 import { PageSection, PageShell, ResponsiveDataView } from '@/components/page-layout'
+import { WorkspaceHeader } from '@/components/workspace-header'
 
-type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
+type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "attention" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
 
 type RegistrationPeriod = "all" | "today" | "month" | "custom"
 
@@ -289,6 +290,7 @@ export default function ClientesPage() {
     else if (quickFilter === 'canceled') matchesQuick = c.status === 'canceled' || c.status === 'inactive'
     else if (quickFilter === 'today') matchesQuick = d === 0
     else if (quickFilter === '7days') matchesQuick = d !== null && d > 0 && d <= 7
+    else if (quickFilter === 'attention') matchesQuick = c.status === 'vencido' || d === 0
     else if (quickFilter === 'no_whatsapp') matchesQuick = !c.phone || c.phone.trim() === ''
     else if (quickFilter === 'no_service') matchesQuick = !c.client_services || c.client_services.length === 0
 
@@ -514,6 +516,7 @@ export default function ClientesPage() {
   const activePortfolio = clients.filter((client) => client.status === "active")
   const overduePortfolio = clients.filter((client) => client.status === "vencido")
   const dueTodayPortfolio = clients.filter((client) => diffDays(client.due_date) === 0)
+  const attentionPortfolio = clients.filter((client) => client.status === "vencido" || diffDays(client.due_date) === 0)
   const dueSoonPortfolio = clients.filter((client) => {
     const days = diffDays(client.due_date)
     return client.status === "active" && days !== null && days > 0 && days <= 7
@@ -521,7 +524,6 @@ export default function ClientesPage() {
   const suspendedPortfolio = clients.filter((client) => client.status === "suspended")
   const canceledPortfolio = clients.filter((client) => client.status === "canceled" || client.status === "inactive")
   const registeredTodayPortfolio = clients.filter((client) => clientCreatedKey(client) === todayKey)
-  const activeRate = clients.length > 0 ? (activePortfolio.length / clients.length) * 100 : 0
   const monthlyRegistrationCounts = Array.from({ length: 6 }, (_, index) => {
     const monthStart = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1)
     const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
@@ -610,21 +612,16 @@ export default function ClientesPage() {
 
   return (
     <PageShell>
-      <section aria-labelledby="clients-page-title" className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
-          <div className="min-w-0">
-            <p className="microlabel">Carteira operacional</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2.5">
-              <h1 id="clients-page-title" className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">Clientes</h1>
-              <span className="num rounded-md bg-interactive-bg px-2 py-0.5 text-[10px] font-semibold text-interactive">
-                {clients.length}{planContext.limits.clients === null ? "" : ` / ${planContext.limits.clients}`}
-              </span>
-            </div>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
-              Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação.
-            </p>
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+      <WorkspaceHeader
+        id="clients-page-title"
+        icon={Users}
+        eyebrow="Carteira operacional"
+        title="Clientes"
+        badge={`${clients.length}${planContext.limits.clients === null ? "" : ` / ${planContext.limits.clients}`}`}
+        description="Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação."
+        contentClassName="p-0"
+        actions={
+          <>
             <DropdownMenu>
               <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "min-h-10 flex-1 gap-2 sm:flex-none" })}>
                 <FileText className="size-4" aria-hidden="true" /> Relatórios
@@ -648,11 +645,12 @@ export default function ClientesPage() {
             <Button onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="min-h-10 flex-1 gap-2 sm:flex-none">
               <Plus className="size-4" /> Novo cliente
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      >
 
         {isLoading ? (
-          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
+          <div className="grid gap-3 bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="flex min-h-[112px] items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4">
                 <Skeleton className="size-9 rounded-xl" />
@@ -661,14 +659,14 @@ export default function ClientesPage() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
+          <div className="grid gap-3 bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
             <PortfolioSignal icon={Users} label="Total de clientes" value={String(clients.length)} hint={`${activePortfolio.length} ativos na base`} tone="primary" onClick={clients.length > 0 ? () => applyRegistrationPeriod("all") : undefined} actionLabel="Ver todos os clientes" />
             <PortfolioSignal icon={CalendarDays} label="Cadastrados hoje" value={String(registeredTodayPortfolio.length)} hint={registeredTodayPortfolio.length === 1 ? "novo cliente no dia" : "novos clientes no dia"} tone="today" onClick={registeredTodayPortfolio.length > 0 ? () => applyRegistrationPeriod("today") : undefined} actionLabel="Ver clientes cadastrados hoje" />
             <PortfolioSignal icon={TrendingUp} label="Cadastrados no mês" value={String(currentMonthNewClients)} hint={previousMonthNewClients > 0 && monthlyGrowthRate !== null ? `${monthlyGrowthRate >= 0 ? "+" : ""}${monthlyGrowthRate.toFixed(1)}% vs. mês anterior` : `${previousMonthNewClients} no mês anterior`} tone="growth" onClick={currentMonthNewClients > 0 ? () => applyRegistrationPeriod("month") : undefined} actionLabel="Ver clientes cadastrados neste mês" />
-            <PortfolioSignal icon={UserCheck} label="Clientes ativos" value={String(activePortfolio.length)} hint={`${activeRate.toFixed(1)}% da base total`} tone="healthy" onClick={activePortfolio.length > 0 ? () => revealPortfolio("active") : undefined} actionLabel="Ver clientes ativos" />
+            <PortfolioSignal icon={AlertCircle} label="Atenção hoje" value={String(attentionPortfolio.length)} hint={`${overduePortfolio.length} vencido${overduePortfolio.length === 1 ? "" : "s"} · ${dueTodayPortfolio.length} vence${dueTodayPortfolio.length === 1 ? "" : "m"} hoje`} tone="loss" onClick={attentionPortfolio.length > 0 ? () => revealPortfolio("attention") : undefined} actionLabel="Ver clientes que exigem atenção hoje" />
           </div>
         )}
-      </section>
+      </WorkspaceHeader>
 
 
       {/* Tabela de Gestão */}

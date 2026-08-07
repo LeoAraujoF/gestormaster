@@ -1,7 +1,8 @@
-import { SecretsManager } from "@/lib/encryption";
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
+import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 
 export async function POST(req: Request) {
@@ -10,108 +11,123 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // --- KILL SWITCH CHECK ---
-    const isBanned = await redisConnection.sismember('global:banned_users', user.id)
-    if (isBanned) {
+    if (await redisConnection.sismember('global:banned_users', user.id)) {
       return NextResponse.json({ error: 'Sua conta foi suspensa temporariamente. Contate o suporte.' }, { status: 403 })
     }
 
-    const { instanceName, phone, message, mediaBase64, mediaMimeType } = await req.json()
+    const body = await req.json() as {
+      instanceName?: unknown
+      phone?: unknown
+      message?: unknown
+      mediaBase64?: unknown
+      mediaMimeType?: unknown
+      leadId?: unknown
+    }
+    const instanceName = typeof body.instanceName === 'string' ? body.instanceName.trim() : ''
+    const phone = typeof body.phone === 'string' ? body.phone : ''
+    const message = typeof body.message === 'string' ? body.message : ''
+    const mediaBase64 = typeof body.mediaBase64 === 'string' ? body.mediaBase64 : null
+    const mediaMimeType = typeof body.mediaMimeType === 'string' ? body.mediaMimeType : null
+    const leadId = typeof body.leadId === 'string' ? body.leadId : null
 
-    if (!instanceName || !phone || !message) {
-      return NextResponse.json({ error: 'Faltam campos obrigatórios (instanceName, phone, message)' }, { status: 400 })
+    if (!instanceName || !phone || (!message && !mediaBase64)) {
+      return NextResponse.json({ error: 'Faltam campos obrigatórios (instanceName, phone e message ou mídia)' }, { status: 400 })
     }
 
-    // 1. Fetch instance details securely
     const { data: instance, error: instanceError } = await supabase
       .from('evolution_instances')
-      .select('base_url, api_key, connection_mode')
+      .select('id, organization_id, instance_name')
       .eq('user_id', user.id)
       .eq('instance_name', instanceName)
       .maybeSingle()
 
-    if (instanceError || !instance) {
+    if (instanceError || !instance || !instance.organization_id) {
       return NextResponse.json({ error: 'Instância não encontrada ou sem permissão' }, { status: 400 })
     }
 
-    let finalBaseUrl = instance.base_url
-    let finalApiKey = SecretsManager.decrypt(instance.api_key || '')
+    if (leadId) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('id', leadId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!lead) return NextResponse.json({ error: 'Lead não encontrado ou sem permissão' }, { status: 400 })
 
-    if (instance.connection_mode === 'integrated' || !finalBaseUrl) {
-      finalBaseUrl = process.env.EVOLUTION_API_URL || ''
-      finalApiKey = process.env.EVOLUTION_API_KEY || ''
-    }
-
-    if (!finalBaseUrl || !finalApiKey) {
-       return NextResponse.json({ error: 'Credenciais da API não configuradas.' }, { status: 500 })
-    }
-
-    const baseUrl = finalBaseUrl.replace(/\/$/, '')
-
-    let apiReq;
-
-    if (mediaBase64 && mediaMimeType) {
-      // Send Media
-      const url = `${baseUrl}/message/sendMedia/${instanceName}`
-      const body = {
-        number: phone,
-        options: {
-          delay: 1200,
-          presence: 'composing'
-        },
-        mediaMessage: {
-          mediatype: mediaMimeType.includes('image') ? 'image' : 'video',
-          caption: message,
-          media: mediaBase64.split(',')[1] || mediaBase64 // Evolution needs base64 without prefix usually, but handles both. Let's send raw base64.
-        }
+      const { data: activeHistory } = await supabaseAdmin
+        .from('alert_history')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('lead_id', leadId)
+        .in('status', ['queued', 'accepted', 'sent', 'delivered', 'read', 'pending'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (activeHistory) {
+        return NextResponse.json({ success: true, queued: false, already_queued: true, history_id: activeHistory.id }, { status: 202 })
       }
-
-      apiReq = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': finalApiKey
-        },
-        body: JSON.stringify(body)
-      })
-    } else {
-      // Send Text
-      const url = `${baseUrl}/message/sendText/${instanceName}`
-      apiReq = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': finalApiKey
-        },
-        body: JSON.stringify({
-          number: phone,
-          options: { delay: 1200, presence: 'composing' },
-          text: message
-        })
-      })
     }
 
-    if (!apiReq.ok) {
-      const errData = await apiReq.text()
-      console.error("Evolution API Error:", errData)
-      return NextResponse.json({ error: `Erro na API: ${errData}` }, { status: 400 })
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      return NextResponse.json({ error: 'Número de telefone inválido' }, { status: 400 })
     }
 
-    const responseData = await apiReq.json()
-
-    const maskedPhone = phone.length > 4 ? '***' + phone.slice(-4) : phone
-    await logAudit({
+    const { data: history, error: historyError } = await supabaseAdmin.from('alert_history').insert({
       user_id: user.id,
-      action: 'whatsapp.send_single',
-      resource: 'evolution',
-      details: { instance_name: instanceName, phone: maskedPhone, has_media: !!(mediaBase64 && mediaMimeType) },
-      ip_address: getIpFromRequest(req)
+      organization_id: instance.organization_id,
+      client_id: null,
+      lead_id: leadId,
+      phone: cleanPhone,
+      instance_name: instance.instance_name,
+      status: 'queued',
+      message_content: message,
+      queued_at: new Date().toISOString(),
+      scheduled_at: new Date().toISOString(),
+    }).select('id').single()
+    if (historyError || !history) {
+      throw new Error(`Falha ao registrar histórico da mensagem: ${historyError?.message || 'registro ausente'}`)
+    }
+
+    const job = await messageQueue.add('send-message', {
+      organizationId: instance.organization_id,
+      userId: user.id,
+      instanceId: instance.id,
+      instanceName: instance.instance_name,
+      phone: cleanPhone,
+      finalMessage: message,
+      mediaBase64,
+      mediaMimeType,
+      alertHistoryId: history.id,
+      leadId,
+      source: leadId ? 'lead_campaign' : 'manual_single',
+    }, {
+      jobId: `alert-history:${history.id}`,
+      priority: 5,
     })
 
-    return NextResponse.json({ success: true, data: responseData })
+    await supabaseAdmin.from('alert_history')
+      .update({ source_job_id: String(job.id) })
+      .eq('id', history.id)
 
-  } catch (error: any) {
-    console.error("send-single error:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    await logAudit({
+      user_id: user.id,
+      organization_id: instance.organization_id,
+      action: 'whatsapp.send_single_queued',
+      resource: 'evolution',
+      resource_id: history.id,
+      details: { instance_name: instance.instance_name, phone: `***${cleanPhone.slice(-4)}`, job_id: job.id, lead_id: leadId },
+      ip_address: getIpFromRequest(req),
+    })
+
+    return NextResponse.json({
+      success: true,
+      queued: true,
+      job_id: job.id,
+      history_id: history.id,
+    }, { status: 202 })
+  } catch (error: unknown) {
+    console.error('send-single error:', error)
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro interno' }, { status: 500 })
   }
 }

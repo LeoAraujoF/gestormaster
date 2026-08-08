@@ -33,8 +33,7 @@ export function parseLeadCampaignMessage(template: string, lead: LeadCampaignRec
   return applySpintax(message)
 }
 
-export function normalizeCampaignPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length === 10 || digits.length === 11) return `55${digits}`
-  return digits
+export function normalizeCampaignPhone(phone: string): string | null {
+  return normalizeWhatsAppNumber(phone)
 }
+import { normalizeWhatsAppNumber } from './phone'

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
-import { phoneMask } from "@/lib/utils"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -105,7 +104,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
         reset({
           name: client.name || "",
-          phone: client.phone || "",
+          phone: client.phone_e164 || client.phone || "",
           plan_value: client.plan_value || 0,
           screens: client.screens || 1,
           due_date: client.due_date || new Date().toISOString().split('T')[0],
@@ -166,6 +165,9 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
       let clientId = client?.id
       const normalizedPhone = normalizeClientPhone(data.phone)
+      if (data.phone?.trim() && !normalizedPhone.phone_e164) {
+        throw new Error("Número inválido. Informe o WhatsApp com DDI, por exemplo: +55 11 99999-9999 ou +1 202 555 0123.")
+      }
 
       if (client) {
         const { error } = await supabase
@@ -370,10 +372,10 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   </div>
                   <input
                     {...register("phone")}
-                    onChange={(e) => e.target.value = phoneMask(e.target.value)}
-                    placeholder="(11) 99999-9999"
+                    placeholder="+55 11 99999-9999 ou +1 202 555 0123"
                     className="input-2a"
                   />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Use o código do país para números internacionais.</p>
                 </div>
               </div>
 

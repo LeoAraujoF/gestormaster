@@ -120,8 +120,11 @@ export function cleanPhone(value: string): string {
   // Primeiro tenta corrigir notação científica
   let phone = fixScientificNotation(value)
   
-  // Remove tudo que não é dígito
+  // Mantém o sinal de + quando o CSV trouxe um DDI explícito. Sem isso um
+  // número internacional perde a informação do país antes de chegar ao banco.
+  const hasInternationalPrefix = phone.trim().startsWith('+')
   phone = phone.replace(/\D/g, '')
+  if (hasInternationalPrefix) phone = `+${phone}`
   
   // Remove zeros à esquerda excessivos
   if (phone.length > 13) {

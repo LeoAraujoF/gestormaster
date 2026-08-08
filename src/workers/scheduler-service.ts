@@ -10,6 +10,7 @@ import { captureAnalyticsSnapshots } from '../lib/analytics-service';
 import { createCoordinatedAlert, releaseDeferredContacts, reserveContact } from '../lib/contact-coordination';
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
 import { decideFixedBillingRule, type FixedBillingAlertType } from '../lib/collection-orchestration';
+import { normalizePhoneE164 } from '../lib/phone';
 
 startOperationalHeartbeat('scheduler');
 
@@ -202,7 +203,8 @@ cron.schedule('*/5 * * * *', async () => {
       const jobsToQueue = [];
 
       for (const client of clients) {
-        if (!client.phone) continue;
+        const clientPhone = normalizePhoneE164(client.phone_e164 || client.phone || '');
+        if (!clientPhone) continue;
 
         const coverage = intelligentCoverage.get(client.id);
         const orchestrationDecision = decideFixedBillingRule({
@@ -273,7 +275,7 @@ cron.schedule('*/5 * * * *', async () => {
             name: 'send-automated-message',
             data: {
               clientId: client.id,
-              phone: client.phone,
+              phone: clientPhone,
               finalMessage: finalMsg,
               instanceUrl: instance.base_url,
               apiKey: instance.api_key,

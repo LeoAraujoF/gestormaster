@@ -1,4 +1,5 @@
 import type { CollectionProfileCode } from './collection-score'
+import { normalizePhoneE164 } from './phone'
 
 export type FixedBillingAlertType = 'before_due' | 'on_due' | 'after_due'
 
@@ -42,7 +43,7 @@ export function getCollectionIneligibilityReasons(client: {
   const reasons: CollectionIneligibilityReason[] = []
   const planValue = Number(client.plan_value || 0)
   if (!Number.isFinite(planValue) || planValue <= 0) reasons.push('CLIENT_PLAN_VALUE_NOT_POSITIVE')
-  if (!(client.phone_e164?.trim() || client.phone?.trim())) reasons.push('CLIENT_PHONE_NOT_FOUND')
+  if (!normalizePhoneE164(client.phone_e164 || client.phone || '')) reasons.push('CLIENT_PHONE_NOT_FOUND')
   return reasons
 }
 

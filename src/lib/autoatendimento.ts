@@ -1,7 +1,7 @@
 import crypto from 'crypto'
-import { normalizeBrazilPhone } from './phone'
+import { normalizeBrazilPhone, normalizePhoneE164 } from './phone'
 
-export { normalizeBrazilPhone } from './phone'
+export { normalizeBrazilPhone, normalizePhoneE164 } from './phone'
 
 export const BOT_STATE_TTL_SECONDS = 30 * 60
 export const PHONE_VERIFICATION_TTL_MINUTES = 10
@@ -113,6 +113,36 @@ export function brazilPhoneLegacyCandidates(raw: string): string[] {
   return brazilPhoneE164Candidates(raw).flatMap((candidate) => {
     const digits = candidate.replace(/\D/g, '')
     return [digits, digits.slice(2)]
+  }).filter((candidate, index, values) => values.indexOf(candidate) === index)
+}
+
+/**
+ * Gera as variantes usadas pelo inbound da Evolution.
+ *
+ * O JID chega apenas com dígitos, então a variante com `+` é necessária para
+ * países fora do Brasil. As variantes brasileiras antigas permanecem para
+ * não interromper clientes já cadastrados antes do phone_e164.
+ */
+export function phoneE164Candidates(raw: string): string[] {
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return []
+
+  const localCandidate = normalizePhoneE164(raw)
+  const internationalCandidate = normalizePhoneE164(`+${digits}`)
+  // JIDs com 55 são brasileiros; nos demais casos priorizamos o DDI que veio
+  // no próprio JID para não confundir, por exemplo, +1 com DDD 12 do Brasil.
+  const candidates = digits.startsWith('55')
+    ? [localCandidate, internationalCandidate]
+    : [internationalCandidate, localCandidate]
+  if (digits.startsWith('55')) candidates.push(...brazilPhoneE164Candidates(digits))
+
+  return [...new Set(candidates.filter((candidate): candidate is string => Boolean(candidate)))]
+}
+
+export function phoneLegacyCandidates(raw: string): string[] {
+  return phoneE164Candidates(raw).flatMap((candidate) => {
+    const digits = candidate.replace(/\D/g, '')
+    return [digits, ...(digits.startsWith('55') ? [digits.slice(2)] : [])]
   }).filter((candidate, index, values) => values.indexOf(candidate) === index)
 }
 

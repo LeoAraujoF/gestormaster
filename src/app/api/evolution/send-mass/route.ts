@@ -14,6 +14,7 @@ import { getOrganizationPlanContext } from '@/lib/plan-catalog'
 import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { normalizePhoneE164 } from '@/lib/phone'
 
 type MassRequest = {
   action?: 'preview' | 'confirm'
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
       if (!page || page.length < 1000) break
     }
     const audienceClients = serviceClientIds ? clients.filter((client) => serviceClientIds.has(client.id)) : clients
-    const withValidPhone = audienceClients.filter((client) => (client.phone_e164 || client.phone || '').replace(/\D/g, '').length >= 10)
+    const withValidPhone = audienceClients.filter((client) => Boolean(normalizePhoneE164(client.phone_e164 || client.phone || '')))
     const clientLimit = plan.limits.clients
     const eligibleByPlan = clientLimit == null ? withValidPhone : withValidPhone.slice(0, clientLimit)
     const overPlanLimit = withValidPhone.length - eligibleByPlan.length

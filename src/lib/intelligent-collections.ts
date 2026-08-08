@@ -3,6 +3,7 @@ import { messageQueue } from '@/lib/queue'
 import { resolveProfileCode, type CollectionProfileCode } from '@/lib/collection-score'
 import { createCoordinatedAlert, reserveContact } from '@/lib/contact-coordination'
 import type { IntelligentRecoveryCoverage } from '@/lib/collection-orchestration'
+import { normalizePhoneE164 } from '@/lib/phone'
 
 type ProfileCode = CollectionProfileCode
 
@@ -221,7 +222,7 @@ export async function scheduleIntelligentCollections(now = new Date()) {
         const { data: client } = await supabaseAdmin.from('clients')
           .select('id, name, phone_e164, phone, user_id, status')
           .eq('id', cycle.client_id).eq('organization_id', setting.organization_id).maybeSingle()
-        if (!client || !['active', 'vencido'].includes(client.status) || !(client.phone_e164 || client.phone)) continue
+        if (!client || !['active', 'vencido'].includes(client.status) || !normalizePhoneE164(client.phone_e164 || client.phone || '')) continue
         const score = await calculateScore(client.id)
         const { data: assignments } = await supabaseAdmin.from('client_tag_assignments')
           .select('client_tags(code)')

@@ -1,4 +1,5 @@
 import { SecretsManager } from "@/lib/encryption";
+import { normalizeWhatsAppNumber } from '@/lib/phone'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -36,10 +37,8 @@ export async function POST(req: Request) {
       throw new Error("Credenciais do servidor não configuradas")
     }
 
-    let parsedPhone = phone.replace(/\D/g, '')
-    if (!parsedPhone.startsWith('55') && parsedPhone.length <= 11) {
-      parsedPhone = '55' + parsedPhone
-    }
+    const parsedPhone = normalizeWhatsAppNumber(phone)
+    if (!parsedPhone) throw new Error("Número de WhatsApp inválido. Informe o DDI, por exemplo +55 ou +1.")
 
     const testMessage = "✅ *Conexão Lembrado x Evolution* estabelecida com sucesso!\n\nSeu motor de envios está pronto para funcionar."
 

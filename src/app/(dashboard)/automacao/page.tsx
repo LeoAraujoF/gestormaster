@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { phoneMask, cn } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
 import { usePlan } from "@/components/providers/plan-provider"
+import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -312,12 +313,12 @@ export default function AutomacaoPage() {
   /* â€”â€”â€”â€”â€” conexÃ£o â€”â€”â€”â€”â€” */
   const getPairingPhone = () => {
     if (connectionMethod !== 'pairing') return undefined
-    const digits = pairingPhone.replace(/\D/g, '')
-    if (!/^\d{10,15}$/.test(digits)) {
-      toast.error('Informe o número com DDI e DDD, usando apenas números.')
+    const normalizedPhone = normalizeWhatsAppNumber(pairingPhone)
+    if (!normalizedPhone) {
+      toast.error('Informe um WhatsApp válido com código do país, por exemplo +55 11 99999-9999.')
       return null
     }
-    return digits
+    return normalizedPhone
   }
 
   const handleConnectionResponse = async (responseData: {
@@ -1686,14 +1687,14 @@ export default function AutomacaoPage() {
               <Label htmlFor="pairing-phone" className="text-[11px]">Número do WhatsApp</Label>
               <Input
                 id="pairing-phone"
-                inputMode="numeric"
+                inputMode="tel"
                 autoComplete="tel"
-                placeholder="5511999999999"
+                placeholder="+55 11 99999-9999"
                 value={pairingPhone}
-                onChange={(event) => setPairingPhone(event.target.value.replace(/\D/g, '').slice(0, 15))}
+                onChange={(event) => setPairingPhone(event.target.value)}
                 className="num h-9 text-xs"
               />
-              <p className="text-[10.5px] text-muted-foreground">Informe DDI + DDD + número, sem espaços. Ex.: 5511999999999.</p>
+              <p className="text-[10.5px] text-muted-foreground">Use o DDI. Ex.: +55 11 99999-9999 ou +1 202 555 0123.</p>
             </div>
           )}
 

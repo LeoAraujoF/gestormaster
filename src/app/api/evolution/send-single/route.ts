@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
+import { normalizeWhatsAppNumber } from '@/lib/phone'
 
 export async function POST(req: Request) {
   try {
@@ -68,9 +69,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 10) {
-      return NextResponse.json({ error: 'Número de telefone inválido' }, { status: 400 })
+    const cleanPhone = normalizeWhatsAppNumber(phone)
+    if (!cleanPhone) {
+      return NextResponse.json({ error: 'Número de telefone inválido. Informe o DDI, por exemplo +55 11 99999-9999.' }, { status: 400 })
     }
 
     const { data: history, error: historyError } = await supabaseAdmin.from('alert_history').insert({

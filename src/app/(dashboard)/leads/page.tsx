@@ -5,6 +5,7 @@ import { Upload, Download, Search, FileText, Phone, Trash2, UserPlus, Lock, Zap,
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { phoneMask } from "@/lib/utils"
+import { normalizePhoneE164, normalizeWhatsAppNumber } from "@/lib/phone"
 import { logAuditClient } from "@/lib/audit-client"
 import { useRouter } from "next/navigation"
 import {
@@ -613,7 +614,7 @@ export default function LeadsPage() {
       // Deduplicação contra clientes existentes
       const { data: existingClients, error: clientsError } = await supabase
         .from('clients')
-        .select('phone')
+        .select('phone, phone_e164')
         
       let finalLeads = parsedLeads;
       let duplicatedCount = 0;
@@ -621,18 +622,14 @@ export default function LeadsPage() {
       if (!clientsError && existingClients) {
         const clientPhones = new Set(
           existingClients
-            .map(c => c.phone ? c.phone.replace(/\D/g, '') : null)
+            .map(c => normalizePhoneE164(c.phone_e164 || c.phone || ''))
             .filter(Boolean)
         );
         
         finalLeads = parsedLeads.filter((lead: Record<string, any>) => {
           if (!lead.phone) return true;
-          const cleanPhone = lead.phone.replace(/\D/g, '');
-          
-          const phoneWith55 = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? `55${cleanPhone}` : cleanPhone;
-          const phoneWithout55 = cleanPhone.startsWith('55') ? cleanPhone.substring(2) : cleanPhone;
-          
-          if (clientPhones.has(cleanPhone) || clientPhones.has(phoneWith55) || clientPhones.has(phoneWithout55)) {
+          const normalizedPhone = normalizePhoneE164(lead.phone)
+          if (normalizedPhone && clientPhones.has(normalizedPhone)) {
             duplicatedCount++;
             return false;
           }
@@ -749,11 +746,8 @@ export default function LeadsPage() {
   }
 
   const getWhatsAppLink = (phone: string) => {
-    let cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length >= 10 && cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) {
-      cleanPhone = '55' + cleanPhone
-    }
-    return `https://wa.me/${cleanPhone}`
+    const cleanPhone = normalizeWhatsAppNumber(phone)
+    return cleanPhone ? `https://wa.me/${cleanPhone}` : '#'
   }
 
   const convertToClient = () => {

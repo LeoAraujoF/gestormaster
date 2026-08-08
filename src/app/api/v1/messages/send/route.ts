@@ -4,6 +4,7 @@ import { messageQueue } from '@/lib/queue'
 import crypto from 'crypto'
 import { redisConnection } from '@/lib/redis'
 import { organizationHasCapability } from '@/lib/plan-catalog'
+import { normalizeWhatsAppNumber } from '@/lib/phone'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -79,9 +80,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'media_url deve ser uma URL HTTPS válida.' }, { status: 400 })
     }
 
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 10) {
-      return NextResponse.json({ error: 'Número de telefone inválido.' }, { status: 400 })
+    const cleanPhone = normalizeWhatsAppNumber(phone)
+    if (!cleanPhone) {
+      return NextResponse.json({ error: 'Número de telefone inválido. Informe o DDI, por exemplo +55 11 99999-9999.' }, { status: 400 })
     }
 
     let selectedInstance: { id: string; instance_name: string } | null = null

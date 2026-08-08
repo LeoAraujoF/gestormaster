@@ -23,14 +23,14 @@ import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsApp
 startOperationalHeartbeat('webhook_worker')
 import {
   BOT_STATE_TTL_SECONDS,
-  brazilPhoneE164Candidates,
-  brazilPhoneLegacyCandidates,
   buildMainMenu,
   extractIncomingMessageText,
   generateVerificationCode,
   isMenuCommand,
-  normalizeBrazilPhone,
+  normalizePhoneE164,
   parseDueDate,
+  phoneE164Candidates,
+  phoneLegacyCandidates,
   PHONE_VERIFICATION_TTL_MINUTES,
   resolveIncomingPhoneJid,
   verifyCode,
@@ -218,8 +218,9 @@ async function handleInboundMessage(payload: any) {
   const instanceName = payload.instance as string | undefined
 
   if (!remoteJid || !instanceName || message?.key?.fromMe || !text) return
-  const phoneCandidates = brazilPhoneE164Candidates(remoteJid.split('@')[0])
-  const legacyPhoneCandidates = brazilPhoneLegacyCandidates(remoteJid.split('@')[0])
+  const remotePhone = remoteJid.split('@')[0]
+  const phoneCandidates = phoneE164Candidates(remotePhone)
+  const legacyPhoneCandidates = phoneLegacyCandidates(remotePhone)
   const normalizedPhone = phoneCandidates[0]
   if (!normalizedPhone) return
 
@@ -250,7 +251,7 @@ async function handleInboundMessage(payload: any) {
   const clients = [...(e164Result.data || []), ...(legacyResult.data || [])]
   const client = phoneCandidates
     .map((candidate) => clients.find((item) => (
-      item.phone_e164 === candidate || normalizeBrazilPhone(item.phone || '') === candidate
+      item.phone_e164 === candidate || normalizePhoneE164(item.phone || '') === candidate
     )))
     .find(Boolean)
 
@@ -264,7 +265,7 @@ async function handleInboundMessage(payload: any) {
     logger.warn('[Webhook] Cliente localizado pelo telefone legado; phone_e164 ainda não preenchido.')
   }
 
-  const deliveryPhone = client.phone_e164 || normalizeBrazilPhone(client.phone || '') || normalizedPhone
+  const deliveryPhone = client.phone_e164 || normalizePhoneE164(client.phone || '') || normalizedPhone
 
   const pauseKey = `bot_pause:${organizationId}:${normalizedPhone}`
   const stateKey = `bot_state:${organizationId}:${normalizedPhone}`
@@ -578,9 +579,9 @@ async function handleInboundMessage(payload: any) {
   }
 
   if (state.step === 'awaiting_new_phone') {
-    const newPhone = normalizeBrazilPhone(textValue)
+    const newPhone = normalizePhoneE164(textValue)
     if (!newPhone || newPhone === client.phone_e164) {
-      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Número inválido ou igual ao atual. Informe outro telefone com DDD.' })
+      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Número inválido ou igual ao atual. Informe com código do país, por exemplo: +55 11 99999-9999 ou +1 202 555 0123.' })
       return
     }
     const code = generateVerificationCode()

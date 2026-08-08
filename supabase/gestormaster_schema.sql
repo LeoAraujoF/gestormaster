@@ -967,7 +967,7 @@ ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_port
 
 ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_code_hash_check CHECK (code_hash ~ '^[a-f0-9]{64}$'::text);
 
-ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_phone_e164_check CHECK (phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_phone_e164_check CHECK (phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_requested_ip_hash_check CHECK (requested_ip_hash IS NULL OR requested_ip_hash ~ '^[a-f0-9]{64}$'::text);
 
@@ -991,7 +991,7 @@ ALTER TABLE ONLY public.client_tags ADD CONSTRAINT client_tags_code_check CHECK 
 
 ALTER TABLE ONLY public.client_tags ADD CONSTRAINT client_tags_name_check CHECK (char_length(name) >= 2 AND char_length(name) <= 60);
 
-ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_phone_e164_format_check CHECK (phone_e164 IS NULL OR phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_phone_e164_format_check CHECK (phone_e164 IS NULL OR phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.collection_dispatches ADD CONSTRAINT collection_dispatches_status_check CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'retryable'::text, 'sent'::text, 'failed'::text, 'cancelled'::text]));
 
@@ -1099,7 +1099,7 @@ ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_v
 
 ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_code_hash_check CHECK (code_hash ~ '^[a-f0-9]{64}$'::text);
 
-ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_new_phone_e164_check CHECK (new_phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_new_phone_e164_check CHECK (new_phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_requested_via_check CHECK (requested_via = ANY (ARRAY['whatsapp_bot'::text, 'portal'::text]));
 
@@ -3043,7 +3043,8 @@ CREATE OR REPLACE VIEW public.vw_enriched_clients WITH (security_invoker=true) A
     COALESCE(( SELECT jsonb_agg(jsonb_build_object('service_id', cs.service_id, 'username', cs.username, 'password', cs.password, 'services', jsonb_build_object('id', s.id, 'name', s.name, 'cost', s.cost))) AS jsonb_agg
            FROM client_services cs
              JOIN services s ON cs.service_id = s.id
-          WHERE cs.client_id = c.id), '[]'::jsonb) AS client_services
+           WHERE cs.client_id = c.id), '[]'::jsonb) AS client_services,
+    phone_e164
    FROM clients c;;
 
 

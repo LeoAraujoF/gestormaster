@@ -50,6 +50,7 @@ export interface Client {
   user_id: string
   name: string
   phone: string | null
+  phone_e164: string | null
   plan_value: number
   due_date: string // format: YYYY-MM-DD
   observation: string | null

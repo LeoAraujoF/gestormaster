@@ -99,7 +99,8 @@ export async function POST(request: Request) {
         skipped.push({ lead_id: lead.id, name: lead.name, reason: 'ALREADY_IN_FLIGHT' })
         continue
       }
-      if (!lead.phone || lead.phone.replace(/\D/g, '').length < 10) {
+      const normalizedPhone = lead.phone ? normalizeCampaignPhone(lead.phone) : null
+      if (!normalizedPhone) {
         skipped.push({ lead_id: lead.id, name: lead.name, reason: 'PHONE_INVALID' })
         continue
       }
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
       const template = input.messageVariants[randomInteger(0, input.messageVariants.length - 1)] || ''
       eligibleLeads.push({
         lead,
-        phone: normalizeCampaignPhone(lead.phone),
+        phone: normalizedPhone,
         instanceName,
         message: parseLeadCampaignMessage(template, lead),
       })

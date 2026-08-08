@@ -16,6 +16,7 @@ import { organizationHasCapability } from '@/lib/plan-catalog'
 import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
+import { normalizePhoneE164 } from '@/lib/phone'
 
 export async function POST(req: Request) {
   try {
@@ -47,7 +48,9 @@ export async function POST(req: Request) {
     if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
     if (!rule) return NextResponse.json({ error: 'Regra de automação não encontrada' }, { status: 404 })
     if (!instance) return NextResponse.json({ error: 'WhatsApp não configurado ou desconectado' }, { status: 400 })
-    if (!(client.phone_e164 || client.phone)) return NextResponse.json({ error: 'Cliente não possui telefone' }, { status: 400 })
+    if (!normalizePhoneE164(client.phone_e164 || client.phone || '')) {
+      return NextResponse.json({ error: 'Cliente não possui um WhatsApp válido. Use o código do país, por exemplo +55 ou +1.' }, { status: 400 })
+    }
 
     const category = categoryForAlertType(rule.alert_type)
     const timezone = await organizationTimezone(membership.organizationId)

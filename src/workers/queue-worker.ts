@@ -14,6 +14,7 @@ import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
 import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
 import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
 import { normalizeSendMessageJob } from '../lib/message-job-contract';
+import { normalizeWhatsAppNumber } from '../lib/phone';
 
 startOperationalHeartbeat('message_worker');
 
@@ -402,14 +403,15 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         }
       }
 
-      // 6. Normaliza o número de telefone (Adiciona 55 se for BR e estiver sem DDI)
+      // 6. Normaliza para o formato numérico E.164 aceito pela Evolution.
       if (!phone) {
         await updateAlertStatus('failed', { error_message: 'PHONE_MISSING' });
         throw new Error('Número de telefone ausente no job');
       }
-      let normalizedPhone = phone.replace(/\D/g, '');
-      if (normalizedPhone.length === 10 || normalizedPhone.length === 11) {
-        normalizedPhone = `55${normalizedPhone}`;
+      const normalizedPhone = normalizeWhatsAppNumber(phone);
+      if (!normalizedPhone) {
+        await updateAlertStatus('failed', { error_message: 'PHONE_INVALID' });
+        throw new Error('Número de telefone inválido. Use o formato internacional, como +55 11 99999-9999.');
       }
 
       // 7. Envia a mensagem. Na Evolution 2.3.x os botões podem retornar 201

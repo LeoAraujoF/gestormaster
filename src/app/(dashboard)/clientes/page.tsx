@@ -440,8 +440,8 @@ export default function ClientesPage() {
 
   const commStatusBadge = (status: string | null) => {
     if (!status) return <span className="text-[10px] text-muted-foreground">Sem envios</span>
-    if (status === 'sent') return <span className="text-[10px] text-success-fg font-medium">✓ Enviada</span>
-    if (status === 'failed') return <span className="text-[10px] text-danger font-medium">✗ Falhou</span>
+    if (['accepted', 'sent', 'delivered', 'read'].includes(status)) return <span className="text-[10px] text-success-fg font-medium">✓ Enviada</span>
+    if (['failed', 'cancelled', 'canceled'].includes(status)) return <span className="text-[10px] text-danger font-medium">✗ Falhou</span>
     return <span className="text-[10px] text-warning-fg font-medium">Pendente</span>
   }
 

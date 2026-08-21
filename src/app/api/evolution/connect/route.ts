@@ -7,6 +7,7 @@ import { getOrganizationMembership } from '@/lib/access-control'
 import { getOrganizationPlanContext } from '@/lib/plan-catalog'
 import { SecretsManager } from '@/lib/encryption'
 import { EvolutionWhatsAppProvider } from '@/providers/whatsapp/EvolutionWhatsAppProvider'
+import { normalizeWhatsAppNumber } from '@/lib/phone'
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Falha ao conectar'
@@ -16,8 +17,7 @@ type ConnectionMethod = 'qr' | 'pairing'
 
 function normalizePairingPhone(value: unknown) {
   if (typeof value !== 'string') return null
-  const digits = value.replace(/\D/g, '')
-  return /^\d{10,15}$/.test(digits) ? digits : null
+  return normalizeWhatsAppNumber(value)
 }
 
 export async function POST(request: Request) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const pairingPhone = selectedConnectionMethod === 'pairing' ? normalizePairingPhone(phone) : null
     if (selectedConnectionMethod === 'pairing' && !pairingPhone) {
       return NextResponse.json(
-        { error: 'Informe o número com DDI e DDD, usando apenas números' },
+        { error: 'Informe um WhatsApp válido com código do país, por exemplo +55 11 99999-9999' },
         { status: 400 }
       )
     }

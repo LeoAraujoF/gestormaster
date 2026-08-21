@@ -21,6 +21,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'ID da instância é obrigatório' }, { status: 400 })
     }
 
+    if (is_warming_up === true) {
+      return NextResponse.json({
+        error: 'O aquecimento artificial foi desativado. Use apenas comunicações autorizadas e protegidas pela fila.',
+        code: 'ARTIFICIAL_WARMUP_DISABLED',
+      }, { status: 410 })
+    }
+
     const { data: instance, error: instanceError } = await supabase
       .from('evolution_instances')
       .update({ is_warming_up })

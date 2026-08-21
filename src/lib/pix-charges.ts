@@ -3,6 +3,7 @@ import { messageQueue } from '@/lib/queue'
 import { getTrustedAppUrl } from '@/lib/access-control'
 import { recordApprovedCollectionPayment } from '@/lib/intelligent-collections'
 import { buildMercadoPagoPixPayload } from '@/lib/mercadopago-pix-payload'
+import { getValidPixCopyPasteCode } from '@/lib/pix-copy-paste'
 
 export type PixChargePurpose = 'manual' | 'renewal' | 'charge'
 export type PixChargeStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'failed'
@@ -262,9 +263,16 @@ export async function createMercadoPagoPixCharge(input: CreateMercadoPagoPixChar
       throw new Error(`Mercado Pago recusou a criação da cobrança${reason}`)
     }
 
+    const pixCopyPasteCode = getValidPixCopyPasteCode(
+      payment.point_of_interaction?.transaction_data?.qr_code
+    )
+    if (!pixCopyPasteCode) {
+      throw new Error('Mercado Pago retornou um código PIX fora do padrão esperado')
+    }
+
     return attachProviderPayment(charge.id, {
       provider_payment_id: String(payment.id),
-      copia_e_cola: payment.point_of_interaction?.transaction_data?.qr_code || null,
+      copia_e_cola: pixCopyPasteCode,
       qr_code_base64: payment.point_of_interaction?.transaction_data?.qr_code_base64 || null,
       ticket_url: payment.point_of_interaction?.transaction_data?.ticket_url || null,
       external_reference: externalReference,

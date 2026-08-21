@@ -4,15 +4,16 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
-import { phoneMask } from "@/lib/utils"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { logAuditClient } from "@/lib/audit-client"
 import { normalizeClientPhone } from "@/lib/phone"
+import { isMissingRenewalReminderColumnError, withoutRenewalReminderFields } from "@/lib/renewal-reminder-compat"
 import {
   addBillingMonths,
   billingCreditsBetween,
+  billingCreditsForPeriod,
   billingMonthsFromPlanName,
   calculateBillingTotals,
   todayDateOnly,
@@ -33,6 +34,11 @@ const clientSchema = z.object({
   status: z.enum(['active', 'inactive', 'pending', 'vencido']),
   observation: z.string().optional(),
   description: z.string().optional(),
+  whatsapp_opt_in: z.boolean(),
+  whatsapp_opt_in_categories: z.array(z.enum(['operational', 'billing', 'marketing'])),
+  send_welcome: z.boolean(),
+  renewal_reminder_enabled: z.boolean(),
+  renewal_reminder_days_before: z.number().int().min(1).max(60),
   selected_services: z.array(z.string()).min(1, "É obrigatório selecionar pelo menos um serviço"),
   service_access: z.any().optional(),
 })
@@ -65,8 +71,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       payment_method: 'pix',
       status: 'active',
       observation: "",
-      description: "",
-      selected_services: [],
+       description: "",
+       whatsapp_opt_in: false,
+       whatsapp_opt_in_categories: [],
+       send_welcome: false,
+       renewal_reminder_enabled: false,
+       renewal_reminder_days_before: 7,
+       selected_services: [],
       service_access: {},
     }
   })
@@ -75,9 +86,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const planValue = watch("plan_value")
   const screens = watch("screens") || 1
   const dueDate = watch("due_date")
-  const initialBillingCredits = client
+  const whatsappOptIn = watch("whatsapp_opt_in")
+  const whatsappOptInCategories = watch("whatsapp_opt_in_categories") || []
+  const renewalReminderEnabled = watch("renewal_reminder_enabled")
+  const initialBillingMonths = client
     ? 1
     : billingCreditsBetween(todayDateOnly(), dueDate)
+  const initialBillingCredits = billingCreditsForPeriod(initialBillingMonths, screens)
   const monthlyServiceCost = servicesList
     .filter((service) => selectedServices.includes(service.id))
     .reduce((total, service) => total + Number(service.cost || 0), 0)
@@ -103,7 +118,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
         reset({
           name: client.name || "",
-          phone: client.phone || "",
+          phone: client.phone_e164 || client.phone || "",
           plan_value: client.plan_value || 0,
           screens: client.screens || 1,
           due_date: client.due_date || new Date().toISOString().split('T')[0],
@@ -111,8 +126,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           payment_method: 'pix',
           status: client.status || 'active',
           observation: client.observation || "",
-          description: client.description || "",
-          selected_services: client.client_services ? client.client_services.map((cs: any) => cs.service_id) : [],
+           description: client.description || "",
+           whatsapp_opt_in: client.whatsapp_opt_in === true,
+           whatsapp_opt_in_categories: Array.isArray(client.whatsapp_opt_in_categories) ? client.whatsapp_opt_in_categories : [],
+           send_welcome: false,
+           renewal_reminder_enabled: client.renewal_reminder_enabled === true,
+           renewal_reminder_days_before: client.renewal_reminder_days_before || 7,
+           selected_services: client.client_services ? client.client_services.map((cs: any) => cs.service_id) : [],
           service_access: accessFromClient,
         })
       } else {
@@ -126,8 +146,13 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           payment_method: 'pix',
           status: 'active',
           observation: "",
-          description: "",
-          selected_services: [],
+           description: "",
+           whatsapp_opt_in: false,
+            whatsapp_opt_in_categories: [],
+            send_welcome: false,
+            renewal_reminder_enabled: false,
+            renewal_reminder_days_before: 7,
+            selected_services: [],
           service_access: {},
         })
       }
@@ -158,30 +183,67 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
   const onSubmit = async (data: ClientForm) => {
     setIsSubmitting(true)
+    let renewalReminderUnavailable = false
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
       let clientId = client?.id
       const normalizedPhone = normalizeClientPhone(data.phone)
+      if (data.phone?.trim() && !normalizedPhone.phone_e164) {
+        throw new Error("Número inválido. Informe o WhatsApp com DDI, por exemplo: +55 11 99999-9999 ou +1 202 555 0123.")
+      }
+
+      const consentNow = new Date().toISOString()
+      const hadConsent = client?.whatsapp_opt_in === true
+      const hasOptOut = hadConsent || client?.whatsapp_opt_out === true
+      const whatsappConsent = data.whatsapp_opt_in
+        ? {
+            whatsapp_opt_in: true,
+            whatsapp_opt_in_at: client?.whatsapp_opt_in_at || consentNow,
+            whatsapp_opt_in_source: client?.whatsapp_opt_in_source || 'dashboard_client_form',
+            whatsapp_opt_in_categories: data.whatsapp_opt_in_categories,
+            whatsapp_opt_out: false,
+            whatsapp_opt_out_at: null,
+          }
+        : {
+            whatsapp_opt_in: false,
+            whatsapp_opt_in_at: null,
+            whatsapp_opt_in_source: null,
+            whatsapp_opt_in_categories: [],
+            whatsapp_opt_out: hasOptOut,
+            whatsapp_opt_out_at: hasOptOut ? (client?.whatsapp_opt_out_at || consentNow) : null,
+          }
 
       if (client) {
-        const { error } = await supabase
+        const clientUpdate = {
+          name: data.name,
+          ...normalizedPhone,
+          plan_value: data.plan_value,
+          screens: data.screens,
+          due_date: data.due_date,
+          due_time: data.due_time,
+          status: data.status,
+          observation: data.observation,
+          description: data.description,
+          ...whatsappConsent,
+          renewal_reminder_enabled: data.renewal_reminder_enabled,
+          renewal_reminder_days_before: data.renewal_reminder_days_before,
+        }
+        let updateResult = await supabase
           .from('clients')
-          .update({
-            name: data.name,
-            ...normalizedPhone,
-            plan_value: data.plan_value,
-            screens: data.screens,
-            due_date: data.due_date,
-            due_time: data.due_time,
-            status: data.status,
-            observation: data.observation,
-            description: data.description,
-          })
+          .update(clientUpdate)
           .eq('id', clientId)
 
-        if (error) throw error
+        if (isMissingRenewalReminderColumnError(updateResult.error)) {
+          renewalReminderUnavailable = true
+          updateResult = await supabase
+            .from('clients')
+            .update(withoutRenewalReminderFields(clientUpdate))
+            .eq('id', clientId)
+        }
+
+        if (updateResult.error) throw updateResult.error
         await supabase.from('client_services').delete().eq('client_id', clientId)
 
         const selectedServicesCost = servicesList
@@ -203,37 +265,52 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           await supabase.from('payments').update({ net_profit: newNetProfit }).eq('id', latestPayment.id)
         }
       } else {
-        const { data: newClient, error } = await supabase
+        const clientInsert = {
+          user_id: user.id,
+          name: data.name,
+          ...normalizedPhone,
+          plan_value: monthlyPlanValueFromPayment(data.plan_value, billingCreditsBetween(todayDateOnly(), data.due_date)),
+          screens: data.screens,
+          due_date: data.due_date,
+          due_time: data.due_time,
+          status: data.status,
+          observation: data.observation,
+          description: data.description,
+          ...whatsappConsent,
+          renewal_reminder_enabled: data.renewal_reminder_enabled,
+          renewal_reminder_days_before: data.renewal_reminder_days_before,
+        }
+        let insertResult = await supabase
           .from('clients')
-          .insert({
-            user_id: user.id,
-            name: data.name,
-            ...normalizedPhone,
-            plan_value: monthlyPlanValueFromPayment(data.plan_value, billingCreditsBetween(todayDateOnly(), data.due_date)),
-            screens: data.screens,
-            due_date: data.due_date,
-            due_time: data.due_time,
-            status: data.status,
-            observation: data.observation,
-            description: data.description,
-          })
+          .insert(clientInsert)
           .select()
           .single()
 
-        if (error) throw error
-        clientId = newClient.id
+        if (isMissingRenewalReminderColumnError(insertResult.error)) {
+          renewalReminderUnavailable = true
+          insertResult = await supabase
+            .from('clients')
+            .insert(withoutRenewalReminderFields(clientInsert))
+            .select()
+            .single()
+        }
+
+        if (insertResult.error) throw insertResult.error
+        if (!insertResult.data) throw new Error("O cliente não foi retornado após o cadastro.")
+        clientId = insertResult.data.id
 
         const selectedServicesCost = servicesList
           .filter(s => data.selected_services.includes(s.id))
           .reduce((acc, s) => acc + s.cost, 0)
 
         const monthsCovered = billingCreditsBetween(todayDateOnly(), data.due_date)
+        const creditsConsumed = billingCreditsForPeriod(monthsCovered, data.screens)
         const amountPaid = data.plan_value
         const billingTotals = calculateBillingTotals({
           amountPaid,
           monthlyServiceCost: selectedServicesCost,
           screens: data.screens,
-          credits: monthsCovered,
+          credits: creditsConsumed,
         })
 
         const { error: paymentError } = await supabase
@@ -244,6 +321,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
             amount_paid: amountPaid,
             net_profit: billingTotals.netProfit,
             months_renewed: monthsCovered,
+            credits_consumed: creditsConsumed,
             payment_method: data.payment_method,
             paid_at: new Date().toISOString(),
           })
@@ -268,7 +346,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       }
 
       // Disparo de Boas Vindas se for um novo cliente
-      if (!client && clientId) {
+      if (!client && clientId && data.send_welcome && data.whatsapp_opt_in && data.whatsapp_opt_in_categories.includes('operational')) {
         const { data: rules } = await supabase
           .from('automations')
           .select('*')
@@ -278,23 +356,30 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
 
         if (rules && rules.length > 0) {
           for (const rule of rules) {
-            fetch(window.location.origin + '/api/evolution/send-instant', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clientId: clientId, ruleId: rule.id })
-            }).then(async (res) => {
+            try {
+              const res = await fetch(window.location.origin + '/api/evolution/send-instant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId: clientId, ruleId: rule.id })
+              })
               if (!res.ok) {
-                const errData = await res.json()
+                const errData = await res.json().catch(() => ({}))
                 toast.warning(`WhatsApp (Boas Vindas) falhou: ${errData.error}`)
               }
-            }).catch(() => {
+            } catch {
               toast.warning(`WhatsApp (Boas Vindas) bloqueado pelo navegador.`)
-            })
+            }
           }
         }
       }
 
-      toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!")
+      if (renewalReminderUnavailable) {
+        toast.warning(client ? "Cliente atualizado, mas o lembrete não foi salvo." : "Cliente cadastrado, mas o lembrete não foi salvo.", {
+          description: "Aplique a migration de lembretes no Supabase para ativar este recurso.",
+        })
+      } else {
+        toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!")
+      }
       logAuditClient({ action: client ? 'client.update' : 'client.create', resource: 'clients', details: { client_name: data.name } })
       onOpenChange(false)
       onSuccess?.()
@@ -365,14 +450,87 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   </div>
                   <input
                     {...register("phone")}
-                    onChange={(e) => e.target.value = phoneMask(e.target.value)}
-                    placeholder="(11) 99999-9999"
+                    placeholder="+55 11 99999-9999 ou +1 202 555 0123"
                     className="input-2a"
                   />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Use o código do país para números internacionais.</p>
                 </div>
               </div>
 
-              {/* SERVIÇOS E ACESSOS */}
+              {/* WHATSAPP E NOTIFICAÇÕES */}
+              <div className="rounded-[8px] border border-border bg-muted/30 p-[12px] mt-[12px]">
+                <label className="flex items-start gap-[8px] text-[11px] text-secondary-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-[2px]"
+                    {...register("whatsapp_opt_in", {
+                      onChange: (event) => {
+                        if (event.target.checked && watch("whatsapp_opt_in_categories").length === 0) {
+                          setValue("whatsapp_opt_in_categories", ["operational"], { shouldValidate: true })
+                        }
+                      },
+                    })}
+                  />
+                  <span>
+                    <span className="block font-medium text-foreground">Cliente autorizou mensagens pelo WhatsApp</span>
+                    <span className="block mt-[2px] text-muted-foreground">Marque somente com autorização registrada do cliente.</span>
+                  </span>
+                </label>
+                {whatsappOptIn && (
+                  <div className="mt-[10px] pl-[24px] flex flex-wrap gap-x-[14px] gap-y-[6px]">
+                    {[
+                      ["operational", "Avisos operacionais"],
+                      ["billing", "Cobranças"],
+                      ["marketing", "Ofertas e campanhas"],
+                    ].map(([value, label]) => (
+                      <label key={value} className="flex items-center gap-[6px] text-[10.5px] text-secondary-foreground cursor-pointer">
+                        <input type="checkbox" value={value} {...register("whatsapp_opt_in_categories")} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!client && (
+                <label className="mt-[10px] flex items-start gap-[8px] rounded-[8px] border border-border bg-card p-[10px] text-[11px] text-secondary-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-[2px]"
+                    disabled={!whatsappOptIn || !whatsappOptInCategories.includes("operational")}
+                    {...register("send_welcome")}
+                  />
+                  <span>
+                    <span className="block font-medium text-foreground">Enviar boas-vindas agora</span>
+                    <span className="block mt-[2px] text-muted-foreground">Só será enviado se houver consentimento operacional e uma automação ativa.</span>
+                  </span>
+                </label>
+              )}
+
+              <div className="mt-[10px] rounded-[8px] border border-border bg-card p-[10px]">
+                <label className="flex items-start gap-[8px] text-[11px] text-secondary-foreground cursor-pointer">
+                  <input type="checkbox" className="mt-[2px]" {...register("renewal_reminder_enabled")} />
+                  <span>
+                    <span className="block font-medium text-foreground">Lembrete interno antes do vencimento</span>
+                    <span className="block mt-[2px] text-muted-foreground">Envia o aviso para o seu WhatsApp de suporte, sem falar com o cliente.</span>
+                  </span>
+                </label>
+                {renewalReminderEnabled && (
+                  <div className="mt-[8px] flex items-center gap-[8px] pl-[24px]">
+                    <label htmlFor="renewalReminderDays" className="text-[10.5px] text-muted-foreground">Avisar com</label>
+                    <input
+                      id="renewalReminderDays"
+                      type="number"
+                      min="1"
+                      max="60"
+                      {...register("renewal_reminder_days_before", { valueAsNumber: true })}
+                      className="h-[30px] w-[64px] rounded-[6px] border border-input bg-card px-[8px] text-[11px] font-mono text-foreground"
+                    />
+                    <span className="text-[10.5px] text-muted-foreground">dia(s) antes · 1 a 60</span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-[8px] mt-[20px] mb-[10px]">
                 <span className="microlabel m-0">SERVIÇOS E ACESSOS <span className="text-danger">*</span></span>
                 <span className="font-mono text-[9.5px] font-medium text-muted-foreground">usuário e senha são opcionais</span>
@@ -549,7 +707,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      R$ {initialAmount.toFixed(2).replace(".", ",")} recebidos. Despesas do período: {initialBillingCredits} × R$ {(monthlyServiceCost * screens).toFixed(2).replace(".", ",")} = R$ {initialBillingTotals.totalCost.toFixed(2).replace(".", ",")}.
+                      R$ {initialAmount.toFixed(2).replace(".", ",")} recebidos. Despesas do período: {initialBillingCredits} créditos × R$ {monthlyServiceCost.toFixed(2).replace(".", ",")} = R$ {initialBillingTotals.totalCost.toFixed(2).replace(".", ",")}.
                       {" "}Lucro líquido estimado: R$ {initialBillingTotals.netProfit.toFixed(2).replace(".", ",")}.
                     </p>
                   </div>

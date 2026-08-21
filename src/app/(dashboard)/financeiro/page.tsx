@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, type ReactNode } from "react
 import { useSearchParams } from "next/navigation"
 import { differenceInCalendarDays, subDays } from "date-fns"
 import { createClient } from "@/lib/supabase/client"
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react"
+import { FileSpreadsheet, FileText, Loader2, WalletCards } from "lucide-react"
 import { formatCurrency, cn } from "@/lib/utils"
 import type { DashboardMetrics, ClientsByService, PixCharge, PixChargeMetrics } from "@/types/database"
 import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
@@ -15,10 +15,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts"
-import { ExecutiveDashboardView } from "@/components/executive-dashboard-view"
 import { usePlanCapability } from "@/components/providers/plan-provider"
 import { useOrganization } from "@/components/providers/organization-provider"
-import { PageHeader, PageSection, PageShell, ResponsiveDataView } from "@/components/page-layout"
+import { PageSection, PageShell, ResponsiveDataView } from "@/components/page-layout"
+import { WorkspaceHeader } from "@/components/workspace-header"
 import { toast } from "sonner"
 import { FinancialPlanningOverview } from "./financial-planning-overview"
 import { FinancialReportCharts } from "./financial-report-charts"
@@ -31,7 +31,6 @@ import {
   financialReportPaymentMethods,
   financialReportServiceOptions,
   summarizeFinancialReport,
-  summarizeFinancialReportClients,
   type FinancialReportFilters as FinancialReportFiltersValue,
   type FinancialReportPayment,
 } from "./financial-report-types"
@@ -97,8 +96,8 @@ export default function FinanceiroPage() {
   const [pixMetrics, setPixMetrics] = useState<PixChargeMetrics | null>(null)
   const [pixCharges, setPixCharges] = useState<PixCharge[]>([])
   const [pixMigrationRequired, setPixMigrationRequired] = useState(false)
-  const [executive, setExecutive] = useState<ExecutiveDashboardDTO | null>(null)
-  const [executivePeriod, setExecutivePeriod] = useState<ExecutivePeriod>("month")
+  const [, setExecutive] = useState<ExecutiveDashboardDTO | null>(null)
+  const executivePeriod: ExecutivePeriod = "month"
   const [upgradeRequired, setUpgradeRequired] = useState(false)
 
   const { displayValue } = usePrivacy()
@@ -341,10 +340,6 @@ export default function FinanceiroPage() {
     () => summarizeFinancialReport(filteredReportPayments),
     [filteredReportPayments],
   )
-  const reportClientSummary = useMemo(
-    () => summarizeFinancialReportClients(filteredReportPayments, reportFilters),
-    [filteredReportPayments, reportFilters],
-  )
   const filteredPreviousReportPayments = useMemo(
     () => filterFinancialReportPayments(previousReportPayments, reportFilters),
     [previousReportPayments, reportFilters],
@@ -446,11 +441,13 @@ export default function FinanceiroPage() {
 
   return (
     <PageShell>
-      <PageHeader
+      <WorkspaceHeader
+        id="financial-page-title"
+        icon={WalletCards}
         eyebrow="Visão financeira"
         title="Financeiro"
         description="Planeje a receita, acompanhe riscos e confira cada entrada sem perder o contexto."
-        className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6 lg:p-7"
+        className="animate-in fade-in slide-in-from-bottom-2 duration-500"
       />
 
       {hasFinancialError ? (
@@ -476,7 +473,6 @@ export default function FinanceiroPage() {
         onSaveGoal={saveMonthlyGoal}
       />
 
-      {executive && <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} compact />}
       {upgradeRequired && !hasAdvancedFinance && (
         <div className="flex flex-col gap-3 rounded-2xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
           <div className="flex-1">
@@ -488,29 +484,39 @@ export default function FinanceiroPage() {
       )}
 
       {pixMetrics && (
-        <div className="grid gap-3 rounded-[24px] border border-border bg-muted/30 p-3 shadow-sm sm:grid-cols-3">
-          <div className="rounded-2xl border border-warning-border bg-warning-bg/65 p-4">
-            <p className="microlabel">PIX pendentes</p>
-            <p className="num mt-1 text-[18px] font-semibold text-warning-fg">
-              {displayValue(formatCurrency(pixMetrics.pending_amount))}
-            </p>
-            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.pending_count} em aberto</p>
+        <section className="space-y-3" aria-labelledby="pix-overview-title">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="microlabel">Recebimentos rápidos</p>
+              <h2 id="pix-overview-title" className="mt-1 text-base font-semibold tracking-tight text-foreground">PIX</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Acompanhe o que está em aberto e o que já entrou por este canal.</p>
+            </div>
+            <span className="num text-xs text-muted-foreground">{pixMetrics.paid_month_count} pagos no mês</span>
           </div>
-          <div className="rounded-2xl border border-success-border bg-success-bg/65 p-4">
-            <p className="microlabel">PIX pagos hoje</p>
-            <p className="num mt-1 text-[18px] font-semibold text-money">
-              {displayValue(formatCurrency(pixMetrics.paid_today_amount))}
-            </p>
-            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_today_count} confirmações</p>
+          <div className="grid gap-3 rounded-[24px] border border-border bg-muted/30 p-3 shadow-sm sm:grid-cols-3">
+            <div className="rounded-2xl border border-warning-border bg-warning-bg/65 p-4">
+              <p className="microlabel">PIX pendentes</p>
+              <p className="num mt-1 text-[18px] font-semibold text-warning-fg">
+                {displayValue(formatCurrency(pixMetrics.pending_amount))}
+              </p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.pending_count} em aberto</p>
+            </div>
+            <div className="rounded-2xl border border-success-border bg-success-bg/65 p-4">
+              <p className="microlabel">PIX pagos hoje</p>
+              <p className="num mt-1 text-[18px] font-semibold text-money">
+                {displayValue(formatCurrency(pixMetrics.paid_today_amount))}
+              </p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_today_count} confirmações</p>
+            </div>
+            <div className="rounded-2xl border border-interactive/20 bg-interactive-bg/65 p-4">
+              <p className="microlabel">PIX no mês</p>
+              <p className="num mt-1 text-[18px] font-semibold text-interactive-fg">
+                {displayValue(formatCurrency(pixMetrics.paid_month_amount))}
+              </p>
+              <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_month_count} pagos</p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-interactive/20 bg-interactive-bg/65 p-4">
-            <p className="microlabel">PIX no mês</p>
-            <p className="num mt-1 text-[18px] font-semibold text-interactive-fg">
-              {displayValue(formatCurrency(pixMetrics.paid_month_amount))}
-            </p>
-            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_month_count} pagos</p>
-          </div>
-        </div>
+        </section>
       )}
 
       {pixMigrationRequired && (
@@ -520,11 +526,15 @@ export default function FinanceiroPage() {
       )}
 
       {pixCharges.length > 0 && (
-        <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-[13px] font-semibold">Histórico de cobranças PIX</p>
-            <span className="text-[10px] text-muted-foreground">últimas {pixCharges.length}</span>
-          </div>
+        <details className="group overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground">Histórico de cobranças PIX</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Abra para revisar status, telefone e expiração das últimas cobranças.</p>
+            </div>
+            <span className="num shrink-0 text-[10px] text-muted-foreground">últimas {pixCharges.length} · <span className="text-interactive-fg group-open:hidden">abrir</span><span className="hidden text-interactive-fg group-open:inline">fechar</span></span>
+          </summary>
+          <div className="border-t border-border">
           <ResponsiveDataView
             desktopFrom="md"
             mobile={
@@ -612,12 +622,13 @@ export default function FinanceiroPage() {
             </Table>
             }
           />
-        </div>
+          </div>
+        </details>
       )}
 
       <PageSection
-        title="Dashboard e relatórios"
-        description="Filtre os dados reais, analise o período e exporte todos os registros encontrados."
+        title="Relatório de recebimentos"
+        description="Filtre o período, confira a composição da receita e exporte os registros encontrados."
         actions={
           <>
             <Button
@@ -667,11 +678,8 @@ export default function FinanceiroPage() {
           </div>
         ) : (
           <div className="mt-4 space-y-4">
-            <div className={cn("grid grid-cols-2 gap-3 rounded-[24px] border border-border bg-muted/30 p-3", hasAdvancedFinance ? "lg:grid-cols-4" : "sm:grid-cols-3")}>
+            <div className={cn("grid grid-cols-2 gap-3 rounded-[24px] border border-border bg-muted/30 p-3", hasAdvancedFinance ? "sm:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-3")}>
               <PeriodMetric label="Receita recebida" value={displayValue(formatCurrency(reportRevenue))} hint={`${filteredReportPayments.length} pagamento${filteredReportPayments.length === 1 ? "" : "s"}`} tone="success" />
-              <PeriodMetric label="Clientes" value={String(reportClientSummary.total)} hint="com pagamento no período" />
-              <PeriodMetric label="Novos clientes" value={String(reportClientSummary.newClients)} hint="cadastrados dentro do recorte" />
-              <PeriodMetric label="Clientes ativos" value={String(reportClientSummary.active)} hint="situação atual no recorte" />
               {hasAdvancedFinance ? (
                 <>
                   <PeriodMetric label="Lucro líquido" value={displayValue(formatCurrency(reportNetProfit))} hint={`margem ${reportRevenue > 0 ? ((reportNetProfit / reportRevenue) * 100).toFixed(0) : 0}%`} tone="success" />
@@ -691,7 +699,7 @@ export default function FinanceiroPage() {
               <div className="rounded-[24px] border border-border bg-card p-4 shadow-sm">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[13px] font-semibold">
-                    Composição dos recebimentos <span className="ml-1 text-[11px] font-normal text-muted-foreground">{reportPeriodLabel.toLowerCase()}</span>
+                    Entradas, custos e líquido <span className="ml-1 text-[11px] font-normal text-muted-foreground">{reportPeriodLabel.toLowerCase()}</span>
                   </p>
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground" aria-label="Legenda do gráfico">
                     <span className="flex items-center gap-1"><span className="size-2 rounded-[2px] bg-money" /> líquido</span>
@@ -727,7 +735,6 @@ export default function FinanceiroPage() {
             ) : null}
 
             <FinancialReportCharts
-              filters={reportFilters}
               payments={filteredReportPayments}
               displayValue={displayValue}
             />

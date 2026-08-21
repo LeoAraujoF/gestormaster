@@ -1,7 +1,7 @@
 "use client"
 // AutomaÃ§Ã£o â€” direÃ§Ã£o 2a (design_handoff/Automacao.dc.html + GUIA-AUTOMACAO-E-MODAIS PARTE 1)
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { Activity, CircleCheckBig, CircleX, Clock3, Copy, Image as ImageIcon, Loader2, MoreHorizontal, PhoneOff, QrCode, RotateCcw, Send, Shield, Smartphone, Star, Trash2, Wifi, WifiOff, X } from "lucide-react"
@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { phoneMask, cn } from "@/lib/utils"
 import { logAuditClient } from "@/lib/audit-client"
 import { usePlan } from "@/components/providers/plan-provider"
+import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +48,9 @@ const getDefaultTemplate = (type: string) => {
     quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso RÃ¡pido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
     activation: "OlÃ¡ {{primeiro_nome}}! Seja muito bem-vindo(a)! ðŸŒŸ\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse nÃºmero aqui, ele serÃ¡ o nosso canal oficial de suporte tÃ©cnico e onde vocÃª receberÃ¡ seus avisos de vencimento, ok? ðŸ¤\\n\\nðŸ’° Valor do Plano: R$ {{plan_value}}\\nðŸ“… Seu Vencimento: {{due_date}}\\n\\nðŸŽ *PROMOÃ‡ÃƒO INDIQUE E GANHE*\\nSabia que vocÃª pode ganhar meses grÃ¡tis? Ã‰ muito simples: indicou um amigo e ele fechou com a gente, o seu prÃ³ximo mÃªs sai 100% DE GRAÃ‡A! Sem sorteio, indicou, ganhou! ðŸš€\\n\\nðŸ“± *NOSSO CANAL EXCLUSIVO*\\nNÃ£o fique de fora das novidades, manutenÃ§Ãµes programadas e promoÃ§Ãµes relÃ¢mpago! Entre agora no nosso canal oficial para clientes:\\nðŸ‘‰ {{link_canal}}\\n\\nQualquer dÃºvida, Ã© sÃ³ nos chamar por aqui. Aproveite!"
   }
+  if (type === 'activation') {
+    return "Ola {{primeiro_nome}}! Seja bem-vindo(a).\n\nSeu plano foi ativado com sucesso em nosso sistema.\n\nEste numero sera usado apenas para suporte tecnico e avisos operacionais autorizados. Se precisar de ajuda, responda esta mensagem.\n\nEquipe {{empresa}}"
+  }
   return defaults[type] || defaults.before_due
 }
 
@@ -57,6 +61,17 @@ const STARTER_SYSTEM_TYPES: Record<string, string> = { renewal: 'Renovação', a
 const LOG_TYPE: Record<string, string> = { before_due: 'Aviso prévio', on_due: 'No vencimento', after_due: 'Atraso', renewal: 'Renovação', activation: 'Boas-vindas', promotion: 'Promoção', quick_message: 'Msg rápida' }
 const TYPE_DOT: Record<string, string> = { before_due: 'var(--interactive)', on_due: 'var(--warning)', after_due: 'var(--danger)', renewal: 'var(--money)', activation: 'var(--money)', quick_message: 'var(--money)', promotion: '#7a5af8' }
 const VARS = ['{{primeiro_nome}}', '{{plan_value}}', '{{due_date}}', '{{pix}}', '{{titular_pix}}', '{{banco_pix}}', '{{empresa}}', '{{link_canal}}']
+
+type LogDisplayStatus = 'pending' | 'deferred' | 'sent' | 'failed'
+type AlertHistoryLog = { status?: unknown; contact_decision?: unknown }
+
+function getLogDisplayStatus(log: AlertHistoryLog): LogDisplayStatus {
+  const status = String(log.status || '').toLowerCase()
+  if (status === 'pending' && log.contact_decision === 'deferred') return 'deferred'
+  if (['accepted', 'sent', 'delivered', 'read'].includes(status)) return 'sent'
+  if (['failed', 'cancelled', 'canceled'].includes(status)) return 'failed'
+  return 'pending'
+}
 
 // Etiquetas dos templates (protÃ³tipo): cores por significado
 const BADGES = ['PIX', 'LOGIN', 'CAMPANHA', 'PROMO', 'AVISO'] as const
@@ -157,7 +172,7 @@ export default function AutomacaoPage() {
   const [estimatedAudience, setEstimatedAudience] = useState<number | null>(null)
   const [services, setServices] = useState<any[]>([])
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const { register: regConn, handleSubmit: handleConnSubmit, formState: { errors: connErrs }, setValue: setConnValue } = useForm<ExternalConnectionForm>({
     resolver: zodResolver(externalConnectionSchema),
@@ -312,12 +327,12 @@ export default function AutomacaoPage() {
   /* â€”â€”â€”â€”â€” conexÃ£o â€”â€”â€”â€”â€” */
   const getPairingPhone = () => {
     if (connectionMethod !== 'pairing') return undefined
-    const digits = pairingPhone.replace(/\D/g, '')
-    if (!/^\d{10,15}$/.test(digits)) {
-      toast.error('Informe o número com DDI e DDD, usando apenas números.')
+    const normalizedPhone = normalizeWhatsAppNumber(pairingPhone)
+    if (!normalizedPhone) {
+      toast.error('Informe um WhatsApp válido com código do país, por exemplo +55 11 99999-9999.')
       return null
     }
-    return digits
+    return normalizedPhone
   }
 
   const handleConnectionResponse = async (responseData: {
@@ -465,7 +480,11 @@ export default function AutomacaoPage() {
       if (!user) throw new Error("NÃ£o autenticado")
       const { error } = await supabase
         .from('evolution_instances')
-        .update({ min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay })
+        .update({
+          min_delay: antiBanConfig.min_delay,
+          max_delay: antiBanConfig.max_delay,
+          message_min_interval_ms: antiBanConfig.min_delay * 1000,
+        })
         .eq('user_id', user.id)
       if (error) throw error
       logAuditClient({ action: 'antiban.update', resource: 'evolution_instances', details: { min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay } })
@@ -615,8 +634,8 @@ export default function AutomacaoPage() {
   }
 
   /* â€”â€”â€”â€”â€” logs â€”â€”â€”â€”â€” */
-  const loadLogs = async () => {
-    setIsLogsLoading(true)
+  const loadLogs = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLogsLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -626,8 +645,14 @@ export default function AutomacaoPage() {
         .eq('user_id', user.id)
         .order('scheduled_at', { ascending: false })
       if (data) setLogs(data)
-    } catch (e) { console.error(e) } finally { setIsLogsLoading(false) }
-  }
+    } catch (e) { console.error(e) } finally { if (showLoading) setIsLogsLoading(false) }
+  }, [supabase])
+
+  useEffect(() => {
+    if (activeTab !== 'logs') return
+    const intervalId = window.setInterval(() => { void loadLogs(false) }, 5000)
+    return () => window.clearInterval(intervalId)
+  }, [activeTab, loadLogs])
 
   const handleResendLog = async (id: string) => {
     await supabase.from('alert_history').update({ status: 'pending', error_message: null }).eq('id', id)
@@ -740,11 +765,11 @@ export default function AutomacaoPage() {
   /* â€”â€”â€”â€”â€” derivados â€”â€”â€”â€”â€” */
   const onlineCount = instances.filter(i => i.status === 'connected').length
   const anyOnline = onlineCount > 0
-  const pendingCount = logs.filter(l => l.status === 'pending').length
-  const failedCount = logs.filter(l => l.status === 'failed').length
-  const sentCount = logs.filter(l => l.status === 'sent').length
+  const pendingCount = logs.filter(l => getLogDisplayStatus(l) === 'pending').length
+  const failedCount = logs.filter(l => getLogDisplayStatus(l) === 'failed').length
+  const sentCount = logs.filter(l => getLogDisplayStatus(l) === 'sent').length
   const activeAutomationCount = automations.filter(rule => rule.is_active).length
-  const filteredLogs = logs.filter(l => logFilter === 'all' || l.status === logFilter)
+  const filteredLogs = logs.filter(l => logFilter === 'all' || getLogDisplayStatus(l) === logFilter)
 
   const bulk = logFilter === 'failed'
     ? { label: 'Reenviar todos', action: 'resend_failed' as const, cls: 'border-money/40 bg-success-bg text-success-fg' }
@@ -1332,13 +1357,13 @@ export default function AutomacaoPage() {
             <div className="px-4 py-10 text-center"><p className="microlabel">Nenhum log neste filtro</p></div>
           ) : (
             filteredLogs.map((log) => {
-              const displayStatus = log.status === 'pending' && log.contact_decision === 'deferred' ? 'deferred' : log.status
+              const displayStatus = getLogDisplayStatus(log)
               const st = ({
                 pending: ['Na fila', 'bg-warning-bg text-warning-fg'],
                 deferred: ['Adiado', 'bg-interactive-bg text-interactive-fg'],
                 sent: ['Enviado', 'bg-success-bg text-success-fg'],
                 failed: ['Falhou', 'bg-danger-bg text-danger-fg'],
-              } as Record<string, [string, string]>)[displayStatus] || [displayStatus, 'bg-secondary']
+              } as Record<LogDisplayStatus, [string, string]>)[displayStatus]
               const sched = log.scheduled_at
                 ? `${new Date(log.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${new Date(log.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
                 : '—'
@@ -1356,7 +1381,12 @@ export default function AutomacaoPage() {
                   <span className="num text-[10.5px] text-muted-foreground md:w-[110px]"><span className="microlabel mb-1 block md:hidden">Programado</span>{sched}</span>
                   <span className="md:w-[90px]">
                     <span className="microlabel mb-1 block md:hidden">Status</span>
-                    <span className={cn("inline-flex rounded px-2 py-0.5 text-[10px] font-semibold", st[1])}>{st[0]}</span>
+                    <span
+                      className={cn("inline-flex rounded px-2 py-0.5 text-[10px] font-semibold", st[1])}
+                      title={log.status === 'accepted' ? 'A Evolution API aceitou o envio; a confirmação de entrega pode chegar depois.' : undefined}
+                    >
+                      {st[0]}
+                    </span>
                   </span>
                   <span className="flex items-end justify-end gap-1 md:w-[80px]">
                     <span className="sr-only">Ações</span>
@@ -1686,14 +1716,14 @@ export default function AutomacaoPage() {
               <Label htmlFor="pairing-phone" className="text-[11px]">Número do WhatsApp</Label>
               <Input
                 id="pairing-phone"
-                inputMode="numeric"
+                inputMode="tel"
                 autoComplete="tel"
-                placeholder="5511999999999"
+                placeholder="+55 11 99999-9999"
                 value={pairingPhone}
-                onChange={(event) => setPairingPhone(event.target.value.replace(/\D/g, '').slice(0, 15))}
+                onChange={(event) => setPairingPhone(event.target.value)}
                 className="num h-9 text-xs"
               />
-              <p className="text-[10.5px] text-muted-foreground">Informe DDI + DDD + número, sem espaços. Ex.: 5511999999999.</p>
+              <p className="text-[10.5px] text-muted-foreground">Use o DDI. Ex.: +55 11 99999-9999 ou +1 202 555 0123.</p>
             </div>
           )}
 

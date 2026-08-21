@@ -103,6 +103,21 @@ export function buildRenewalConfirmationButtons(description: string): WhatsAppBu
   }
 }
 
+export function buildPixCopyButton(code: string, amount: number): WhatsAppButtonsMessage {
+  const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+  return {
+    type: 'buttons',
+    title: `PIX de ${currency.format(amount)} pronto`,
+    description: 'Toque para copiar o código. Se o botão não aparecer, copie a mensagem anterior inteira.',
+    footer: 'Cole sem alterar em Pix Copia e Cola no app do seu banco.',
+    buttons: [{
+      type: 'copyCode',
+      displayText: 'Copiar código PIX',
+      copyCode: code,
+    }],
+  }
+}
+
 export function buildCancellationConfirmationButtons(): WhatsAppButtonsMessage {
   return {
     type: 'buttons',

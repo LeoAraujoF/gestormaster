@@ -5,7 +5,8 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { organizationHasCapability } from '@/lib/plan-catalog'
 import { messageQueue } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
-import { normalizeBrazilPhone, parseDueDate } from '@/lib/autoatendimento'
+import { parseDueDate } from '@/lib/autoatendimento'
+import { normalizePhoneE164 } from '@/lib/phone'
 import { createMercadoPagoPixCharge } from '@/lib/pix-charges'
 import { SecretsManager } from '@/lib/encryption'
 import { generatePortalCode, generatePortalToken, hashPortalCode, maskPhone, normalizePortalSlug, portalHash } from '@/lib/client-portal-crypto'
@@ -113,7 +114,7 @@ export async function getPublicPortalBrand(slug: string) {
 export async function requestPortalCode(slug: string, rawPhone: string, ip: string, requestedClientId?: string) {
   const opaqueChallengeId = randomUUID()
   const generic = { accepted: true, challengeId: opaqueChallengeId, message: 'Se o telefone estiver cadastrado, o código será enviado pelo WhatsApp.' }
-  const phone = normalizeBrazilPhone(rawPhone)
+  const phone = normalizePhoneE164(rawPhone)
   const ipHash = portalHash(ip)
   const [ipLimit, phoneLimit] = await Promise.all([
     rateLimit(`portal:otp:ip:${ipHash}`, 10, 3600, { failOpen: false }),
@@ -267,7 +268,7 @@ export async function createPortalRequest(session: PortalSession, type: 'due_dat
 
 export async function requestPortalPhoneChange(session: PortalSession, rawPhone: string) {
   if (!session.settings.allow_phone_change) throw new Error('FEATURE_DISABLED')
-  const phone = normalizeBrazilPhone(rawPhone)
+  const phone = normalizePhoneE164(rawPhone)
   if (!phone) throw new Error('PHONE_INVALID')
   const limit = await rateLimit(`portal:phone-change:${session.organizationId}:${session.clientId}`, 5, 3600, { failOpen: false })
   if (!limit.ok) throw new Error('RATE_LIMITED')

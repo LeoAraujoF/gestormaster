@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, UserCheck, AlertCircle, CalendarDays, Zap, ArrowRight, TrendingUp, FileText, type LucideIcon } from "lucide-react"
+import { Plus, Download, Search, Filter, MoreHorizontal, MessageCircle, Loader2, Users, AlertCircle, CalendarDays, Zap, ArrowRight, TrendingUp, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, phoneMask, cn } from "@/lib/utils"
+import { normalizePhoneE164, normalizeWhatsAppNumber } from "@/lib/phone"
 import type { Service, ClientService, ClientsManagementMetrics, EnrichedClient } from "@/types/database"
 import { ClientFormDialog } from "@/components/client-form-dialog"
 import { RenewDialog, PromoDialog, DeleteDialog, BulkDeleteDialog } from "@/components/client-action-dialogs"
@@ -24,83 +25,11 @@ import { ClientGrowthChart, ClientRegistrationRhythmChart, ClientsByStatusChart 
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { usePlan } from '@/components/providers/plan-provider'
 import { PageSection, PageShell, ResponsiveDataView } from '@/components/page-layout'
+import { WorkspaceHeader } from '@/components/workspace-header'
 
-type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
+type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "attention" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
 
-type RegistrationPeriod = "all" | "today" | "month" | "custom"
-
-type PortfolioSignalTone = "primary" | "today" | "growth" | "healthy" | "loss"
-
-const signalToneClasses: Record<PortfolioSignalTone, { icon: string; value: string; surface: string }> = {
-  primary: {
-    icon: "bg-card/80 text-interactive-fg",
-    value: "text-interactive-fg",
-    surface: "border-interactive/20 bg-interactive-bg/70",
-  },
-  today: {
-    icon: "bg-card/80 text-warning-fg",
-    value: "text-warning-fg",
-    surface: "border-warning-border bg-warning-bg/70",
-  },
-  growth: {
-    icon: "bg-card/80 text-interactive-fg",
-    value: "text-interactive-fg",
-    surface: "border-interactive/20 bg-interactive-bg/55",
-  },
-  healthy: {
-    icon: "bg-card/80 text-success-fg",
-    value: "text-success-fg",
-    surface: "border-success-border bg-success-bg/70",
-  },
-  loss: {
-    icon: "bg-card/80 text-danger",
-    value: "text-danger",
-    surface: "border-danger-border bg-danger-bg/70",
-  },
-}
-
-function PortfolioSignal({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-  onClick,
-  actionLabel,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  hint: string
-  tone: PortfolioSignalTone
-  onClick?: () => void
-  actionLabel?: string
-}) {
-  const content: ReactNode = (
-    <>
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", signalToneClasses[tone].icon)}>
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="microlabel block text-[9px]">{label}</span>
-        <span className={cn("num mt-1 block text-lg font-semibold tracking-tight", signalToneClasses[tone].value)}>{value}</span>
-        <span className="mt-0.5 block text-[11px] text-muted-foreground">{hint}</span>
-      </span>
-      {onClick ? <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
-    </>
-  )
-
-  const className = cn(
-    "group flex min-h-[112px] w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.03)] transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5",
-    signalToneClasses[tone].surface
-  )
-
-  return onClick ? (
-    <button type="button" onClick={onClick} aria-label={actionLabel} className={className}>{content}</button>
-  ) : (
-    <div className={className}>{content}</div>
-  )
-}
+type RegistrationPeriod = "all" | "today" | "last7" | "month" | "custom"
 
 export default function ClientesPage() {
   const searchParams = useSearchParams()
@@ -243,7 +172,7 @@ export default function ClientesPage() {
     const qPhone = cleanPhone(searchTerm)
     // Se a busca tiver 55 no começo, tentamos buscar também sem o 55 para ser mais flexível
     const qPhoneLenient = qPhone.startsWith('55') ? qPhone.substring(2) : qPhone
-    const cPhone = c.phone ? cleanPhone(c.phone) : ''
+    const cPhone = c.phone_e164 || c.phone ? cleanPhone(c.phone_e164 || c.phone || '') : ''
 
     const matchesSearch = c.name.toLowerCase().includes(q)
       || (qPhoneLenient.length > 0 && cPhone.includes(qPhoneLenient))
@@ -289,18 +218,33 @@ export default function ClientesPage() {
     else if (quickFilter === 'canceled') matchesQuick = c.status === 'canceled' || c.status === 'inactive'
     else if (quickFilter === 'today') matchesQuick = d === 0
     else if (quickFilter === '7days') matchesQuick = d !== null && d > 0 && d <= 7
-    else if (quickFilter === 'no_whatsapp') matchesQuick = !c.phone || c.phone.trim() === ''
+    else if (quickFilter === 'attention') matchesQuick = c.status === 'vencido' || d === 0
+    else if (quickFilter === 'no_whatsapp') matchesQuick = !normalizePhoneE164(c.phone_e164 || c.phone || '')
     else if (quickFilter === 'no_service') matchesQuick = !c.client_services || c.client_services.length === 0
 
     return matchesSearch && matchesStatus && matchesService && matchesDate && matchesRegistration && matchesQuick
   })
 
+  const getQueueBucket = (days: number | null) => {
+    if (days === null) return 3
+    if (days <= -3) return 2
+    if (days <= 0) return 0
+    return 1
+  }
+
   const sortedClients = [...filteredClients].sort((a, b) => {
-    // Ordem natural: Vencem em breve primeiro, depois vencidos
-    if (!a.due_date) return 1
-    if (!b.due_date) return -1
-    const dA = diffDays(a.due_date)!, dB = diffDays(b.due_date)!
-    return dA - dB
+    const dA = diffDays(a.due_date)
+    const dB = diffDays(b.due_date)
+    const bucketA = getQueueBucket(dA)
+    const bucketB = getQueueBucket(dB)
+
+    if (bucketA !== bucketB) return bucketA - bucketB
+
+    // Dentro dos atrasos antigos, o mais recente continua sendo a próxima recuperação possível.
+    if (bucketA === 2 && dA !== dB) return (dB ?? 0) - (dA ?? 0)
+    if (bucketA !== 3 && dA !== dB) return (dA ?? 0) - (dB ?? 0)
+
+    return a.name.localeCompare(b.name, "pt-BR")
   })
 
   const totalPages = Math.ceil(sortedClients.length / ITEMS_PER_PAGE) || 1
@@ -317,7 +261,7 @@ export default function ClientesPage() {
     }
     const headers = ["Nome", "Telefone", "Vencimento", "Cadastro", "Valor_Plano", "Status", "Renovacoes", "Tempo_Cliente_Dias"]
     const rows = list.map((c) => [
-      `"${c.name.replaceAll('"', '""')}"`, `"${c.phone || ''}"`,
+      `"${c.name.replaceAll('"', '""')}"`, `"${c.phone_e164 || c.phone || ''}"`,
       `"${c.due_date ? new Date(c.due_date + "T00:00:00").toLocaleDateString('pt-BR') : ''}"`,
       `"${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : ''}"`,
       c.plan_value, `"${c.status}"`, c.renewal_count || 0, c.days_as_client || 0
@@ -353,9 +297,8 @@ export default function ClientesPage() {
 
   // --- Ações ---
   const handleWhatsApp = (client: any) => {
-    if (!client.phone) { toast.error("Este cliente não possui telefone cadastrado."); return }
-    const numbersOnly = client.phone.replace(/\D/g, '')
-    const phoneWithCountry = numbersOnly.startsWith('55') ? numbersOnly : `55${numbersOnly}`
+    const phoneWithCountry = normalizeWhatsAppNumber(client.phone_e164 || client.phone)
+    if (!phoneWithCountry) { toast.error("Informe um WhatsApp válido com código do país."); return }
     let rawMsg = `Olá ${client.name}, tudo bem?`
     if (quickMessage?.template) {
       const primeiroNome = client.name ? client.name.split(' ')[0] : ''
@@ -374,7 +317,7 @@ export default function ClientesPage() {
   }
 
   const handleCobrar = async (client: any) => {
-    if (!client.phone) { toast.error(`${client.name} não possui WhatsApp cadastrado.`); return }
+    if (!normalizePhoneE164(client.phone_e164 || client.phone || "")) { toast.error(`${client.name} não possui um WhatsApp válido.`); return }
     if (chargeRules.length === 0) { toast.error("Nenhuma regra de automação ativa."); return }
     setChargingIds((prev) => new Set(prev).add(client.id))
     try {
@@ -497,10 +440,16 @@ export default function ClientesPage() {
 
   const commStatusBadge = (status: string | null) => {
     if (!status) return <span className="text-[10px] text-muted-foreground">Sem envios</span>
-    if (status === 'sent') return <span className="text-[10px] text-success-fg font-medium">✓ Enviada</span>
-    if (status === 'failed') return <span className="text-[10px] text-danger font-medium">✗ Falhou</span>
+    if (['accepted', 'sent', 'delivered', 'read'].includes(status)) return <span className="text-[10px] text-success-fg font-medium">✓ Enviada</span>
+    if (['failed', 'cancelled', 'canceled'].includes(status)) return <span className="text-[10px] text-danger font-medium">✗ Falhou</span>
     return <span className="text-[10px] text-warning-fg font-medium">Pendente</span>
   }
+
+  const commSentDate = (date: string | null) => date ? (
+    <span className="text-[9px] text-muted-foreground" title={new Date(date).toLocaleString('pt-BR')}>
+      {new Date(date).toLocaleDateString('pt-BR')}
+    </span>
+  ) : null
 
   const getClientPrimaryService = (client: EnrichedClient) => {
     const relation = client.client_services?.[0] as (ClientService & { services?: Service }) | undefined
@@ -511,17 +460,16 @@ export default function ClientesPage() {
   const prazoColor = (d: number | null) => d === null ? "text-muted-foreground" : d < 0 ? "text-danger font-medium" : d === 0 ? "text-warning-fg font-medium" : "text-muted-foreground"
 
   const hasAdvanced = filterStatus !== 'all' || filterService !== 'all' || filterDateFrom || filterDateTo
-  const activePortfolio = clients.filter((client) => client.status === "active")
   const overduePortfolio = clients.filter((client) => client.status === "vencido")
   const dueTodayPortfolio = clients.filter((client) => diffDays(client.due_date) === 0)
   const dueSoonPortfolio = clients.filter((client) => {
     const days = diffDays(client.due_date)
-    return client.status === "active" && days !== null && days > 0 && days <= 7
+    return days !== null && days > 0 && days <= 7
   })
   const suspendedPortfolio = clients.filter((client) => client.status === "suspended")
   const canceledPortfolio = clients.filter((client) => client.status === "canceled" || client.status === "inactive")
-  const registeredTodayPortfolio = clients.filter((client) => clientCreatedKey(client) === todayKey)
-  const activeRate = clients.length > 0 ? (activePortfolio.length / clients.length) * 100 : 0
+  const noWhatsappPortfolio = clients.filter((client) => !normalizePhoneE164(client.phone_e164 || client.phone || ""))
+  const noServicePortfolio = clients.filter((client) => !client.client_services || client.client_services.length === 0)
   const monthlyRegistrationCounts = Array.from({ length: 6 }, (_, index) => {
     const monthStart = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1)
     const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
@@ -548,9 +496,24 @@ export default function ClientesPage() {
       registrations: clients.filter((client) => clientCreatedKey(client) === dateKey).length,
     }
   })
+  const dateKeyDaysAgo = (days: number) => {
+    const date = new Date(today)
+    date.setDate(date.getDate() - days)
+    return toDateKey(date)
+  }
+  const registrationHistory = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today)
+    date.setDate(date.getDate() - index)
+    const dateKey = toDateKey(date)
+    return {
+      dateKey,
+      label: index === 0 ? "Hoje" : date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+      date: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      count: clients.filter((client) => clientCreatedKey(client) === dateKey).length,
+    }
+  })
+  const selectedRegistrationDate = registeredFrom && registeredFrom === registeredTo ? registeredFrom : null
   const previousMonthNewClients = clientGrowthSeries.at(-2)?.new_clients || 0
-  const monthlyGrowthDelta = currentMonthNewClients - previousMonthNewClients
-  const monthlyGrowthRate = previousMonthNewClients > 0 ? (monthlyGrowthDelta / previousMonthNewClients) * 100 : null
   const focusPortfolio = () => {
     requestAnimationFrame(() => {
       const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
@@ -565,6 +528,9 @@ export default function ClientesPage() {
     if (period === "today") {
       setRegisteredFrom(todayKey)
       setRegisteredTo(todayKey)
+    } else if (period === "last7") {
+      setRegisteredFrom(dateKeyDaysAgo(6))
+      setRegisteredTo(todayKey)
     } else if (period === "month") {
       setRegisteredFrom(currentMonthStartKey)
       setRegisteredTo(todayKey)
@@ -575,11 +541,11 @@ export default function ClientesPage() {
     focusPortfolio()
   }
 
-  const revealPortfolio = (filter: QuickFilter) => {
-    setRegistrationPeriod("all")
-    setRegisteredFrom("")
-    setRegisteredTo("")
-    setQuickFilter(filter)
+  const applyRegistrationDate = (dateKey: string) => {
+    setRegistrationPeriod("custom")
+    setRegisteredFrom(dateKey)
+    setRegisteredTo(dateKey)
+    setQuickFilter("all")
     focusPortfolio()
   }
 
@@ -607,24 +573,26 @@ export default function ClientesPage() {
 
   const hasRegistrationFilter = registrationPeriod !== "all" || registeredFrom || registeredTo
   const hasAnyFilter = quickFilter !== "all" || hasAdvanced || hasRegistrationFilter || searchTerm.trim().length > 0
+  const activeFilterCount = [
+    searchTerm.trim().length > 0,
+    quickFilter !== "all",
+    filterStatus !== "all",
+    filterService !== "all",
+    Boolean(filterDateFrom || filterDateTo),
+    Boolean(hasRegistrationFilter),
+  ].filter(Boolean).length
 
   return (
     <PageShell>
-      <section aria-labelledby="clients-page-title" className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
-          <div className="min-w-0">
-            <p className="microlabel">Carteira operacional</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2.5">
-              <h1 id="clients-page-title" className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">Clientes</h1>
-              <span className="num rounded-md bg-interactive-bg px-2 py-0.5 text-[10px] font-semibold text-interactive">
-                {clients.length}{planContext.limits.clients === null ? "" : ` / ${planContext.limits.clients}`}
-              </span>
-            </div>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
-              Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação.
-            </p>
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+      <WorkspaceHeader
+        id="clients-page-title"
+        icon={Users}
+        eyebrow="Carteira operacional"
+        title="Clientes"
+        badge={`${clients.length}${planContext.limits.clients === null ? "" : ` / ${planContext.limits.clients}`}`}
+        description="Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação."
+        actions={
+          <>
             <DropdownMenu>
               <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "min-h-10 flex-1 gap-2 sm:flex-none" })}>
                 <FileText className="size-4" aria-hidden="true" /> Relatórios
@@ -648,32 +616,14 @@ export default function ClientesPage() {
             <Button onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="min-h-10 flex-1 gap-2 sm:flex-none">
               <Plus className="size-4" /> Novo cliente
             </Button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex min-h-[112px] items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4">
-                <Skeleton className="size-9 rounded-xl" />
-                <div className="flex-1 space-y-2"><Skeleton className="h-2.5 w-24" /><Skeleton className="h-5 w-28" /><Skeleton className="h-2.5 w-32" /></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
-            <PortfolioSignal icon={Users} label="Total de clientes" value={String(clients.length)} hint={`${activePortfolio.length} ativos na base`} tone="primary" onClick={clients.length > 0 ? () => applyRegistrationPeriod("all") : undefined} actionLabel="Ver todos os clientes" />
-            <PortfolioSignal icon={CalendarDays} label="Cadastrados hoje" value={String(registeredTodayPortfolio.length)} hint={registeredTodayPortfolio.length === 1 ? "novo cliente no dia" : "novos clientes no dia"} tone="today" onClick={registeredTodayPortfolio.length > 0 ? () => applyRegistrationPeriod("today") : undefined} actionLabel="Ver clientes cadastrados hoje" />
-            <PortfolioSignal icon={TrendingUp} label="Cadastrados no mês" value={String(currentMonthNewClients)} hint={previousMonthNewClients > 0 && monthlyGrowthRate !== null ? `${monthlyGrowthRate >= 0 ? "+" : ""}${monthlyGrowthRate.toFixed(1)}% vs. mês anterior` : `${previousMonthNewClients} no mês anterior`} tone="growth" onClick={currentMonthNewClients > 0 ? () => applyRegistrationPeriod("month") : undefined} actionLabel="Ver clientes cadastrados neste mês" />
-            <PortfolioSignal icon={UserCheck} label="Clientes ativos" value={String(activePortfolio.length)} hint={`${activeRate.toFixed(1)}% da base total`} tone="healthy" onClick={activePortfolio.length > 0 ? () => revealPortfolio("active") : undefined} actionLabel="Ver clientes ativos" />
-          </div>
-        )}
-      </section>
+          </>
+        }
+      />
 
 
       {/* Tabela de Gestão */}
       <div ref={portfolioSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-[24px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
-      <PageSection title="Seus clientes" description="Busque pelo nome ou telefone, filtre por cadastro e execute a próxima ação.">
+      <PageSection title="Seus clientes" description="Busque pelo nome ou telefone, filtre por situação, serviço, vencimento ou cadastro e execute a próxima ação.">
 
         {/* Busca + segmentos + filtros */}
         <div className="rounded-[24px] border border-border bg-card p-3 shadow-sm sm:p-4">
@@ -686,7 +636,7 @@ export default function ClientesPage() {
               <Popover>
                 <PopoverTrigger className={buttonVariants({ variant: "outline", className: "relative h-11 flex-1 gap-2 lg:h-10 lg:flex-none" })}>
                   <Filter className="size-4" /> Filtros
-                  {hasAdvanced && <span className="absolute -right-1 -top-1 size-2.5 rounded-full border-2 border-card bg-interactive" />}
+                  {activeFilterCount > 0 && <span className="num inline-flex min-w-5 items-center justify-center rounded-full bg-interactive px-1.5 py-0.5 text-[10px] font-semibold text-interactive-fg">{activeFilterCount}</span>}
                 </PopoverTrigger>
                 <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] p-4" align="end">
                   <div className="space-y-4">
@@ -735,10 +685,11 @@ export default function ClientesPage() {
                   <CalendarDays className="size-4 text-interactive" aria-hidden="true" />
                   <p className="text-xs font-semibold text-foreground">Filtrar pela data de cadastro</p>
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-1.5" role="group" aria-label="Período rápido de cadastro">
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4" role="group" aria-label="Período rápido de cadastro">
                   {[
                     { key: "all", label: "Todos" },
                     { key: "today", label: "Hoje" },
+                    { key: "last7", label: "Últimos 7 dias" },
                     { key: "month", label: "Este mês" },
                   ].map((period) => (
                     <button
@@ -771,6 +722,52 @@ export default function ClientesPage() {
             </div>
           </div>
 
+          <div className="mt-3 rounded-2xl border border-border bg-background p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="size-4 text-interactive" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Histórico recente de cadastros</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">Selecione um dia para ver exatamente quem entrou na base.</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => applyRegistrationPeriod("last7")}
+                aria-pressed={registrationPeriod === "last7"}
+                className={cn(
+                  "inline-flex min-h-9 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  registrationPeriod === "last7" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:bg-muted"
+                )}
+              >
+                Ver últimos 7 dias
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" role="group" aria-label="Histórico de cadastros dos últimos 7 dias">
+              {registrationHistory.map((entry) => {
+                const isSelected = selectedRegistrationDate === entry.dateKey
+                return (
+                  <button
+                    key={entry.dateKey}
+                    type="button"
+                    onClick={() => applyRegistrationDate(entry.dateKey)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "min-h-[84px] rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isSelected ? "border-interactive bg-interactive-bg ring-1 ring-interactive/30" : "border-border bg-card hover:border-interactive/40 hover:bg-muted"
+                    )}
+                  >
+                    <span className="microlabel block text-[8px]">{entry.label}</span>
+                    <span className={cn("num mt-1 block text-xl font-semibold", entry.count > 0 ? "text-foreground" : "text-muted-foreground")}>{entry.count}</span>
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{entry.date} · cadastro{entry.count === 1 ? "" : "s"}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <p className="microlabel mt-4 text-[9px]">Situação dos clientes</p>
           <div className="mt-2 flex max-w-full items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Situação dos clientes">
             {[
@@ -780,6 +777,8 @@ export default function ClientesPage() {
               { key: "7days", label: "Próximos 7 dias", count: dueSoonPortfolio.length },
               { key: "suspended", label: "Suspensos", count: suspendedPortfolio.length },
               { key: "canceled", label: "Cancelados", count: canceledPortfolio.length },
+              { key: "no_whatsapp", label: "Sem WhatsApp", count: noWhatsappPortfolio.length },
+              { key: "no_service", label: "Sem serviço", count: noServicePortfolio.length },
             ].map((segment) => (
               <button key={segment.key} type="button" onClick={() => setQuickFilter(segment.key as QuickFilter)} aria-pressed={quickFilter === segment.key}
                 className={cn("flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -789,7 +788,7 @@ export default function ClientesPage() {
             ))}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground" aria-live="polite">
-            Exibindo <strong className="font-semibold text-foreground">{sortedClients.length}</strong> de {clients.length} clientes{registrationPeriod === "today" ? " cadastrados hoje" : registrationPeriod === "month" ? " cadastrados neste mês" : registrationPeriod === "custom" ? " no período escolhido" : ""}, ordenados pelo vencimento mais urgente.
+            Exibindo <strong className="font-semibold text-foreground">{sortedClients.length}</strong> de {clients.length} clientes{registrationPeriod === "today" ? " cadastrados hoje" : registrationPeriod === "last7" ? " cadastrados nos últimos 7 dias" : registrationPeriod === "month" ? " cadastrados neste mês" : registrationPeriod === "custom" ? " no período escolhido" : ""}. Hoje e próximos vencimentos primeiro; atrasos de 3+ dias no fim.
           </p>
         </div>
 
@@ -862,7 +861,7 @@ export default function ClientesPage() {
                                   <h3 className="truncate text-sm font-semibold text-foreground">{client.name}</h3>
                                   {statusBadge(client.status)}
                                 </div>
-                                <p className="mt-1 truncate text-xs text-muted-foreground">{client.phone ? phoneMask(client.phone) : "Sem WhatsApp"}</p>
+                                <p className="mt-1 truncate text-xs text-muted-foreground">{client.phone_e164 || client.phone ? phoneMask(client.phone_e164 || client.phone || "") : "Sem WhatsApp"}</p>
                                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{service}{client.screens ? ` · ${client.screens} tela${client.screens > 1 ? "s" : ""}` : ""}</p>
                               </div>
                               <ArrowRight className="mt-2 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -883,7 +882,13 @@ export default function ClientesPage() {
                           </div>
 
                           <div className="flex flex-col gap-3">
-                            <div><p className="microlabel mb-1 text-[8px]">Última comunicação</p>{commStatusBadge(client.last_communication_status)}</div>
+                            <div>
+                              <p className="microlabel mb-1 text-[8px]">Última comunicação</p>
+                              <div className="flex flex-col gap-0.5">
+                                {commStatusBadge(client.last_communication_status)}
+                                {commSentDate(client.last_charge_sent_date)}
+                              </div>
+                            </div>
                             <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                               <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-9 px-2 text-[11px]">
                                 {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
@@ -940,9 +945,9 @@ export default function ClientesPage() {
                             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">{getInitials(client.name)}</div>
                             <div className="min-w-0">
                               <button className="block truncate rounded-sm text-[13px] font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => openProfile(client)} aria-label={`Abrir ficha de ${client.name}`}>{client.name}</button>
-                              <button onClick={() => { if (client.phone) { navigator.clipboard.writeText(client.phone); toast.success("Telefone copiado!") } }}
+                              <button onClick={() => { if (client.phone_e164 || client.phone) { navigator.clipboard.writeText(client.phone_e164 || client.phone || ""); toast.success("Telefone copiado!") } }}
                                 className="num block truncate text-[11px] text-muted-foreground hover:text-foreground" title="Copiar">
-                                {client.phone ? phoneMask(client.phone) : 'sem WhatsApp'}
+                                {client.phone_e164 || client.phone ? phoneMask(client.phone_e164 || client.phone || "") : 'sem WhatsApp'}
                               </button>
                             </div>
                           </div>
@@ -974,9 +979,7 @@ export default function ClientesPage() {
                         <TableCell>
                           <div className="flex flex-col gap-0.5">
                             {commStatusBadge(client.last_communication_status)}
-                            <span className="text-[9px] text-muted-foreground max-w-[90px] truncate" title={client.last_charge_sent_date ? new Date(client.last_charge_sent_date).toLocaleString('pt-BR') : ''}>
-                              {client.last_charge_sent_date ? new Date(client.last_charge_sent_date).toLocaleDateString('pt-BR') : ''}
-                            </span>
+                            {commSentDate(client.last_charge_sent_date)}
                           </div>
                         </TableCell>
                         <TableCell className="pr-3 text-right">
@@ -1067,7 +1070,7 @@ export default function ClientesPage() {
                       <h3 className="truncate text-lg font-semibold text-foreground">{profileClient.name}</h3>
                       {statusBadge(profileClient.status)}
                     </div>
-                    <p className="num mt-1 text-xs text-muted-foreground">{profileClient.phone ? phoneMask(profileClient.phone) : 'Sem telefone cadastrado'}</p>
+            <p className="num mt-1 text-xs text-muted-foreground">{profileClient.phone_e164 || profileClient.phone ? phoneMask(profileClient.phone_e164 || profileClient.phone || "") : 'Sem telefone cadastrado'}</p>
                     <p className="mt-1 text-[11px] text-muted-foreground">{profileClient.days_as_client} dias na base</p>
                   </div>
                 </div>

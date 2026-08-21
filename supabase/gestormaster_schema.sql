@@ -16,7 +16,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 -- Tipos
 
-CREATE TYPE public.alert_send_status AS ENUM ('sent', 'failed', 'pending');
+CREATE TYPE public.alert_send_status AS ENUM ('queued', 'accepted', 'sent', 'delivered', 'read', 'failed', 'pending');
 
 CREATE TYPE public.alert_type AS ENUM ('before_due', 'on_due', 'after_due', 'renewal', 'promotion', 'quick_message', 'activation', 'welcome');
 
@@ -97,7 +97,7 @@ CREATE TABLE public.affiliate_earnings (
 CREATE TABLE public.alert_history (
   id uuid DEFAULT uuid_generate_v4() NOT NULL,
   user_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  client_id uuid,
   automation_id uuid,
   sent_at timestamp with time zone,
   status alert_send_status DEFAULT 'pending'::alert_send_status NOT NULL,
@@ -111,7 +111,18 @@ CREATE TABLE public.alert_history (
   contact_origin text,
   contact_category text,
   contact_decision text,
-  contact_decision_reason text
+  contact_decision_reason text,
+  lead_id uuid,
+  phone text,
+  instance_name text,
+  provider_message_id text,
+  provider_status text,
+  source_job_id text,
+  queued_at timestamp with time zone,
+  accepted_at timestamp with time zone,
+  delivered_at timestamp with time zone,
+  read_at timestamp with time zone,
+  failed_at timestamp with time zone
 );
 
 CREATE TABLE public.analytics_forecasts (
@@ -153,10 +164,13 @@ CREATE TABLE public.analytics_scenarios (
 
 CREATE TABLE public.api_keys (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  user_id uuid NOT NULL,
+  user_id uuid,
   name text NOT NULL,
-  key text NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+  key text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  organization_id uuid,
+  key_hash text,
+  last_used_at timestamp with time zone
 );
 
 CREATE TABLE public.audit_logs (
@@ -322,7 +336,16 @@ CREATE TABLE public.clients (
   organization_id uuid,
   external_id text,
   due_time text,
-  phone_e164 text
+  phone_e164 text,
+  whatsapp_opt_in boolean DEFAULT false NOT NULL,
+  whatsapp_opt_in_at timestamp with time zone,
+  whatsapp_opt_in_source text,
+  whatsapp_opt_in_categories text[] DEFAULT ARRAY[]::text[] NOT NULL,
+  whatsapp_opt_out boolean DEFAULT false NOT NULL,
+  whatsapp_opt_out_at timestamp with time zone,
+  renewal_reminder_enabled boolean DEFAULT false NOT NULL,
+  renewal_reminder_days_before integer DEFAULT 7 NOT NULL,
+  renewal_reminder_last_sent_due_date date
 );
 
 CREATE TABLE public.collection_dispatches (
@@ -453,7 +476,12 @@ CREATE TABLE public.evolution_instances (
   is_primary boolean DEFAULT false,
   organization_id uuid,
   is_warming_up boolean DEFAULT false,
-  phone_number text
+  phone_number text,
+  daily_message_limit integer DEFAULT 80 NOT NULL,
+  message_min_interval_ms integer DEFAULT 15000 NOT NULL,
+  sending_paused boolean DEFAULT false NOT NULL,
+  sending_pause_reason text,
+  sending_paused_at timestamp with time zone
 );
 
 CREATE TABLE public.executive_daily_snapshots (
@@ -603,7 +631,13 @@ CREATE TABLE public.leads (
   source text DEFAULT 'CSV'::text,
   notes text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  custom_fields jsonb DEFAULT '{}'::jsonb
+  custom_fields jsonb DEFAULT '{}'::jsonb,
+  whatsapp_opt_in boolean DEFAULT false NOT NULL,
+  whatsapp_opt_in_at timestamp with time zone,
+  whatsapp_opt_in_source text,
+  whatsapp_opt_in_categories text[] DEFAULT ARRAY[]::text[] NOT NULL,
+  whatsapp_opt_out boolean DEFAULT false NOT NULL,
+  whatsapp_opt_out_at timestamp with time zone
 );
 
 CREATE TABLE public.message_templates (
@@ -654,6 +688,7 @@ CREATE TABLE public.payments (
   amount_paid numeric(10,2) DEFAULT 0.00 NOT NULL,
   net_profit numeric(10,2) DEFAULT 0.00 NOT NULL,
   months_renewed integer DEFAULT 1 NOT NULL,
+  credits_consumed integer DEFAULT 1 NOT NULL,
   payment_date date DEFAULT CURRENT_DATE NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   organization_id uuid,
@@ -952,7 +987,7 @@ ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_port
 
 ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_code_hash_check CHECK (code_hash ~ '^[a-f0-9]{64}$'::text);
 
-ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_phone_e164_check CHECK (phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_phone_e164_check CHECK (phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.client_portal_auth_challenges ADD CONSTRAINT client_portal_auth_challenges_requested_ip_hash_check CHECK (requested_ip_hash IS NULL OR requested_ip_hash ~ '^[a-f0-9]{64}$'::text);
 
@@ -976,7 +1011,7 @@ ALTER TABLE ONLY public.client_tags ADD CONSTRAINT client_tags_code_check CHECK 
 
 ALTER TABLE ONLY public.client_tags ADD CONSTRAINT client_tags_name_check CHECK (char_length(name) >= 2 AND char_length(name) <= 60);
 
-ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_phone_e164_format_check CHECK (phone_e164 IS NULL OR phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_phone_e164_format_check CHECK (phone_e164 IS NULL OR phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.collection_dispatches ADD CONSTRAINT collection_dispatches_status_check CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'retryable'::text, 'sent'::text, 'failed'::text, 'cancelled'::text]));
 
@@ -1084,7 +1119,7 @@ ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_v
 
 ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_code_hash_check CHECK (code_hash ~ '^[a-f0-9]{64}$'::text);
 
-ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_new_phone_e164_check CHECK (new_phone_e164 ~ '^\+[1-9][0-9]{9,14}$'::text);
+ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_new_phone_e164_check CHECK (new_phone_e164 ~ '^\+[1-9][0-9]{7,14}$'::text);
 
 ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_requested_via_check CHECK (requested_via = ANY (ARRAY['whatsapp_bot'::text, 'portal'::text]));
 
@@ -1198,6 +1233,8 @@ ALTER TABLE ONLY public.organizations ADD CONSTRAINT organizations_pkey PRIMARY 
 
 ALTER TABLE ONLY public.payments ADD CONSTRAINT payments_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.payments ADD CONSTRAINT payments_credits_consumed_check CHECK (credits_consumed > 0);
+
 ALTER TABLE ONLY public.phone_change_verifications ADD CONSTRAINT phone_change_verifications_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.pix_charges ADD CONSTRAINT pix_charges_pkey PRIMARY KEY (id);
@@ -1288,6 +1325,8 @@ ALTER TABLE ONLY public.alert_history ADD CONSTRAINT alert_history_client_id_fke
 
 ALTER TABLE ONLY public.alert_history ADD CONSTRAINT alert_history_contact_reservation_id_fkey FOREIGN KEY (contact_reservation_id) REFERENCES contact_reservations(id) ON DELETE SET NULL;
 
+ALTER TABLE ONLY public.alert_history ADD CONSTRAINT alert_history_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL;
+
 ALTER TABLE ONLY public.alert_history ADD CONSTRAINT alert_history_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.alert_history ADD CONSTRAINT alert_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
@@ -1299,6 +1338,8 @@ ALTER TABLE ONLY public.analytics_scenarios ADD CONSTRAINT analytics_scenarios_c
 ALTER TABLE ONLY public.analytics_scenarios ADD CONSTRAINT analytics_scenarios_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.api_keys ADD CONSTRAINT api_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.api_keys ADD CONSTRAINT api_keys_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_logs ADD CONSTRAINT audit_logs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
@@ -1511,9 +1552,21 @@ CREATE INDEX idx_alert_history_status ON public.alert_history USING btree (statu
 
 CREATE INDEX idx_alert_history_sent_at ON public.alert_history USING btree (sent_at);
 
+CREATE INDEX alert_history_organization_id_idx ON public.alert_history USING btree (organization_id);
+
+CREATE INDEX alert_history_provider_message_idx ON public.alert_history USING btree (instance_name, provider_message_id) WHERE (provider_message_id IS NOT NULL);
+
+CREATE INDEX alert_history_lead_id_idx ON public.alert_history USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
 CREATE UNIQUE INDEX alert_history_collection_dispatch_uidx ON public.alert_history USING btree (collection_dispatch_id) WHERE (collection_dispatch_id IS NOT NULL);
 
 CREATE UNIQUE INDEX alert_history_contact_reservation_uidx ON public.alert_history USING btree (contact_reservation_id) WHERE (contact_reservation_id IS NOT NULL);
+
+CREATE UNIQUE INDEX api_keys_key_hash_uidx ON public.api_keys USING btree (key_hash) WHERE (key_hash IS NOT NULL);
+
+CREATE INDEX api_keys_organization_id_idx ON public.api_keys USING btree (organization_id);
+
+CREATE INDEX api_keys_user_id_idx ON public.api_keys USING btree (user_id);
 
 CREATE INDEX analytics_forecasts_org_date_idx ON public.analytics_forecasts USING btree (organization_id, forecast_date DESC, horizon);
 
@@ -1994,6 +2047,10 @@ DECLARE
   v_client public.clients%ROWTYPE;
   v_new_due_date date;
   v_payment_id uuid;
+  v_months integer;
+  v_credits integer;
+  v_monthly_service_cost numeric := 0;
+  v_net_profit numeric := 0;
 BEGIN
   SELECT * INTO v_charge FROM public.pix_charges WHERE id = p_charge_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'CobranÃ§a PIX nÃ£o encontrada'; END IF;
@@ -2014,15 +2071,25 @@ BEGIN
     WHERE id = v_charge.client_id AND organization_id = v_charge.organization_id FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Cliente da cobranÃ§a nÃ£o encontrado'; END IF;
 
-    v_new_due_date := (greatest(v_client.due_date, current_date) + make_interval(months => greatest(v_charge.months_to_renew, 1)))::date;
+    v_months := greatest(v_charge.months_to_renew, 1);
+    v_credits := greatest(v_months + greatest(coalesce(v_client.screens, 1), 1) - 1, 1);
+    v_new_due_date := (greatest(v_client.due_date, current_date) + make_interval(months => v_months))::date;
+
+    SELECT coalesce(sum(service.cost), 0)
+    INTO v_monthly_service_cost
+    FROM public.client_services assignment
+    JOIN public.services service ON service.id = assignment.service_id
+    WHERE assignment.client_id = v_client.id;
+
+    v_net_profit := v_charge.amount - (v_monthly_service_cost * v_credits);
     UPDATE public.clients SET due_date = v_new_due_date, status = 'active', updated_at = now() WHERE id = v_client.id;
 
     INSERT INTO public.payments (
-      organization_id, user_id, client_id, amount_paid, net_profit, months_renewed,
+      organization_id, user_id, client_id, amount_paid, net_profit, months_renewed, credits_consumed,
       payment_method, provider, paid_at
     ) VALUES (
       v_charge.organization_id, coalesce(v_client.user_id, v_charge.user_id), v_client.id,
-      v_charge.amount, v_charge.amount, greatest(v_charge.months_to_renew, 1),
+      v_charge.amount, v_net_profit, v_months, v_credits,
       'pix', v_charge.provider, now()
     ) RETURNING id INTO v_payment_id;
 
@@ -2031,9 +2098,9 @@ BEGIN
 
   INSERT INTO public.audit_logs (organization_id, user_id, action, resource, resource_id, details)
   VALUES (v_charge.organization_id, v_charge.user_id, 'pix.payment.finalized', 'pix_charges', v_charge.id::text,
-    jsonb_build_object('provider_payment_id', p_provider_payment_id, 'amount', p_amount, 'payment_id', v_payment_id));
+    jsonb_build_object('provider_payment_id', p_provider_payment_id, 'amount', p_amount, 'payment_id', v_payment_id, 'months_renewed', v_months, 'credits_consumed', v_credits, 'net_profit', v_net_profit));
 
-  RETURN jsonb_build_object('already_processed', false, 'charge_id', v_charge.id, 'payment_id', v_payment_id, 'new_due_date', v_new_due_date);
+  RETURN jsonb_build_object('already_processed', false, 'charge_id', v_charge.id, 'payment_id', v_payment_id, 'new_due_date', v_new_due_date, 'credits_consumed', v_credits);
 END;
 $function$
 
@@ -2996,8 +3063,18 @@ CREATE OR REPLACE VIEW public.vw_enriched_clients WITH (security_invoker=true) A
     COALESCE(( SELECT jsonb_agg(jsonb_build_object('service_id', cs.service_id, 'username', cs.username, 'password', cs.password, 'services', jsonb_build_object('id', s.id, 'name', s.name, 'cost', s.cost))) AS jsonb_agg
            FROM client_services cs
              JOIN services s ON cs.service_id = s.id
-          WHERE cs.client_id = c.id), '[]'::jsonb) AS client_services
-   FROM clients c;;
+           WHERE cs.client_id = c.id), '[]'::jsonb) AS client_services,
+     phone_e164,
+     whatsapp_opt_in,
+     whatsapp_opt_in_at,
+     whatsapp_opt_in_source,
+     whatsapp_opt_in_categories,
+     whatsapp_opt_out,
+     whatsapp_opt_out_at,
+     renewal_reminder_enabled,
+     renewal_reminder_days_before,
+     renewal_reminder_last_sent_due_date
+    FROM clients c;;
 
 
 -- Triggers
@@ -3066,6 +3143,19 @@ ALTER TABLE public.analytics_forecasts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_scenarios ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuários podem ver suas próprias chaves" ON public.api_keys;
+DROP POLICY IF EXISTS "Usuários podem criar suas próprias chaves" ON public.api_keys;
+DROP POLICY IF EXISTS "Usuários podem deletar suas próprias chaves" ON public.api_keys;
+DROP POLICY IF EXISTS "Members can view organization API keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Members can create organization API keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Members can delete organization API keys" ON public.api_keys;
+CREATE POLICY "Members can view organization API keys" ON public.api_keys FOR SELECT TO authenticated
+USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (SELECT auth.uid())));
+CREATE POLICY "Members can create organization API keys" ON public.api_keys FOR INSERT TO authenticated
+WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (SELECT auth.uid())) AND user_id = (SELECT auth.uid()));
+CREATE POLICY "Members can delete organization API keys" ON public.api_keys FOR DELETE TO authenticated
+USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (SELECT auth.uid())));
 
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
@@ -3206,18 +3296,6 @@ CREATE POLICY "Members view analytics scenarios" ON public.analytics_scenarios F
 USING ((EXISTS ( SELECT 1
    FROM organization_members member
   WHERE ((member.organization_id = analytics_scenarios.organization_id) AND (member.user_id = ( SELECT auth.uid() AS uid))))));
-
-DROP POLICY IF EXISTS "Usuários podem criar suas próprias chaves" ON public.api_keys;
-CREATE POLICY "Usuários podem criar suas próprias chaves" ON public.api_keys FOR INSERT TO PUBLIC
-WITH CHECK ((auth.uid() = user_id));
-
-DROP POLICY IF EXISTS "Usuários podem deletar suas próprias chaves" ON public.api_keys;
-CREATE POLICY "Usuários podem deletar suas próprias chaves" ON public.api_keys FOR DELETE TO PUBLIC
-USING ((auth.uid() = user_id));
-
-DROP POLICY IF EXISTS "Usuários podem ver suas próprias chaves" ON public.api_keys;
-CREATE POLICY "Usuários podem ver suas próprias chaves" ON public.api_keys FOR SELECT TO PUBLIC
-USING ((auth.uid() = user_id));
 
 DROP POLICY IF EXISTS tenant_isolation_automations ON public.automations;
 CREATE POLICY tenant_isolation_automations ON public.automations FOR ALL TO PUBLIC
@@ -3664,8 +3742,6 @@ GRANT SELECT ON TABLE public.analytics_scenarios TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.analytics_scenarios TO service_role;
 
 REVOKE ALL ON TABLE public.api_keys FROM PUBLIC, anon, authenticated, service_role;
-
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.api_keys TO anon;
 
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.api_keys TO authenticated;
 

@@ -5,6 +5,7 @@ import { Upload, Download, Search, FileText, Phone, Trash2, UserPlus, Lock, Zap,
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { phoneMask } from "@/lib/utils"
+import { normalizePhoneE164, normalizeWhatsAppNumber } from "@/lib/phone"
 import { logAuditClient } from "@/lib/audit-client"
 import { useRouter } from "next/navigation"
 import {
@@ -87,6 +88,12 @@ interface Lead {
   source?: string
   notes?: string
   custom_fields?: Record<string, string>
+  whatsapp_opt_in?: boolean
+  whatsapp_opt_in_at?: string | null
+  whatsapp_opt_in_source?: string | null
+  whatsapp_opt_in_categories?: string[]
+  whatsapp_opt_out?: boolean
+  whatsapp_opt_out_at?: string | null
   created_at?: string
 }
 
@@ -613,7 +620,7 @@ export default function LeadsPage() {
       // Deduplicação contra clientes existentes
       const { data: existingClients, error: clientsError } = await supabase
         .from('clients')
-        .select('phone')
+        .select('phone, phone_e164')
         
       let finalLeads = parsedLeads;
       let duplicatedCount = 0;
@@ -621,18 +628,14 @@ export default function LeadsPage() {
       if (!clientsError && existingClients) {
         const clientPhones = new Set(
           existingClients
-            .map(c => c.phone ? c.phone.replace(/\D/g, '') : null)
+            .map(c => normalizePhoneE164(c.phone_e164 || c.phone || ''))
             .filter(Boolean)
         );
         
         finalLeads = parsedLeads.filter((lead: Record<string, any>) => {
           if (!lead.phone) return true;
-          const cleanPhone = lead.phone.replace(/\D/g, '');
-          
-          const phoneWith55 = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? `55${cleanPhone}` : cleanPhone;
-          const phoneWithout55 = cleanPhone.startsWith('55') ? cleanPhone.substring(2) : cleanPhone;
-          
-          if (clientPhones.has(cleanPhone) || clientPhones.has(phoneWith55) || clientPhones.has(phoneWithout55)) {
+          const normalizedPhone = normalizePhoneE164(lead.phone)
+          if (normalizedPhone && clientPhones.has(normalizedPhone)) {
             duplicatedCount++;
             return false;
           }
@@ -749,11 +752,8 @@ export default function LeadsPage() {
   }
 
   const getWhatsAppLink = (phone: string) => {
-    let cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length >= 10 && cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) {
-      cleanPhone = '55' + cleanPhone
-    }
-    return `https://wa.me/${cleanPhone}`
+    const cleanPhone = normalizeWhatsAppNumber(phone)
+    return cleanPhone ? `https://wa.me/${cleanPhone}` : '#'
   }
 
   const convertToClient = () => {
@@ -788,42 +788,8 @@ export default function LeadsPage() {
     setLogs(prev => [{ id: Date.now().toString() + Math.random().toString(), time: new Date().toLocaleTimeString('pt-BR'), type, message }, ...prev])
   }
 
-  const applySpintax = (text: string) => {
-    let result = text
-    const spintaxRegex = /\{([^{}]*)\}/
-    while (spintaxRegex.test(result)) {
-      result = result.replace(spintaxRegex, (match, contents) => {
-        const choices = contents.split('|')
-        return choices[Math.floor(Math.random() * choices.length)]
-      })
-    }
-    return result
-  }
-
-  const parseMessage = (template: string, lead: Lead) => {
-    let msg = template
-    msg = applySpintax(msg)
-    msg = msg.replace(/{{nome}}/g, lead.name.split(' ')[0] || 'Amigo(a)')
-    msg = msg.replace(/{{nome_completo}}/g, lead.name || 'Amigo(a)')
-    msg = msg.replace(/{{email}}/g, lead.email || '')
-    msg = msg.replace(/{{telefone}}/g, lead.phone || '')
-    
-    // Variáveis dinâmicas dos custom_fields
-    if (lead.custom_fields) {
-      for (const [key, value] of Object.entries(lead.custom_fields)) {
-        const regex = new RegExp(`{{${key}}}`, 'g')
-        msg = msg.replace(regex, value || '')
-      }
-    }
-    return msg
-  }
-
   // Coletar todas as chaves de custom_fields disponíveis para uso em templates
   const availableCustomKeys = useMemo(() => getCustomFieldKeys(leads), [leads])
-
-  const getRandomDelay = () => {
-    return Math.floor(Math.random() * (maxDelay - minDelay + 1) + minDelay) * 1000
-  }
 
   const startMassMessage = async () => {
     if (filteredLeads.length === 0) {
@@ -847,120 +813,53 @@ export default function LeadsPage() {
 
     setIsSending(true)
     setLogs([])
-    addLog('info', `Iniciando campanha para ${filteredLeads.length} leads filtrados...`)
-    
+    addLog('info', `Enfileirando campanha backend para ${filteredLeads.length} leads filtrados...`)
     abortControllerRef.current = new AbortController()
     const signal = abortControllerRef.current.signal
 
-    let successCount = 0
-    let errorCount = 0
-    let sentCount = 0
-
-    for (let i = 0; i < filteredLeads.length; i++) {
-      if (signal.aborted) {
-        addLog('info', 'Campanha interrompida pelo usuário.')
-        break
+    try {
+      const req = await fetch('/api/evolution/send-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadIds: filteredLeads.map((lead) => lead.id),
+          instanceNames: selectedInstances,
+          messageVariants,
+          mediaBase64,
+          mediaMimeType,
+          minDelaySeconds: minDelay,
+          maxDelaySeconds: maxDelay,
+          pauseCount,
+          pauseDurationMinutes: pauseDuration,
+          messagesPerInstance,
+        }),
+        signal,
+      })
+      const response = await req.json().catch(() => ({}))
+      if (!req.ok || response.error) {
+        addLog('error', response.error || 'Falha ao enfileirar a campanha.')
+        return
       }
 
-      const lead = filteredLeads[i]
-      if (lead.status === 'concluido' || lead.status === 'concluído') {
-        addLog('info', `Ignorado: ${lead.name} (Concluído)`)
-        continue
-      }
-      if (!lead.phone || lead.phone.length < 8) {
-        addLog('error', `Ignorado: ${lead.name} (Telefone inválido)`)
-        continue
-      }
-
-      let phone = lead.phone.replace(/\D/g, '')
-      if (phone.length >= 10 && phone.length <= 11 && !phone.startsWith('55')) {
-        phone = '55' + phone
-      }
-
-      const instanceIndex = Math.floor(i / messagesPerInstance) % selectedInstances.length
-      const instance = selectedInstances[instanceIndex]
-      const randomVariant = messageVariants[Math.floor(Math.random() * messageVariants.length)] || ""
-      const finalMessage = parseMessage(randomVariant, lead)
-
-      addLog('info', `Enviando para ${lead.name} (${phone}) via ${instance}...`)
-
-      try {
-        const req = await fetch('/api/evolution/send-single', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instanceName: instance,
-            phone: phone,
-            message: finalMessage,
-            mediaBase64: mediaBase64,
-            mediaMimeType: mediaMimeType
-          }),
-          signal
+      const queuedLeadIds = Array.isArray(response.queued_lead_ids) ? response.queued_lead_ids as string[] : []
+      setLeads((previous) => previous.map((lead) => queuedLeadIds.includes(lead.id) ? { ...lead, status: 'enfileirado' } : lead))
+      addLog('success', `${response.queued_count || 0} mensagens enfileiradas no backend.`)
+      if (Array.isArray(response.skipped)) {
+        response.skipped.slice(0, 20).forEach((item: { name?: string; reason?: string }) => {
+          addLog('info', `Ignorado: ${item.name || 'Lead'} (${item.reason || 'não elegível'})`)
         })
-
-        const res = await req.json()
-        if (!req.ok || res.error) {
-          addLog('error', `Falha ao enviar para ${lead.name}: ${res.error || 'Erro desconhecido'}`)
-          errorCount++
-        } else {
-          addLog('success', `Mensagem enviada para ${lead.name}!`)
-          successCount++
-          sentCount++
-          
-          // Auto-mark lead as concluido
-          const supabaseClient = createClient()
-          await supabaseClient.from('leads').update({ status: 'concluido' }).eq('id', lead.id)
-          setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: 'concluido' } : l))
-        }
-      } catch (err) {
-        const error = err as Error
-        if (error.name === 'AbortError') {
-          addLog('info', 'Campanha abortada.')
-          break
-        }
-        addLog('error', `Erro de conexão ao enviar para ${lead.name}.`)
-        errorCount++
       }
-
-      // Check pause
-      if (sentCount > 0 && sentCount % pauseCount === 0 && i < leads.length - 1) {
-        addLog('info', `Pausa de segurança (Anti-ban). Aguardando ${pauseDuration} minutos...`)
-        try {
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(resolve, pauseDuration * 60 * 1000)
-            signal.addEventListener('abort', () => {
-              clearTimeout(timeout)
-              reject(new Error('AbortError'))
-            })
-          })
-        } catch (e) {
-          if (signal.aborted) break
-        }
-      } 
-      // Normal delay between messages
-      else if (i < leads.length - 1) {
-        const delay = getRandomDelay()
-        addLog('info', `Aguardando ${delay/1000}s (Delay Aleatório)...`)
-        try {
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(resolve, delay)
-            signal.addEventListener('abort', () => {
-              clearTimeout(timeout)
-              reject(new Error('AbortError'))
-            })
-          })
-        } catch (e) {
-          if (signal.aborted) break
-        }
+      addLog('info', `Processo finalizado. Enfileirados: ${response.queued_count || 0} | Ignorados: ${response.skipped?.length || 0}`)
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        addLog('info', 'Solicitação da campanha abortada antes da confirmação.')
+      } else {
+        addLog('error', 'Erro de conexão ao enfileirar a campanha.')
       }
+    } finally {
+      setIsSending(false)
+      abortControllerRef.current = null
     }
-
-    if (!signal.aborted) {
-      addLog('info', `Processo finalizado. Sucessos: ${successCount} | Erros: ${errorCount}`)
-    }
-    
-    setIsSending(false)
-    abortControllerRef.current = null
   }
 
   const stopMassMessage = () => {
@@ -1927,6 +1826,50 @@ export default function LeadsPage() {
                   className="col-span-3" 
                 />
               </div>
+              <div className="col-span-4 rounded-md border border-border/50 bg-muted/30 p-3">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingLead.whatsapp_opt_in === true}
+                    onChange={(event) => {
+                      const enabled = event.target.checked
+                      const now = new Date().toISOString()
+                      setEditingLead({
+                        ...editingLead,
+                        whatsapp_opt_in: enabled,
+                        whatsapp_opt_in_at: enabled ? (editingLead.whatsapp_opt_in_at || now) : null,
+                        whatsapp_opt_in_source: enabled ? (editingLead.whatsapp_opt_in_source || 'leads_edit') : null,
+                        whatsapp_opt_out: !enabled,
+                        whatsapp_opt_out_at: enabled ? null : now,
+                        whatsapp_opt_in_categories: enabled
+                          ? (editingLead.whatsapp_opt_in_categories?.length ? editingLead.whatsapp_opt_in_categories : ['marketing'])
+                          : [],
+                      })
+                    }}
+                  />
+                  <span><span className="font-medium">Lead autorizou mensagens pelo WhatsApp</span><span className="block text-xs text-muted-foreground">Sem autorização, campanhas ficam bloqueadas.</span></span>
+                </label>
+                {editingLead.whatsapp_opt_in === true && (
+                  <div className="mt-2 flex flex-wrap gap-3 pl-6 text-xs">
+                    {['operational', 'billing', 'marketing'].map((category) => (
+                      <label key={category} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingLead.whatsapp_opt_in_categories?.includes(category) === true}
+                          onChange={(event) => {
+                            const categories = new Set(editingLead.whatsapp_opt_in_categories || [])
+                            if (event.target.checked) categories.add(category)
+                            else categories.delete(category)
+                            setEditingLead({ ...editingLead, whatsapp_opt_in_categories: [...categories] })
+                          }}
+                        />
+                        {category === 'marketing' ? 'Campanhas' : category === 'billing' ? 'Cobranças' : 'Operacional'}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Campos extras (custom_fields) */}
               {editingLead.custom_fields && Object.keys(editingLead.custom_fields).length > 0 && (
                 <>

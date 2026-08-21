@@ -9,10 +9,12 @@ import { logger, runWithCorrelationId } from '../lib/logger'
 import { createMercadoPagoPixCharge } from '../lib/pix-charges'
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat'
 import { cancelClientRenewalByCustomer } from '../lib/client-renewal-cancellation'
+import { getValidPixCopyPasteCode } from '../lib/pix-copy-paste'
 import {
   buildCancellationConfirmationButtons,
   buildMainMenuList,
   buildPlanList,
+  buildPixCopyButton,
   buildRenewalConfirmationButtons,
   resolveBillingAction,
 } from '../lib/whatsapp-interactive'
@@ -21,14 +23,14 @@ import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsApp
 startOperationalHeartbeat('webhook_worker')
 import {
   BOT_STATE_TTL_SECONDS,
-  brazilPhoneE164Candidates,
-  brazilPhoneLegacyCandidates,
   buildMainMenu,
   extractIncomingMessageText,
   generateVerificationCode,
   isMenuCommand,
-  normalizeBrazilPhone,
+  normalizePhoneE164,
   parseDueDate,
+  phoneE164Candidates,
+  phoneLegacyCandidates,
   PHONE_VERIFICATION_TTL_MINUTES,
   resolveIncomingPhoneJid,
   verifyCode,
@@ -62,6 +64,28 @@ async function sendBotMessage(input: {
     interactiveMessage: input.interactiveMessage,
     source: 'autoatendimento',
   })
+}
+
+async function sendPixCopyPaste(input: {
+  organizationId: string
+  userId: string
+  instanceName: string
+  phone: string
+  amount: number
+  code: unknown
+}): Promise<boolean> {
+  const code = getValidPixCopyPasteCode(input.code)
+  if (!code) return false
+
+  await sendBotMessage({
+    organizationId: input.organizationId,
+    userId: input.userId,
+    instanceName: input.instanceName,
+    phone: input.phone,
+    message: code,
+    interactiveMessage: buildPixCopyButton(code, input.amount),
+  })
+  return true
 }
 
 async function loadAutoConfig(organizationId: string) {
@@ -110,6 +134,83 @@ async function handleConnectionUpdate(payload: any) {
     .eq('instance_name', instanceName)
 }
 
+const deliveryStatusRank: Record<string, number> = {
+  queued: 0,
+  accepted: 1,
+  sent: 2,
+  delivered: 3,
+  read: 4,
+  failed: 5,
+}
+
+function normalizeDeliveryStatus(value: unknown): { status: 'accepted' | 'sent' | 'delivered' | 'read' | 'failed'; providerStatus: string } | null {
+  const providerStatus = String(value ?? '').trim()
+  const normalized = providerStatus.toUpperCase()
+  const numeric = Number(providerStatus)
+  if (normalized.includes('ERROR') || normalized.includes('FAIL') || numeric === 0) return { status: 'failed', providerStatus }
+  if (normalized.includes('READ') || normalized.includes('PLAYED') || numeric === 4 || numeric === 5) return { status: 'read', providerStatus }
+  if (normalized.includes('DELIVERY') || normalized.includes('DELIVERED') || numeric === 3) return { status: 'delivered', providerStatus }
+  if (normalized.includes('SERVER_ACK') || normalized.includes('SENT') || numeric === 2) return { status: 'sent', providerStatus }
+  if (normalized.includes('PENDING') || normalized.includes('ACCEPT') || numeric === 1) return { status: 'accepted', providerStatus }
+  return null
+}
+
+async function handleMessageUpdate(payload: any) {
+  const updates = Array.isArray(payload.data) ? payload.data : [payload.data]
+  const instanceName = typeof payload.instance === 'string' ? payload.instance : null
+  if (!instanceName) return
+
+  for (const item of updates) {
+    const key = item?.key || item?.data?.key
+    const messageId = typeof key?.id === 'string' ? key.id : null
+    const statusValue = item?.update?.status ?? item?.status ?? item?.data?.update?.status
+    const normalized = normalizeDeliveryStatus(statusValue)
+    if (!messageId || !normalized) continue
+
+    const { data: history, error: historyError } = await supabaseAdmin
+      .from('alert_history')
+      .select('id, status, lead_id, collection_dispatch_id, contact_reservation_id')
+      .eq('instance_name', instanceName)
+      .eq('provider_message_id', messageId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (historyError) throw historyError
+    if (!history) continue
+
+    const currentRank = deliveryStatusRank[history.status] ?? 0
+    const nextRank = deliveryStatusRank[normalized.status] ?? 0
+    if (normalized.status === 'failed' && (history.status === 'delivered' || history.status === 'read')) continue
+    if (nextRank < currentRank) continue
+
+    const now = new Date().toISOString()
+    const update: Record<string, unknown> = {
+      status: normalized.status,
+      provider_status: normalized.providerStatus,
+      ...(normalized.status === 'accepted' ? { accepted_at: now } : {}),
+      ...(normalized.status === 'sent' ? { sent_at: now } : {}),
+      ...(normalized.status === 'delivered' ? { delivered_at: now } : {}),
+      ...(normalized.status === 'read' ? { read_at: now } : {}),
+      ...(normalized.status === 'failed' ? { failed_at: now, error_message: normalized.providerStatus } : {}),
+    }
+    const { error: updateError } = await supabaseAdmin.from('alert_history').update(update).eq('id', history.id)
+    if (updateError) throw updateError
+
+    if (normalized.status === 'sent' || normalized.status === 'delivered' || normalized.status === 'read') {
+      if (history.collection_dispatch_id) {
+        await supabaseAdmin.from('collection_dispatches').update({ status: 'sent', sent_at: now }).eq('id', history.collection_dispatch_id)
+      }
+      if (history.contact_reservation_id) {
+        await supabaseAdmin.from('contact_reservations').update({ status: 'sent', sent_at: now, decision_reason: 'CONTACT_SENT' }).eq('id', history.contact_reservation_id)
+      }
+    }
+
+    if (history.lead_id && (normalized.status === 'delivered' || normalized.status === 'read')) {
+      await supabaseAdmin.from('leads').update({ status: 'concluido' }).eq('id', history.lead_id)
+    }
+  }
+}
+
 async function handleInboundMessage(payload: any) {
   const message = payload.data?.messages?.[0] || payload.data
   const remoteJid = resolveIncomingPhoneJid(message?.key)
@@ -117,8 +218,9 @@ async function handleInboundMessage(payload: any) {
   const instanceName = payload.instance as string | undefined
 
   if (!remoteJid || !instanceName || message?.key?.fromMe || !text) return
-  const phoneCandidates = brazilPhoneE164Candidates(remoteJid.split('@')[0])
-  const legacyPhoneCandidates = brazilPhoneLegacyCandidates(remoteJid.split('@')[0])
+  const remotePhone = remoteJid.split('@')[0]
+  const phoneCandidates = phoneE164Candidates(remotePhone)
+  const legacyPhoneCandidates = phoneLegacyCandidates(remotePhone)
   const normalizedPhone = phoneCandidates[0]
   if (!normalizedPhone) return
 
@@ -130,7 +232,7 @@ async function handleInboundMessage(payload: any) {
   if (!instance?.organization_id) return
 
   const organizationId = instance.organization_id
-  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, client_services(services(name, plans))'
+  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories, client_services(services(name, plans))'
   const [e164Result, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('clients')
@@ -149,7 +251,7 @@ async function handleInboundMessage(payload: any) {
   const clients = [...(e164Result.data || []), ...(legacyResult.data || [])]
   const client = phoneCandidates
     .map((candidate) => clients.find((item) => (
-      item.phone_e164 === candidate || normalizeBrazilPhone(item.phone || '') === candidate
+      item.phone_e164 === candidate || normalizePhoneE164(item.phone || '') === candidate
     )))
     .find(Boolean)
 
@@ -163,11 +265,21 @@ async function handleInboundMessage(payload: any) {
     logger.warn('[Webhook] Cliente localizado pelo telefone legado; phone_e164 ainda não preenchido.')
   }
 
-  const deliveryPhone = client.phone_e164 || normalizeBrazilPhone(client.phone || '') || normalizedPhone
+  const deliveryPhone = client.phone_e164 || normalizePhoneE164(client.phone || '') || normalizedPhone
 
   const pauseKey = `bot_pause:${organizationId}:${normalizedPhone}`
   const stateKey = `bot_state:${organizationId}:${normalizedPhone}`
   const textValue = text.trim()
+  if (/^(sair|parar|stop|unsubscribe|cancelar)$/i.test(textValue)) {
+    await supabaseAdmin.from('clients').update({
+      whatsapp_opt_out: true,
+      whatsapp_opt_out_at: new Date().toISOString(),
+    }).eq('id', client.id).eq('organization_id', organizationId)
+    await redisConnection.del(stateKey, pauseKey)
+    logger.info(`[Webhook] Opt-out registrado para o cliente ${client.id}.`)
+    return
+  }
+  if (client.whatsapp_opt_out === true) return
   const billingAction = resolveBillingAction(textValue)
   const stateRaw = await redisConnection.get(stateKey)
   let state: BotState | null = null
@@ -359,7 +471,17 @@ async function handleInboundMessage(payload: any) {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: pending?.copia_e_cola ? `PIX pendente de ${currency.format(Number(pending.amount))}:\n\n${pending.copia_e_cola}` : 'Não há PIX pendente e válido. Escolha a opção 1 para gerar uma nova cobrança.' })
+      const sent = pending && await sendPixCopyPaste({
+        organizationId,
+        userId: client.user_id,
+        instanceName,
+        phone: deliveryPhone,
+        amount: Number(pending.amount),
+        code: pending.copia_e_cola,
+      })
+      if (!sent) {
+        await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Não há PIX pendente e válido. Escolha a opção 1 para gerar uma nova cobrança.' })
+      }
       await redisConnection.del(stateKey)
       return
     }
@@ -441,7 +563,15 @@ async function handleInboundMessage(payload: any) {
       months: 1,
       planName: state.planName,
     })
-    await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: `PIX de ${currency.format(state.price)} gerado:\n\n${charge.copia_e_cola || 'Código indisponível'}` })
+    const sent = await sendPixCopyPaste({
+      organizationId,
+      userId: client.user_id,
+      instanceName,
+      phone: deliveryPhone,
+      amount: state.price,
+      code: charge.copia_e_cola,
+    })
+    if (!sent) throw new Error('O PIX foi criado, mas o código retornado não passou na validação')
     await redisConnection.del(stateKey)
     return
   }
@@ -459,9 +589,9 @@ async function handleInboundMessage(payload: any) {
   }
 
   if (state.step === 'awaiting_new_phone') {
-    const newPhone = normalizeBrazilPhone(textValue)
+    const newPhone = normalizePhoneE164(textValue)
     if (!newPhone || newPhone === client.phone_e164) {
-      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Número inválido ou igual ao atual. Informe outro telefone com DDD.' })
+      await sendBotMessage({ organizationId, userId: client.user_id, instanceName, phone: deliveryPhone, message: 'Número inválido ou igual ao atual. Informe com código do país, por exemplo: +55 11 99999-9999 ou +1 202 555 0123.' })
       return
     }
     const code = generateVerificationCode()
@@ -523,6 +653,7 @@ const worker = new Worker(WEBHOOK_QUEUE_NAME, async (job: Job) => {
     try {
       if (payload.event === 'CONNECTION_UPDATE' || payload.event === 'connection.update') await handleConnectionUpdate(payload)
       if (payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert') await handleInboundMessage(payload)
+      if (payload.event === 'MESSAGES_UPDATE' || payload.event === 'messages.update') await handleMessageUpdate(payload)
       logger.info(`[Webhook ${job.id}] processado com sucesso`)
     } catch (error: any) {
       await redisConnection.del(idempotencyKey)

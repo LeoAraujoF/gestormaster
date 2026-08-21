@@ -1,5 +1,5 @@
 export type ClientStatus = 'active' | 'inactive' | 'pending' | 'vencido' | 'suspended' | 'canceled'
-export type AlertType = 'before_due' | 'on_due' | 'after_due' | 'renewal' | 'promotion' | 'quick_message'
+export type AlertType = 'before_due' | 'on_due' | 'after_due' | 'renewal' | 'promotion' | 'quick_message' | 'activation' | 'welcome'
 export type AlertSendStatus = 'sent' | 'failed' | 'pending'
 export type InstanceStatus = 'connected' | 'disconnected'
 export type OrganizationRole = 'owner' | 'admin' | 'member'
@@ -50,6 +50,7 @@ export interface Client {
   user_id: string
   name: string
   phone: string | null
+  phone_e164: string | null
   plan_value: number
   due_date: string // format: YYYY-MM-DD
   observation: string | null
@@ -58,6 +59,15 @@ export interface Client {
   status: ClientStatus
   created_at: string
   updated_at: string
+  whatsapp_opt_in?: boolean
+  whatsapp_opt_in_at?: string | null
+  whatsapp_opt_in_source?: string | null
+  whatsapp_opt_in_categories?: string[]
+  whatsapp_opt_out?: boolean
+  whatsapp_opt_out_at?: string | null
+  renewal_reminder_enabled?: boolean
+  renewal_reminder_days_before?: number
+  renewal_reminder_last_sent_due_date?: string | null
   screens?: number
   services?: Service[]
   client_services?: ClientService[]
@@ -83,6 +93,11 @@ export interface Promotion {
   end_date: string | null
   created_at: string
   updated_at: string
+  daily_message_limit?: number
+  message_min_interval_ms?: number
+  sending_paused?: boolean
+  sending_pause_reason?: string | null
+  sending_paused_at?: string | null
 }
 
 export interface Automation {
@@ -172,6 +187,7 @@ export interface Payment {
   amount_paid: number
   net_profit: number
   months_renewed: number
+  credits_consumed?: number
   created_at: string
 }
 

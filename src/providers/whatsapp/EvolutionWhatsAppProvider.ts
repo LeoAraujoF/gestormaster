@@ -4,6 +4,7 @@ import {
   WhatsAppButtonsMessage,
   WhatsAppListMessage,
 } from './IWhatsAppProvider';
+import { EvolutionApiError } from './provider-error';
 
 type EvolutionQrResponse = {
   base64?: string
@@ -53,7 +54,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Evolution API Error [${response.status}]: ${errorText}`);
+      throw new EvolutionApiError(response.status, errorText);
     }
 
     return response.json() as Promise<T>;
@@ -78,6 +79,23 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
       throw new Error('Mensagens interativas exigem de 1 a 3 botões de resposta.');
     }
 
+    const buttons = message.buttons.map((button) => {
+      if (button.type === 'copyCode') {
+        if (!button.copyCode.trim()) throw new Error('O botão de cópia precisa de um código.')
+        return {
+          type: 'copyCode',
+          displayText: button.displayText,
+          copyCode: button.copyCode,
+        }
+      }
+
+      return {
+        type: 'reply',
+        id: button.id,
+        displayText: button.displayText,
+      }
+    })
+
     return this.request(`/message/sendButtons/${instanceName}`, 'POST', {
       number: phone,
       title: message.title,
@@ -85,11 +103,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
       footer: message.footer,
       thumbnailUrl: message.thumbnailUrl,
       delay: options?.delay || 1200,
-      buttons: message.buttons.map((button) => ({
-        type: 'reply',
-        id: button.id,
-        displayText: button.displayText,
-      })),
+      buttons,
     });
   }
 
@@ -170,7 +184,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
         url: webhookUrl,
         byEvents: false,
         base64: false,
-        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
+        events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
         ...((webhookSecret || webhookToken) ? {
           headers: {
             ...(webhookSecret ? { "x-webhook-secret": webhookSecret } : {}),
@@ -190,7 +204,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
         url: webhookUrl,
         byEvents: false,
         base64: false,
-        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
+        events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "CONNECTION_UPDATE", "CALL", "PRESENCE_UPDATE"],
         ...((webhookSecret || webhookToken) ? {
           headers: {
             ...(webhookSecret ? { "x-webhook-secret": webhookSecret } : {}),

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { normalizeClientPhone } from "@/lib/phone"
+import { normalizeClientPhone, normalizeWhatsAppNumber } from "@/lib/phone"
 
 /* ——————————————————————————————————————————————
    Types
@@ -111,9 +111,9 @@ export default function OnboardingPage() {
   /* ——— Step 1: Connect WhatsApp ——— */
 
   const connectWhatsApp = useCallback(async () => {
-    const normalizedPhone = pairingPhone.replace(/\D/g, "")
-    if (connectionMethod === "pairing" && !/^\d{10,15}$/.test(normalizedPhone)) {
-      toast.error("Informe o número com DDI e DDD, usando apenas números.")
+    const normalizedPhone = connectionMethod === "pairing" ? normalizeWhatsAppNumber(pairingPhone) : null
+    if (connectionMethod === "pairing" && !normalizedPhone) {
+      toast.error("Informe um WhatsApp válido com código do país, por exemplo +55 11 99999-9999.")
       return
     }
 
@@ -249,10 +249,16 @@ export default function OnboardingPage() {
         return
       }
 
+      const normalizedPhone = normalizeClientPhone(clientWhatsApp)
+      if (clientWhatsApp.trim() && !normalizedPhone.phone_e164) {
+        toast.error("Informe o WhatsApp com código do país, por exemplo +55 11 99999-9999 ou +1 202 555 0123.")
+        return
+      }
+
       const clientData: Record<string, unknown> = {
         user_id: user.id,
         name: clientName.trim(),
-        ...normalizeClientPhone(clientWhatsApp),
+        ...normalizedPhone,
         status: "active",
       }
       if (selectedService) {
@@ -375,13 +381,13 @@ export default function OnboardingPage() {
                   <Label htmlFor="onboarding-pairing-phone">Número do WhatsApp</Label>
                   <Input
                     id="onboarding-pairing-phone"
-                    inputMode="numeric"
+                    inputMode="tel"
                     autoComplete="tel"
-                    placeholder="5511999999999"
+                    placeholder="+55 11 99999-9999"
                     value={pairingPhone}
-                    onChange={(event) => setPairingPhone(event.target.value.replace(/\D/g, "").slice(0, 15))}
+                    onChange={(event) => setPairingPhone(event.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">Informe DDI + DDD + número, sem espaços.</p>
+                  <p className="text-xs text-muted-foreground">Use o DDI. Ex.: +55 11 99999-9999 ou +1 202 555 0123.</p>
                 </div>
               )}
             </div>
@@ -549,11 +555,12 @@ export default function OnboardingPage() {
               </Label>
               <Input
                 id="client-whatsapp"
-                placeholder="(11) 99999-9999"
+                placeholder="+55 11 99999-9999 ou +1 202 555 0123"
                 value={clientWhatsApp}
                 onChange={(e) => setClientWhatsApp(e.target.value)}
                 className="h-10"
               />
+              <p className="text-xs text-muted-foreground">Use o código do país para números internacionais.</p>
             </div>
 
             {services.length > 0 && (

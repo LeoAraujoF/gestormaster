@@ -1,9 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import type { ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, CircleDollarSign, LayoutDashboard, Plus, Send, WalletCards, Zap } from "lucide-react"
+import { ArrowRight, CheckCircle2, CircleAlert, LayoutDashboard, Plus, Send, Zap } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,7 +17,10 @@ import { OnboardingProgress } from "@/components/onboarding-progress"
 import { useConfirm } from "@/components/providers/confirm-provider"
 import { ExecutiveDashboardView, ExecutiveUpgrade } from "@/components/executive-dashboard-view"
 import { usePlanCapability } from "@/components/providers/plan-provider"
-import { MetricGrid, PageSection, PageShell } from "@/components/page-layout"
+import { PageSection, PageShell } from "@/components/page-layout"
+import { WorkspaceHeader } from "@/components/workspace-header"
+import { DashboardOverview } from "@/components/dashboard-overview"
+import { DueDateMap } from "@/components/due-date-map"
 
 type QueueFilter = "vencidos" | "hoje" | "7dias"
 
@@ -146,7 +148,6 @@ export default function DashboardPage() {
   const vencemHoje = clientsList.filter((c) => c.diffDays === 0)
   const proximos7 = clientsList.filter((c) => c.diffDays > 0 && c.diffDays <= 7)
   const overdueTotal = vencidos.reduce((total, client) => total + Number(client.plan_value || 0), 0)
-  const upcomingTotal = proximos7.reduce((total, client) => total + Number(client.plan_value || 0), 0)
 
   const queueMap: Record<QueueFilter, QueueClient[]> = {
     vencidos,
@@ -155,14 +156,16 @@ export default function DashboardPage() {
   }
   const queue = queueMap[queueFilter]
 
-  const revealRiskClients = () => {
-    setQueueFilter("vencidos")
+  const revealQueue = (filter: QueueFilter) => {
+    setQueueFilter(filter)
     window.requestAnimationFrame(() => {
       const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
       queueSectionRef.current?.scrollIntoView({ behavior, block: "start" })
       queueSectionRef.current?.focus({ preventScroll: true })
     })
   }
+
+  const revealRiskClients = () => revealQueue("vencidos")
 
   const prazoLabel = (diff: number) => {
     if (diff === -1) return "ontem"
@@ -303,6 +306,17 @@ export default function DashboardPage() {
     { key: "hoje", label: "Hoje", count: vencemHoje.length },
     { key: "7dias", label: "7 dias", count: proximos7.length },
   ]
+  const selectedQueue = segments.find((segment) => segment.key === queueFilter) || segments[0]
+  const selectedQueueAmount = queue.reduce((total, client) => total + Number(client.plan_value || 0), 0)
+  const selectedQueueContacts = queue.filter((client) => client.phone).length
+
+  const activeClientsCount = clientsList.filter((client) => client.status === "active").length
+  const newClientsInPeriod = executive?.growth.new_clients
+  const receivedInPeriod = executive?.summary.confirmed ?? basicPayments.total
+  const dueTodayTotal = vencemHoje.reduce((total, client) => total + Number(client.plan_value || 0), 0)
+  const nextSevenDaysTotal = proximos7.reduce((total, client) => total + Number(client.plan_value || 0), 0)
+  const trackedReceivable = overdueTotal + dueTodayTotal + nextSevenDaysTotal
+  const activeShare = clientsList.length > 0 ? (activeClientsCount / clientsList.length) * 100 : 0
 
   if (isLoading) {
     return <BrandLoader />
@@ -310,27 +324,16 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
-      <section className="animate-in fade-in slide-in-from-bottom-2 overflow-hidden rounded-[28px] border border-border bg-card shadow-sm duration-500" aria-labelledby="dashboard-title">
-        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between lg:p-7">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
-                <LayoutDashboard className="size-4" aria-hidden="true" />
-              </span>
-              <div>
-                <p className="microlabel">{weekday}, {dayMonth}</p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                  <h1 id="dashboard-title" className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">Painel da operação</h1>
-                  {hasAdvancedFinance ? <span className="rounded-md bg-interactive-bg px-2 py-1 text-[10px] font-semibold text-interactive-fg">PRO</span> : null}
-                </div>
-              </div>
-            </div>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Resultado financeiro, carteira e prioridades em uma leitura rápida para decidir o próximo passo.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+      <WorkspaceHeader
+        id="dashboard-title"
+        icon={LayoutDashboard}
+        eyebrow={`${weekday}, ${dayMonth}`}
+        title="Dashboard"
+        badge={hasAdvancedFinance ? "PRO" : undefined}
+        description="Carteira, recebimentos, vencimentos e prioridades da operação em uma leitura rápida."
+        className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+        actions={
+          <>
             <PixRapidoModal>
               <Button variant="outline" className="min-h-10 gap-2">
                 <Zap className="size-4" aria-hidden="true" /> Gerar PIX
@@ -339,42 +342,31 @@ export default function DashboardPage() {
             <Button onClick={() => setIsAddClientOpen(true)} className="min-h-10 gap-2">
               <Plus className="size-4" aria-hidden="true" /> Novo cliente
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <div className="grid gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
-          <HeroSignal
-            icon={CircleDollarSign}
-            label="Arrecadado hoje"
-            value={hasAdvancedFinance ? displayValue(formatCurrency(todayConfirmed)) : "—"}
-            hint={hasAdvancedFinance ? "Pagamentos confirmados hoje" : "Disponível na visão avançada"}
-            tone="blue"
-          />
-          <HeroSignal
-            icon={WalletCards}
-            label="Recebido neste mês"
-            value={displayValue(formatCurrency(basicPayments.total))}
-            hint={`${basicPayments.count} pagamentos neste mês`}
-            tone="green"
-          />
-          <HeroSignal
-            icon={CircleAlert}
-            label="Exige atenção agora"
-            value={displayValue(formatCurrency(overdueTotal))}
-            hint={`${vencidos.length} cliente${vencidos.length === 1 ? "" : "s"} vencido${vencidos.length === 1 ? "" : "s"}`}
-            tone={vencidos.length > 0 ? "danger" : "green"}
-            onClick={vencidos.length > 0 ? revealRiskClients : undefined}
-            actionLabel="Ver clientes vencidos em exige atenção agora"
-          />
-          <HeroSignal
-            icon={CalendarClock}
-            label="Próximos 7 dias"
-            value={displayValue(formatCurrency(upcomingTotal))}
-            hint={proximos7.length === 1 ? "1 renovação prevista" : `${proximos7.length} renovações previstas`}
-            tone="warning"
-          />
-        </div>
-      </section>
+      <DashboardOverview
+        totalClients={clientsList.length}
+        activeClients={activeClientsCount}
+        overdueClients={vencidos.length}
+        activeShare={activeShare}
+        overdueAmount={String(displayValue(formatCurrency(overdueTotal)))}
+        newClients={newClientsInPeriod ?? null}
+        previousNewClients={executive?.growth.previous_new_clients ?? null}
+        dueTodayCount={vencemHoje.length}
+        nextSevenDaysCount={proximos7.length}
+        dueTodayAmount={String(displayValue(formatCurrency(dueTodayTotal)))}
+        nextSevenDaysAmount={String(displayValue(formatCurrency(nextSevenDaysTotal)))}
+        confirmedAmount={String(displayValue(formatCurrency(receivedInPeriod)))}
+        forecastAmount={String(displayValue(formatCurrency(executive?.summary.forecast ?? trackedReceivable)))}
+        todayAmount={hasAdvancedFinance ? String(displayValue(formatCurrency(todayConfirmed))) : "—"}
+        trackedAmount={String(displayValue(formatCurrency(trackedReceivable)))}
+        advancedFinance={hasAdvancedFinance && Boolean(executive)}
+        onOverdueOpen={() => revealQueue("vencidos")}
+        onTodayOpen={() => revealQueue("hoje")}
+        onNextSevenDaysOpen={() => revealQueue("7dias")}
+      />
 
       <OnboardingProgress />
 
@@ -385,7 +377,7 @@ export default function DashboardPage() {
         actions={
           queue.length > 0 ? (
             <Button variant="outline" size="sm" onClick={handleCobrarTodos} className="h-9 gap-2 text-xs">
-              <Send className="size-3.5" aria-hidden="true" /> Cobrar todos ({queue.filter((client) => client.phone).length})
+              <Send className="size-3.5" aria-hidden="true" /> Cobrar todos ({selectedQueueContacts})
             </Button>
           ) : null
         }
@@ -485,48 +477,73 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <aside className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
-            <p className="microlabel">Ações rápidas</p>
-            <h3 className="mt-1 text-sm font-semibold text-foreground">Continue a operação</h3>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Atalhos para as tarefas mais frequentes do dia.</p>
-
-            <div className="mt-5 space-y-2">
-              <button
-                type="button"
-                onClick={() => setIsAddClientOpen(true)}
-                className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted"
-              >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg"><Plus className="size-4" aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Adicionar cliente</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Cadastre uma nova assinatura</span></span>
-                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </button>
-              <PixRapidoModal>
-                <button className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-success-bg text-success-fg"><Zap className="size-4" aria-hidden="true" /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Gerar PIX rápido</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Crie uma cobrança avulsa</span></span>
-                  <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                </button>
-              </PixRapidoModal>
-              <button
-                type="button"
-                onClick={() => router.push("/automacao")}
-                className="group flex min-h-12 w-full items-center gap-3 rounded-xl border border-input px-3 text-left transition-all hover:border-foreground/25 hover:bg-muted"
-              >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning-bg text-warning-fg"><Send className="size-4" aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-foreground">Abrir automação</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">Revise regras e entregas</span></span>
-                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </button>
+          <aside className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
+            <div className={cn(
+              "border-b border-border p-5",
+              queueFilter === "vencidos" ? "bg-danger-bg/45" : queueFilter === "hoje" ? "bg-warning-bg/45" : "bg-interactive-bg/45"
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="microlabel">Fila selecionada</p>
+                  <h3 className="mt-1 text-sm font-semibold text-foreground">{selectedQueue.label}</h3>
+                </div>
+                <span className={cn(
+                  "flex size-9 items-center justify-center rounded-xl",
+                  queue.length === 0
+                    ? "bg-success-bg text-success-fg"
+                    : queueFilter === "vencidos"
+                      ? "bg-danger-bg text-danger-fg"
+                      : queueFilter === "hoje"
+                        ? "bg-warning-bg text-warning-fg"
+                        : "bg-interactive-bg text-interactive-fg"
+                )}>
+                  {queue.length === 0 ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <CircleAlert className="size-4" aria-hidden="true" />}
+                </span>
+              </div>
+              <p className="num mt-6 text-3xl font-semibold tracking-[-0.05em] text-foreground">{queue.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">cliente{queue.length === 1 ? "" : "s"} nesta prioridade</p>
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+                <span className="text-[10px] text-muted-foreground">Valor acompanhado</span>
+                <span className="num text-sm font-semibold text-foreground">{displayValue(formatCurrency(selectedQueueAmount))}</span>
+              </div>
             </div>
 
-            <div className="mt-5 border-t border-border pt-4">
-              <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Resumo da fila</p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="p-4 sm:p-5">
+              <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Trocar prioridade</p>
+              <div className="mt-3 space-y-2">
                 {segments.map((segment) => (
-                  <button key={segment.key} type="button" onClick={() => setQueueFilter(segment.key)} className="rounded-lg bg-muted p-2 text-center transition-colors hover:bg-secondary" aria-label={`Ver ${segment.label.toLowerCase()}`}>
-                    <span className="num block text-base font-semibold text-foreground">{segment.count}</span>
-                    <span className="mt-0.5 block text-[9px] text-muted-foreground">{segment.label}</span>
+                  <button
+                    key={segment.key}
+                    type="button"
+                    onClick={() => setQueueFilter(segment.key)}
+                    aria-pressed={queueFilter === segment.key}
+                    className={cn(
+                      "group flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      queueFilter === segment.key
+                        ? "border-interactive/30 bg-interactive-bg text-interactive-fg"
+                        : "border-border bg-card text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <span className="min-w-0 flex-1 text-xs font-medium">{segment.label}</span>
+                    <span className="num rounded-lg bg-card px-2 py-1 text-xs font-semibold text-foreground shadow-sm">{segment.count}</span>
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </button>
                 ))}
+              </div>
+
+              <div className="mt-5 border-t border-border pt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-success-bg text-success-fg"><Send className="size-4" aria-hidden="true" /></span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">Automação de cobrança</p>
+                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{automations.length} regra{automations.length === 1 ? "" : "s"} ativa{automations.length === 1 ? "" : "s"}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => router.push("/automacao")} className="min-h-9 rounded-lg px-2 text-[10px] font-semibold text-interactive-fg hover:bg-interactive-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    Gerenciar
+                  </button>
+                </div>
               </div>
             </div>
           </aside>
@@ -538,34 +555,14 @@ export default function DashboardPage() {
         upgradeRequired ? <ExecutiveUpgrade /> : executive ? <ExecutiveDashboardView data={executive} period={executivePeriod} onPeriodChange={setExecutivePeriod} onRiskOpen={revealRiskClients} /> : null
       ) : (
         <>
-          <MetricGrid columns={4}>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="microlabel">Recebido no mês</p>
-              <p className="num mt-2 text-xl font-semibold text-money">{displayValue(formatCurrency(basicPayments.total))}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{basicPayments.count} pagamentos confirmados</p>
-            </div>
-            <div className="rounded-xl border border-danger-border bg-danger-bg/50 p-4">
-              <p className="microlabel">Valor vencido</p>
-              <p className="num mt-2 text-xl font-semibold text-danger">{displayValue(formatCurrency(overdueTotal))}</p>
-              <p className="mt-1 text-xs text-danger-fg">{vencidos.length} clientes exigem atenção</p>
-            </div>
-            <div className="rounded-xl border border-warning-border bg-warning-bg/40 p-4">
-              <p className="microlabel">A receber em 7 dias</p>
-              <p className="num mt-2 text-xl font-semibold text-warning-fg">{displayValue(formatCurrency(upcomingTotal))}</p>
-              <p className="mt-1 text-xs text-warning-fg">{proximos7.length} renovações previstas</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="microlabel">Vencem hoje</p>
-              <p className="num mt-2 text-xl font-semibold">{vencemHoje.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">clientes para acompanhar</p>
-            </div>
-          </MetricGrid>
           <div className="flex flex-col gap-3 rounded-xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
-            <p className="flex-1 text-xs leading-relaxed text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
+            <p className="flex-1 text-xs leading-relaxed text-muted-foreground"><b className="text-interactive-fg">Visão básica ativa.</b> {basicPayments.count} pagamento{basicPayments.count === 1 ? "" : "s"} registrado{basicPayments.count === 1 ? "" : "s"} neste mês. Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
             <Button variant="outline" size="sm" onClick={() => router.push('/planos')} className="h-8 text-xs">Conhecer o Pro</Button>
           </div>
         </>
       )}
+
+      <DueDateMap clients={clientsList} />
 
       {/* Dialogs */}
       <ClientFormDialog
@@ -583,60 +580,6 @@ export default function DashboardPage() {
       />
     </PageShell>
   )
-}
-
-function HeroSignal({ icon: Icon, label, value, hint, tone, onClick, actionLabel }: {
-  icon: typeof WalletCards
-  label: string
-  value: ReactNode
-  hint: string
-  tone: "blue" | "green" | "danger" | "warning"
-  onClick?: () => void
-  actionLabel?: string
-}) {
-  const toneClasses = {
-    blue: "bg-card/70 text-interactive-fg",
-    green: "bg-card/70 text-success-fg",
-    danger: "bg-danger-bg text-danger-fg",
-    warning: "bg-warning-bg text-warning-fg",
-  }
-  const valueClasses = {
-    blue: "text-interactive-fg",
-    green: "text-money",
-    danger: "text-danger",
-    warning: "text-warning-fg",
-  }
-  const surfaceClasses = {
-    blue: "border-interactive/20 bg-interactive-bg/70",
-    green: "border-success-border bg-success-bg/70",
-    danger: "border-danger-border bg-danger-bg/70",
-    warning: "border-warning-border bg-warning-bg/70",
-  }
-
-  const content = (
-    <>
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneClasses[tone])}>
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-[10px] font-medium uppercase tracking-[0.07em] text-muted-foreground">{label}</p>
-        <p className={cn("num mt-1 truncate text-base font-semibold", valueClasses[tone])}>{value}</p>
-        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{hint}</p>
-      </div>
-      {onClick ? <ArrowRight className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
-    </>
-  )
-
-  const className = cn(
-    "group flex min-h-[112px] min-w-0 items-center gap-3 rounded-2xl border p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.03)] transition-all hover:-translate-y-0.5 hover:shadow-sm sm:px-5",
-    surfaceClasses[tone]
-  )
-
-  if (onClick) {
-    return <button type="button" onClick={onClick} aria-label={actionLabel || label} className={cn(className, "hover:bg-muted/70")}>{content}</button>
-  }
-
-  return <div className={className}>{content}</div>
 }
 
 function startOfToday() {

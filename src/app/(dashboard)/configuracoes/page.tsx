@@ -167,11 +167,14 @@ export default function ConfiguracoesPage() {
           if (rows.length === 0) throw new Error("O arquivo CSV está vazio.")
 
           // Map CSV rows supporting both English, Portuguese, accented and case variants
-          const inserts = rows.map(row => {
+          const inserts = rows.map((row, index) => {
             const name = row.Nome ?? row.nome ?? row.name ?? row.Name ?? "Sem Nome"
             const username = row.Usuario ?? row.usuario ?? row.username ?? row.Username ?? null
             const phone = row.Telefone ?? row.telefone ?? row.phone ?? row.Phone ?? null
             const normalizedPhone = normalizeClientPhone(phone)
+            if (phone != null && String(phone).trim() && !normalizedPhone.phone_e164) {
+              throw new Error(`Telefone inválido na linha ${index + 2}. Use o formato +DDI, por exemplo +1 202 555 0123.`)
+            }
             
             const rawPlan = row["Valor do Plano"] ?? row.valor ?? row.plan_value ?? row.PlanValue
             const plan_value = rawPlan !== undefined && rawPlan !== null && rawPlan !== ""

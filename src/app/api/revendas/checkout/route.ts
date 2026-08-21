@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
+import { messageQueue } from "@/lib/queue"
+import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "YOUR_GLOBAL_APIKEY"
 const INSTANCE_NAME = "GestorMaster"
 
 export async function POST(request: Request) {
@@ -89,19 +90,16 @@ export async function POST(request: Request) {
     if (gestorNumber && EVOLUTION_API_URL) {
       const message = `🔔 *Novo Pedido de Revenda*\nO revendedor *${resellerName}* acabou de gerar um pedido de *${creditsAmount}x créditos* para o serviço *${service.service_name}*.\n\nValor: R$ ${totalValue}\nStatus: Aguardando Pagamento (PIX).`
 
-      await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": EVOLUTION_API_KEY
-        },
-        body: JSON.stringify({
-          number: gestorNumber,
-          text: message,
-          options: { delay: 1200, presence: "composing" },
-          textMessage: { text: message }
-        })
-      }).catch(err => console.log("Erro na API Evolution:", err))
+      const cleanPhone = normalizeWhatsAppNumber(gestorNumber)
+      if (cleanPhone) {
+        await messageQueue.add('send-message', {
+          userId: service.resellers?.user_id,
+          instanceName: INSTANCE_NAME,
+          phone: cleanPhone,
+          finalMessage: message,
+          source: 'reseller_notification',
+        }, { priority: 8 })
+      }
     }
 
     return NextResponse.json({ success: true, data: newRequest })

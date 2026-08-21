@@ -15,6 +15,7 @@ import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
+import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 type MassRequest = {
   action?: 'preview' | 'confirm'
@@ -79,10 +80,13 @@ export async function POST(req: Request) {
       if (!serviceClientIds.size) return NextResponse.json({ error: 'Nenhum cliente encontrado para este serviço' }, { status: 400 })
     }
 
-    const clients: Array<{ id: string; name: string; phone: string | null; phone_e164: string | null; plan_value: number; due_date: string; user_id: string }> = []
+    const clients: Array<{
+      id: string; name: string; phone: string | null; phone_e164: string | null; plan_value: number; due_date: string; user_id: string;
+      whatsapp_opt_in?: boolean | null; whatsapp_opt_out?: boolean | null; whatsapp_opt_in_categories?: string[] | null;
+    }> = []
     for (let from = 0; ; from += 1000) {
       let pageQuery = supabaseAdmin.from('clients')
-        .select('id, name, phone, phone_e164, plan_value, due_date, user_id')
+        .select('id, name, phone, phone_e164, plan_value, due_date, user_id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
         .eq('organization_id', membership.organizationId)
         .range(from, from + 999)
       if (audience === 'active') pageQuery = pageQuery.eq('status', 'active')
@@ -95,9 +99,11 @@ export async function POST(req: Request) {
     }
     const audienceClients = serviceClientIds ? clients.filter((client) => serviceClientIds.has(client.id)) : clients
     const withValidPhone = audienceClients.filter((client) => Boolean(normalizePhoneE164(client.phone_e164 || client.phone || '')))
+    const withoutConsent = withValidPhone.filter((client) => !hasWhatsAppConsent(client, 'marketing'))
+    const withConsent = withValidPhone.filter((client) => hasWhatsAppConsent(client, 'marketing'))
     const clientLimit = plan.limits.clients
-    const eligibleByPlan = clientLimit == null ? withValidPhone : withValidPhone.slice(0, clientLimit)
-    const overPlanLimit = withValidPhone.length - eligibleByPlan.length
+    const eligibleByPlan = clientLimit == null ? withConsent : withConsent.slice(0, clientLimit)
+    const overPlanLimit = withConsent.length - eligibleByPlan.length
     if (!eligibleByPlan.length) return NextResponse.json({ error: 'Nenhum cliente com telefone válido encontrado' }, { status: 400 })
 
     const timezone = await organizationTimezone(membership.organizationId)
@@ -121,16 +127,18 @@ export async function POST(req: Request) {
       eligible: eligibleByPlan.length - conflictMap.size,
       deferred: conflictMap.size,
       blocked: overPlanLimit,
+      skippedNoConsent: withoutConsent.length,
       planLimit: clientLimit,
       contactDate,
     }
     if (action === 'preview') return NextResponse.json({ preview })
 
     const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id')
+      .select('id, sending_paused, sending_pause_reason')
       .eq('organization_id', membership.organizationId).eq('status', 'connected')
       .order('is_primary', { ascending: false }).limit(1).maybeSingle()
     if (!instance) return NextResponse.json({ error: 'Nenhum WhatsApp conectado' }, { status: 400 })
+    if (instance.sending_paused) return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
 
     const { data: tempRule, error: ruleError } = await supabaseAdmin.from('automations').insert({
       user_id: user.id,
@@ -143,7 +151,7 @@ export async function POST(req: Request) {
     }).select('id').single()
     if (ruleError || !tempRule) throw new Error(ruleError?.message || 'Erro ao criar campanha')
 
-    const summary = { queued: 0, deferred: 0, blocked: overPlanLimit, failed: 0, total: eligibleByPlan.length, planLimit: clientLimit }
+    const summary = { queued: 0, deferred: 0, blocked: overPlanLimit, skipped_no_consent: withoutConsent.length, failed: 0, total: eligibleByPlan.length, planLimit: clientLimit }
     const delay = Math.max(0, scheduledDate.getTime() - Date.now())
     for (const client of eligibleByPlan) {
       try {

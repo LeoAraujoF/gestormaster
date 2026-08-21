@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
 import { logAuditClient } from "@/lib/audit-client"
+import { isMissingRenewalReminderColumnError, withoutRenewalReminderFields } from "@/lib/renewal-reminder-compat"
 import {
   deleteProtectedResource,
   fetchSecurityPinStatus,
@@ -111,7 +112,9 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
   const [renewScreens, setRenewScreens] = useState(1)
   const [renewDueDate, setRenewDueDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true)
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false)
+  const [renewalReminderEnabled, setRenewalReminderEnabled] = useState(false)
+  const [renewalReminderDaysBefore, setRenewalReminderDaysBefore] = useState(7)
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'money' | 'card'>('pix')
   
   // Estados para geração do PIX
@@ -129,7 +132,9 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       setRenewMonths(1)
       setRenewScreens(client.screens || 1)
       setRenewDueDate(addBillingMonths(renewalBaseDate(client.due_date), 1))
-      setNotifyWhatsApp(true)
+       setNotifyWhatsApp(false)
+       setRenewalReminderEnabled(client.renewal_reminder_enabled === true)
+       setRenewalReminderDaysBefore(client.renewal_reminder_days_before || 7)
       setPaymentMethod('pix')
       setGeneratedPix(null)
 
@@ -275,16 +280,27 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       return
     }
     setIsSubmitting(true)
+    let renewalReminderUnavailable = false
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
 
-      const { error } = await supabase.from('clients').update({
+      const renewalUpdate = {
         due_date: renewDueDate,
         status: 'active',
         screens: renewScreens,
-      }).eq('id', client.id)
-      if (error) throw error
+        renewal_reminder_enabled: renewalReminderEnabled,
+        renewal_reminder_days_before: renewalReminderDaysBefore,
+      }
+      let updateResult = await supabase.from('clients').update(renewalUpdate).eq('id', client.id)
+      if (isMissingRenewalReminderColumnError(updateResult.error)) {
+        renewalReminderUnavailable = true
+        updateResult = await supabase
+          .from('clients')
+          .update(withoutRenewalReminderFields(renewalUpdate))
+          .eq('id', client.id)
+      }
+      if (updateResult.error) throw updateResult.error
 
       const { error: paymentError } = await supabase.from('payments').insert({
         user_id: user.id, client_id: client.id, amount_paid: renewAmount, net_profit: renewalBillingTotals.netProfit, months_renewed: renewMonths,
@@ -330,6 +346,11 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
       }
 
       toast.success(`Assinatura renovada por ${renewMonths} mês(es)! Novo vencimento: ${newDueDate.toLocaleDateString('pt-BR')}`)
+      if (renewalReminderUnavailable) {
+        toast.warning('Renovação registrada, mas o lembrete não foi salvo.', {
+          description: 'Aplique a migration de lembretes no Supabase para ativar este recurso.',
+        })
+      }
       if (notificationWarning) toast.warning(notificationWarning)
       logAuditClient({ action: 'client.renew', resource: 'clients', details: { client_name: client.name, months: renewMonths, due_date: renewDueDate } })
       
@@ -581,6 +602,29 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       onChange={() => setNotifyWhatsApp(!notifyWhatsApp)}
                       label="Avisar o cliente da renovação no WhatsApp"
                     />
+                    <CustomToggle
+                      checked={renewalReminderEnabled}
+                      onChange={() => setRenewalReminderEnabled(!renewalReminderEnabled)}
+                      label="Lembrar-me antes do vencimento"
+                    />
+                    {renewalReminderEnabled && (
+                      <div className="flex items-center justify-end gap-[8px] pb-[6px]">
+                        <label htmlFor="renewalReminderDays" className="text-[10.5px] text-muted-foreground">Avisar com</label>
+                        <input
+                          id="renewalReminderDays"
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={renewalReminderDaysBefore}
+                          onChange={(event) => setRenewalReminderDaysBefore(Math.min(60, Math.max(1, Number(event.target.value) || 1)))}
+                          className="h-[30px] w-[58px] rounded-[6px] border border-input bg-card px-[8px] text-[11px] font-mono text-foreground"
+                        />
+                        <span className="text-[10.5px] text-muted-foreground">dia(s) antes</span>
+                      </div>
+                    )}
+                    <p className="pb-[4px] text-[10px] leading-snug text-muted-foreground">
+                      O lembrete interno usa o WhatsApp de suporte configurado em Minha conta.
+                    </p>
                   </div>
                 </div>
               </div>

@@ -16,6 +16,9 @@ logger.info('🔥 Warmup Worker iniciado e aguardando ciclos...');
 const warmupWorker = new Worker(WARMUP_QUEUE_NAME, async (job: Job) => {
   if (job.name !== 'execute-warmup') return;
 
+  logger.warn('[Warmup] Aquecimento artificial desativado por segurança; ciclo ignorado.');
+  return;
+
   return runWithCorrelationId(undefined, undefined, async () => {
     try {
       // 1. Busca todas as instâncias em modo de aquecimento

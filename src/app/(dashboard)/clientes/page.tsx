@@ -445,6 +445,12 @@ export default function ClientesPage() {
     return <span className="text-[10px] text-warning-fg font-medium">Pendente</span>
   }
 
+  const commSentDate = (date: string | null) => date ? (
+    <span className="text-[9px] text-muted-foreground" title={new Date(date).toLocaleString('pt-BR')}>
+      {new Date(date).toLocaleDateString('pt-BR')}
+    </span>
+  ) : null
+
   const getClientPrimaryService = (client: EnrichedClient) => {
     const relation = client.client_services?.[0] as (ClientService & { services?: Service }) | undefined
     return relation?.service?.name || relation?.services?.name || "Sem serviço"
@@ -876,7 +882,13 @@ export default function ClientesPage() {
                           </div>
 
                           <div className="flex flex-col gap-3">
-                            <div><p className="microlabel mb-1 text-[8px]">Última comunicação</p>{commStatusBadge(client.last_communication_status)}</div>
+                            <div>
+                              <p className="microlabel mb-1 text-[8px]">Última comunicação</p>
+                              <div className="flex flex-col gap-0.5">
+                                {commStatusBadge(client.last_communication_status)}
+                                {commSentDate(client.last_charge_sent_date)}
+                              </div>
+                            </div>
                             <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                               <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-9 px-2 text-[11px]">
                                 {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
@@ -967,9 +979,7 @@ export default function ClientesPage() {
                         <TableCell>
                           <div className="flex flex-col gap-0.5">
                             {commStatusBadge(client.last_communication_status)}
-                            <span className="text-[9px] text-muted-foreground max-w-[90px] truncate" title={client.last_charge_sent_date ? new Date(client.last_charge_sent_date).toLocaleString('pt-BR') : ''}>
-                              {client.last_charge_sent_date ? new Date(client.last_charge_sent_date).toLocaleDateString('pt-BR') : ''}
-                            </span>
+                            {commSentDate(client.last_charge_sent_date)}
                           </div>
                         </TableCell>
                         <TableCell className="pr-3 text-right">

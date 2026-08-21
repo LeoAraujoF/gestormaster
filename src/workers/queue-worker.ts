@@ -15,6 +15,8 @@ import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
 import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
 import { normalizeSendMessageJob } from '../lib/message-job-contract';
 import { normalizeWhatsAppNumber } from '../lib/phone';
+import { hasWhatsAppConsent, reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep, whatsappCategoryForContactCategory } from '../lib/whatsapp-safety';
+import { isRetryableWhatsAppError, shouldPauseWhatsAppInstance, whatsappErrorCode } from '../providers/whatsapp/provider-error';
 
 startOperationalHeartbeat('message_worker');
 
@@ -39,6 +41,9 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     clientId, phone, instanceUrl, apiKey, connectionMode,
     alertHistoryId, ruleId, userId, correlationId
   } = normalizedJob as typeof normalizedJob & { clientId?: string; ruleId?: string; instanceUrl?: string; apiKey?: string; connectionMode?: string };
+  const jobSource = normalizedJob.source || undefined;
+  const renewalReminderClientId = (job.data as Record<string, unknown>).renewalReminderClientId as string | undefined;
+  const renewalReminderDueDate = (job.data as Record<string, unknown>).renewalReminderDueDate as string | undefined;
   userId = userId || undefined;
   correlationId = correlationId || undefined;
   let instanceId = normalizedJob.instanceId as string | undefined;
@@ -47,6 +52,11 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   const contactReservationId = normalizedJob.contactReservationId as string | undefined;
   let interactiveMessage = normalizedJob.interactiveMessage as WhatsAppInteractiveMessage | undefined;
   let contactCategory: string | undefined;
+  let instanceSendingPaused = false;
+  let instanceSendingPauseReason: string | null = null;
+  let instanceDailyMessageLimit = 80;
+  let instanceMessageMinIntervalMs = 15000;
+  let instanceMessageMaxIntervalMs = 25000;
 
   let finalMessage = normalizedJob.finalMessage;
   let organizationId = normalizedJob.organizationId;
@@ -82,7 +92,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('Cliente sem telefone para contato coordenado');
     }
     const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id, instance_name, base_url, api_key, connection_mode')
+      .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
       .eq('organization_id', reservation.organization_id).eq('status', 'connected')
       .order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!instance) {
@@ -104,6 +114,11 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
     connectionMode = instance.connection_mode;
+    instanceSendingPaused = instance.sending_paused === true;
+    instanceSendingPauseReason = instance.sending_pause_reason || null;
+    instanceDailyMessageLimit = instance.daily_message_limit || instanceDailyMessageLimit;
+    instanceMessageMinIntervalMs = Math.max(instance.message_min_interval_ms || 0, (instance.min_delay || 0) * 1000, 1000);
+    instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (instance.max_delay || 25) * 1000);
   }
 
   if (collectionDispatchId) {
@@ -151,7 +166,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('Cliente sem telefone para despacho inteligente');
     }
     const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id, instance_name, base_url, api_key, connection_mode')
+      .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
       .eq('organization_id', dispatch.organization_id).eq('status', 'connected').limit(1).maybeSingle();
     if (!instance) {
       const status = dispatchFailureStatus(job.attemptsMade, job.opts.attempts);
@@ -170,6 +185,11 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     instanceUrl = instance.base_url;
     apiKey = instance.api_key;
     connectionMode = instance.connection_mode;
+    instanceSendingPaused = instance.sending_paused === true;
+    instanceSendingPauseReason = instance.sending_pause_reason || null;
+    instanceDailyMessageLimit = instance.daily_message_limit || instanceDailyMessageLimit;
+    instanceMessageMinIntervalMs = Math.max(instance.message_min_interval_ms || 0, (instance.min_delay || 0) * 1000, 1000);
+    instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (instance.max_delay || 25) * 1000);
   }
 
   if (!interactiveMessage && contactCategory === 'billing') {
@@ -235,6 +255,13 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         }).select('id').single();
         if (error) logger.error(`[Job ${job.id}] Erro ao inserir alert_history: ${error.message}`);
         if (insertedHistory?.id) alertHistoryId = insertedHistory.id;
+      }
+      if (jobSource === 'renewal_reminder' && renewalReminderClientId && renewalReminderDueDate && status === 'failed') {
+        await supabaseAdmin.from('clients')
+          .update({ renewal_reminder_last_sent_due_date: null })
+          .eq('id', renewalReminderClientId)
+          .eq('due_date', renewalReminderDueDate)
+          .eq('renewal_reminder_last_sent_due_date', renewalReminderDueDate);
       }
       if (collectionDispatchId) {
         const dispatchStatus = status === 'sent'
@@ -304,7 +331,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     if (instanceId || instanceName) {
       let instanceQuery = supabaseAdmin
         .from('evolution_instances')
-        .select('id, instance_name, base_url, api_key, connection_mode, organization_id, user_id')
+        .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, organization_id, user_id, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
         .limit(1);
       if (instanceId) instanceQuery = instanceQuery.eq('id', instanceId);
       else if (instanceName) instanceQuery = instanceQuery.eq('instance_name', instanceName);
@@ -323,6 +350,11 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         instanceUrl = resolvedInstance.base_url;
         apiKey = resolvedInstance.api_key;
         connectionMode = resolvedInstance.connection_mode;
+        instanceSendingPaused = resolvedInstance.sending_paused === true;
+        instanceSendingPauseReason = resolvedInstance.sending_pause_reason || null;
+        instanceDailyMessageLimit = resolvedInstance.daily_message_limit || instanceDailyMessageLimit;
+        instanceMessageMinIntervalMs = Math.max(resolvedInstance.message_min_interval_ms || 0, (resolvedInstance.min_delay || 0) * 1000, 1000);
+        instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (resolvedInstance.max_delay || 25) * 1000);
         organizationId = organizationId || resolvedInstance.organization_id;
         userId = userId || resolvedInstance.user_id;
       }
@@ -355,7 +387,9 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     // Fallback: busca no banco a instância conectada
     if (!targetInstanceName) {
-      let instanceQuery = supabaseAdmin.from('evolution_instances').select('id, instance_name').eq('status', 'connected');
+       let instanceQuery = supabaseAdmin.from('evolution_instances')
+         .select('id, instance_name, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
+         .eq('status', 'connected');
       if (organizationId) instanceQuery = instanceQuery.eq('organization_id', organizationId);
       else if (userId) instanceQuery = instanceQuery.eq('user_id', userId);
 
@@ -363,6 +397,11 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       if (insts && insts.length > 0) {
         targetInstanceName = insts[0].instance_name;
         instanceId = insts[0].id;
+        instanceSendingPaused = insts[0].sending_paused === true;
+        instanceSendingPauseReason = insts[0].sending_pause_reason || null;
+        instanceDailyMessageLimit = insts[0].daily_message_limit || instanceDailyMessageLimit;
+        instanceMessageMinIntervalMs = Math.max(insts[0].message_min_interval_ms || 0, (insts[0].min_delay || 0) * 1000, 1000);
+        instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (insts[0].max_delay || 25) * 1000);
       }
     }
 
@@ -375,6 +414,62 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     logger.info(`[Job ${job.id}] Enviando para instância "${targetInstanceName}" → ${phone}`);
 
     try {
+      if (clientId || leadId) {
+        const category = leadId
+          ? 'marketing'
+          : whatsappCategoryForContactCategory(contactCategory || 'operational');
+        const consentQuery = clientId
+          ? supabaseAdmin.from('clients')
+            .select('whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+            .eq('id', clientId)
+            .maybeSingle()
+          : supabaseAdmin.from('leads')
+            .select('whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+            .eq('id', leadId)
+            .maybeSingle();
+        const { data: consentRecord } = await consentQuery;
+        if (!hasWhatsAppConsent(consentRecord, category)) {
+          await updateAlertStatus('failed', { error_message: 'WHATSAPP_CONSENT_REQUIRED' });
+          logger.warn(`[Job ${job.id}] Envio bloqueado por ausência de consentimento (${category}).`);
+          return;
+        }
+      }
+
+      if (instanceSendingPaused) {
+        const reason = instanceSendingPauseReason || 'INSTANCE_SENDING_PAUSED';
+        logger.warn(`[Job ${job.id}] Envio pausado para a instância ${targetInstanceName}: ${reason}`);
+        await updateAlertStatus('failed', { error_message: `INSTANCE_SENDING_PAUSED:${reason}` });
+        return;
+      }
+
+      if (instanceId) {
+        const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit);
+        if (!quota.allowed) {
+          const delay = quota.resetInMs + Math.floor(Math.random() * 60000);
+          logger.warn(`[Job ${job.id}] Limite diário da instância atingido; reagendando em ${Math.ceil(delay / 60000)} min.`);
+          await updateAlertStatus('pending', { error_message: 'INSTANCE_DAILY_LIMIT_REACHED' });
+          if (contactReservationId) {
+            await supabaseAdmin.from('contact_reservations').update({
+              status: 'reserved',
+              decision_reason: 'INSTANCE_DAILY_LIMIT_REACHED',
+              updated_at: new Date().toISOString(),
+            }).eq('id', contactReservationId);
+          }
+          if (collectionDispatchId) {
+            await supabaseAdmin.from('collection_dispatches').update({
+              status: 'pending',
+              error_message: 'INSTANCE_DAILY_LIMIT_REACHED',
+              updated_at: new Date().toISOString(),
+            }).eq('id', collectionDispatchId);
+          }
+          await job.moveToDelayed(Date.now() + delay, job.token);
+          return;
+        }
+        const intervalRange = Math.max(0, instanceMessageMaxIntervalMs - instanceMessageMinIntervalMs);
+        const interval = instanceMessageMinIntervalMs + Math.floor(Math.random() * (intervalRange + 1));
+        await sleep(await reserveInstanceSendSlot(instanceId, interval));
+      }
+
       let sentMessageCount = 0;
       let providerMessageId: string | undefined;
       const rememberProviderResponse = (response: unknown) => {
@@ -493,9 +588,31 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       // 8. Falha — Registra o erro
       logger.error(`[Job ${job.id}] ❌ Falha: ${err.message}`);
 
-      if (!err.message.startsWith('RATE_LIMIT_EXCEEDED') && !err.message.startsWith('CIRCUIT_BREAKER_OPEN')) {
+      const retryable = isRetryableWhatsAppError(err);
+      if (shouldPauseWhatsAppInstance(err) && instanceId) {
+        await supabaseAdmin.from('evolution_instances').update({
+          sending_paused: true,
+          sending_pause_reason: whatsappErrorCode(err),
+          sending_paused_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', instanceId);
+      }
+
+      if (!err.message.startsWith('RATE_LIMIT_EXCEEDED') && !err.message.startsWith('CIRCUIT_BREAKER_OPEN') && retryable) {
         await CircuitBreaker.recordFailure();
-        await updateAlertStatus(collectionDispatchId || contactReservationId ? dispatchFailureStatus(job.attemptsMade, job.opts.attempts) : 'failed', { error_message: err.message });
+      }
+      await updateAlertStatus(
+        retryable ? (collectionDispatchId || contactReservationId ? dispatchFailureStatus(job.attemptsMade, job.opts.attempts) : 'retryable') : 'failed',
+        { error_message: retryable ? err.message : whatsappErrorCode(err) }
+      );
+
+      if (retryable && jobSource === 'renewal_reminder' && job.attemptsMade + 1 >= (job.opts.attempts || 1)) {
+        await updateAlertStatus('failed', { error_message: err.message });
+      }
+
+      if (!retryable) {
+        logger.warn(`[Job ${job.id}] Falha permanente; descartando retry automático.`);
+        return;
       }
 
       throw err; // Lança para o BullMQ fazer o Retry/DLQ

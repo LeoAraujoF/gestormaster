@@ -1,7 +1,8 @@
-import { SecretsManager } from "@/lib/encryption";
 import { normalizeWhatsAppNumber } from '@/lib/phone'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { messageQueue } from '@/lib/queue'
+import { SecretsManager } from "@/lib/encryption";
 
 export async function POST(req: Request) {
   try {
@@ -42,26 +43,21 @@ export async function POST(req: Request) {
 
     const testMessage = "✅ *Conexão Lembrado x Evolution* estabelecida com sucesso!\n\nSeu motor de envios está pronto para funcionar."
 
-    const url = `${finalBaseUrl.replace(/\/$/, '')}/message/sendText/${instance.instance_name}`
-    const apiReq = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': finalApiKey
-      },
-      body: JSON.stringify({
-        number: parsedPhone,
-        options: { delay: 1200, presence: 'composing' },
-        text: testMessage
-      })
-    })
-
-    if (!apiReq.ok) {
-      const errData = await apiReq.text()
-      throw new Error(`Falha no envio: ${errData}`)
+    if (instance.sending_paused) {
+      return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
     }
 
-    return NextResponse.json({ success: true, message: "Mensagem de teste enviada!" })
+    await messageQueue.add('send-message', {
+      organizationId: instance.organization_id,
+      userId: user.id,
+      instanceId: instance.id,
+      instanceName: instance.instance_name,
+      phone: parsedPhone,
+      finalMessage: testMessage,
+      source: 'connection_test',
+    }, { priority: 8 })
+
+    return NextResponse.json({ success: true, message: "Mensagem de teste enfileirada com proteção de ritmo!" }, { status: 202 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

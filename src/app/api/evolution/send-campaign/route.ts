@@ -6,6 +6,7 @@ import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeCampaignPhone, parseLeadCampaignMessage } from '@/lib/lead-campaign'
+import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 const campaignRequestSchema = z.object({
   leadIds: z.array(z.string().uuid()).min(1).max(2000).transform((ids) => [...new Set(ids)]),
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
     const { data: instances, error: instanceError } = await supabaseAdmin
       .from('evolution_instances')
-      .select('id, organization_id, instance_name')
+      .select('id, organization_id, instance_name, sending_paused, sending_pause_reason')
       .eq('user_id', user.id)
       .in('instance_name', instanceNames)
 
@@ -59,6 +60,10 @@ export async function POST(request: Request) {
     const instancesByName = new Map((instances || []).map((instance) => [instance.instance_name, instance]))
     if (instancesByName.size !== instanceNames.length) {
       return NextResponse.json({ error: 'Uma ou mais instâncias não foram encontradas ou não pertencem ao usuário.' }, { status: 400 })
+    }
+    const pausedInstance = (instances || []).find((instance) => instance.sending_paused)
+    if (pausedInstance) {
+      return NextResponse.json({ error: `Envios pausados na instância ${pausedInstance.instance_name}: ${pausedInstance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
     }
     const organizationIds = new Set((instances || []).map((instance) => instance.organization_id).filter(Boolean))
     if (organizationIds.size !== 1) {
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
 
     const { data: leads, error: leadError } = await supabaseAdmin
       .from('leads')
-      .select('id, name, phone, email, status, custom_fields')
+      .select('id, name, phone, email, status, custom_fields, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
       .eq('user_id', user.id)
       .in('id', input.leadIds)
 
@@ -97,6 +102,10 @@ export async function POST(request: Request) {
       }
       if (activeLeadIds.has(lead.id)) {
         skipped.push({ lead_id: lead.id, name: lead.name, reason: 'ALREADY_IN_FLIGHT' })
+        continue
+      }
+      if (!hasWhatsAppConsent(lead, 'marketing')) {
+        skipped.push({ lead_id: lead.id, name: lead.name, reason: 'NO_WHATSAPP_CONSENT' })
         continue
       }
       const normalizedPhone = lead.phone ? normalizeCampaignPhone(lead.phone) : null

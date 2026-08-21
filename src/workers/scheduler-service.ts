@@ -1,7 +1,7 @@
 import '../lib/env';
 import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
-import { messageQueue, healthQueue, warmupQueue } from '../lib/queue';
+import { messageQueue, healthQueue } from '../lib/queue';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { parseMessageTemplate } from '../lib/message-parser';
 import { prepareIntelligentCollectionData, resolveIntelligentRecoveryCoverage, scheduleIntelligentCollections } from '../lib/intelligent-collections';
@@ -16,6 +16,142 @@ startOperationalHeartbeat('scheduler');
 
 logger.info('⏰ Scheduler Service iniciado. Aguardando cron jobs...');
 
+function addDateOnlyDays(dateOnly: string, days: number): string {
+  const date = new Date(`${dateOnly}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+function daysBetweenDateOnly(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T12:00:00Z`).getTime();
+  const end = new Date(`${endDate}T12:00:00Z`).getTime();
+  return Math.round((end - start) / (24 * 60 * 60 * 1000));
+}
+
+function formatDateOnly(dateOnly: string): string {
+  const [year, month, day] = dateOnly.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+async function scheduleRenewalReminders(todayDate: string): Promise<number> {
+  const reminderWindowEnd = addDateOnlyDays(todayDate, 60);
+  const { data: clients, error } = await supabaseAdmin
+    .from('clients')
+    .select('id, user_id, organization_id, name, plan_value, due_date, renewal_reminder_days_before, renewal_reminder_last_sent_due_date')
+    .eq('renewal_reminder_enabled', true)
+    .eq('status', 'active')
+    .gte('due_date', todayDate)
+    .lte('due_date', reminderWindowEnd);
+
+  if (error) throw new Error(`Erro ao buscar lembretes de renovação: ${error.message}`);
+  if (!clients || clients.length === 0) return 0;
+
+  const userMetaCache = new Map<string, Record<string, any>>();
+  const instanceCache = new Map<string, any | null>();
+  let queued = 0;
+
+  for (const client of clients) {
+    const daysBefore = Math.min(60, Math.max(1, Number(client.renewal_reminder_days_before || 7)));
+    if (daysBetweenDateOnly(todayDate, client.due_date) !== daysBefore) continue;
+
+    const userKey = client.user_id as string;
+    if (!userMetaCache.has(userKey)) {
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userKey);
+        userMetaCache.set(userKey, (user?.user_metadata || {}) as Record<string, any>);
+      } catch (metadataError: any) {
+        logger.warn(`[Scheduler] Não foi possível buscar o telefone do gestor ${userKey}: ${metadataError.message}`);
+        userMetaCache.set(userKey, {});
+      }
+    }
+    const userMeta = userMetaCache.get(userKey) || {};
+
+    const instanceKey = client.organization_id ? `org:${client.organization_id}` : `user:${client.user_id}`;
+    if (!instanceCache.has(instanceKey)) {
+      let instanceQuery = supabaseAdmin
+        .from('evolution_instances')
+        .select('id, instance_name, phone_number')
+        .eq('status', 'connected')
+        .order('is_primary', { ascending: false })
+        .limit(1);
+      instanceQuery = client.organization_id
+        ? instanceQuery.eq('organization_id', client.organization_id)
+        : instanceQuery.eq('user_id', client.user_id);
+      const { data: instances } = await instanceQuery;
+      instanceCache.set(instanceKey, instances?.[0] || null);
+    }
+    const instance = instanceCache.get(instanceKey);
+    if (!instance) {
+      logger.warn(`[Scheduler] Lembrete de ${client.name} aguardando uma instância WhatsApp conectada.`);
+      continue;
+    }
+
+    const reminderPhone = normalizePhoneE164(String(userMeta.support_phone || ''))
+      || normalizePhoneE164(String(instance.phone_number || ''));
+    if (!reminderPhone) {
+      logger.warn(`[Scheduler] Lembrete de ${client.name} ignorado: configure o WhatsApp de suporte em Minha conta.`);
+      continue;
+    }
+
+    const { data: claimed, error: claimError } = await supabaseAdmin
+      .from('clients')
+      .update({ renewal_reminder_last_sent_due_date: client.due_date })
+      .eq('id', client.id)
+      .eq('renewal_reminder_enabled', true)
+      .eq('due_date', client.due_date)
+      .or(`renewal_reminder_last_sent_due_date.is.null,renewal_reminder_last_sent_due_date.neq.${client.due_date}`)
+      .select('id');
+
+    if (claimError) {
+      logger.error(`[Scheduler] Não foi possível reservar o lembrete de ${client.name}: ${claimError.message}`);
+      continue;
+    }
+    if (!claimed || claimed.length === 0) continue;
+
+    const formattedDueDate = formatDateOnly(client.due_date);
+    const dayLabel = daysBefore === 1 ? 'dia' : 'dias';
+    const finalMessage = [
+      'Lembrete interno de renovação',
+      `Cliente: ${client.name}`,
+      `Vencimento: ${formattedDueDate} (em ${daysBefore} ${dayLabel})`,
+      `Plano mensal cadastrado: R$ ${Number(client.plan_value || 0).toFixed(2).replace('.', ',')}`,
+      'Acesse o Gestor para verificar e renovar.',
+    ].join('\n');
+
+    try {
+      await messageQueue.add('renewal-reminder', {
+        userId: client.user_id,
+        organizationId: client.organization_id || undefined,
+        instanceId: instance.id,
+        instanceName: instance.instance_name,
+        phone: reminderPhone,
+        finalMessage,
+        source: 'renewal_reminder',
+        renewalReminderClientId: client.id,
+        renewalReminderDueDate: client.due_date,
+        correlationId: logger.bindings()?.correlationId,
+      }, {
+        jobId: `renewal-reminder-${client.id}-${client.due_date}`,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 60000 },
+        removeOnComplete: { age: 86400, count: 1000 },
+        removeOnFail: { age: 604800, count: 1000 },
+      });
+      queued += 1;
+    } catch (queueError: any) {
+      await supabaseAdmin
+        .from('clients')
+        .update({ renewal_reminder_last_sent_due_date: null })
+        .eq('id', client.id)
+        .eq('due_date', client.due_date)
+        .eq('renewal_reminder_last_sent_due_date', client.due_date);
+      logger.error(`[Scheduler] Falha ao enfileirar o lembrete de ${client.name}: ${queueError.message}`);
+    }
+  }
+
+  return queued;
+}
+
 // --- Scheduler Principal (A cada 5 min) ---
 cron.schedule('*/5 * * * *', async () => {
   return runWithCorrelationId(undefined, undefined, async () => {
@@ -28,6 +164,15 @@ cron.schedule('*/5 * * * *', async () => {
     // Utiliza o fuso horário padrão do Brasil (-03:00) como linha de corte
     const brazilDate = new Date(now.getTime() - (3 * 60 * 60 * 1000));
     const brTodayStr = brazilDate.toISOString().split('T')[0];
+
+    try {
+      const renewalRemindersQueued = await scheduleRenewalReminders(brTodayStr);
+      if (renewalRemindersQueued) {
+        logger.info(`[Scheduler] ${renewalRemindersQueued} lembretes internos de renovação enfileirados.`);
+      }
+    } catch (reminderError: any) {
+      logger.error(`[Scheduler] Falha nos lembretes internos de renovação: ${reminderError.message}`);
+    }
 
     const { error: updateGlobalErr } = await supabaseAdmin
       .from('clients')
@@ -336,9 +481,7 @@ cron.schedule('15 * * * *', async () => {
 cron.schedule('*/2 * * * *', async () => {
   return runWithCorrelationId(undefined, undefined, async () => {
     try {
-      await warmupQueue.add('execute-warmup', { timestamp: Date.now() }, {
-        removeOnComplete: true,
-      });
+      return;
       logger.info('[Scheduler] 🔥 Job de execute-warmup disparado.');
     } catch (error: any) {
       logger.error(`[Scheduler] ❌ Erro ao disparar Warmup: ${error.message}`);

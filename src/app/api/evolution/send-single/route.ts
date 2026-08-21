@@ -5,6 +5,7 @@ import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
+import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       mediaBase64?: unknown
       mediaMimeType?: unknown
       leadId?: unknown
+      consent_confirmed?: unknown
     }
     const instanceName = typeof body.instanceName === 'string' ? body.instanceName.trim() : ''
     const phone = typeof body.phone === 'string' ? body.phone : ''
@@ -30,6 +32,7 @@ export async function POST(req: Request) {
     const mediaBase64 = typeof body.mediaBase64 === 'string' ? body.mediaBase64 : null
     const mediaMimeType = typeof body.mediaMimeType === 'string' ? body.mediaMimeType : null
     const leadId = typeof body.leadId === 'string' ? body.leadId : null
+    const consentConfirmed = body.consent_confirmed === true
 
     if (!instanceName || !phone || (!message && !mediaBase64)) {
       return NextResponse.json({ error: 'Faltam campos obrigatórios (instanceName, phone e message ou mídia)' }, { status: 400 })
@@ -37,7 +40,7 @@ export async function POST(req: Request) {
 
     const { data: instance, error: instanceError } = await supabase
       .from('evolution_instances')
-      .select('id, organization_id, instance_name')
+      .select('id, organization_id, instance_name, sending_paused, sending_pause_reason')
       .eq('user_id', user.id)
       .eq('instance_name', instanceName)
       .maybeSingle()
@@ -46,14 +49,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Instância não encontrada ou sem permissão' }, { status: 400 })
     }
 
+    if (instance.sending_paused) {
+      return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
+    }
+
     if (leadId) {
       const { data: lead } = await supabase
         .from('leads')
-        .select('id')
+        .select('id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
         .eq('id', leadId)
         .eq('user_id', user.id)
         .maybeSingle()
       if (!lead) return NextResponse.json({ error: 'Lead não encontrado ou sem permissão' }, { status: 400 })
+
+      if (!hasWhatsAppConsent(lead, 'marketing')) {
+        return NextResponse.json({ error: 'O lead não possui consentimento para mensagens de marketing.', code: 'WHATSAPP_CONSENT_REQUIRED' }, { status: 412 })
+      }
 
       const { data: activeHistory } = await supabaseAdmin
         .from('alert_history')
@@ -67,6 +78,10 @@ export async function POST(req: Request) {
       if (activeHistory) {
         return NextResponse.json({ success: true, queued: false, already_queued: true, history_id: activeHistory.id }, { status: 202 })
       }
+    }
+
+    else if (!consentConfirmed) {
+      return NextResponse.json({ error: 'Confirme que o destinatário autorizou receber esta mensagem.', code: 'WHATSAPP_CONSENT_REQUIRED' }, { status: 412 })
     }
 
     const cleanPhone = normalizeWhatsAppNumber(phone)

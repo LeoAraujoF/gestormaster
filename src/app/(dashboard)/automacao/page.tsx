@@ -48,6 +48,9 @@ const getDefaultTemplate = (type: string) => {
     quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso RÃ¡pido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
     activation: "OlÃ¡ {{primeiro_nome}}! Seja muito bem-vindo(a)! ðŸŒŸ\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse nÃºmero aqui, ele serÃ¡ o nosso canal oficial de suporte tÃ©cnico e onde vocÃª receberÃ¡ seus avisos de vencimento, ok? ðŸ¤\\n\\nðŸ’° Valor do Plano: R$ {{plan_value}}\\nðŸ“… Seu Vencimento: {{due_date}}\\n\\nðŸŽ *PROMOÃ‡ÃƒO INDIQUE E GANHE*\\nSabia que vocÃª pode ganhar meses grÃ¡tis? Ã‰ muito simples: indicou um amigo e ele fechou com a gente, o seu prÃ³ximo mÃªs sai 100% DE GRAÃ‡A! Sem sorteio, indicou, ganhou! ðŸš€\\n\\nðŸ“± *NOSSO CANAL EXCLUSIVO*\\nNÃ£o fique de fora das novidades, manutenÃ§Ãµes programadas e promoÃ§Ãµes relÃ¢mpago! Entre agora no nosso canal oficial para clientes:\\nðŸ‘‰ {{link_canal}}\\n\\nQualquer dÃºvida, Ã© sÃ³ nos chamar por aqui. Aproveite!"
   }
+  if (type === 'activation') {
+    return "Ola {{primeiro_nome}}! Seja bem-vindo(a).\n\nSeu plano foi ativado com sucesso em nosso sistema.\n\nEste numero sera usado apenas para suporte tecnico e avisos operacionais autorizados. Se precisar de ajuda, responda esta mensagem.\n\nEquipe {{empresa}}"
+  }
   return defaults[type] || defaults.before_due
 }
 
@@ -477,7 +480,11 @@ export default function AutomacaoPage() {
       if (!user) throw new Error("NÃ£o autenticado")
       const { error } = await supabase
         .from('evolution_instances')
-        .update({ min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay })
+        .update({
+          min_delay: antiBanConfig.min_delay,
+          max_delay: antiBanConfig.max_delay,
+          message_min_interval_ms: antiBanConfig.min_delay * 1000,
+        })
         .eq('user_id', user.id)
       if (error) throw error
       logAuditClient({ action: 'antiban.update', resource: 'evolution_instances', details: { min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay } })

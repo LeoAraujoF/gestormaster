@@ -242,6 +242,7 @@ export default function DesenvolvedorPage() {
 {`{
   "phone": "5511999999999",
   "message": "Olá mundo via API!",
+  "consent_confirmed": true,
   "instance_id": "opcional_uuid"
 }`}
                 </div>

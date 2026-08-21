@@ -88,6 +88,12 @@ interface Lead {
   source?: string
   notes?: string
   custom_fields?: Record<string, string>
+  whatsapp_opt_in?: boolean
+  whatsapp_opt_in_at?: string | null
+  whatsapp_opt_in_source?: string | null
+  whatsapp_opt_in_categories?: string[]
+  whatsapp_opt_out?: boolean
+  whatsapp_opt_out_at?: string | null
   created_at?: string
 }
 
@@ -1820,6 +1826,50 @@ export default function LeadsPage() {
                   className="col-span-3" 
                 />
               </div>
+              <div className="col-span-4 rounded-md border border-border/50 bg-muted/30 p-3">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingLead.whatsapp_opt_in === true}
+                    onChange={(event) => {
+                      const enabled = event.target.checked
+                      const now = new Date().toISOString()
+                      setEditingLead({
+                        ...editingLead,
+                        whatsapp_opt_in: enabled,
+                        whatsapp_opt_in_at: enabled ? (editingLead.whatsapp_opt_in_at || now) : null,
+                        whatsapp_opt_in_source: enabled ? (editingLead.whatsapp_opt_in_source || 'leads_edit') : null,
+                        whatsapp_opt_out: !enabled,
+                        whatsapp_opt_out_at: enabled ? null : now,
+                        whatsapp_opt_in_categories: enabled
+                          ? (editingLead.whatsapp_opt_in_categories?.length ? editingLead.whatsapp_opt_in_categories : ['marketing'])
+                          : [],
+                      })
+                    }}
+                  />
+                  <span><span className="font-medium">Lead autorizou mensagens pelo WhatsApp</span><span className="block text-xs text-muted-foreground">Sem autorização, campanhas ficam bloqueadas.</span></span>
+                </label>
+                {editingLead.whatsapp_opt_in === true && (
+                  <div className="mt-2 flex flex-wrap gap-3 pl-6 text-xs">
+                    {['operational', 'billing', 'marketing'].map((category) => (
+                      <label key={category} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingLead.whatsapp_opt_in_categories?.includes(category) === true}
+                          onChange={(event) => {
+                            const categories = new Set(editingLead.whatsapp_opt_in_categories || [])
+                            if (event.target.checked) categories.add(category)
+                            else categories.delete(category)
+                            setEditingLead({ ...editingLead, whatsapp_opt_in_categories: [...categories] })
+                          }}
+                        />
+                        {category === 'marketing' ? 'Campanhas' : category === 'billing' ? 'Cobranças' : 'Operacional'}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Campos extras (custom_fields) */}
               {editingLead.custom_fields && Object.keys(editingLead.custom_fields).length > 0 && (
                 <>

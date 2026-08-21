@@ -232,7 +232,7 @@ async function handleInboundMessage(payload: any) {
   if (!instance?.organization_id) return
 
   const organizationId = instance.organization_id
-  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, client_services(services(name, plans))'
+  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories, client_services(services(name, plans))'
   const [e164Result, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('clients')
@@ -270,6 +270,16 @@ async function handleInboundMessage(payload: any) {
   const pauseKey = `bot_pause:${organizationId}:${normalizedPhone}`
   const stateKey = `bot_state:${organizationId}:${normalizedPhone}`
   const textValue = text.trim()
+  if (/^(sair|parar|stop|unsubscribe|cancelar)$/i.test(textValue)) {
+    await supabaseAdmin.from('clients').update({
+      whatsapp_opt_out: true,
+      whatsapp_opt_out_at: new Date().toISOString(),
+    }).eq('id', client.id).eq('organization_id', organizationId)
+    await redisConnection.del(stateKey, pauseKey)
+    logger.info(`[Webhook] Opt-out registrado para o cliente ${client.id}.`)
+    return
+  }
+  if (client.whatsapp_opt_out === true) return
   const billingAction = resolveBillingAction(textValue)
   const stateRaw = await redisConnection.get(stateKey)
   let state: BotState | null = null

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { supabaseAdmin } from "@/lib/supabase/service-role"
+import { messageQueue } from "@/lib/queue"
+import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "YOUR_GLOBAL_APIKEY"
 const INSTANCE_NAME = "GestorMaster"
 
 export async function POST(request: Request) {
@@ -76,19 +77,16 @@ export async function POST(request: Request) {
       if (gestorNumber && EVOLUTION_API_URL) {
         const message = `💰 *Pagamento de Revenda*\nO revendedor *${reseller.name}* acaba de confirmar o pagamento de *${requestData.credits_amount}x créditos* para o serviço *${requestData.service_name}*.\n\nValor: R$ ${requestData.total_value}\n\nAcesse a Lembrado para liberar o crédito!`
 
-        await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": EVOLUTION_API_KEY
-          },
-          body: JSON.stringify({
-            number: gestorNumber,
-            text: message,
-            options: { delay: 1200, presence: "composing" },
-            textMessage: { text: message }
-          })
-        }).catch(err => console.log("Erro na API Evolution:", err))
+        const cleanPhone = normalizeWhatsAppNumber(gestorNumber)
+        if (cleanPhone) {
+          await messageQueue.add('send-message', {
+            userId: reseller.user_id,
+            instanceName: INSTANCE_NAME,
+            phone: cleanPhone,
+            finalMessage: message,
+            source: 'reseller_notification',
+          }, { priority: 8 })
+        }
       }
     } else if (actionType === "notify_reseller_completed") {
       // Enviar comprovante para o revendedor
@@ -97,19 +95,16 @@ export async function POST(request: Request) {
       if (resellerNumber && EVOLUTION_API_URL) {
         const message = `✅ *Créditos Liberados!*\nOlá *${reseller.name}*, sua recarga foi concluída com sucesso.\n\n*Serviço:* ${requestData.service_name}\n*Quantidade:* ${requestData.credits_amount} créditos\n*Valor Pago:* R$ ${requestData.total_value}\n\nSeus créditos já estão disponíveis para uso! 🚀`
 
-        await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": EVOLUTION_API_KEY
-          },
-          body: JSON.stringify({
-            number: resellerNumber,
-            text: message,
-            options: { delay: 1200, presence: "composing" },
-            textMessage: { text: message }
-          })
-        }).catch(err => console.log("Erro na API Evolution:", err))
+        const cleanPhone = normalizeWhatsAppNumber(resellerNumber)
+        if (cleanPhone) {
+          await messageQueue.add('send-message', {
+            userId: reseller.user_id,
+            instanceName: INSTANCE_NAME,
+            phone: cleanPhone,
+            finalMessage: message,
+            source: 'reseller_notification',
+          }, { priority: 8 })
+        }
       }
     }
 

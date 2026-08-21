@@ -4,6 +4,7 @@ import {
   WhatsAppButtonsMessage,
   WhatsAppListMessage,
 } from './IWhatsAppProvider';
+import { EvolutionApiError } from './provider-error';
 
 type EvolutionQrResponse = {
   base64?: string
@@ -53,7 +54,7 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Evolution API Error [${response.status}]: ${errorText}`);
+      throw new EvolutionApiError(response.status, errorText);
     }
 
     return response.json() as Promise<T>;

@@ -44,6 +44,10 @@ export default function AquecimentoPage() {
   }
 
   const toggleWarmup = async (instanceId: string, currentStatus: boolean) => {
+    if (!currentStatus) {
+      toast.info('O aquecimento artificial foi desativado. Use comunicações autorizadas e os limites da fila.')
+      return
+    }
     setIsToggling(instanceId)
     try {
       const res = await fetch('/api/instances/warmup', {
@@ -89,6 +93,11 @@ export default function AquecimentoPage() {
         actions={<Button nativeButton={false} render={<Link href="/automacao" />} variant="outline" size="sm"><Wifi className="size-4" aria-hidden="true" /> Gerenciar conexões</Button>}
       />
       <AutomationNavigation active="warmup" />
+
+      <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg">
+        <span className="status-dot bg-warning" />
+        <div><p className="font-semibold">Aquecimento artificial desativado</p><p className="mt-0.5 opacity-80">A página acompanha a idade do cadastro, mas não simula conversas. Os envios usam consentimento, espaçamento e limites da fila.</p></div>
+      </div>
 
       {!isLoading && instances.length > 0 && (
         <MetricGrid columns={4}>

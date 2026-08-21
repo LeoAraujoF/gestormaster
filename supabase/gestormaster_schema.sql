@@ -336,7 +336,16 @@ CREATE TABLE public.clients (
   organization_id uuid,
   external_id text,
   due_time text,
-  phone_e164 text
+  phone_e164 text,
+  whatsapp_opt_in boolean DEFAULT false NOT NULL,
+  whatsapp_opt_in_at timestamp with time zone,
+  whatsapp_opt_in_source text,
+  whatsapp_opt_in_categories text[] DEFAULT ARRAY[]::text[] NOT NULL,
+  whatsapp_opt_out boolean DEFAULT false NOT NULL,
+  whatsapp_opt_out_at timestamp with time zone,
+  renewal_reminder_enabled boolean DEFAULT false NOT NULL,
+  renewal_reminder_days_before integer DEFAULT 7 NOT NULL,
+  renewal_reminder_last_sent_due_date date
 );
 
 CREATE TABLE public.collection_dispatches (
@@ -467,7 +476,12 @@ CREATE TABLE public.evolution_instances (
   is_primary boolean DEFAULT false,
   organization_id uuid,
   is_warming_up boolean DEFAULT false,
-  phone_number text
+  phone_number text,
+  daily_message_limit integer DEFAULT 80 NOT NULL,
+  message_min_interval_ms integer DEFAULT 15000 NOT NULL,
+  sending_paused boolean DEFAULT false NOT NULL,
+  sending_pause_reason text,
+  sending_paused_at timestamp with time zone
 );
 
 CREATE TABLE public.executive_daily_snapshots (
@@ -617,7 +631,13 @@ CREATE TABLE public.leads (
   source text DEFAULT 'CSV'::text,
   notes text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  custom_fields jsonb DEFAULT '{}'::jsonb
+  custom_fields jsonb DEFAULT '{}'::jsonb,
+  whatsapp_opt_in boolean DEFAULT false NOT NULL,
+  whatsapp_opt_in_at timestamp with time zone,
+  whatsapp_opt_in_source text,
+  whatsapp_opt_in_categories text[] DEFAULT ARRAY[]::text[] NOT NULL,
+  whatsapp_opt_out boolean DEFAULT false NOT NULL,
+  whatsapp_opt_out_at timestamp with time zone
 );
 
 CREATE TABLE public.message_templates (
@@ -3044,8 +3064,17 @@ CREATE OR REPLACE VIEW public.vw_enriched_clients WITH (security_invoker=true) A
            FROM client_services cs
              JOIN services s ON cs.service_id = s.id
            WHERE cs.client_id = c.id), '[]'::jsonb) AS client_services,
-    phone_e164
-   FROM clients c;;
+     phone_e164,
+     whatsapp_opt_in,
+     whatsapp_opt_in_at,
+     whatsapp_opt_in_source,
+     whatsapp_opt_in_categories,
+     whatsapp_opt_out,
+     whatsapp_opt_out_at,
+     renewal_reminder_enabled,
+     renewal_reminder_days_before,
+     renewal_reminder_last_sent_due_date
+    FROM clients c;;
 
 
 -- Triggers

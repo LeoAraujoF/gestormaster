@@ -17,6 +17,7 @@ import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
+import { hasWhatsAppConsent, whatsappCategoryForAlertType } from '@/lib/whatsapp-safety'
 
 export async function POST(req: Request) {
   try {
@@ -34,11 +35,11 @@ export async function POST(req: Request) {
     const { clientId, ruleId, confirmRecentContact = false } = await req.json()
     if (!clientId || !ruleId) return NextResponse.json({ error: 'Cliente e regra são obrigatórios' }, { status: 400 })
     const [{ data: client }, { data: rule }, { data: instance }, { data: latestPayment }] = await Promise.all([
-      supabaseAdmin.from('clients').select('id, name, phone, phone_e164, plan_value, due_date, user_id')
+      supabaseAdmin.from('clients').select('id, name, phone, phone_e164, plan_value, due_date, user_id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
         .eq('id', clientId).eq('organization_id', membership.organizationId).maybeSingle(),
       supabaseAdmin.from('automations').select('id, alert_type, message_template')
         .eq('id', ruleId).eq('organization_id', membership.organizationId).maybeSingle(),
-      supabaseAdmin.from('evolution_instances').select('id')
+      supabaseAdmin.from('evolution_instances').select('id, sending_paused, sending_pause_reason')
         .eq('organization_id', membership.organizationId).eq('status', 'connected')
         .order('is_primary', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('payments').select('amount_paid, created_at')
@@ -48,11 +49,22 @@ export async function POST(req: Request) {
     if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
     if (!rule) return NextResponse.json({ error: 'Regra de automação não encontrada' }, { status: 404 })
     if (!instance) return NextResponse.json({ error: 'WhatsApp não configurado ou desconectado' }, { status: 400 })
+    if (instance.sending_paused) {
+      return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
+    }
     if (!normalizePhoneE164(client.phone_e164 || client.phone || '')) {
       return NextResponse.json({ error: 'Cliente não possui um WhatsApp válido. Use o código do país, por exemplo +55 ou +1.' }, { status: 400 })
     }
 
     const category = categoryForAlertType(rule.alert_type)
+    const whatsappCategory = whatsappCategoryForAlertType(rule.alert_type)
+    if (!hasWhatsAppConsent(client, whatsappCategory)) {
+      return NextResponse.json({
+        error: `O cliente não autorizou mensagens WhatsApp da categoria ${whatsappCategory}.`,
+        code: 'WHATSAPP_CONSENT_REQUIRED',
+        category: whatsappCategory,
+      }, { status: 412 })
+    }
     const timezone = await organizationTimezone(membership.organizationId)
     const now = new Date()
     // plan_value é mantido como mensal no cadastro. Para ativação e renovação,

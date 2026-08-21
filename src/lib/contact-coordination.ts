@@ -3,6 +3,12 @@ import 'server-only'
 import { messageQueue } from '@/lib/queue'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { dateInTimezone, type ContactCategory, type ContactSource } from '@/lib/contact-policy'
+import {
+  buildReservationDeliveryUpdate,
+  DELIVERY_CONFIRMATION_TIMEOUT_REASON,
+  DELIVERY_FAILED_REASON,
+  staleReservationCutoff,
+} from '@/lib/contact-delivery'
 
 export { categoryForAlertType, dateInTimezone } from '@/lib/contact-policy'
 
@@ -105,6 +111,102 @@ export async function enqueueContactReservation(reservationId: string, delay = 0
     jobId: `contact-${reservationId}-${runKey}`,
     delay: Math.max(0, delay),
   })
+}
+
+export async function reconcileStaleContactReservations(now = new Date()) {
+  const cutoff = staleReservationCutoff(now)
+  const { data: reservations, error: reservationsError } = await supabaseAdmin
+    .from('contact_reservations')
+    .select('id, alert_history_id, updated_at')
+    .eq('status', 'processing')
+    .lt('updated_at', cutoff)
+    .order('updated_at', { ascending: true })
+    .limit(500)
+  if (reservationsError) throw new Error(`Falha ao buscar reservas presas: ${reservationsError.message}`)
+  if (!reservations?.length) return 0
+
+  const historyIds = reservations
+    .map((reservation) => reservation.alert_history_id)
+    .filter((id): id is string => Boolean(id))
+  const { data: histories, error: historiesError } = historyIds.length
+    ? await supabaseAdmin
+      .from('alert_history')
+      .select('id, status, error_message, provider_status, collection_dispatch_id, sent_at, delivered_at, read_at')
+      .in('id', historyIds)
+    : { data: [], error: null }
+  if (historiesError) throw new Error(`Falha ao buscar histórico das reservas presas: ${historiesError.message}`)
+
+  const historyById = new Map((histories || []).map((history) => [history.id, history]))
+  let reconciled = 0
+
+  for (const reservation of reservations) {
+    const history = reservation.alert_history_id ? historyById.get(reservation.alert_history_id) : null
+    const successful = history && ['sent', 'delivered', 'read'].includes(history.status)
+    const sentAt = history?.sent_at || history?.delivered_at || history?.read_at || now.toISOString()
+
+    if (successful) {
+      const { error } = await supabaseAdmin.from('contact_reservations').update({
+        status: 'sent',
+        sent_at: sentAt,
+        decision_reason: 'CONTACT_SENT',
+        updated_at: now.toISOString(),
+      }).eq('id', reservation.id).eq('status', 'processing')
+      if (error) throw new Error(`Falha ao concluir reserva ${reservation.id}: ${error.message}`)
+      reconciled++
+      continue
+    }
+
+    if (history?.status === 'failed') {
+      const { error } = await supabaseAdmin.from('contact_reservations').update({
+        status: 'failed',
+        decision_reason: history.error_message?.startsWith(DELIVERY_FAILED_REASON)
+          ? history.error_message
+          : DELIVERY_FAILED_REASON,
+        updated_at: now.toISOString(),
+      }).eq('id', reservation.id).eq('status', 'processing')
+      if (error) throw new Error(`Falha ao encerrar reserva com falha ${reservation.id}: ${error.message}`)
+      if (history.collection_dispatch_id) {
+        const { error: dispatchError } = await supabaseAdmin.from('collection_dispatches').update({
+          status: 'failed',
+          error_message: history.error_message || DELIVERY_FAILED_REASON,
+          updated_at: now.toISOString(),
+        }).eq('id', history.collection_dispatch_id)
+        if (dispatchError) throw new Error(`Falha ao encerrar despacho ${history.collection_dispatch_id}: ${dispatchError.message}`)
+      }
+      reconciled++
+      continue
+    }
+
+    // Sem confirmação após o limite, libera uma nova tentativa. O histórico
+    // recebe um erro específico, mas o webhook ainda pode recuperar a entrega
+    // caso a Evolution envie uma confirmação atrasada.
+    if (history) {
+      const { error: historyError } = await supabaseAdmin.from('alert_history').update({
+        status: 'failed',
+        error_message: DELIVERY_CONFIRMATION_TIMEOUT_REASON,
+        failed_at: now.toISOString(),
+        provider_status: history.provider_status || DELIVERY_CONFIRMATION_TIMEOUT_REASON,
+      }).eq('id', history.id).eq('status', history.status)
+      if (historyError) throw new Error(`Falha ao marcar histórico expirado ${history.id}: ${historyError.message}`)
+      if (history.collection_dispatch_id) {
+        const { error: dispatchError } = await supabaseAdmin.from('collection_dispatches').update({
+          status: 'failed',
+          error_message: DELIVERY_CONFIRMATION_TIMEOUT_REASON,
+          updated_at: now.toISOString(),
+        }).eq('id', history.collection_dispatch_id)
+        if (dispatchError) throw new Error(`Falha ao liberar despacho expirado ${history.collection_dispatch_id}: ${dispatchError.message}`)
+      }
+    }
+
+    const { error: reservationError } = await supabaseAdmin.from('contact_reservations').update({
+      ...buildReservationDeliveryUpdate('failed', now.toISOString(), DELIVERY_CONFIRMATION_TIMEOUT_REASON),
+      decision_reason: DELIVERY_CONFIRMATION_TIMEOUT_REASON,
+    }).eq('id', reservation.id).eq('status', 'processing')
+    if (reservationError) throw new Error(`Falha ao liberar reserva expirada ${reservation.id}: ${reservationError.message}`)
+    reconciled++
+  }
+
+  return reconciled
 }
 
 export async function releaseDeferredContacts(now = new Date()) {

@@ -7,7 +7,7 @@ import { parseMessageTemplate } from '../lib/message-parser';
 import { prepareIntelligentCollectionData, resolveIntelligentRecoveryCoverage, scheduleIntelligentCollections } from '../lib/intelligent-collections';
 import { scheduleIntelligenceRuns } from '../lib/intelligence-service';
 import { captureAnalyticsSnapshots } from '../lib/analytics-service';
-import { createCoordinatedAlert, releaseDeferredContacts, reserveContact } from '../lib/contact-coordination';
+import { createCoordinatedAlert, reconcileStaleContactReservations, releaseDeferredContacts, reserveContact } from '../lib/contact-coordination';
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
 import { decideFixedBillingRule, type FixedBillingAlertType } from '../lib/collection-orchestration';
 import { normalizePhoneE164 } from '../lib/phone';
@@ -209,6 +209,10 @@ cron.schedule('*/5 * * * *', async () => {
     const intelligentOrganizations = new Set((intelligentSettings || []).filter((setting) => setting.enabled).map((setting) => setting.organization_id));
     const intelligentQueued = await scheduleIntelligentCollections(now);
     if (intelligentQueued) logger.info(`[Scheduler] ${intelligentQueued} despachos inteligentes enfileirados.`);
+    const staleReservationsReconciled = await reconcileStaleContactReservations(now);
+    if (staleReservationsReconciled) {
+      logger.info(`[Scheduler] ${staleReservationsReconciled} reservas de contato presas reconciliadas.`);
+    }
     const deferredQueued = await releaseDeferredContacts(now);
     if (deferredQueued) logger.info(`[Scheduler] ${deferredQueued} contatos adiados liberados.`);
     try {

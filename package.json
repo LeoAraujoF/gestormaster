@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:financial-reports": "tsx --test tests/financial-report-utils.test.ts",
+    "test:contact-delivery": "tsx --test tests/contact-delivery.test.ts",
     "worker:start": "concurrently \"tsx src/workers/queue-worker.ts\" \"tsx src/workers/webhook-worker.ts\" \"tsx src/workers/health-worker.ts\" \"tsx src/workers/warmup-worker.ts\" \"tsx src/workers/bull-board.ts\" \"tsx src/workers/ai-worker.ts\" \"tsx src/workers/intelligence-worker.ts\"",
     "scheduler:start": "tsx src/workers/scheduler-service.ts"
   },

@@ -1638,7 +1638,7 @@ CREATE INDEX contact_reservations_deferred_idx ON public.contact_reservations US
 
 CREATE UNIQUE INDEX contact_reservations_active_automatic_uidx ON public.contact_reservations USING btree (organization_id, client_id, contact_date) WHERE ((status = ANY (ARRAY['reserved'::text, 'processing'::text, 'sent'::text])) AND (category <> 'manual'::text));
 
-CREATE UNIQUE INDEX contact_reservations_source_uidx ON public.contact_reservations USING btree (source, source_id, client_id, contact_date) WHERE ((source_id IS NOT NULL) AND (status <> 'cancelled'::text));
+CREATE UNIQUE INDEX contact_reservations_source_uidx ON public.contact_reservations USING btree (source, source_id, client_id, contact_date) WHERE ((source_id IS NOT NULL) AND (status <> ALL (ARRAY['cancelled'::text, 'failed'::text])));
 
 CREATE INDEX idx_evolution_instances_user_id ON public.evolution_instances USING btree (user_id);
 
@@ -2732,7 +2732,7 @@ BEGIN
     FROM public.contact_reservations cr
     WHERE cr.source = p_source AND cr.source_id = p_source_id
       AND cr.client_id = p_client_id AND cr.contact_date = p_contact_date
-      AND cr.status <> 'cancelled'
+      AND cr.status NOT IN ('cancelled', 'failed')
     ORDER BY cr.created_at DESC LIMIT 1;
     IF FOUND THEN
       RETURN QUERY SELECT v_existing.id, 'idempotent'::text,

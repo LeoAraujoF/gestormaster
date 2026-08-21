@@ -35,6 +35,11 @@ import {
   resolveIncomingPhoneJid,
   verifyCode,
 } from '../lib/autoatendimento'
+import {
+  buildAlertDeliveryUpdate,
+  buildReservationDeliveryUpdate,
+  canApplyDeliveryStatus,
+} from '../lib/contact-delivery'
 
 type BotState =
   | { step: 'main_menu'; clientId: string }
@@ -134,15 +139,6 @@ async function handleConnectionUpdate(payload: any) {
     .eq('instance_name', instanceName)
 }
 
-const deliveryStatusRank: Record<string, number> = {
-  queued: 0,
-  accepted: 1,
-  sent: 2,
-  delivered: 3,
-  read: 4,
-  failed: 5,
-}
-
 function normalizeDeliveryStatus(value: unknown): { status: 'accepted' | 'sent' | 'delivered' | 'read' | 'failed'; providerStatus: string } | null {
   const providerStatus = String(value ?? '').trim()
   const normalized = providerStatus.toUpperCase()
@@ -169,7 +165,7 @@ async function handleMessageUpdate(payload: any) {
 
     const { data: history, error: historyError } = await supabaseAdmin
       .from('alert_history')
-      .select('id, status, lead_id, collection_dispatch_id, contact_reservation_id')
+      .select('id, status, lead_id, collection_dispatch_id, contact_reservation_id, error_message, accepted_at, sent_at, delivered_at, read_at, failed_at')
       .eq('instance_name', instanceName)
       .eq('provider_message_id', messageId)
       .order('created_at', { ascending: false })
@@ -178,31 +174,33 @@ async function handleMessageUpdate(payload: any) {
     if (historyError) throw historyError
     if (!history) continue
 
-    const currentRank = deliveryStatusRank[history.status] ?? 0
-    const nextRank = deliveryStatusRank[normalized.status] ?? 0
-    if (normalized.status === 'failed' && (history.status === 'delivered' || history.status === 'read')) continue
-    if (nextRank < currentRank) continue
+    if (!canApplyDeliveryStatus(history.status, normalized.status, history.error_message)) continue
 
     const now = new Date().toISOString()
     const update: Record<string, unknown> = {
-      status: normalized.status,
-      provider_status: normalized.providerStatus,
-      ...(normalized.status === 'accepted' ? { accepted_at: now } : {}),
-      ...(normalized.status === 'sent' ? { sent_at: now } : {}),
-      ...(normalized.status === 'delivered' ? { delivered_at: now } : {}),
-      ...(normalized.status === 'read' ? { read_at: now } : {}),
-      ...(normalized.status === 'failed' ? { failed_at: now, error_message: normalized.providerStatus } : {}),
+      ...buildAlertDeliveryUpdate(normalized.status, normalized.providerStatus, now, history),
+      ...(normalized.status === 'failed'
+        ? { error_message: normalized.providerStatus }
+        : { error_message: null }),
     }
     const { error: updateError } = await supabaseAdmin.from('alert_history').update(update).eq('id', history.id)
     if (updateError) throw updateError
 
-    if (normalized.status === 'sent' || normalized.status === 'delivered' || normalized.status === 'read') {
-      if (history.collection_dispatch_id) {
-        await supabaseAdmin.from('collection_dispatches').update({ status: 'sent', sent_at: now }).eq('id', history.collection_dispatch_id)
-      }
-      if (history.contact_reservation_id) {
-        await supabaseAdmin.from('contact_reservations').update({ status: 'sent', sent_at: now, decision_reason: 'CONTACT_SENT' }).eq('id', history.contact_reservation_id)
-      }
+    const isSuccessfulDelivery = normalized.status === 'sent' || normalized.status === 'delivered' || normalized.status === 'read'
+    if (history.collection_dispatch_id) {
+      const { error: dispatchError } = await supabaseAdmin.from('collection_dispatches').update({
+        status: isSuccessfulDelivery ? 'sent' : normalized.status === 'failed' ? 'failed' : 'processing',
+        ...(isSuccessfulDelivery ? { sent_at: now } : {}),
+        ...(normalized.status === 'failed' ? { error_message: normalized.providerStatus } : {}),
+        updated_at: now,
+      }).eq('id', history.collection_dispatch_id)
+      if (dispatchError) throw dispatchError
+    }
+    if (history.contact_reservation_id) {
+      const { error: reservationError } = await supabaseAdmin.from('contact_reservations')
+        .update(buildReservationDeliveryUpdate(normalized.status, now, normalized.providerStatus))
+        .eq('id', history.contact_reservation_id)
+      if (reservationError) throw reservationError
     }
 
     if (history.lead_id && (normalized.status === 'delivered' || normalized.status === 'read')) {

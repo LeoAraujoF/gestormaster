@@ -99,7 +99,14 @@ export async function POST(req: Request) {
       }, { status: 409 })
     }
     if (!reservation.reservationId || reservation.decision === 'blocked') {
-      return NextResponse.json({ error: 'Contato bloqueado por uma mensagem de maior prioridade.', reason: reservation.reason }, { status: 409 })
+      const sameCategory = reservation.existingCategory === category
+      return NextResponse.json({
+        error: sameCategory
+          ? 'Já existe uma mensagem desta categoria programada ou em processamento para este cliente hoje.'
+          : 'Contato bloqueado por uma mensagem de maior prioridade.',
+        reason: reservation.reason,
+        existing_category: reservation.existingCategory,
+      }, { status: 409 })
     }
     if (reservation.decision === 'idempotent') {
       const { data: existing } = await supabaseAdmin.from('contact_reservations')

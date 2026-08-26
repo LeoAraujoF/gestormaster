@@ -47,7 +47,6 @@ export default function DashboardPage() {
   const [servicesList, setServicesList] = useState<any[]>([])
   const [automations, setAutomations] = useState<{ id: string; alert_type: string }[]>([])
   const [basicPayments, setBasicPayments] = useState({ count: 0, total: 0 })
-  const [todayConfirmed, setTodayConfirmed] = useState(0)
 
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("vencidos")
   const [chargingIds, setChargingIds] = useState<Set<string>>(new Set())
@@ -73,9 +72,6 @@ export default function DashboardPage() {
         if (executiveResponse.ok) {
           const executiveData = executivePayload as ExecutiveDashboardDTO
           setExecutive(executiveData)
-          if (executivePeriod === "month" || executivePeriod === "30d") {
-            setTodayConfirmed(executiveData.series.find((item) => item.date === localDateKey())?.confirmed ?? 0)
-          }
           setUpgradeRequired(false)
         } else if (executiveResponse.status === 403 && executivePayload.upgrade_required) {
           setExecutive(null)
@@ -177,7 +173,7 @@ export default function DashboardPage() {
   const prazoColor = (diff: number) =>
     diff < 0 ? "text-danger" : diff === 0 ? "text-warning-fg" : "text-muted-foreground"
   const dotColor = (diff: number) =>
-    diff < 0 ? "bg-danger" : diff === 0 ? "bg-warning" : "bg-[#c9c8c2]"
+    diff < 0 ? "bg-danger" : diff === 0 ? "bg-warning" : "bg-muted-foreground"
 
   const clientSubtitle = (c: QueueClient) => {
     const service = c.client_services?.[0]?.services?.name || "Sem serviço"
@@ -359,8 +355,6 @@ export default function DashboardPage() {
         dueTodayAmount={String(displayValue(formatCurrency(dueTodayTotal)))}
         nextSevenDaysAmount={String(displayValue(formatCurrency(nextSevenDaysTotal)))}
         confirmedAmount={String(displayValue(formatCurrency(receivedInPeriod)))}
-        forecastAmount={String(displayValue(formatCurrency(executive?.summary.forecast ?? trackedReceivable)))}
-        todayAmount={hasAdvancedFinance ? String(displayValue(formatCurrency(todayConfirmed))) : "—"}
         trackedAmount={String(displayValue(formatCurrency(trackedReceivable)))}
         advancedFinance={hasAdvancedFinance && Boolean(executive)}
         onOverdueOpen={() => revealQueue("vencidos")}
@@ -591,11 +585,4 @@ function startOfToday() {
 function diffInDays(today: Date, dueDateStr: string) {
   const due = new Date(dueDateStr + "T00:00:00")
   return Math.round((due.getTime() - today.getTime()) / 86400000)
-}
-
-function localDateKey(date = new Date()) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
 }

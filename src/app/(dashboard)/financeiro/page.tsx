@@ -766,93 +766,106 @@ export default function FinanceiroPage() {
         )}
       </PageSection>
 
-      {hasAdvancedFinance ? <FixedCostsSection /> : null}
-
-      {hasAdvancedFinance ? <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="annual-cashflow-title">
-          <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
-            <div>
-              <h2 id="annual-cashflow-title" className="text-sm font-semibold text-foreground">Evolução de caixa</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Receita e lucro confirmados mês a mês em {year}.</p>
+      {hasAdvancedFinance ? (
+        <details className="group overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground">Análises adicionais e custos fixos</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Abra para ver evolução anual, distribuição por serviços e gerenciar os custos fixos mensais.</p>
             </div>
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground" aria-label="Legenda do gráfico">
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded bg-interactive" /> Receita</span>
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded bg-money" /> Lucro</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-muted/20 px-1 py-3">
-            <ChartMetric label="Receita no ano" value={displayValue(formatCurrency(annualRevenue))} />
-            <ChartMetric label="Lucro no ano" value={displayValue(formatCurrency(annualProfit))} tone="success" />
-            <ChartMetric label="Margem" value={`${annualMargin.toFixed(1)}%`} />
-          </div>
-          <div className="p-3 sm:p-4">
-            {hasAnnualCashflow ? <div className="h-[270px] w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 520, height: 270 }}>
-                <LineChart data={annualCashflow} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} width={58} tickFormatter={compactCurrency} />
-                  <Tooltip
-                    cursor={{ stroke: 'var(--border)', strokeDasharray: '4 4' }}
-                    contentStyle={{ backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)', borderColor: 'var(--border)', borderRadius: 12, boxShadow: '0 12px 28px rgba(0,0,0,.12)', fontSize: 12 }}
-                    formatter={(value, name) => [displayValue(formatCurrency(Number(value))), name]}
-                  />
-                  <Line type="monotone" dataKey="Receita" stroke="var(--interactive)" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--card)' }} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="Lucro" stroke="var(--money)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--card)' }} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div> : <ChartEmptyState message="Ainda não há pagamentos registrados neste ano." />}
-          </div>
-        </section>
+            <span className="num shrink-0 text-[10px] text-muted-foreground"><span className="text-interactive-fg group-open:hidden">abrir</span><span className="hidden text-interactive-fg group-open:inline">fechar</span></span>
+          </summary>
+          <div className="space-y-4 border-t border-border p-4 sm:p-5">
+            <FixedCostsSection />
 
-        <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="service-distribution-title">
-          <div className="border-b border-border px-4 py-4 sm:px-5">
-            <h2 id="service-distribution-title" className="text-sm font-semibold text-foreground">Distribuição por serviços</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Participação real dos serviços nos vínculos da carteira.</p>
-          </div>
-          <div className="p-4 sm:p-5">
-            {serviceData.length > 0 ? <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <div className="relative h-[250px] min-w-0">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 420, height: 250 }}>
-                  <PieChart>
-                    <Pie data={serviceData} cx="50%" cy="50%" innerRadius={67} outerRadius={96} paddingAngle={3} dataKey="client_count" nameKey="service_name" stroke="none">
-                      {serviceData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)', borderColor: 'var(--border)', borderRadius: 12, boxShadow: '0 12px 28px rgba(0,0,0,.12)', fontSize: 12 }}
-                      formatter={(value) => [`${Number(value)} vínculo${Number(value) === 1 ? "" : "s"}`, "Carteira"]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="num text-2xl font-semibold tracking-[-0.04em] text-foreground">{serviceLinks}</span>
-                  <span className="mt-0.5 text-[10px] text-muted-foreground">vínculos</span>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="annual-cashflow-title">
+                <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+                  <div>
+                    <h2 id="annual-cashflow-title" className="text-sm font-semibold text-foreground">Evolução de caixa</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Receita e lucro confirmados mês a mês em {year}.</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground" aria-label="Legenda do gráfico">
+                    <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded bg-interactive" /> Receita</span>
+                    <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded bg-money" /> Lucro</span>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-3">
-                {serviceData.slice(0, 5).map((service, index) => {
-                  const count = Number(service.client_count || 0)
-                  return (
-                    <div key={service.service_name}>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
-                          <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="truncate">{service.service_name}</span>
-                        </span>
-                        <span className="num shrink-0 text-muted-foreground">{count}</span>
-                      </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full" style={{ width: `${maxServiceLinks > 0 ? (count / maxServiceLinks) * 100 : 0}%`, backgroundColor: COLORS[index % COLORS.length] }} />
+                <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-muted/20 px-1 py-3">
+                  <ChartMetric label="Receita no ano" value={displayValue(formatCurrency(annualRevenue))} />
+                  <ChartMetric label="Lucro no ano" value={displayValue(formatCurrency(annualProfit))} tone="success" />
+                  <ChartMetric label="Margem" value={`${annualMargin.toFixed(1)}%`} />
+                </div>
+                <div className="p-3 sm:p-4">
+                  {hasAnnualCashflow ? <div className="h-[270px] w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 520, height: 270 }}>
+                      <LineChart data={annualCashflow} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
+                        <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} width={58} tickFormatter={compactCurrency} />
+                        <Tooltip
+                          cursor={{ stroke: 'var(--border)', strokeDasharray: '4 4' }}
+                          contentStyle={{ backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)', borderColor: 'var(--border)', borderRadius: 12, boxShadow: '0 12px 28px rgba(0,0,0,.12)', fontSize: 12 }}
+                          formatter={(value, name) => [displayValue(formatCurrency(Number(value))), name]}
+                        />
+                        <Line type="monotone" dataKey="Receita" stroke="var(--interactive)" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--card)' }} isAnimationActive={false} />
+                        <Line type="monotone" dataKey="Lucro" stroke="var(--money)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--card)' }} isAnimationActive={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div> : <ChartEmptyState message="Ainda não há pagamentos registrados neste ano." />}
+                </div>
+              </section>
+
+              <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="service-distribution-title">
+                <div className="border-b border-border px-4 py-4 sm:px-5">
+                  <h2 id="service-distribution-title" className="text-sm font-semibold text-foreground">Distribuição por serviços</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Participação real dos serviços nos vínculos da carteira.</p>
+                </div>
+                <div className="p-4 sm:p-5">
+                  {serviceData.length > 0 ? <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                    <div className="relative h-[250px] min-w-0">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 420, height: 250 }}>
+                        <PieChart>
+                          <Pie data={serviceData} cx="50%" cy="50%" innerRadius={67} outerRadius={96} paddingAngle={3} dataKey="client_count" nameKey="service_name" stroke="none">
+                            {serviceData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)', borderColor: 'var(--border)', borderRadius: 12, boxShadow: '0 12px 28px rgba(0,0,0,.12)', fontSize: 12 }}
+                            formatter={(value) => [`${Number(value)} vínculo${Number(value) === 1 ? "" : "s"}`, "Carteira"]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                        <span className="num text-2xl font-semibold tracking-[-0.04em] text-foreground">{serviceLinks}</span>
+                        <span className="mt-0.5 text-[10px] text-muted-foreground">vínculos</span>
                       </div>
                     </div>
-                  )
-                })}
-                {serviceData.length > 5 ? <p className="pt-1 text-[10px] text-muted-foreground">Mais {serviceData.length - 5} serviço{serviceData.length - 5 === 1 ? "" : "s"} no gráfico.</p> : null}
-              </div>
-            </div> : <ChartEmptyState message="Vincule clientes aos serviços para visualizar a distribuição." />}
+                    <div className="space-y-3">
+                      {serviceData.slice(0, 5).map((service, index) => {
+                        const count = Number(service.client_count || 0)
+                        return (
+                          <div key={service.service_name}>
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                              <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+                                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                <span className="truncate">{service.service_name}</span>
+                              </span>
+                              <span className="num shrink-0 text-muted-foreground">{count}</span>
+                            </div>
+                            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full" style={{ width: `${maxServiceLinks > 0 ? (count / maxServiceLinks) * 100 : 0}%`, backgroundColor: COLORS[index % COLORS.length] }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {serviceData.length > 5 ? <p className="pt-1 text-[10px] text-muted-foreground">Mais {serviceData.length - 5} serviço{serviceData.length - 5 === 1 ? "" : "s"} no gráfico.</p> : null}
+                    </div>
+                  </div> : <ChartEmptyState message="Vincule clientes aos serviços para visualizar a distribuição." />}
+                </div>
+              </section>
+            </div>
           </div>
-        </section>
-      </div> : null}
+        </details>
+      ) : null}
     </PageShell>
   )
 }

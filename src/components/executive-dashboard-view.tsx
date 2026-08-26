@@ -51,6 +51,7 @@ const periodLabels: Array<{ value: ExecutivePeriod; label: string }> = [
 
 type Tone = "neutral" | "success" | "danger" | "interactive" | "warning"
 type RankingTab = "services" | "payments" | "health"
+type SecondaryTab = "growth" | "insights"
 
 type SummaryMetric = {
   label: string
@@ -82,6 +83,7 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
   const { displayValue } = usePrivacy()
   const [reduceMotion, setReduceMotion] = useState(false)
   const [rankingTab, setRankingTab] = useState<RankingTab>("services")
+  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("growth")
   const money = (value: number) => String(displayValue(formatCurrency(value)))
   const realizationRate = data.summary.forecast > 0
     ? (data.summary.confirmed / data.summary.forecast) * 100
@@ -193,26 +195,15 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
 
       {!compact ? (
         <>
-          <div className="grid gap-4 xl:grid-cols-2">
-            <ClientGrowthPanel
-              current={data.growth.new_clients}
-              previous={data.growth.previous_new_clients}
-              activeClients={data.summary.active_clients}
-              cancellations={data.growth.cancellations}
-              period={period}
-              reduceMotion={reduceMotion}
-            />
-
-            <FinancialActivityPanel
-              data={data}
-              period={period}
-              totalPayments={totalPayments}
-              averagePerBucket={averagePerBucket}
-              bestBucket={bestBucket}
-              reduceMotion={reduceMotion}
-              money={money}
-            />
-          </div>
+          <FinancialActivityPanel
+            data={data}
+            period={period}
+            totalPayments={totalPayments}
+            averagePerBucket={averagePerBucket}
+            bestBucket={bestBucket}
+            reduceMotion={reduceMotion}
+            money={money}
+          />
 
           {data.rates.default > 0 ? (
             <div className="flex flex-col gap-3 rounded-xl border border-danger-border bg-danger-bg/45 px-4 py-3 sm:flex-row sm:items-center">
@@ -228,16 +219,42 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
             </div>
           ) : null}
 
-          <RankingExplorer
-            tab={rankingTab}
-            onTabChange={setRankingTab}
-            data={data}
-            realizationRate={realizationRate}
-            riskShare={riskShare}
-            totalPayments={totalPayments}
-            money={money}
-            reduceMotion={reduceMotion}
-          />
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="microlabel">Análises</p>
+                <h2 className="mt-1 text-sm font-semibold text-foreground">Aprofunde a leitura</h2>
+              </div>
+              <div className="flex gap-1 rounded-xl border border-border bg-muted p-1" role="tablist" aria-label="Tipo de análise">
+                <SecondaryTabButton icon={UsersRound} label="Crescimento" value="growth" selected={secondaryTab} onSelect={setSecondaryTab} />
+                <SecondaryTabButton icon={ChartPie} label="Ranking e indicadores" value="insights" selected={secondaryTab} onSelect={setSecondaryTab} />
+              </div>
+            </div>
+
+            <div id={`analysis-panel-${secondaryTab}`} role="tabpanel" aria-label={secondaryTab === "growth" ? "Crescimento da carteira" : "Ranking e indicadores"}>
+              {secondaryTab === "growth" ? (
+                <ClientGrowthPanel
+                  current={data.growth.new_clients}
+                  previous={data.growth.previous_new_clients}
+                  activeClients={data.summary.active_clients}
+                  cancellations={data.growth.cancellations}
+                  period={period}
+                  reduceMotion={reduceMotion}
+                />
+              ) : (
+                <RankingExplorer
+                  tab={rankingTab}
+                  onTabChange={setRankingTab}
+                  data={data}
+                  realizationRate={realizationRate}
+                  riskShare={riskShare}
+                  totalPayments={totalPayments}
+                  money={money}
+                  reduceMotion={reduceMotion}
+                />
+              )}
+            </div>
+          </div>
         </>
       ) : null}
     </section>
@@ -309,7 +326,6 @@ function ClientGrowthPanel({ current, previous, activeClients, cancellations, pe
   period: ExecutivePeriod
   reduceMotion: boolean
 }) {
-  const change = previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0
   const chartData = [
     { label: "Anterior", clients: previous },
     { label: period === "month" ? "Mês atual" : "Atual", clients: current },
@@ -320,17 +336,11 @@ function ClientGrowthPanel({ current, previous, activeClients, cancellations, pe
       <PanelHeader
         icon={UsersRound}
         title="Crescimento da carteira"
-        description="Novos clientes no período atual comparados ao anterior."
+        description="Os números de novos clientes e variação já estão no resumo, acima. Aqui: a comparação visual e o contexto de retenção."
         badge={periodLabel(period)}
         tone="interactive"
         titleId="client-growth-title"
       />
-
-      <div className="grid grid-cols-3 gap-2 border-b border-border p-4 sm:gap-3 sm:p-5">
-        <MiniMetric label="Período atual" value={String(current)} tone="success" />
-        <MiniMetric label="Período anterior" value={String(previous)} tone="interactive" />
-        <MiniMetric label="Variação" value={`${change >= 0 ? "+" : ""}${change.toFixed(1)}%`} tone={change >= 0 ? "success" : "danger"} />
-      </div>
 
       <div className="h-[290px] bg-muted/20 px-2 py-4 sm:px-5">
         <div className="h-full" role="img" aria-label={`Comparativo de novos clientes: ${previous} no período anterior e ${current} no atual`}>
@@ -504,6 +514,32 @@ function RankingExplorer({ tab, onTabChange, data, realizationRate, riskShare, t
         </>
       )}
     </section>
+  )
+}
+
+function SecondaryTabButton({ icon: Icon, label, value, selected, onSelect }: {
+  icon: LucideIcon
+  label: string
+  value: SecondaryTab
+  selected: SecondaryTab
+  onSelect: (tab: SecondaryTab) => void
+}) {
+  const active = selected === value
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-controls={`analysis-panel-${value}`}
+      onClick={() => onSelect(value)}
+      className={cn(
+        "flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden="true" />
+      {label}
+    </button>
   )
 }
 

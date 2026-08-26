@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { MetricCard } from "@/components/metric-card"
 
 type DashboardOverviewProps = {
   totalClients: number
@@ -29,8 +30,6 @@ type DashboardOverviewProps = {
   dueTodayAmount: string
   nextSevenDaysAmount: string
   confirmedAmount: string
-  forecastAmount: string
-  todayAmount: string
   trackedAmount: string
   advancedFinance: boolean
   onOverdueOpen: () => void
@@ -53,8 +52,6 @@ export function DashboardOverview({
   dueTodayAmount,
   nextSevenDaysAmount,
   confirmedAmount,
-  forecastAmount,
-  todayAmount,
   trackedAmount,
   advancedFinance,
   onOverdueOpen,
@@ -81,21 +78,21 @@ export function DashboardOverview({
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <PrimaryMetric
+        <MetricCard
           icon={UsersRound}
           label="Total de clientes"
           value={String(totalClients)}
           hint={`${activeClients} cliente${activeClients === 1 ? "" : "s"} ativo${activeClients === 1 ? "" : "s"}`}
           tone="neutral"
         />
-        <PrimaryMetric
+        <MetricCard
           icon={UserRoundCheck}
           label="Clientes ativos"
           value={String(activeClients)}
           hint={`${activeShare.toFixed(0)}% da carteira em andamento`}
           tone="success"
         />
-        <PrimaryMetric
+        <MetricCard
           icon={UserRoundX}
           label="Clientes vencidos"
           value={String(overdueClients)}
@@ -106,7 +103,7 @@ export function DashboardOverview({
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-3">
+      <div className={cn("grid gap-3", advancedFinance ? "xl:grid-cols-2" : "xl:grid-cols-3")}>
         <InsightCard
           icon={UserPlus}
           title="Crescimento da carteira"
@@ -158,85 +155,26 @@ export function DashboardOverview({
           }}
         />
 
-        <InsightCard
-          icon={CircleDollarSign}
-          title="Valores a receber"
-          subtitle={advancedFinance ? "Ciclos do período selecionado" : "Movimentação do mês atual"}
-          tone="money"
-          rows={[
-            { label: "Confirmado", value: confirmedAmount, emphasize: true },
-            { label: advancedFinance ? "Previsão" : "Em acompanhamento", value: advancedFinance ? forecastAmount : trackedAmount },
-          ]}
-          footer={{
-            label: advancedFinance ? "Confirmado hoje" : "Carteira monitorada",
-            value: advancedFinance ? todayAmount : trackedAmount,
-            trend: "up",
-          }}
-        />
+        {advancedFinance ? null : (
+          <InsightCard
+            icon={CircleDollarSign}
+            title="Valores a receber"
+            subtitle="Movimentação do mês atual"
+            tone="money"
+            rows={[
+              { label: "Confirmado", value: confirmedAmount, emphasize: true },
+              { label: "Em acompanhamento", value: trackedAmount },
+            ]}
+            footer={{
+              label: "Carteira monitorada",
+              value: trackedAmount,
+              trend: "up",
+            }}
+          />
+        )}
       </div>
     </section>
   )
-}
-
-function PrimaryMetric({ icon: Icon, label, value, hint, tone, onClick, actionLabel }: {
-  icon: LucideIcon
-  label: string
-  value: string
-  hint: string
-  tone: "neutral" | "success" | "danger"
-  onClick?: () => void
-  actionLabel?: string
-}) {
-  const toneClasses = {
-    neutral: {
-      surface: "border-border bg-card",
-      icon: "bg-interactive-bg text-interactive-fg",
-      value: "text-foreground",
-      accent: "bg-interactive",
-    },
-    success: {
-      surface: "border-success-border bg-success-bg/45",
-      icon: "bg-card/80 text-success-fg",
-      value: "text-money",
-      accent: "bg-money",
-    },
-    danger: {
-      surface: "border-danger-border bg-danger-bg/50",
-      icon: "bg-card/80 text-danger-fg",
-      value: "text-danger",
-      accent: "bg-danger",
-    },
-  }[tone]
-
-  const content = (
-    <>
-      <span className={cn("absolute inset-x-0 top-0 h-1", toneClasses.accent)} />
-      <Icon className="absolute -bottom-5 -right-3 size-28 opacity-[0.055]" aria-hidden="true" />
-      <div className="relative flex items-start justify-between gap-4">
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm", toneClasses.icon)}>
-          <Icon className="size-5" aria-hidden="true" />
-        </span>
-        {onClick ? <ArrowRight className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
-      </div>
-      <div className="relative mt-5">
-        <p className={cn("num text-3xl font-semibold tracking-[-0.05em]", toneClasses.value)}>{value}</p>
-        <p className="mt-1.5 text-sm font-semibold text-foreground">{label}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
-      </div>
-    </>
-  )
-
-  const className = cn(
-    "group relative min-h-[160px] w-full overflow-hidden rounded-[22px] border p-5 text-left shadow-sm transition-[transform,box-shadow,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none sm:p-6",
-    onClick && "hover:-translate-y-0.5 hover:shadow-md motion-reduce:hover:translate-y-0",
-    toneClasses.surface
-  )
-
-  if (onClick) {
-    return <button type="button" onClick={onClick} aria-label={actionLabel || label} className={className}>{content}</button>
-  }
-
-  return <article className={className}>{content}</article>
 }
 
 type InsightRow = {

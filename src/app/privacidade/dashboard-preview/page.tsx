@@ -64,8 +64,6 @@ export default function DashboardPreviewPage() {
           dueTodayAmount="R$ 1.240,00"
           nextSevenDaysAmount="R$ 5.680,00"
           confirmedAmount="R$ 31.520,00"
-          forecastAmount="R$ 42.850,00"
-          todayAmount="R$ 2.180,00"
           trackedAmount="R$ 11.780,00"
           advancedFinance
           onOverdueOpen={() => undefined}

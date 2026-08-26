@@ -149,7 +149,7 @@ export function GlobalDeleteDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={isSubmitting || isCheckingPin || !hasPin || isPinLocked || pinInput.length !== 4}
-            className="disabled:bg-[#f0d3d3] disabled:text-white disabled:opacity-100 dark:disabled:bg-danger/30 sm:flex-[1.4]"
+            className="disabled:bg-danger-bg disabled:text-danger-fg disabled:opacity-100 dark:disabled:bg-danger/30 sm:flex-[1.4]"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Excluir
           </Button>

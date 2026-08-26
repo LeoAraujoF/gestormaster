@@ -32,6 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!ops/hermes/.env.example
+
+# Hermes: dados persistentes e segredos ficam somente no Home Lab
+/ops/hermes/data/
+/ops/hermes/logs/
+/ops/hermes/secrets/
 
 # vercel
 .vercel

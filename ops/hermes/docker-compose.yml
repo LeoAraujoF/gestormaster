@@ -1,0 +1,44 @@
+services:
+  hermes:
+    image: nousresearch/hermes-agent:${HERMES_IMAGE_TAG:-latest}
+    container_name: hermes_agent
+    restart: unless-stopped
+    init: true
+    command: ["gateway", "run"]
+    working_dir: /opt/workspace
+    environment:
+      HERMES_HOME: /opt/data
+      PATH: /opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      HERMES_DASHBOARD: "${HERMES_DASHBOARD:-0}"
+      GATEWAY_ALLOWED_USERS: "${GATEWAY_ALLOWED_USERS:-}"
+      GATEWAY_ALLOW_ALL_USERS: "${GATEWAY_ALLOW_ALL_USERS:-false}"
+      API_SERVER_ENABLED: "${API_SERVER_ENABLED:-false}"
+      API_SERVER_KEY: "${API_SERVER_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-}"
+      TZ: "${TZ:-America/Sao_Paulo}"
+    ports:
+      - "${HERMES_BIND_ADDRESS:-127.0.0.1}:${HERMES_GATEWAY_PORT:-8642}:8642"
+      - "${HERMES_BIND_ADDRESS:-127.0.0.1}:${HERMES_DASHBOARD_PORT:-9119}:9119"
+    volumes:
+      - hermes_data:/opt/data
+      - ./bootstrap/SOUL.md:/opt/data/SOUL.md:ro
+      - ./bootstrap/AGENTS.md:/opt/workspace/AGENTS.md:ro
+      - ./skills/operacao-home-lab:/opt/data/skills/operacao-home-lab:ro
+      - ./skills/operacao-saas:/opt/data/skills/operacao-saas:ro
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "${HERMES_CPU_LIMIT:-2.0}"
+          memory: "${HERMES_MEMORY_LIMIT:-1G}"
+
+volumes:
+  hermes_data:

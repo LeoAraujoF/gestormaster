@@ -15,7 +15,6 @@ import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
-import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 type MassRequest = {
   action?: 'preview' | 'confirm'
@@ -99,11 +98,9 @@ export async function POST(req: Request) {
     }
     const audienceClients = serviceClientIds ? clients.filter((client) => serviceClientIds.has(client.id)) : clients
     const withValidPhone = audienceClients.filter((client) => Boolean(normalizePhoneE164(client.phone_e164 || client.phone || '')))
-    const withoutConsent = withValidPhone.filter((client) => !hasWhatsAppConsent(client, 'marketing'))
-    const withConsent = withValidPhone.filter((client) => hasWhatsAppConsent(client, 'marketing'))
     const clientLimit = plan.limits.clients
-    const eligibleByPlan = clientLimit == null ? withConsent : withConsent.slice(0, clientLimit)
-    const overPlanLimit = withConsent.length - eligibleByPlan.length
+    const eligibleByPlan = clientLimit == null ? withValidPhone : withValidPhone.slice(0, clientLimit)
+    const overPlanLimit = withValidPhone.length - eligibleByPlan.length
     if (!eligibleByPlan.length) return NextResponse.json({ error: 'Nenhum cliente com telefone válido encontrado' }, { status: 400 })
 
     const timezone = await organizationTimezone(membership.organizationId)
@@ -127,7 +124,7 @@ export async function POST(req: Request) {
       eligible: eligibleByPlan.length - conflictMap.size,
       deferred: conflictMap.size,
       blocked: overPlanLimit,
-      skippedNoConsent: withoutConsent.length,
+      skippedNoConsent: 0,
       planLimit: clientLimit,
       contactDate,
     }
@@ -151,7 +148,7 @@ export async function POST(req: Request) {
     }).select('id').single()
     if (ruleError || !tempRule) throw new Error(ruleError?.message || 'Erro ao criar campanha')
 
-    const summary = { queued: 0, deferred: 0, blocked: overPlanLimit, skipped_no_consent: withoutConsent.length, failed: 0, total: eligibleByPlan.length, planLimit: clientLimit }
+    const summary = { queued: 0, deferred: 0, blocked: overPlanLimit, skipped_no_consent: 0, failed: 0, total: eligibleByPlan.length, planLimit: clientLimit }
     const delay = Math.max(0, scheduledDate.getTime() - Date.now())
     for (const client of eligibleByPlan) {
       try {

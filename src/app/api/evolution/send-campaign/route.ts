@@ -6,7 +6,6 @@ import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeCampaignPhone, parseLeadCampaignMessage } from '@/lib/lead-campaign'
-import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 const campaignRequestSchema = z.object({
   leadIds: z.array(z.string().uuid()).min(1).max(2000).transform((ids) => [...new Set(ids)]),
@@ -102,10 +101,6 @@ export async function POST(request: Request) {
       }
       if (activeLeadIds.has(lead.id)) {
         skipped.push({ lead_id: lead.id, name: lead.name, reason: 'ALREADY_IN_FLIGHT' })
-        continue
-      }
-      if (!hasWhatsAppConsent(lead, 'marketing')) {
-        skipped.push({ lead_id: lead.id, name: lead.name, reason: 'NO_WHATSAPP_CONSENT' })
         continue
       }
       const normalizedPhone = lead.phone ? normalizeCampaignPhone(lead.phone) : null

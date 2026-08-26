@@ -5,7 +5,6 @@ import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
-import { hasWhatsAppConsent } from '@/lib/whatsapp-safety'
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +23,6 @@ export async function POST(req: Request) {
       mediaBase64?: unknown
       mediaMimeType?: unknown
       leadId?: unknown
-      consent_confirmed?: unknown
     }
     const instanceName = typeof body.instanceName === 'string' ? body.instanceName.trim() : ''
     const phone = typeof body.phone === 'string' ? body.phone : ''
@@ -32,7 +30,6 @@ export async function POST(req: Request) {
     const mediaBase64 = typeof body.mediaBase64 === 'string' ? body.mediaBase64 : null
     const mediaMimeType = typeof body.mediaMimeType === 'string' ? body.mediaMimeType : null
     const leadId = typeof body.leadId === 'string' ? body.leadId : null
-    const consentConfirmed = body.consent_confirmed === true
 
     if (!instanceName || !phone || (!message && !mediaBase64)) {
       return NextResponse.json({ error: 'Faltam campos obrigatórios (instanceName, phone e message ou mídia)' }, { status: 400 })
@@ -62,10 +59,6 @@ export async function POST(req: Request) {
         .maybeSingle()
       if (!lead) return NextResponse.json({ error: 'Lead não encontrado ou sem permissão' }, { status: 400 })
 
-      if (!hasWhatsAppConsent(lead, 'marketing')) {
-        return NextResponse.json({ error: 'O lead não possui consentimento para mensagens de marketing.', code: 'WHATSAPP_CONSENT_REQUIRED' }, { status: 412 })
-      }
-
       const { data: activeHistory } = await supabaseAdmin
         .from('alert_history')
         .select('id')
@@ -78,10 +71,6 @@ export async function POST(req: Request) {
       if (activeHistory) {
         return NextResponse.json({ success: true, queued: false, already_queued: true, history_id: activeHistory.id }, { status: 202 })
       }
-    }
-
-    else if (!consentConfirmed) {
-      return NextResponse.json({ error: 'Confirme que o destinatário autorizou receber esta mensagem.', code: 'WHATSAPP_CONSENT_REQUIRED' }, { status: 412 })
     }
 
     const cleanPhone = normalizeWhatsAppNumber(phone)

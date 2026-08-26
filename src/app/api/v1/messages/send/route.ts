@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
     // 4. Validação de Payload
     const body = await request.json()
-    const { phone, message, media_url, instance_id, consent_confirmed } = body
+    const { phone, message, media_url, instance_id } = body
 
     if (instance_id !== undefined && instance_id !== null && (typeof instance_id !== 'string' || !UUID_PATTERN.test(instance_id))) {
       return NextResponse.json({ error: 'instance_id deve ser um UUID.' }, { status: 400 })
@@ -74,10 +74,6 @@ export async function POST(request: Request) {
 
     if (typeof phone !== 'string' || typeof message !== 'string' || !phone || !message || message.length > 4_000) {
       return NextResponse.json({ error: 'Os campos "phone" e "message" são obrigatórios.' }, { status: 400 })
-    }
-
-    if (consent_confirmed !== true) {
-      return NextResponse.json({ error: 'consent_confirmed=true é obrigatório para enviar uma mensagem WhatsApp.' }, { status: 412 })
     }
 
     if (media_url && (typeof media_url !== 'string' || !/^https:\/\//i.test(media_url) || media_url.length > 2_000)) {

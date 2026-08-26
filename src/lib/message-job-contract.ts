@@ -22,6 +22,7 @@ export const sendMessageJobSchema = z.object({
   contactReservationId: z.string().uuid().nullable().optional(),
   correlationId: z.string().min(1).nullable().optional(),
   source: z.string().min(1).nullable().optional(),
+  manualRetry: z.boolean().optional(),
   interactiveMessage: z.unknown().optional(),
 }).passthrough()
 

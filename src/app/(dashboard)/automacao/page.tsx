@@ -151,6 +151,7 @@ export default function AutomacaoPage() {
   const [logFilter, setLogFilter] = useState<'pending' | 'sent' | 'failed' | 'all'>('pending')
   const [isLogsLoading, setIsLogsLoading] = useState(false)
   const [isBulkActioning, setIsBulkActioning] = useState(false)
+  const [retryingLogIds, setRetryingLogIds] = useState<Set<string>>(new Set())
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false)
   const [testPhone, setTestPhone] = useState('')
   const [isTestingPhone, setIsTestingPhone] = useState(false)
@@ -655,10 +656,32 @@ export default function AutomacaoPage() {
   }, [activeTab, loadLogs])
 
   const handleResendLog = async (id: string) => {
-    await supabase.from('alert_history').update({ status: 'pending', error_message: null }).eq('id', id)
-    logAuditClient({ action: 'alert.retry', resource: 'alert_history', resource_id: id })
-    toast.success("Reenviado para a fila.")
-    loadLogs()
+    setRetryingLogIds((current) => new Set(current).add(id))
+    try {
+      const response = await fetch('/api/evolution/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertHistoryId: id, force: true }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (response.status === 409 && data.status === 'already_queued') {
+        toast.info(data.message || 'Esta mensagem já está na fila.')
+      } else if (!response.ok) {
+        throw new Error(data.message || data.error || 'Não foi possível reenviar a mensagem.')
+      } else {
+        logAuditClient({ action: 'alert.retry', resource: 'alert_history', resource_id: id })
+        toast.success(data.message || 'Mensagem colocada novamente na fila.')
+      }
+      loadLogs(false)
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.')
+    } finally {
+      setRetryingLogIds((current) => {
+        const next = new Set(current)
+        next.delete(id)
+        return next
+      })
+    }
   }
   const handleCancelLog = async (id: string) => {
     await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuÃ¡rio' }).eq('id', id)
@@ -679,12 +702,27 @@ export default function AutomacaoPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       if (action === 'resend_failed') {
-        const { error } = await supabase.from('alert_history')
-          .update({ status: 'pending', error_message: null, scheduled_at: new Date().toISOString() })
-          .eq('status', 'failed').eq('user_id', user.id)
-        if (error) throw error
+        const failedIds = logs
+          .filter((log) => getLogDisplayStatus(log) === 'failed')
+          .map((log) => log.id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+        if (failedIds.length === 0) {
+          toast.info("Nenhuma falha disponível para reenvio.")
+          return
+        }
+        const summary = { queued: 0, alreadyQueued: 0, alreadySent: 0, skipped: 0, errors: 0 }
+        for (let index = 0; index < failedIds.length; index += 200) {
+          const response = await fetch('/api/evolution/retry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alertHistoryIds: failedIds.slice(index, index + 200), force: true }),
+          })
+          const data = await response.json().catch(() => ({}))
+          if (!response.ok && !data.summary) throw new Error(data.message || data.error || 'Não foi possível reenviar as falhas.')
+          for (const key of Object.keys(summary) as (keyof typeof summary)[]) summary[key] += Number(data.summary?.[key] || 0)
+        }
         logAuditClient({ action: 'alert.batch_retry', resource: 'alert_history' })
-        toast.success("Falhas reenviadas para a fila.")
+        toast.success(`${summary.queued} falha(s) colocada(s) novamente na fila.`)
       } else if (action === 'cancel_pending') {
         const { error } = await supabase.from('alert_history')
           .update({ status: 'failed', error_message: 'Cancelado em lote' })
@@ -1390,8 +1428,16 @@ export default function AutomacaoPage() {
                   </span>
                   <span className="flex items-end justify-end gap-1 md:w-[80px]">
                     <span className="sr-only">Ações</span>
-                    {displayStatus !== 'sent' && displayStatus !== 'deferred' && (
-                      <button onClick={() => handleResendLog(log.id)} title="Reenviar" aria-label={`Reenviar mensagem de ${log.client?.name || 'cliente removido'}`} className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-money hover:bg-muted"><RotateCcw className="size-3.5" aria-hidden="true" /></button>
+                    {(displayStatus === 'failed' || displayStatus === 'pending') && (
+                      <button
+                        onClick={() => void handleResendLog(log.id)}
+                        disabled={retryingLogIds.has(log.id)}
+                        title={displayStatus === 'pending' ? 'Forçar reenvio' : 'Reenviar mensagem'}
+                        aria-label={`${displayStatus === 'pending' ? 'Forçar reenvio' : 'Reenviar mensagem'} de ${log.client?.name || 'cliente removido'}`}
+                        className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-money hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {retryingLogIds.has(log.id) ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <RotateCcw className="size-3.5" aria-hidden="true" />}
+                      </button>
                     )}
                     {displayStatus === 'pending' && (
                       <button onClick={() => handleCancelLog(log.id)} title="Cancelar" aria-label={`Cancelar mensagem de ${log.client?.name || 'cliente removido'}`} className="inline-flex size-[30px] items-center justify-center rounded-md border border-input bg-card text-warning hover:bg-muted"><X className="size-3.5" aria-hidden="true" /></button>

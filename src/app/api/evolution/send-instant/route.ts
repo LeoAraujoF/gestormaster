@@ -17,7 +17,6 @@ import { redisConnection } from '@/lib/redis'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
-import { hasWhatsAppConsent, whatsappCategoryForAlertType } from '@/lib/whatsapp-safety'
 
 export async function POST(req: Request) {
   try {
@@ -57,14 +56,6 @@ export async function POST(req: Request) {
     }
 
     const category = categoryForAlertType(rule.alert_type)
-    const whatsappCategory = whatsappCategoryForAlertType(rule.alert_type)
-    if (!hasWhatsAppConsent(client, whatsappCategory)) {
-      return NextResponse.json({
-        error: `O cliente não autorizou mensagens WhatsApp da categoria ${whatsappCategory}.`,
-        code: 'WHATSAPP_CONSENT_REQUIRED',
-        category: whatsappCategory,
-      }, { status: 412 })
-    }
     const timezone = await organizationTimezone(membership.organizationId)
     const now = new Date()
     // plan_value é mantido como mensal no cadastro. Para ativação e renovação,

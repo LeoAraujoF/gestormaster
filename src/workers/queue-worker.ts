@@ -15,7 +15,7 @@ import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
 import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
 import { normalizeSendMessageJob } from '../lib/message-job-contract';
 import { normalizeWhatsAppNumber } from '../lib/phone';
-import { hasWhatsAppConsent, reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep, whatsappCategoryForContactCategory } from '../lib/whatsapp-safety';
+import { reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep } from '../lib/whatsapp-safety';
 import { isRetryableWhatsAppError, shouldPauseWhatsAppInstance, whatsappErrorCode } from '../providers/whatsapp/provider-error';
 
 startOperationalHeartbeat('message_worker');
@@ -41,6 +41,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     clientId, phone, instanceUrl, apiKey, connectionMode,
     alertHistoryId, ruleId, userId, correlationId
   } = normalizedJob as typeof normalizedJob & { clientId?: string; ruleId?: string; instanceUrl?: string; apiKey?: string; connectionMode?: string };
+  const manualRetry = normalizedJob.manualRetry === true;
   const jobSource = normalizedJob.source || undefined;
   const renewalReminderClientId = (job.data as Record<string, unknown>).renewalReminderClientId as string | undefined;
   const renewalReminderDueDate = (job.data as Record<string, unknown>).renewalReminderDueDate as string | undefined;
@@ -68,7 +69,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   if (contactReservationId) {
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_contact_reservation', {
       p_reservation_id: contactReservationId,
-      p_is_retry: job.attemptsMade > 0,
+      p_is_retry: manualRetry || job.attemptsMade > 0,
     });
     if (claimError) throw new Error(`Falha ao reservar contato coordenado: ${claimError.message}`);
     if (!claimed) return;
@@ -125,7 +126,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     contactCategory = 'billing';
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_collection_dispatch', {
       p_dispatch_id: collectionDispatchId,
-      p_is_retry: job.attemptsMade > 0,
+      p_is_retry: manualRetry || job.attemptsMade > 0,
     });
     if (claimError) throw new Error(`Falha ao reservar despacho inteligente: ${claimError.message}`);
     if (!claimed) return;
@@ -414,27 +415,6 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     logger.info(`[Job ${job.id}] Enviando para instância "${targetInstanceName}" → ${phone}`);
 
     try {
-      if (clientId || leadId) {
-        const category = leadId
-          ? 'marketing'
-          : whatsappCategoryForContactCategory(contactCategory || 'operational');
-        const consentQuery = clientId
-          ? supabaseAdmin.from('clients')
-            .select('whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
-            .eq('id', clientId)
-            .maybeSingle()
-          : supabaseAdmin.from('leads')
-            .select('whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
-            .eq('id', leadId)
-            .maybeSingle();
-        const { data: consentRecord } = await consentQuery;
-        if (!hasWhatsAppConsent(consentRecord, category)) {
-          await updateAlertStatus('failed', { error_message: 'WHATSAPP_CONSENT_REQUIRED' });
-          logger.warn(`[Job ${job.id}] Envio bloqueado por ausência de consentimento (${category}).`);
-          return;
-        }
-      }
-
       if (instanceSendingPaused) {
         const reason = instanceSendingPauseReason || 'INSTANCE_SENDING_PAUSED';
         logger.warn(`[Job ${job.id}] Envio pausado para a instância ${targetInstanceName}: ${reason}`);

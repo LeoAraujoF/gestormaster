@@ -14,9 +14,19 @@ services:
       GATEWAY_ALLOW_ALL_USERS: "${GATEWAY_ALLOW_ALL_USERS:-false}"
       API_SERVER_ENABLED: "${API_SERVER_ENABLED:-false}"
       API_SERVER_KEY: "${API_SERVER_KEY:-}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       OPENAI_BASE_URL: "${OPENAI_BASE_URL:-}"
+      PORTAINER_URL: "${PORTAINER_URL:-https://192.168.1.11:9443}"
+      PORTAINER_API_KEY: "${PORTAINER_API_KEY:-}"
+      PORTAINER_TLS_VERIFY: "${PORTAINER_TLS_VERIFY:-0}"
+      PORTAINER_READ_ONLY: "${PORTAINER_READ_ONLY:-1}"
+      PORTAINER_NO_PROXY: "${PORTAINER_NO_PROXY:-1}"
+      PORTAINER_PROFILES: "${PORTAINER_PROFILES:-BASE,DOCKER}"
+      PORTAINER_ACTIONS_ENABLED: "${PORTAINER_ACTIONS_ENABLED:-0}"
+      PORTAINER_ACTION_API_KEY: "${PORTAINER_ACTION_API_KEY:-}"
+      ACTION_ALLOWED_CONTAINERS: "${ACTION_ALLOWED_CONTAINERS:-hermes_agent}"
       TZ: "${TZ:-America/Sao_Paulo}"
     ports:
       - "${HERMES_BIND_ADDRESS:-127.0.0.1}:${HERMES_GATEWAY_PORT:-8642}:8642"
@@ -25,6 +35,9 @@ services:
       - hermes_data:/opt/data
       - ./bootstrap/SOUL.md:/opt/data/SOUL.md:ro
       - ./bootstrap/AGENTS.md:/opt/workspace/AGENTS.md:ro
+      - ./bootstrap/portainer-mcp.sh:/opt/workspace/portainer-mcp:ro
+      - ./scripts:/opt/data/scripts:ro
+      - ./runbooks:/opt/data/runbooks:ro
       - ./skills/operacao-home-lab:/opt/data/skills/operacao-home-lab:ro
       - ./skills/operacao-saas:/opt/data/skills/operacao-saas:ro
     security_opt:

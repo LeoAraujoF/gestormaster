@@ -17,6 +17,8 @@ Sem autorização explícita para a ação atual, o agente pode:
 - comparar a versão implantada com a versão publicada no GHCR;
 - correlacionar horário, commit, erro, serviço e impacto;
 - preparar um diagnóstico e um plano de correção reversível.
+- interpretar o snapshot de `scripts/home-lab-health.py` e usar os runbooks em
+  `/opt/data/runbooks` para manter diagnósticos consistentes.
 
 ## Sempre pedir confirmação antes de executar
 
@@ -64,3 +66,9 @@ Um erro de envio não é autorização para reenviar automaticamente. Para um re
 identifique a mensagem ou `alert_history_id`, explique o risco de duplicidade e peça
 confirmação. Depois valide a entrada na fila e o resultado do worker; um HTTP 200 da
 rota não prova entrega no WhatsApp.
+
+## Monitor automático
+
+O monitor é somente leitura e não pode chamar retry, reiniciar containers ou fazer
+redeploy. Em estado saudável sem alertas, não envie mensagem. Em mudança relevante,
+informe impacto, evidências, hipótese, ação reversível sugerida e confirmação necessária.

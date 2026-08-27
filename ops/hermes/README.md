@@ -14,6 +14,9 @@ as redes internas ou o socket do Docker da Lembrado.
 - logs com rotação;
 - identidade e política operacional em `bootstrap/`;
 - skills iniciais para operação do Home Lab e da Lembrado.
+- monitor somente leitura a cada 5 minutos e resumo diário no Telegram;
+- snapshots estáveis de Portainer, containers, liveness público e GitHub Actions;
+- runbooks para aplicação, worker/fila, Evolution, deploy e ações aprovadas.
 
 O primeiro estágio é de observação e diagnóstico. Portainer, GitHub, Supabase,
 Evolution e qualquer ação de produção devem ser conectados depois com credenciais
@@ -48,6 +51,11 @@ Hermes justificar mais memória, aumente gradualmente após observar o host.
 Para o modelo, use uma chave dedicada do provedor escolhido, com limite de gasto.
 Não reutilize nenhuma chave da Lembrado, do Supabase, da Stripe ou da Evolution.
 
+Com DeepSeek, use o modelo principal `deepseek-v4-flash`. Para análise de imagens,
+screenshots e gráficos, configure separadamente `deepseek-v4-flash-vision-exp` como
+modelo auxiliar de visão. O modelo principal é texto; a API de visão exige o modelo
+com sufixo `-vision-exp` e aceita JPEG, PNG, GIF e WebP.
+
 O volume `hermes_data` deve permanecer associado à stack. Ele guarda configuração,
 memória, sessões e logs do Hermes. Não versione esse conteúdo.
 
@@ -80,6 +88,45 @@ O agente não deve receber o Docker socket. Para ações no Portainer, use um to
 dedicado, preferencialmente somente leitura no estágio inicial. Para o GitHub, use
 um token fino e somente leitura até que haja uma necessidade operacional aprovada.
 
+### Portainer MCP
+
+O Hermes usa o pacote oficial do Portainer por meio de um processo MCP local.
+O container não monta o socket Docker e a integração fica estritamente em modo
+de leitura (`PORTAINER_READ_ONLY=1`), sem proxy de comandos (`PORTAINER_NO_PROXY=1`).
+
+Depois de criar o token de acesso no Portainer, coloque-o somente no `.env` da
+stack no servidor como `PORTAINER_API_KEY`. Não o versione nem o envie por chat.
+Recrie o container e registre o MCP dentro do Hermes:
+
+```bash
+docker compose up -d --force-recreate hermes
+docker exec -it hermes_agent /opt/hermes/.venv/bin/hermes mcp add portainer \
+  --command /bin/sh --args /opt/workspace/portainer-mcp
+docker exec -it hermes_agent /opt/hermes/.venv/bin/hermes mcp test portainer
+```
+
+Para fazer a autenticação sem expor a senha ou o token no terminal compartilhado,
+use o assistente `bootstrap/configure-portainer.sh` no host. Ele solicita as
+credenciais de forma interativa, grava o token com permissão `600`, recria o Hermes,
+habilita o MCP e executa o teste.
+
+O Portainer atual do homelab é 2.39.x; o servidor MCP oficial atualmente
+publicado acompanha versões 2.41.x ou mais novas. Mantemos o pacote fixado e
+limitado a `BASE,DOCKER` para reduzir o risco de incompatibilidade enquanto o
+Portainer não for atualizado em uma janela própria.
+
+### Monitoramento contínuo
+
+O job `Home Lab - health monitor` roda a cada 5 minutos, entrega no Telegram e só
+aciona o modelo quando o snapshot muda. O job `Home Lab - daily summary` roda às
+08:00 no fuso `America/Sao_Paulo`. Ambos são somente leitura. O monitor cobre os
+containers críticos, `/api/health`, o ambiente Portainer e o último workflow público
+do GitHub Actions.
+
+Os backups operacionais devem ser mantidos fora do repositório e com acesso restrito.
+Antes de atualizar Portainer, Hermes ou qualquer serviço de produção, gere backup e
+defina uma janela de manutenção.
+
 ## Critério de sucesso do MVP
 
 O MVP estará pronto quando o Hermes conseguir responder, sem segredo exposto:
@@ -91,8 +138,10 @@ O MVP estará pronto quando o Hermes conseguir responder, sem segredo exposto:
 - qual evidência sustenta um diagnóstico;
 - qual ação requer aprovação humana.
 
-## Próxima etapa
+## Ações de produção
 
-Depois do primeiro deploy, a integração deve ser feita uma por vez. O próximo passo
-é cadastrar o endpoint do Portainer e criar um token somente leitura. Só depois disso
-vale configurar comandos de mutação com confirmação e auditoria.
+O ambiente está pronto para diagnóstico contínuo. A camada de escrita continua
+desabilitada de propósito: para ativá-la, crie uma identidade Portainer separada com
+escopo mínimo e siga `runbooks/approved-actions.md`. Isso evita que um alerta, um
+prompt ambíguo ou uma chave exposta possa reiniciar serviços, alterar secrets ou
+reenviar mensagens sem aprovação humana.

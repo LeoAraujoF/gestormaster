@@ -2,7 +2,7 @@
 
 ## Sinais
 
-- `gestor_worker` parado, reiniciando ou `unhealthy`;
+- réplicas do serviço `gestor-worker` paradas, reiniciando ou `unhealthy` (o serviço é escalável; confira todas);
 - `redis_queue` indisponível;
 - mensagens permanecem em `pending`/`processing` sem avanço;
 - reenvios retornam sucesso HTTP, mas nenhum job chega ao worker.

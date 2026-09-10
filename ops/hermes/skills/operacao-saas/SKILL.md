@@ -13,7 +13,7 @@ de reenvio manual.
 - aplicação: `https://www.lembrado.com.br`;
 - repositório: `https://github.com/LeoAraujoF/gestormaster`;
 - workflow de publicação da imagem: GitHub Actions;
-- observabilidade de runtime: Portainer e logs do `gestor_app`, `gestor_worker`,
+- observabilidade de runtime: Portainer e logs do `gestor_app`, do serviço `gestor-worker` (escalável, pode ter várias réplicas),
   `gestor_scheduler`, `redis_queue` e `evolution_api`.
 
 ## Diagnóstico de falha de envio

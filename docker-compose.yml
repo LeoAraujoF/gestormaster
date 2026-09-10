@@ -26,7 +26,10 @@ services:
       - PIXGO_WEBHOOK_SECRET=${PIXGO_WEBHOOK_SECRET}
       - NEXT_PUBLIC_QUEUES_URL=${NEXT_PUBLIC_QUEUES_URL}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - BULL_BOARD_URL=http://gestor_worker:3001
+      # Nome do serviço, não do container: com `--scale` o compose resolve o
+      # alias do serviço para qualquer réplica (o Bull Board lê do Redis, então
+      # qualquer uma serve).
+      - BULL_BOARD_URL=http://gestor-worker:3001
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
       - REDIS_HOST=redis-queue
@@ -45,10 +48,12 @@ services:
   # -----------------------------------------------------
   # 1.1 GESTOR WORKER (Filas em background)
   # -----------------------------------------------------
+  # Escalável: `docker compose up -d --scale gestor-worker=3`. O pacing de envio
+  # é coordenado no Redis (slot por instância), então réplicas não se atropelam.
+  # Sem `container_name` — ele fixa o nome e impede mais de uma réplica.
   gestor-worker:
     image: ghcr.io/leoaraujof/gestormaster:${GESTOR_IMAGE_TAG:-latest}
     pull_policy: always
-    container_name: gestor_worker
     restart: unless-stopped
     command: npm run worker:start
     environment:
@@ -110,7 +115,9 @@ services:
     image: redis:7-alpine
     container_name: redis_queue
     restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    # Só com snapshot RDB (o padrão da imagem) uma queda perde até uma hora de
+    # fila. O AOF com fsync por segundo limita a perda a ~1s de jobs.
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --appendfsync everysec
     volumes:
       - redis_queue_data:/data
     networks:

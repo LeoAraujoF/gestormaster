@@ -132,7 +132,7 @@ defina uma janela de manutenção.
 O MVP estará pronto quando o Hermes conseguir responder, sem segredo exposto:
 
 - qual commit e imagem estão em produção;
-- se `gestor_app`, `gestor_worker`, `gestor_scheduler`, Redis e Evolution estão saudáveis;
+- se `gestor_app`, o serviço `gestor-worker` (uma ou mais réplicas), `gestor_scheduler`, Redis e Evolution estão saudáveis;
 - se o liveness web responde em `/api/health`;
 - se houve falha recente no GitHub Actions;
 - qual evidência sustenta um diagnóstico;

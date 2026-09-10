@@ -7,6 +7,7 @@ import { messageQueue } from '@/lib/queue'
 import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeCampaignPhone, parseLeadCampaignMessage } from '@/lib/lead-campaign'
+import { resolveMassInstances } from '@/lib/instance-routing'
 
 const campaignRequestSchema = z.object({
   leadIds: z.array(z.string().uuid()).min(1).max(2000).transform((ids) => [...new Set(ids)]),
@@ -71,6 +72,28 @@ export async function POST(request: Request) {
     }
     const organizationId = [...organizationIds][0]
 
+    // Papel do número: o principal fica reservado a lembretes e alertas, e um
+    // número já em outra campanha não entra nesta. A única exceção é a operação
+    // de um número só — ver resolveMassInstances.
+    const decisaoMassa = await resolveMassInstances({ organizationId, instanceNames })
+    if (decisaoMassa.permitidas.length === 0) {
+      const motivos: Record<string, string> = {
+        NOT_FOUND: 'não encontrado',
+        PRIMARY_RESERVED: 'é o número principal, reservado a lembretes e alertas',
+        MASS_NOT_ALLOWED: 'não está liberado para disparo em massa',
+        BUSY_WITH_MASS: 'já está em uma campanha em andamento',
+      }
+      const detalhe = decisaoMassa.recusadas
+        .map((item) => `${item.instance_name}: ${motivos[item.motivo] || item.motivo}`)
+        .join('; ')
+      return NextResponse.json({
+        error: `Nenhum número disponível para disparo em massa. ${detalhe}`,
+        refused_instances: decisaoMassa.recusadas,
+      }, { status: 409 })
+    }
+    // Segue apenas com os números aprovados, na ordem em que foram pedidos.
+    const massInstanceNames = decisaoMassa.permitidas.map((instancia) => instancia.instance_name)
+
     const { data: leads, error: leadError } = await supabaseAdmin
       .from('leads')
       .select('id, name, phone, email, status, custom_fields')
@@ -88,6 +111,7 @@ export async function POST(request: Request) {
     const activeLeadIds = new Set((activeHistories || []).map((history) => history.lead_id).filter(Boolean))
     const leadsById = new Map((leads || []).map((lead) => [lead.id, lead]))
     const skipped: Array<{ lead_id: string; name: string; reason: string }> = []
+    const phonesJaIncluidos = new Set<string>()
     const eligibleLeads: Array<{ lead: NonNullable<typeof leads>[number]; phone: string; instanceName: string; message: string }> = []
 
     for (const leadId of input.leadIds) {
@@ -109,9 +133,20 @@ export async function POST(request: Request) {
         skipped.push({ lead_id: lead.id, name: lead.name, reason: 'PHONE_INVALID' })
         continue
       }
+      // Uma mensagem por pessoa. A base tem o mesmo telefone cadastrado como
+      // leads diferentes (importação repetida de CSV), e deduplicar só por
+      // `lead_id` fazia a mesma pessoa receber uma mensagem por cadastro — sete,
+      // no pior caso observado em 10/09/2026. A trava definitiva é o índice
+      // único (mass_run_id, phone) no banco; esta checagem evita chegar lá e
+      // explica ao operador, no log da campanha, quem ficou de fora e por quê.
+      if (phonesJaIncluidos.has(normalizedPhone)) {
+        skipped.push({ lead_id: lead.id, name: lead.name, reason: 'PHONE_DUPLICATE' })
+        continue
+      }
+      phonesJaIncluidos.add(normalizedPhone)
 
       const queueIndex = eligibleLeads.length
-      const instanceName = instanceNames[Math.floor(queueIndex / input.messagesPerInstance) % instanceNames.length]
+      const instanceName = massInstanceNames[Math.floor(queueIndex / input.messagesPerInstance) % massInstanceNames.length]
       const template = input.messageVariants[randomInteger(0, input.messageVariants.length - 1)] || ''
       eligibleLeads.push({
         lead,
@@ -141,6 +176,27 @@ export async function POST(request: Request) {
     const cadenceClamped = effectiveMinDelaySeconds !== input.minDelaySeconds
       || effectiveMaxDelaySeconds !== input.maxDelaySeconds
 
+    // A execução ganha identidade antes de qualquer job existir. É ela que
+    // permite pausar/parar uma campanha já enfileirada (o worker consulta o
+    // status antes de cada envio) e que marca estes números como ocupados, para
+    // que lembrete e alerta não saiam por eles enquanto a campanha roda.
+    const { data: run, error: runError } = await supabaseAdmin
+      .from('mass_campaign_runs')
+      .insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        status: 'running',
+        instance_names: massInstanceNames,
+        total_messages: eligibleLeads.length,
+        skipped_messages: skipped.length,
+      })
+      .select('id')
+      .single()
+
+    if (runError || !run) {
+      throw new Error(`Falha ao registrar a execução da campanha: ${runError?.message || 'sem retorno'}`)
+    }
+
     const queuedAt = new Date().toISOString()
     const { data: histories, error: historyError } = await supabaseAdmin
       .from('alert_history')
@@ -149,6 +205,7 @@ export async function POST(request: Request) {
         organization_id: organizationId,
         client_id: null,
         lead_id: lead.id,
+        mass_run_id: run.id,
         phone,
         instance_name: instanceName,
         status: 'queued',
@@ -159,6 +216,11 @@ export async function POST(request: Request) {
       .select('id, lead_id')
 
     if (historyError || !histories || histories.length !== eligibleLeads.length) {
+      // Sem isto a run ficaria 'running' sem nenhum job, ocupando os números
+      // para lembrete indefinidamente.
+      await supabaseAdmin.from('mass_campaign_runs')
+        .update({ status: 'stopped', stop_reason: 'HISTORY_INSERT_FAILED', finished_at: new Date().toISOString() })
+        .eq('id', run.id)
       throw new Error(`Falha ao registrar histórico da campanha: ${historyError?.message || 'registros incompletos'}`)
     }
 
@@ -186,6 +248,7 @@ export async function POST(request: Request) {
           mediaMimeType: input.mediaMimeType || null,
           alertHistoryId,
           leadId: lead.id,
+          massRunId: run.id,
           source: 'lead_campaign',
         },
         opts: {
@@ -203,6 +266,9 @@ export async function POST(request: Request) {
       await messageQueue.addBulk(jobs)
     } catch (error) {
       await supabaseAdmin.from('alert_history').update({ status: 'failed', failed_at: new Date().toISOString(), error_message: 'QUEUE_ENQUEUE_FAILED' }).in('id', histories.map((history) => history.id))
+      await supabaseAdmin.from('mass_campaign_runs')
+        .update({ status: 'stopped', stop_reason: 'QUEUE_ENQUEUE_FAILED', finished_at: new Date().toISOString() })
+        .eq('id', run.id)
       throw error
     }
 
@@ -226,6 +292,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       queued: true,
+      run_id: run.id,
+      instance_names: massInstanceNames,
+      refused_instances: decisaoMassa.recusadas,
       queued_count: queuedLeadIds.length,
       queued_lead_ids: queuedLeadIds,
       skipped,

@@ -148,6 +148,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   let instanceId = normalizedJob.instanceId as string | undefined;
   let leadId = normalizedJob.leadId as string | undefined;
   const collectionDispatchId = normalizedJob.collectionDispatchId as string | undefined;
+  const massRunId = (job.data as Record<string, unknown>).massRunId as string | undefined;
   const contactReservationId = normalizedJob.contactReservationId as string | undefined;
   let interactiveMessage = normalizedJob.interactiveMessage as WhatsAppInteractiveMessage | undefined;
   let contactCategory: string | undefined;
@@ -607,6 +608,57 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     // 6. Circuit breaker por provedor: uma Evolution externa de um tenant fora do
     // ar não pode interromper os envios de quem usa outro servidor.
+    // 6.5 Freio da campanha em massa.
+    //
+    // Até 10/09/2026 não havia como parar uma campanha já enfileirada: o botão
+    // "PARAR CAMPANHA" só abortava a requisição HTTP, e os jobs seguiam saindo
+    // com o atraso programado. Agora a execução tem status, e é consultado aqui,
+    // imediatamente antes do envio — o que para a campanha sem precisar mexer no
+    // Redis, porque cada job acorda, lê o status e decide sozinho.
+    if (massRunId) {
+      const { data: massRun } = await supabaseAdmin
+        .from('mass_campaign_runs')
+        .select('status, stop_reason')
+        .eq('id', massRunId)
+        .maybeSingle();
+
+      // Sem a linha não há como saber se a campanha foi interrompida. Não enviar
+      // é a escolha segura: a mensagem fica como falha auditável em vez de
+      // escapar de um freio que pode ter sido acionado.
+      if (!massRun) {
+        logger.warn(`[Job ${job.id}] Execução de campanha ${massRunId} não encontrada; não enviando.`);
+        await updateAlertStatus('failed', { error_message: 'MASS_RUN_NOT_FOUND' });
+        await releaseCoordinationHold('MASS_RUN_NOT_FOUND');
+        return;
+      }
+
+      if (massRun.status === 'stopped') {
+        logger.info(`[Job ${job.id}] Campanha ${massRunId} parada pelo operador (${massRun.stop_reason || 'sem motivo'}); descartando envio.`);
+        // 'failed' e não 'cancelled': o enum alert_send_status não tem
+        // 'cancelled', e gravar valor fora do enum vira 400 silencioso no
+        // PostgREST. O motivo fica no error_message.
+        await updateAlertStatus('failed', { error_message: `MASS_RUN_STOPPED:${massRun.stop_reason || 'OPERATOR'}` });
+        await releaseCoordinationHold('MASS_RUN_STOPPED');
+        return;
+      }
+
+      if (massRun.status === 'paused') {
+        // Mesma lógica da pausa de instância: espera uma janela antes de
+        // desistir, porque quem pausou vai retomar.
+        const pausedSince = readBackpressure(job)?.pausedSince ?? Date.now();
+        if (Date.now() - pausedSince < INSTANCE_PAUSED_GRACE_MS) {
+          logger.info(`[Job ${job.id}] Campanha ${massRunId} pausada; reagendando.`);
+          await updateAlertStatus('pending', { error_message: 'MASS_RUN_PAUSED' });
+          await releaseCoordinationHold('MASS_RUN_PAUSED');
+          await deferJob(job, INSTANCE_PAUSED_RETRY_MS, 'MASS_RUN_PAUSED', { pausedSince });
+        }
+        logger.warn(`[Job ${job.id}] Campanha ${massRunId} pausada além da janela de espera; descartando envio.`);
+        await updateAlertStatus('failed', { error_message: 'MASS_RUN_PAUSED_EXPIRED' });
+        await releaseCoordinationHold('MASS_RUN_PAUSED_EXPIRED');
+        return;
+      }
+    }
+
     const providerScope = CircuitBreaker.scopeFor(finalUrl);
     if (await CircuitBreaker.isTripped(providerScope)) {
       const retryInMs = await CircuitBreaker.retryAfterMs(providerScope);

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Upload, Download, Search, FileText, Phone, Trash2, UserPlus, Lock, Zap, Loader2, Edit, ChevronLeft, ChevronRight, Play, Square, Settings2, Image as ImageIcon, AlertCircle, CheckCircle2, Info, X, ArrowRight, Columns3, Tag, ListChecks, Wand2, Star, MoreHorizontal, BarChart3, Users } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
@@ -263,6 +263,15 @@ export default function LeadsPage() {
   const [messagesPerInstance, setMessagesPerInstance] = useState(10)
   
   const [isSending, setIsSending] = useState(false)
+  // Execução da campanha no backend. Enquanto isto existe há mensagens que ainda
+  // podem sair, mesmo com a aba fechada — por isso o freio precisa falar com o
+  // servidor, e não só abortar a requisição local.
+  const [activeRun, setActiveRun] = useState<{ id: string; status: 'running' | 'paused'; pending: number } | null>(null)
+  const [runBusy, setRunBusy] = useState(false)
+  // Números presos a uma campanha que está rodando agora. Diferente de
+  // getChipCampaignAssignment, que olha os templates salvos em `campaigns`:
+  // isto é ocupação de verdade, vinda das execuções ativas.
+  const [busyInstanceNames, setBusyInstanceNames] = useState<string[]>([])
   const [logs, setLogs] = useState<{ id: string, time: string, type: 'success' | 'error' | 'info', message: string }[]>([])
   const abortControllerRef = useRef<AbortController | null>(null)
   const logEndRef = useRef<HTMLDivElement>(null)
@@ -500,9 +509,14 @@ export default function LeadsPage() {
        
         if (instData) {
           setInstances(instData)
-          // Auto-select: prefer non-primary chips; only use primary if it's the only one
+          // Auto-seleção: primeiro um número liberado para massa, depois qualquer
+          // secundário, e só por último o principal — que é reservado a
+          // lembretes e alertas, e serve aqui apenas a quem tem um número só.
+          const liberadosParaMassa = instData.filter((i) => i.allow_mass && !i.is_primary)
           const nonPrimary = instData.filter((i: any) => !i.is_primary)
-          if (nonPrimary.length > 0) {
+          if (liberadosParaMassa.length > 0) {
+            setSelectedInstances([liberadosParaMassa[0].instance_name])
+          } else if (nonPrimary.length > 0) {
             setSelectedInstances([nonPrimary[0].instance_name])
           } else if (instData.length > 0) {
             setSelectedInstances([instData[0].instance_name])
@@ -778,6 +792,65 @@ export default function LeadsPage() {
     if (mediaInputRef.current) mediaInputRef.current.value = ""
   }
 
+  const loadActiveRun = useCallback(async () => {
+    try {
+      const res = await fetch('/api/evolution/campaign-runs', { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
+      const runs: Array<{ id: string; status: 'running' | 'paused'; pending_messages?: number; instance_names?: string[] }> = data.runs || []
+      const run = runs[0]
+      setActiveRun(run ? { id: run.id, status: run.status, pending: run.pending_messages ?? 0 } : null)
+      setBusyInstanceNames(runs.filter((item) => item.status === 'running').flatMap((item) => item.instance_names || []))
+    } catch {
+      // Silencioso de propósito: não saber se há campanha ativa não pode quebrar
+      // a tela de leads, que serve para muito mais que disparar campanha.
+    }
+  }, [])
+
+  const controlRun = async (action: 'pause' | 'resume' | 'stop') => {
+    if (!activeRun) return
+    setRunBusy(true)
+    try {
+      const res = await fetch('/api/evolution/campaign-runs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId: activeRun.id, action }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível alterar a campanha.')
+        await loadActiveRun()
+        return
+      }
+      if (action === 'stop') {
+        toast.success(`Campanha parada. ${data.cancelled_messages || 0} mensagens canceladas antes de sair.`)
+        addLog('info', `Campanha parada pelo operador: ${data.cancelled_messages || 0} mensagens canceladas.`)
+        setActiveRun(null)
+        setIsSending(false)
+      } else {
+        toast.success(action === 'pause' ? 'Campanha pausada.' : 'Campanha retomada.')
+        addLog('info', action === 'pause' ? 'Campanha pausada; as mensagens restantes aguardam.' : 'Campanha retomada.')
+        await loadActiveRun()
+      }
+    } catch {
+      toast.error('Erro de conexão ao alterar a campanha.')
+    } finally {
+      setRunBusy(false)
+    }
+  }
+
+  // A campanha roda no backend e sobrevive a um F5: ao abrir a tela, reencontra a
+  // execução ativa para que Pausar/Parar continuem disponíveis.
+  // Busca na montagem. Dispara o mesmo aviso de lint que as outras duas buscas
+  // desta tela (react-hooks/set-state-in-effect): é o padrão de carregar dado do
+  // servidor ao abrir, e aqui é necessário porque o estado da campanha vive no
+  // backend — a tela pode ser reaberta com uma campanha já em andamento.
+  useEffect(() => {
+    void loadActiveRun()
+    const timer = setInterval(() => { void loadActiveRun() }, 30_000)
+    return () => clearInterval(timer)
+  }, [loadActiveRun])
+
   const addLog = (type: 'success' | 'error' | 'info', message: string) => {
     setLogs(prev => [{ id: Date.now().toString() + Math.random().toString(), time: new Date().toLocaleTimeString('pt-BR'), type, message }, ...prev])
   }
@@ -838,6 +911,14 @@ export default function LeadsPage() {
       const queuedLeadIds = Array.isArray(response.queued_lead_ids) ? response.queued_lead_ids as string[] : []
       setLeads((previous) => previous.map((lead) => queuedLeadIds.includes(lead.id) ? { ...lead, status: 'enfileirado' } : lead))
       addLog('success', `${response.queued_count || 0} mensagens enfileiradas no backend.`)
+      if (response.run_id) {
+        setActiveRun({ id: response.run_id, status: 'running', pending: response.queued_count || 0 })
+      }
+      if (Array.isArray(response.refused_instances) && response.refused_instances.length > 0) {
+        response.refused_instances.forEach((item: { instance_name?: string; motivo?: string }) => {
+          addLog('info', `Número não usado: ${item.instance_name} (${item.motivo})`)
+        })
+      }
       if (response.cadence?.clamped) {
         addLog('info', `Ritmo ajustado para ${response.cadence.min_delay_seconds}-${response.cadence.max_delay_seconds}s: a instância exige ao menos ${response.cadence.instance_floor_seconds}s entre mensagens.`)
       }
@@ -859,11 +940,15 @@ export default function LeadsPage() {
     }
   }
 
+  // O abort continua valendo para a janela curta antes do 202 (a requisição que
+  // enfileira). Depois disso, quem para a campanha é o status da execução no
+  // backend: os jobs já estão na fila com atraso e não dependem mais desta aba.
   const stopMassMessage = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       setIsSending(false)
     }
+    if (activeRun) void controlRun('stop')
   }
   // --- END MASS MESSAGING LOGIC ---
 
@@ -1282,8 +1367,22 @@ export default function LeadsPage() {
               </div>
               
               <div className="flex gap-3 pt-4 border-t border-border/50">
-                 <Button variant="outline" className="flex-1 text-[11px] h-8" onClick={() => {}}>Pausar</Button>
-                 <Button variant="outline" className="flex-1 text-[11px] h-8 text-danger hover:text-danger hover:bg-danger/10" onClick={() => { if(abortControllerRef.current) abortControllerRef.current.abort(); setIsSending(false) }}>Cancelar</Button>
+                 <Button
+                   variant="outline"
+                   className="flex-1 text-[11px] h-8"
+                   disabled={!activeRun || runBusy}
+                   onClick={() => controlRun(activeRun?.status === 'paused' ? 'resume' : 'pause')}
+                 >
+                   {activeRun?.status === 'paused' ? 'Retomar' : 'Pausar'}
+                 </Button>
+                 <Button
+                   variant="outline"
+                   className="flex-1 text-[11px] h-8 text-danger hover:text-danger hover:bg-danger/10"
+                   disabled={runBusy}
+                   onClick={stopMassMessage}
+                 >
+                   Parar
+                 </Button>
               </div>
             </>
           ) : (
@@ -1441,10 +1540,17 @@ export default function LeadsPage() {
                             const hasOtherAvailableInstances = instances.some(i => !i.is_primary && !getChipCampaignAssignment(i.instance_name))
                             
                             const isUnavailable = !!assignedCampaign
+                            // Ocupação real: o número está numa campanha rodando
+                            // agora, então não pode entrar em outra nem servir de
+                            // lembrete enquanto isso.
+                            const isBusyNow = busyInstanceNames.includes(inst.instance_name)
+                            // Papel do número: sem liberação para massa, fica de
+                            // fora do disparo (o principal tem regra própria).
+                            const isMassBlocked = !inst.is_primary && inst.allow_mass === false
                             const isBlockedPrimary = inst.is_primary && hasOtherAvailableInstances
 
                             return (
-                              <div key={inst.id} className={`flex items-center space-x-3 border p-3 rounded-xl transition-all ${isUnavailable || isBlockedPrimary ? 'opacity-50 bg-muted/20 border-border/50' : selectedInstances.includes(inst.instance_name) ? 'bg-primary/5 border-primary/40 shadow-[0_0_15px_rgba(var(--primary),0.1)]' : 'border-border/50 hover:border-primary/30 hover:bg-muted/30 cursor-pointer'}`}>
+                              <div key={inst.id} className={`flex items-center space-x-3 border p-3 rounded-xl transition-all ${isUnavailable || isBlockedPrimary || isBusyNow || isMassBlocked ? 'opacity-50 bg-muted/20 border-border/50' : selectedInstances.includes(inst.instance_name) ? 'bg-primary/5 border-primary/40 shadow-[0_0_15px_rgba(var(--primary),0.1)]' : 'border-border/50 hover:border-primary/30 hover:bg-muted/30 cursor-pointer'}`}>
                                 <Checkbox 
                                   id={`inst-${inst.id}`} 
                                   checked={selectedInstances.includes(inst.instance_name)}
@@ -1461,7 +1567,7 @@ export default function LeadsPage() {
                                       setSelectedInstances(prev => prev.filter(name => name !== inst.instance_name))
                                     }
                                   }}
-                                  disabled={isSending || isUnavailable || isBlockedPrimary}
+                                  disabled={isSending || isUnavailable || isBlockedPrimary || isBusyNow || isMassBlocked}
                                   className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                 />
                                 <Label htmlFor={`inst-${inst.id}`} className="flex-1 cursor-pointer flex flex-col gap-0.5">
@@ -1474,7 +1580,17 @@ export default function LeadsPage() {
                                       {phoneMask(inst.phone_number)}
                                     </span>
                                   )}
-                                  {isUnavailable && (
+                                  {isBusyNow && (
+                                    <span className="text-[10px] text-warning-fg font-medium">
+                                      Em campanha agora
+                                    </span>
+                                  )}
+                                  {isMassBlocked && !isBusyNow && (
+                                    <span className="text-[10px] text-muted-foreground font-medium">
+                                      Reservado para lembretes · libere em Automação
+                                    </span>
+                                  )}
+                                  {isUnavailable && !isBusyNow && !isMassBlocked && (
                                     <span className="text-[10px] text-warning-fg font-medium">
                                       Em uso: {assignedCampaign}
                                     </span>
@@ -1712,14 +1828,32 @@ export default function LeadsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   
-                  {isSending ? (
-                    <Button 
-                      onClick={stopMassMessage} 
-                      className="w-full h-12 bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse"
-                    >
-                      <Square className="w-5 h-5 mr-2" />
-                      PARAR CAMPANHA
-                    </Button>
+                  {isSending || activeRun ? (
+                    <div className="space-y-2">
+                      <Button
+                        onClick={stopMassMessage}
+                        disabled={runBusy}
+                        className="w-full h-12 bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse"
+                      >
+                        <Square className="w-5 h-5 mr-2" />
+                        PARAR CAMPANHA
+                      </Button>
+                      {activeRun && (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="w-full h-9 text-xs"
+                            disabled={runBusy}
+                            onClick={() => controlRun(activeRun.status === 'paused' ? 'resume' : 'pause')}
+                          >
+                            {activeRun.status === 'paused' ? 'Retomar envio' : 'Pausar envio'}
+                          </Button>
+                          <p className="text-center text-[11px] text-muted-foreground">
+                            {activeRun.status === 'paused' ? 'Pausada' : 'Em andamento'} · <span className="num">{activeRun.pending}</span> na fila
+                          </p>
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <Button 
                       onClick={startMassMessage} 

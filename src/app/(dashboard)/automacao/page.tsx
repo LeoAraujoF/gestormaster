@@ -478,6 +478,25 @@ export default function AutomacaoPage() {
     } catch (error) { toast.error('Erro de conexão ao definir instância primária.') } finally { setIsConnecting(false) }
   }
 
+  // Papel do número: liberar ou reservar para disparo em massa. O principal fica
+  // sempre reservado a lembretes e alertas — a rota recusa liberá-lo.
+  const handleToggleMassRole = async (instanceName: string, allowMass: boolean) => {
+    setIsConnecting(true)
+    try {
+      const res = await fetch('/api/evolution/instance-role', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceName, allowMass })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(allowMass
+          ? `${instanceName} liberado para disparo em massa.`
+          : `${instanceName} reservado para lembretes e alertas.`)
+        setInstances(prev => prev.map(inst => inst.instance_name === instanceName ? { ...inst, allow_mass: allowMass } : inst))
+      } else toast.error(data.error || 'Erro ao alterar o papel do número.')
+    } catch { toast.error('Erro de conexão ao alterar o papel do número.') } finally { setIsConnecting(false) }
+  }
+
   /* ————— anti-ban + chamadas ————— */
   const handleSaveAntiBan = async () => {
     setIsSavingAntiBan(true)
@@ -996,6 +1015,9 @@ export default function AutomacaoPage() {
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-[12.5px] font-semibold">{inst.instance_name}</span>
                         {inst.is_primary && <Star className="size-3 shrink-0 fill-warning text-warning" />}
+                        <span className="microlabel shrink-0 rounded bg-secondary px-1.5 py-0.5 text-secondary-foreground">
+                          {inst.is_primary ? 'lembretes' : inst.allow_mass ? 'massa' : 'lembretes'}
+                        </span>
                       </div>
                       <div className="num truncate text-[10.5px] text-muted-foreground">
                         {inst.phone_number ? phoneMask(inst.phone_number) : qr ? 'aguardando conexão · escaneie o QR' : '—'}
@@ -1012,6 +1034,11 @@ export default function AutomacaoPage() {
                       <DropdownMenuContent align="end">
                         {online && !inst.is_primary && (
                           <DropdownMenuItem onClick={() => handleSetPrimary(inst.instance_name)}>Tornar principal</DropdownMenuItem>
+                        )}
+                        {!inst.is_primary && (
+                          <DropdownMenuItem onClick={() => handleToggleMassRole(inst.instance_name, !inst.allow_mass)}>
+                            {inst.allow_mass ? 'Reservar para lembretes' : 'Liberar para disparo em massa'}
+                          </DropdownMenuItem>
                         )}
                         {online && (
                           <DropdownMenuItem onClick={() => handleDisconnect(inst.instance_name)}>Desconectar</DropdownMenuItem>

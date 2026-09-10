@@ -172,7 +172,10 @@ export async function POST(request: Request) {
           source: 'lead_campaign',
         },
         opts: {
-          jobId: `alert-history:${alertHistoryId}`,
+          // Separador com hífen, não `:`. O BullMQ 5.77 rejeita id customizado
+          // com um único dois-pontos (`Custom Id cannot contain :`, job.js), o
+          // que fazia toda campanha estourar no addBulk antes de tocar no Redis.
+          jobId: `alert-history-${alertHistoryId}`,
           priority: 5,
           delay: cumulativeDelay,
         },

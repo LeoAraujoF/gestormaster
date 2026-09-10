@@ -84,7 +84,7 @@ function ReportChartCard({
   children: ReactNode
 }) {
   return (
-    <section className={`overflow-hidden rounded-[24px] border border-border bg-card shadow-sm ${className || ""}`}>
+    <section className={`overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,.04)] ${className || ""}`}>
       <div className="border-b border-border px-4 py-4 sm:px-5">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>

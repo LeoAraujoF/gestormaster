@@ -198,7 +198,7 @@ export function FinancialReportsTable({ data, displayValue }: FinancialReportsTa
 
   if (data.length === 0) {
     return (
-      <div className="flex min-h-56 flex-col items-center justify-center rounded-[24px] border border-dashed border-border bg-muted/20 px-6 text-center">
+      <div className="flex min-h-56 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 text-center">
         <p className="text-sm font-semibold text-foreground">Nenhuma movimentação encontrada</p>
         <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Ajuste os filtros ou escolha outro período para consultar os pagamentos.</p>
       </div>
@@ -206,7 +206,7 @@ export function FinancialReportsTable({ data, displayValue }: FinancialReportsTa
   }
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium text-foreground">{data.length} {data.length === 1 ? "movimentação" : "movimentações"}</p>

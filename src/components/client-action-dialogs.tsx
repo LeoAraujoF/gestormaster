@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { BadgePercent, Loader2 } from "lucide-react"
+import { BadgePercent, Loader2, RefreshCw, X } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import confetti from "canvas-confetti"
@@ -379,36 +379,37 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[440px] sm:max-w-[720px] focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[560px] sm:max-w-[560px] focus:outline-none"
         >
           <div className="modal-2a flex flex-col max-h-[90vh]">
             {/* HEADER */}
             <div className="modal-header-2a flex-shrink-0">
-              <span className="w-[34px] h-[34px] rounded-[9px] bg-success-bg text-success-fg flex items-center justify-center text-[15px]">
-                ↻
+              <span className="w-[34px] h-[34px] rounded-[9px] bg-interactive-bg text-interactive-fg flex items-center justify-center flex-shrink-0">
+                <RefreshCw className="w-[16px] h-[16px]" aria-hidden="true" />
               </span>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground truncate">
-                  Renovar assinatura
+                  Renovar plano
                 </div>
-                <div className="text-muted-foreground text-[11px] mt-[1px] truncate">
+                <div className="text-muted-foreground text-[11px] mt-[2px] truncate">
                   {client?.name} · vence {displayDate}
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => onOpenChange(false)}
-                className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
+                aria-label="Fechar"
+                className="cursor-pointer border-none bg-transparent text-muted-foreground hover:text-secondary-foreground flex-shrink-0"
               >
-                ✕
+                <X className="w-[15px] h-[15px]" aria-hidden="true" />
               </button>
             </div>
             
             <div className="p-[20px_22px] overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[24px]">
-                {/* LEFT COLUMN */}
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-col gap-[16px]">
+                <div className="min-w-0">
                   {/* Period grid */}
+              <p className="microlabel mb-[8px]">PERÍODO</p>
               <div className="grid grid-cols-2 gap-[8px] mb-[12px]">
                 {periods.map(p => {
                   const isActive =
@@ -420,15 +421,16 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
                       key={`${p.label}-${p.months}`}
                       type="button"
                       onClick={() => selectRenewPeriod(p.months, p.price)}
+                      aria-pressed={isActive}
                       className={cn(
-                        "rounded-[8px] p-[10px] text-left transition-colors flex flex-col gap-[2px]",
+                        "rounded-[8px] border p-[10px] text-left transition-colors flex flex-col gap-[2px] min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isActive
-                          ? "border-[1.5px] border-primary bg-muted"
-                          : "border-[1px] border-input bg-card hover:border-primary/40"
+                          ? "border-interactive bg-interactive-bg text-interactive-fg"
+                          : "border-border bg-card text-foreground hover:bg-muted"
                       )}
                     >
-                      <span className="text-[12px] font-semibold text-foreground">{p.label}</span>
-                      <span className="font-mono text-[11px] text-secondary-foreground">{formatCurrency(p.price)}</span>
+                      <span className="text-[12.5px] font-semibold">{p.label}</span>
+                      <span className={cn("font-mono text-[11px]", isActive ? "text-interactive-fg/80" : "text-secondary-foreground")}>{formatCurrency(p.price)}</span>
                     </button>
                   )
                 })}
@@ -502,43 +504,40 @@ export function RenewDialog({ open, onOpenChange, client, onSuccess }: { open: b
               </div>
 
               {/* Summary ruler */}
-              <div className="flex rounded-[8px] border border-border bg-muted overflow-hidden mb-[20px] w-full min-w-0">
-                <div className="flex-1 p-[12px] border-r border-border min-w-0">
-                  <div className="microlabel mb-[4px] truncate">NOVO VENCIMENTO</div>
-                  <div className="font-mono text-[14px] font-bold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</div>
-                  <div className="mt-[2px] text-[10px] text-muted-foreground">{renewalCredits} crédito{renewalCredits === 1 ? "" : "s"}</div>
+              <div className="flex items-start justify-between gap-[10px] rounded-[10px] bg-muted px-[14px] py-[12px] mb-[4px] w-full min-w-0">
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground">Novo vencimento</p>
+                  <p className="mt-[3px] font-mono text-[13px] font-semibold text-foreground">{newDueDate.toLocaleDateString('pt-BR')}</p>
+                  <p className="mt-[2px] text-[10px] text-muted-foreground">{renewalCredits} crédito{renewalCredits === 1 ? "" : "s"}</p>
                 </div>
-                <div className="flex-1 p-[12px] min-w-0">
-                  <div className="microlabel mb-[4px] truncate">TOTAL</div>
-                  <div className="font-mono text-[14px] font-bold text-money">{formatCurrency(renewAmount)}</div>
-                  <div className="mt-[2px] text-[10px] text-muted-foreground">
-                    Líquido estimado {formatCurrency(renewalBillingTotals.netProfit)}
-                  </div>
+                <div className="min-w-0 text-right">
+                  <p className="text-[10px] text-muted-foreground">Total</p>
+                  <p className="mt-[3px] font-mono text-[13px] font-semibold text-money">{formatCurrency(renewAmount)}</p>
+                  <p className="mt-[2px] text-[10px] text-muted-foreground">Líquido {formatCurrency(renewalBillingTotals.netProfit)}</p>
                 </div>
               </div>
 
                 </div>
 
-                {/* RIGHT COLUMN */}
-                <div className="flex-1 min-w-0 flex flex-col">
+                <div className="min-w-0 flex flex-col">
                   {/* Payment methods */}
-                  <div className="space-y-[8px] mb-[20px]">
+                  <p className="microlabel mb-[8px]">FORMA DE PAGAMENTO</p>
+                  <div className="flex gap-[8px] mb-[16px]">
                     {paymentMethods.map(pm => (
                       <button
                         type="button"
                         key={pm.id}
                         onClick={() => setPaymentMethod(pm.id)}
                         aria-pressed={paymentMethod === pm.id}
-                        className="flex w-full items-center gap-[12px] rounded-[8px] border border-input p-[12px] text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        title={pm.desc}
+                        className={cn(
+                          "flex-1 min-h-[38px] rounded-[8px] border text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          paymentMethod === pm.id
+                            ? "border-interactive bg-interactive-bg text-interactive-fg"
+                            : "border-border bg-card text-foreground hover:bg-muted"
+                        )}
                       >
-                        <div className={cn(
-                          "w-[15px] h-[15px] rounded-full border transition-all",
-                          paymentMethod === pm.id ? "border-[4.5px] border-primary" : "border-[1px] border-input"
-                        )} />
-                        <div>
-                          <div className="text-[13px] font-medium text-foreground leading-tight">{pm.label}</div>
-                          <div className="text-[11px] text-muted-foreground leading-tight mt-[2px]">{pm.desc}</div>
-                        </div>
+                        {pm.label}
                       </button>
                     ))}
                   </div>

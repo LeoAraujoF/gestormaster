@@ -1,5 +1,7 @@
 import type { ComponentProps, ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 type PageWidth = "compact" | "default" | "wide" | "full"
@@ -154,5 +156,102 @@ export function ResponsiveDataView({
       <div className={breakpoint.mobile}>{mobile}</div>
       <div className={breakpoint.desktop}>{desktop}</div>
     </div>
+  )
+}
+
+/**
+ * Anatomia de card do handoff `design_handoff_v2_redesign` (v2): 16px de raio,
+ * borda 1px real, cabeçalho 16/20px com título 14.5px/600 e descrição 11.5px,
+ * conteúdo com respiro de 20px, rodapé 14/20px. Usar em vez do `Card` genérico
+ * do shadcn ao recriar telas desse handoff, para manter fidelidade visual entre
+ * as páginas convertidas.
+ */
+interface SectionCardProps {
+  title: ReactNode
+  description?: ReactNode
+  headerBadge?: ReactNode
+  headerAction?: ReactNode
+  children?: ReactNode
+  footer?: ReactNode
+  contentClassName?: string
+  className?: string
+}
+
+export function SectionCard({
+  title,
+  description,
+  headerBadge,
+  headerAction,
+  children,
+  footer,
+  contentClassName,
+  className,
+}: SectionCardProps) {
+  return (
+    <div className={cn("overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[14.5px] font-semibold text-foreground">{title}</h2>
+            {headerBadge}
+          </div>
+          {description ? <p className="mt-[3px] text-[11.5px] text-muted-foreground">{description}</p> : null}
+        </div>
+        {headerAction}
+      </div>
+      {children ? <div className={cn("p-5", contentClassName)}>{children}</div> : null}
+      {footer ? <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5">{footer}</div> : null}
+    </div>
+  )
+}
+
+/**
+ * Cabeçalho-cartão do handoff v2 (seção WORKSPACE HEADER de `Clientes.dc.html`):
+ * raio 8px, borda 1px, quadrado de ícone 40px em `interactive`, sobrancelha com
+ * selo de contagem ao lado, título 26px e descrição 13px. Diferente do
+ * `PageHeader` solto, este é uma superfície de cartão.
+ */
+interface PageHeaderCardProps {
+  icon: LucideIcon
+  eyebrow: ReactNode
+  badge?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  actions?: ReactNode
+  titleId?: string
+}
+
+export function PageHeaderCard({ icon: Icon, eyebrow, badge, title, description, actions, titleId }: PageHeaderCardProps) {
+  return (
+    <section aria-labelledby={titleId} className="rounded-lg border border-border bg-card">
+      <div className="flex flex-wrap items-start justify-between gap-5 px-5 py-[22px] sm:px-6">
+        <div className="flex min-w-0 items-start gap-3.5">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-black/[0.04] bg-interactive-bg text-interactive-fg">
+            <Icon className="size-[18px]" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="microlabel">{eyebrow}</p>
+              {badge ? (
+                <span className="num rounded-[6px] bg-interactive-bg px-[7px] py-0.5 text-[10px] font-semibold text-interactive-fg">{badge}</span>
+              ) : null}
+            </div>
+            <h1 id={titleId} className="mt-1 text-[26px] font-semibold tracking-[-0.045em] text-foreground">{title}</h1>
+            {description ? (
+              <p className="mt-2 max-w-[560px] text-[13px] leading-[1.6] text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+    </section>
+  )
+}
+
+export function ComingSoon({ label = "Em breve" }: { label?: string }) {
+  return (
+    <Badge variant="outline" className="shrink-0 rounded-md text-[10px] font-medium text-muted-foreground">
+      {label}
+    </Badge>
   )
 }

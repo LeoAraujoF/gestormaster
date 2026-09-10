@@ -10,15 +10,15 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronDown,
-  CircleHelp,
   Clock3,
   FileText,
   LifeBuoy,
   Loader2,
-  MessageSquareText,
   Plus,
   Search,
   Smartphone,
+  ThumbsDown,
+  ThumbsUp,
   Ticket,
 } from "lucide-react"
 
@@ -27,14 +27,13 @@ import { logAuditClient } from "@/lib/audit-client"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
+import { PageHeader, PageShell, SectionCard } from "@/components/page-layout"
 import { toast } from "sonner"
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed"
@@ -181,10 +180,10 @@ function StatusBadge({ status }: { status: string }) {
     <Badge
       variant="outline"
       className={cn(
-        "border-0 font-medium",
-        status === "open" && "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-        status === "in_progress" && "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-        status === "resolved" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+        "rounded-[5px] border-transparent font-mono text-[9px] font-bold uppercase tracking-[0.03em]",
+        status === "open" && "bg-interactive-bg text-interactive-fg",
+        status === "in_progress" && "bg-warning-bg text-warning-fg",
+        status === "resolved" && "bg-success-bg text-success-fg",
         status === "closed" && "bg-muted text-muted-foreground",
       )}
     >
@@ -199,9 +198,9 @@ function PriorityBadge({ priority }: { priority: string }) {
     <Badge
       variant="outline"
       className={cn(
-        "font-medium",
-        priority === "critical" && "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-        priority === "high" && "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+        "rounded-[5px] font-medium",
+        priority === "critical" && "border-danger-border bg-danger-bg text-danger-fg",
+        priority === "high" && "border-warning-border bg-warning-bg text-warning-fg",
       )}
     >
       {label}
@@ -216,10 +215,12 @@ export default function SuportePage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [isLoadingTickets, setIsLoadingTickets] = useState(true)
   const [whatsappStatus, setWhatsappStatus] = useState<"checking" | "connected" | "disconnected">("checking")
+  const [planName, setPlanName] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("help")
   const [faqSearch, setFaqSearch] = useState("")
   const [faqCategory, setFaqCategory] = useState<(typeof FAQ_CATEGORIES)[number]>("Todos")
   const [openFaqId, setOpenFaqId] = useState<string | null>(FAQS[0].id)
+  const [faqVotes, setFaqVotes] = useState<Record<string, "yes" | "no">>({})
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newTicket, setNewTicket] = useState({ subject: "", priority: "medium", page_url: "", description: "" })
@@ -236,7 +237,7 @@ export default function SuportePage() {
       return
     }
 
-    const [ticketsResult, whatsappResult] = await Promise.all([
+    const [ticketsResult, whatsappResult, entitlementResult] = await Promise.all([
       supabase
         .from("tickets")
         .select("*")
@@ -248,10 +249,12 @@ export default function SuportePage() {
         .eq("user_id", currentUser.id)
         .eq("status", "connected")
         .limit(1),
+      fetch("/api/entitlements", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ])
 
     if (ticketsResult.data) setTickets(ticketsResult.data as SupportTicket[])
     setWhatsappStatus(whatsappResult.data?.length ? "connected" : "disconnected")
+    if (entitlementResult?.plan) setPlanName(entitlementResult.plan.charAt(0).toUpperCase() + entitlementResult.plan.slice(1))
     setIsLoadingTickets(false)
   }, [supabase])
 
@@ -302,6 +305,10 @@ export default function SuportePage() {
     }
   }
 
+  const voteFaq = (id: string, helpful: boolean) => {
+    setFaqVotes((prev) => ({ ...prev, [id]: helpful ? "yes" : "no" }))
+  }
+
   const activeTickets = tickets.filter((ticket) => !["resolved", "closed"].includes(ticket.status))
   const inProgressTickets = tickets.filter((ticket) => ticket.status === "in_progress")
   const resolvedTickets = tickets.filter((ticket) => ["resolved", "closed"].includes(ticket.status))
@@ -312,6 +319,10 @@ export default function SuportePage() {
     const searchable = normalizeText(`${faq.question} ${faq.answer} ${faq.keywords}`)
     return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery))
   })
+  const categoryCounts = FAQ_CATEGORIES.map((category) => ({
+    key: category,
+    count: category === "Todos" ? FAQS.length : FAQS.filter((faq) => faq.category === category).length,
+  }))
 
   return (
     <PageShell width="default">
@@ -327,251 +338,279 @@ export default function SuportePage() {
         }
       />
 
-      <MetricGrid columns={4}>
-        <Card className={cn("border-border", activeTickets.length > 0 && "border-blue-500/25")}>
-          <CardContent className="flex items-start justify-between p-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className={cn("rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]", activeTickets.length > 0 && "border-interactive/25")}>
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Chamados ativos</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{isLoadingTickets ? "—" : activeTickets.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">abertos ou em análise</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">abertos ou em análise</p>
             </div>
-            <span className="rounded-lg bg-blue-500/10 p-2 text-blue-700 dark:text-blue-300"><Ticket className="size-4" aria-hidden="true" /></span>
-          </CardContent>
-        </Card>
-        <Card className={cn("border-border", inProgressTickets.length > 0 && "border-amber-500/25")}>
-          <CardContent className="flex items-start justify-between p-4">
+            <span className="rounded-lg bg-interactive-bg p-2 text-interactive-fg"><Ticket className="size-4" aria-hidden="true" /></span>
+          </div>
+        </div>
+        <div className={cn("rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]", inProgressTickets.length > 0 && "border-warning-border")}>
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Em análise</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{isLoadingTickets ? "—" : inProgressTickets.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">com a equipe de suporte</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">com a equipe de suporte</p>
             </div>
-            <span className="rounded-lg bg-amber-500/10 p-2 text-amber-700 dark:text-amber-300"><Clock3 className="size-4" aria-hidden="true" /></span>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="flex items-start justify-between p-4">
+            <span className="rounded-lg bg-warning-bg p-2 text-warning-fg"><Clock3 className="size-4" aria-hidden="true" /></span>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Histórico concluído</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{isLoadingTickets ? "—" : resolvedTickets.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">resolvidos ou encerrados</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">resolvidos ou encerrados</p>
             </div>
-            <span className="rounded-lg bg-emerald-500/10 p-2 text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-4" aria-hidden="true" /></span>
-          </CardContent>
-        </Card>
-        <Card className={cn("border-border", whatsappStatus === "disconnected" && "border-amber-500/25")}>
-          <CardContent className="flex items-start justify-between p-4">
+            <span className="rounded-lg bg-success-bg p-2 text-success-fg"><CheckCircle2 className="size-4" aria-hidden="true" /></span>
+          </div>
+        </div>
+        <div className={cn("rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]", whatsappStatus === "disconnected" && "border-warning-border")}>
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Canal de envio</p>
               <p className="mt-2 text-base font-semibold tracking-tight">
                 {whatsappStatus === "checking" ? "Verificando…" : whatsappStatus === "connected" ? "Disponível" : "Indisponível"}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">ao menos um número online</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">ao menos um número online</p>
             </div>
-            <span className={cn("rounded-lg p-2", whatsappStatus === "connected" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/10 text-amber-700 dark:text-amber-300")}>
+            <span className={cn("rounded-lg p-2", whatsappStatus === "connected" ? "bg-success-bg text-success-fg" : "bg-warning-bg text-warning-fg")}>
               {whatsappStatus === "checking" ? <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-label="Verificando conexão" /> : <Smartphone className="size-4" aria-hidden="true" />}
             </span>
-          </CardContent>
-        </Card>
-      </MetricGrid>
+          </div>
+        </div>
+      </div>
 
       {criticalTickets.length > 0 && (
-        <div className="flex flex-col gap-3 rounded-xl border border-red-500/25 bg-red-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-danger-border bg-danger-bg px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-700 dark:text-red-300" aria-hidden="true" />
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger-fg" aria-hidden="true" />
             <div>
-              <p className="text-sm font-semibold">{criticalTickets.length === 1 ? "1 chamado crítico está ativo" : `${criticalTickets.length} chamados críticos estão ativos`}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Acompanhe o histórico antes de abrir outra solicitação sobre o mesmo problema.</p>
+              <p className="text-[13px] font-semibold text-danger-fg">{criticalTickets.length === 1 ? "1 chamado crítico está ativo" : `${criticalTickets.length} chamados críticos estão ativos`}</p>
+              <p className="mt-0.5 text-[11px] text-danger-fg/80">Acompanhe o histórico antes de abrir outra solicitação sobre o mesmo problema.</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setActiveTab("tickets")}>Ver chamados</Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("tickets")} className="h-8 shrink-0 text-xs">Ver chamados</Button>
         </div>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid h-12 w-full grid-cols-2 border bg-muted/50 p-1 sm:max-w-[430px]">
-          <TabsTrigger value="help" className="h-full gap-2 rounded-lg">
-            <BookOpen className="size-4" aria-hidden="true" /> Central de ajuda
+        <TabsList className="grid h-11 w-full grid-cols-2 rounded-[10px] border border-border bg-muted p-1 sm:max-w-[380px]">
+          <TabsTrigger value="help" className="h-full gap-1.5 rounded-[7px] text-[13px]">
+            <BookOpen className="size-3.5" aria-hidden="true" /> Respostas rápidas
           </TabsTrigger>
-          <TabsTrigger value="tickets" className="h-full gap-2 rounded-lg">
-            <Ticket className="size-4" aria-hidden="true" /> Meus chamados
+          <TabsTrigger value="tickets" className="h-full gap-1.5 rounded-[7px] text-[13px]">
+            <Ticket className="size-3.5" aria-hidden="true" /> Meus chamados
             {activeTickets.length > 0 && <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[9px] font-semibold text-background">{activeTickets.length}</span>}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="help" className="mt-5">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-            <Card className="overflow-hidden border-border">
-              <CardHeader className="border-b border-border bg-muted/20">
-                <div className="flex items-start gap-3">
-                  <span className="rounded-lg bg-primary/10 p-2 text-primary"><CircleHelp className="size-4" aria-hidden="true" /></span>
-                  <div>
-                    <CardTitle className="text-lg">Como podemos ajudar?</CardTitle>
-                    <CardDescription className="mt-1">As respostas abaixo foram revisadas conforme as telas e os recursos atuais.</CardDescription>
-                  </div>
-                </div>
-                <div className="relative mt-2">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                  <Input
-                    value={faqSearch}
-                    onChange={(event) => setFaqSearch(event.target.value)}
-                    className="h-11 pl-9"
-                    placeholder="Busque por WhatsApp, PIX, disparo, chamado…"
-                    aria-label="Buscar na central de ajuda"
-                  />
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Categorias da central de ajuda">
-                  {FAQ_CATEGORIES.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setFaqCategory(category)}
-                      aria-pressed={faqCategory === category}
-                      className={cn(
-                        "min-h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
-                        faqCategory === category ? "border-foreground bg-foreground text-background" : "border-border bg-card text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-5">
-                <p className="mb-3 text-xs text-muted-foreground" aria-live="polite">
-                  {filteredFaqs.length === 1 ? "1 orientação encontrada" : `${filteredFaqs.length} orientações encontradas`}
-                </p>
+        <TabsContent value="help" className="mt-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,1fr)] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-3.5">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  value={faqSearch}
+                  onChange={(event) => setFaqSearch(event.target.value)}
+                  className="h-11 rounded-[10px] pl-9 text-[13px]"
+                  placeholder="Buscar na base de conhecimento…"
+                  aria-label="Buscar na central de ajuda"
+                />
+              </div>
+
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5" aria-label="Categorias da central de ajuda">
+                {categoryCounts.map(({ key, count }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFaqCategory(key)}
+                    aria-pressed={faqCategory === key}
+                    className={cn(
+                      "min-h-[30px] shrink-0 rounded-[8px] border px-2.5 text-[11.5px] transition-colors motion-reduce:transition-none",
+                      faqCategory === key
+                        ? "border-interactive bg-interactive-bg font-semibold text-interactive-fg"
+                        : "border-border bg-card font-medium text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {key} <span className="font-mono opacity-70">{count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                 {filteredFaqs.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border px-5 py-10 text-center">
+                  <div className="px-5 py-12 text-center">
                     <Search className="mx-auto size-5 text-muted-foreground" aria-hidden="true" />
-                    <p className="mt-3 text-sm font-semibold">Nenhuma orientação encontrada</p>
-                    <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">Tente outro termo ou abra um chamado informando a página e o que você precisa fazer.</p>
-                    <Button className="mt-4" size="sm" onClick={() => setIsNewTicketOpen(true)}>Abrir chamado</Button>
+                    <p className="mt-3 text-[13px] font-semibold">Nada encontrado</p>
+                    <p className="mx-auto mt-1.5 max-w-md text-[11.5px] leading-[1.55] text-muted-foreground">
+                      Não achamos resposta para “{faqSearch.trim()}”. Abra um chamado e resolvemos com você.
+                    </p>
+                    <Button size="sm" className="mt-3.5 h-[34px] px-3.5 text-xs" onClick={() => setIsNewTicketOpen(true)}>Abrir chamado</Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {filteredFaqs.map((faq) => {
-                      const isOpen = openFaqId === faq.id
-                      const panelId = `faq-panel-${faq.id}`
-                      return (
-                        <div key={faq.id} className={cn("overflow-hidden rounded-xl border transition-colors motion-reduce:transition-none", isOpen ? "border-primary/25 bg-primary/[0.025]" : "border-border bg-card")}>
-                          <button
-                            type="button"
-                            onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
-                            aria-expanded={isOpen}
-                            aria-controls={panelId}
-                            className="flex min-h-14 w-full items-center justify-between gap-4 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                          >
-                            <span className="min-w-0">
-                              <span className="block text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">{faq.category}</span>
-                              <span className="mt-1 block text-sm font-semibold leading-5">{faq.question}</span>
-                            </span>
-                            <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", isOpen && "rotate-180")} aria-hidden="true" />
-                          </button>
-                          {isOpen && (
-                            <div id={panelId} className="border-t border-border/70 px-4 py-4">
-                              <p className="text-sm leading-6 text-muted-foreground">{faq.answer}</p>
+                  filteredFaqs.map((faq) => {
+                    const isOpen = openFaqId === faq.id
+                    const vote = faqVotes[faq.id]
+                    const panelId = `faq-panel-${faq.id}`
+                    return (
+                      <div key={faq.id} className="border-b border-border last:border-b-0">
+                        <button
+                          type="button"
+                          onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
+                          aria-expanded={isOpen}
+                          aria-controls={panelId}
+                          className="flex w-full items-center gap-3 px-[18px] py-[15px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                        >
+                          <span className="shrink-0 rounded-[5px] bg-secondary px-1.5 py-[3px] font-mono text-[9px] font-bold uppercase tracking-[0.03em] text-secondary-foreground">
+                            {faq.category}
+                          </span>
+                          <span className={cn("min-w-0 flex-1 text-[13px] text-foreground", isOpen ? "font-semibold" : "font-medium")}>{faq.question}</span>
+                          <ChevronDown className={cn("size-[15px] shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", isOpen && "rotate-180")} aria-hidden="true" />
+                        </button>
+                        {isOpen && (
+                          <div id={panelId} className="px-[18px] pb-4">
+                            <p className="max-w-[640px] text-[12.5px] leading-[1.65] text-muted-foreground">{faq.answer}</p>
+                            <div className="mt-3 flex flex-wrap items-center gap-2.5">
                               {faq.href && faq.action && (
-                                <Button nativeButton={false} render={<Link href={faq.href} />} variant="link" className="mt-3 h-auto px-0 text-sm">
+                                <Button
+                                  nativeButton={false}
+                                  render={<Link href={faq.href} />}
+                                  variant="link"
+                                  className="h-auto px-0 text-[12.5px]"
+                                >
                                   {faq.action} <ArrowRight className="size-3.5" aria-hidden="true" />
                                 </Button>
                               )}
+                              <span className="text-[10.5px] text-muted-foreground">Isso resolveu?</span>
+                              <button
+                                type="button"
+                                onClick={() => voteFaq(faq.id, true)}
+                                className={cn(
+                                  "flex h-[26px] items-center gap-1 rounded-[6px] border px-2.5 text-[11px] font-semibold",
+                                  vote === "yes" ? "border-money bg-success-bg text-success-fg" : "border-border bg-card text-muted-foreground",
+                                )}
+                              >
+                                <ThumbsUp className="size-3" aria-hidden="true" /> Sim
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => voteFaq(faq.id, false)}
+                                className={cn(
+                                  "flex h-[26px] items-center gap-1 rounded-[6px] border px-2.5 text-[11px] font-semibold",
+                                  vote === "no" ? "border-danger-border bg-danger-bg text-danger-fg" : "border-border bg-card text-muted-foreground",
+                                )}
+                              >
+                                <ThumbsDown className="size-3" aria-hidden="true" /> Não
+                              </button>
+                              {vote && <span className="text-[10.5px] font-semibold text-money">Obrigado pelo retorno!</span>}
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <div className="space-y-4">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <span className="mb-2 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><LifeBuoy className="size-4" aria-hidden="true" /></span>
-                  <CardTitle className="text-base">Não encontrou a resposta?</CardTitle>
-                  <CardDescription>Abra um chamado. O histórico e as respostas ficam vinculados à sua conta nesta central.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" onClick={() => setIsNewTicketOpen(true)}>
-                    <MessageSquareText className="size-4" aria-hidden="true" /> Abrir novo chamado
+            <div className="flex flex-col gap-3.5">
+              <SectionCard
+                title="Seu plano"
+                description={planName ?? "—"}
+                headerAction={<span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-interactive-bg text-interactive-fg"><LifeBuoy className="size-[15px]" aria-hidden="true" /></span>}
+                footer={
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/planos")}
+                    className="h-[34px] w-full rounded-[8px] text-xs font-medium"
+                  >
+                    Comparar planos
                   </Button>
-                </CardContent>
-              </Card>
+                }
+              >
+                <p className="text-[11px] leading-[1.55] text-muted-foreground">
+                  Abra um chamado ou consulte a base de conhecimento — o histórico e as respostas ficam vinculados à sua conta.
+                </p>
+              </SectionCard>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base"><FileText className="size-4 text-muted-foreground" aria-hidden="true" /> Antes de enviar</CardTitle>
-                  <CardDescription>Inclua contexto suficiente para reduzir perguntas adicionais.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 text-sm text-muted-foreground">
-                    {["Página em que ocorreu", "Ação que você tentou executar", "Resultado obtido e esperado", "Mensagem de erro exibida"].map((item) => (
-                      <li key={item} className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />{item}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <SectionCard
+                title="Antes de enviar"
+                description="Inclua contexto suficiente para reduzir perguntas adicionais."
+                headerAction={<span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-secondary text-secondary-foreground"><FileText className="size-[15px]" aria-hidden="true" /></span>}
+              >
+                <ul className="flex flex-col gap-2.5 text-[12px] text-muted-foreground">
+                  {["Página em que ocorreu", "Ação que você tentou executar", "Resultado obtido e esperado", "Mensagem de erro exibida"].map((item) => (
+                    <li key={item} className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-money" aria-hidden="true" />{item}</li>
+                  ))}
+                </ul>
+              </SectionCard>
 
               {whatsappStatus === "disconnected" && (
-                <Card className="border-amber-500/25 bg-amber-500/[0.035]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base"><Smartphone className="size-4 text-amber-700 dark:text-amber-300" aria-hidden="true" /> WhatsApp desconectado</CardTitle>
-                    <CardDescription>Se a dúvida for sobre envios, reconecte o número antes de abrir um chamado.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button nativeButton={false} render={<Link href="/automacao" />} variant="outline" className="w-full">Revisar conexão</Button>
-                  </CardContent>
-                </Card>
+                <SectionCard
+                  className="border-warning-border"
+                  title="WhatsApp desconectado"
+                  description="Se a dúvida for sobre envios, reconecte o número antes de abrir um chamado."
+                  headerAction={<span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-warning-bg text-warning-fg"><Smartphone className="size-[15px]" aria-hidden="true" /></span>}
+                  footer={
+                    <Button nativeButton={false} render={<Link href="/automacao" />} variant="outline" className="h-[34px] w-full rounded-[8px] text-xs font-medium">
+                      Revisar conexão
+                    </Button>
+                  }
+                />
               )}
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="tickets" className="mt-5">
-          <Card className="overflow-hidden border-border">
-            <CardHeader className="flex flex-col gap-4 border-b border-border bg-muted/20 sm:flex-row sm:items-center sm:justify-between">
+        <TabsContent value="tickets" className="mt-4">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2 text-lg"><Ticket className="size-4 text-primary" aria-hidden="true" /> Meus chamados</CardTitle>
-                <CardDescription className="mt-1">Abra uma solicitação para acompanhar respostas e manter o contexto registrado.</CardDescription>
+                <h2 className="flex items-center gap-2 text-[14.5px] font-semibold text-foreground"><Ticket className="size-4 text-interactive-fg" aria-hidden="true" /> Meus chamados</h2>
+                <p className="mt-[3px] text-[11.5px] text-muted-foreground">Abra uma solicitação para acompanhar respostas e manter o contexto registrado.</p>
               </div>
-              <Button className="w-full sm:w-auto" onClick={() => setIsNewTicketOpen(true)}><Plus className="size-4" aria-hidden="true" /> Novo chamado</Button>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-5">
+              <Button size="sm" className="h-8 w-full text-xs sm:w-auto" onClick={() => setIsNewTicketOpen(true)}><Plus className="size-3.5" aria-hidden="true" /> Novo chamado</Button>
+            </div>
+            <div className="p-3.5 sm:p-5">
               {isLoadingTickets ? (
                 <div className="space-y-3" aria-label="Carregando chamados" aria-live="polite">
                   {[0, 1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-xl border border-border bg-muted/50 motion-reduce:animate-none" />)}
                 </div>
               ) : tickets.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border px-5 py-12 text-center">
-                  <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-5" aria-hidden="true" /></span>
-                  <h3 className="mt-4 text-base font-semibold">Nenhum chamado registrado</h3>
-                  <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">Consulte a Central de ajuda ou abra uma solicitação se precisar de acompanhamento.</p>
+                  <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-success-bg text-success-fg"><CheckCircle2 className="size-5" aria-hidden="true" /></span>
+                  <h3 className="mt-4 text-[15px] font-semibold">Nenhum chamado registrado</h3>
+                  <p className="mx-auto mt-1 max-w-md text-[13px] leading-[1.55] text-muted-foreground">Consulte a Central de ajuda ou abra uma solicitação se precisar de acompanhamento.</p>
                   <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
-                    <Button variant="outline" onClick={() => setActiveTab("help")}>Consultar ajuda</Button>
-                    <Button onClick={() => setIsNewTicketOpen(true)}>Abrir chamado</Button>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setActiveTab("help")}>Consultar ajuda</Button>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => setIsNewTicketOpen(true)}>Abrir chamado</Button>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {tickets.map((ticket) => (
                     <button
                       key={ticket.id}
                       type="button"
                       onClick={() => router.push(`/suporte/ticket/${ticket.id}`)}
-                      className="group w-full rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/25 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+                      className="group w-full rounded-[11px] border border-border bg-card px-[18px] py-[15px] text-left transition-colors hover:border-interactive/25 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
                     >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-mono text-[10px] text-muted-foreground">#{ticket.id.slice(0, 6).toUpperCase()}</span>
                             <StatusBadge status={ticket.status} />
                             <PriorityBadge priority={ticket.priority} />
                           </div>
-                          <p className="mt-2 truncate text-sm font-semibold group-hover:text-primary">{ticket.subject}</p>
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{ticket.description}</p>
+                          <p className="mt-1.5 truncate text-[13px] font-semibold group-hover:text-interactive-fg">{ticket.subject}</p>
+                          <p className="mt-1 line-clamp-2 text-[11.5px] leading-[1.5] text-muted-foreground">{ticket.description}</p>
                         </div>
-                        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-border pt-3 text-xs text-muted-foreground sm:block sm:border-0 sm:pt-0 sm:text-right">
+                        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-border pt-2.5 text-[11px] text-muted-foreground sm:block sm:border-0 sm:pt-0 sm:text-right">
                           <span className="block">Última atualização</span>
                           <span className="mt-1 flex items-center gap-1 font-medium text-foreground sm:justify-end"><Clock3 className="size-3" aria-hidden="true" />{formatDate(ticket.updated_at ?? ticket.created_at)}</span>
                         </div>
@@ -580,31 +619,31 @@ export default function SuportePage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
       <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[620px]">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Abrir novo chamado</DialogTitle>
+            <DialogTitle>Abrir chamado</DialogTitle>
             <DialogDescription>Descreva o contexto para que a equipe entenda o problema sem depender de várias perguntas adicionais.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-5 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="ticket-subject">Assunto</Label>
-              <Input id="ticket-subject" placeholder="Ex: WhatsApp desconectou durante os envios" value={newTicket.subject} onChange={(event) => setNewTicket({ ...newTicket, subject: event.target.value })} />
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="ticket-subject" className="text-[11.5px]">Assunto</Label>
+              <Input id="ticket-subject" className="h-9 text-[12.5px]" placeholder="Ex: WhatsApp desconectou durante os envios" value={newTicket.subject} onChange={(event) => setNewTicket({ ...newTicket, subject: event.target.value })} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="ticket-page">Página relacionada <span className="font-normal text-muted-foreground">(opcional)</span></Label>
-                <Input id="ticket-page" placeholder="Ex: /automacao" value={newTicket.page_url} onChange={(event) => setNewTicket({ ...newTicket, page_url: event.target.value })} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="ticket-page" className="text-[11.5px]">Página relacionada <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                <Input id="ticket-page" className="h-9 text-[12.5px]" placeholder="Ex: /automacao" value={newTicket.page_url} onChange={(event) => setNewTicket({ ...newTicket, page_url: event.target.value })} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ticket-priority">Prioridade</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="ticket-priority" className="text-[11.5px]">Prioridade</Label>
                 <Select value={newTicket.priority} onValueChange={(value) => setNewTicket({ ...newTicket, priority: value || "medium" })}>
-                  <SelectTrigger id="ticket-priority"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger id="ticket-priority" className="h-9 text-[12.5px]"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Baixa · dúvida ou orientação</SelectItem>
                     <SelectItem value="medium">Média · problema com alternativa</SelectItem>
@@ -614,17 +653,17 @@ export default function SuportePage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="ticket-description">Descrição detalhada</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="ticket-description" className="text-[11.5px]">Descrição detalhada</Label>
               <Textarea
                 id="ticket-description"
                 placeholder="O que você tentou fazer? O que aconteceu? O que esperava? Inclua a mensagem de erro, se houver."
-                className="min-h-36 resize-y"
+                className="min-h-36 resize-y text-[12.5px]"
                 value={newTicket.description}
                 onChange={(event) => setNewTicket({ ...newTicket, description: event.target.value })}
               />
             </div>
-            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
+            <div className="rounded-[9px] border border-border bg-muted px-3 py-2.5 text-[11.5px] leading-[1.5] text-muted-foreground">
               Prioridade crítica deve ser usada quando o sistema estiver indisponível para a operação. Para dúvidas e orientações, use baixa ou média.
             </div>
           </div>

@@ -10,7 +10,7 @@ const PAGE_TITLES: { route: string; title: string }[] = [
   { route: "/cobranca-inteligente", title: "Cobrança inteligente" },
   { route: "/portal-cliente", title: "Portal do cliente" },
   { route: "/autoatendimento", title: "Autoatendimento" },
-  { route: "/atualizacoes", title: "Atualizações" },
+  { route: "/atualizacoes", title: "Notificações" },
   { route: "/configuracoes", title: "Configurações" },
   { route: "/desenvolvedor", title: "Desenvolvedor" },
   { route: "/minha-conta", title: "Minha conta" },

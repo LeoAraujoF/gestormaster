@@ -88,12 +88,6 @@ interface Lead {
   source?: string
   notes?: string
   custom_fields?: Record<string, string>
-  whatsapp_opt_in?: boolean
-  whatsapp_opt_in_at?: string | null
-  whatsapp_opt_in_source?: string | null
-  whatsapp_opt_in_categories?: string[]
-  whatsapp_opt_out?: boolean
-  whatsapp_opt_out_at?: string | null
   created_at?: string
 }
 
@@ -844,6 +838,9 @@ export default function LeadsPage() {
       const queuedLeadIds = Array.isArray(response.queued_lead_ids) ? response.queued_lead_ids as string[] : []
       setLeads((previous) => previous.map((lead) => queuedLeadIds.includes(lead.id) ? { ...lead, status: 'enfileirado' } : lead))
       addLog('success', `${response.queued_count || 0} mensagens enfileiradas no backend.`)
+      if (response.cadence?.clamped) {
+        addLog('info', `Ritmo ajustado para ${response.cadence.min_delay_seconds}-${response.cadence.max_delay_seconds}s: a instância exige ao menos ${response.cadence.instance_floor_seconds}s entre mensagens.`)
+      }
       if (Array.isArray(response.skipped)) {
         response.skipped.slice(0, 20).forEach((item: { name?: string; reason?: string }) => {
           addLog('info', `Ignorado: ${item.name || 'Lead'} (${item.reason || 'não elegível'})`)
@@ -882,14 +879,14 @@ export default function LeadsPage() {
   if (userPlan === "Lite" && !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4 max-w-md mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2">
-          <Lock className="w-10 h-10 text-slate-400" />
+        <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-2">
+          <Lock className="w-10 h-10 text-secondary-foreground" />
         </div>
         <h2 className="text-2xl font-bold">Gestão de Leads Bloqueada</h2>
         <p className="text-muted-foreground">
           A ferramenta de gestão, extração de Leads e disparos em massa é um recurso exclusivo dos planos <strong>Pro e Plus</strong>.
         </p>
-        <Button className="mt-4 bg-sky-500 hover:bg-sky-600 text-white" onClick={() => router.push('/minha-conta')}>
+        <Button className="mt-4" onClick={() => router.push('/minha-conta')}>
           <Zap className="w-4 h-4 mr-2" />
           Fazer Upgrade
         </Button>
@@ -934,39 +931,39 @@ export default function LeadsPage() {
 
       {/* Mini-Dashboard Premium */}
       <MetricGrid columns={3}>
-        <Card className="border-sky-500/20 bg-sky-500/[0.06] shadow-sm">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-xl text-primary">
-              <Users className="w-5 h-5" />
-            </div>
+        <div className="rounded-[16px] border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
+              <Users className="size-4" aria-hidden="true" />
+            </span>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total de Leads</p>
-              <h3 className="text-2xl font-bold">{leads.length}</h3>
+              <p className="microlabel">Total de Leads</p>
+              <p className="num mt-1 text-2xl font-semibold tracking-tight">{leads.length}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-500/20 bg-amber-500/[0.05] shadow-sm">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
-              <BarChart3 className="w-5 h-5" />
-            </div>
+          </div>
+        </div>
+        <div className="rounded-[16px] border border-warning-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-warning-bg text-warning-fg">
+              <BarChart3 className="size-4" aria-hidden="true" />
+            </span>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Novos Leads</p>
-              <h3 className="text-2xl font-bold">{statusCounts.novo}</h3>
+              <p className="microlabel">Novos Leads</p>
+              <p className="num mt-1 text-2xl font-semibold tracking-tight">{statusCounts.novo}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-500/20 bg-emerald-500/[0.05] shadow-sm">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
+          </div>
+        </div>
+        <div className="rounded-[16px] border border-success-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-success-bg text-success-fg">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+            </span>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Concluídos</p>
-              <h3 className="text-2xl font-bold">{statusCounts.concluido}</h3>
+              <p className="microlabel">Concluídos</p>
+              <p className="num mt-1 text-2xl font-semibold tracking-tight">{statusCounts.concluido}</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </MetricGrid>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1108,8 +1105,8 @@ export default function LeadsPage() {
 
               {leads.length === 0 ? (
                 <div className="text-center py-16 px-4">
-                  <div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-sky-500" />
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-secondary-foreground" />
                   </div>
                   <h3 className="text-lg font-medium">Sua lista está vazia</h3>
                   <p className="text-muted-foreground max-w-sm mx-auto mt-2">
@@ -1172,11 +1169,11 @@ export default function LeadsPage() {
                         <span 
                           onClick={() => toggleLeadStatus(lead)}
                           className={`cursor-pointer inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
-                            lead.status === 'concluido' 
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25' 
-                              : lead.status === 'teste' 
-                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25'
-                                : 'bg-orange-500/15 text-orange-600 dark:text-orange-400 hover:bg-orange-500/25'
+                            lead.status === 'concluido'
+                              ? 'bg-success-bg text-success-fg hover:opacity-80'
+                              : lead.status === 'teste'
+                                ? 'bg-interactive-bg text-interactive-fg hover:opacity-80'
+                                : 'bg-warning-bg text-warning-fg hover:opacity-80'
                           }`}
                         >
                           {lead.status === 'concluido' ? 'Convertido' : lead.status === 'teste' ? 'Teste' : 'Contato'}
@@ -1268,15 +1265,15 @@ export default function LeadsPage() {
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Entregues</span>
-                  <span className="text-emerald-500 font-medium num">{logs.filter(l => l.type==="success").length}</span>
+                  <span className="text-money font-medium num">{logs.filter(l => l.type==="success").length}</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Respostas</span>
-                  <span className="text-blue-500 font-medium num">0</span>
+                  <span className="text-interactive font-medium num">0</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Falhas</span>
-                  <span className="text-red-500 font-medium num">{logs.filter(l => l.type==="error").length}</span>
+                  <span className="text-danger font-medium num">{logs.filter(l => l.type==="error").length}</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Intervalo</span>
@@ -1431,7 +1428,7 @@ export default function LeadsPage() {
                     ) : (
                       <div className="flex flex-col gap-3 mt-2">
                         {instances.filter(i => i.is_primary && !instances.some(other => !other.is_primary && !getChipCampaignAssignment(other.instance_name))).length > 0 && (
-                           <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-500 text-xs rounded-md flex items-start gap-2 border border-amber-500/20">
+                           <div className="p-3 bg-warning-bg text-warning-fg text-xs rounded-md flex items-start gap-2 border border-warning-border">
                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                              <p>
                                <strong>Aviso:</strong> Você só tem o seu número Principal disponível. Campanhas em massa possuem alto risco de banimento. É fortemente recomendado conectar chips extras na aba Automação para esta função.
@@ -1470,7 +1467,7 @@ export default function LeadsPage() {
                                 <Label htmlFor={`inst-${inst.id}`} className="flex-1 cursor-pointer flex flex-col gap-0.5">
                                   <span className="flex items-center gap-1.5 font-medium text-sm">
                                     {inst.instance_name} 
-                                    {inst.is_primary && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                                    {inst.is_primary && <Star className="w-3.5 h-3.5 text-warning fill-warning" />}
                                   </span>
                                   {inst.phone_number && (
                                     <span className="text-xs text-muted-foreground font-normal mb-0.5">
@@ -1478,17 +1475,17 @@ export default function LeadsPage() {
                                     </span>
                                   )}
                                   {isUnavailable && (
-                                    <span className="text-[10px] text-amber-500 font-medium">
+                                    <span className="text-[10px] text-warning-fg font-medium">
                                       Em uso: {assignedCampaign}
                                     </span>
                                   )}
                                   {isBlockedPrimary && !isUnavailable && (
-                                    <span className="text-[10px] text-red-500 dark:text-red-400 font-medium">
+                                    <span className="text-[10px] text-danger font-medium">
                                       Use chips secundários
                                     </span>
                                   )}
                                 </Label>
-                                <Badge variant="outline" className={`${isUnavailable ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : isBlockedPrimary ? 'bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'} border font-medium text-[10px] px-2 py-0.5`}>
+                                <Badge variant="outline" className={`${isUnavailable ? 'bg-warning-bg text-warning-fg border-warning-border' : isBlockedPrimary ? 'bg-danger-bg text-danger border-danger-border' : 'bg-success-bg text-success-fg border-success-border'} border font-medium text-[10px] px-2 py-0.5`}>
                                   {isUnavailable ? 'Em Uso' : isBlockedPrimary ? 'Bloqueado' : 'Pronto'}
                                 </Badge>
                               </div>
@@ -1602,7 +1599,7 @@ export default function LeadsPage() {
                             <Badge 
                               key={key}
                               variant="outline" 
-                              className="cursor-pointer hover:bg-sky-500/10 border-sky-500/30 text-sky-600 dark:text-sky-400" 
+                              className="cursor-pointer hover:bg-interactive-bg border-accent text-interactive-fg"
                               onClick={() => {
                                 if(isSending) return
                                 const newV = [...messageVariants]
@@ -1726,7 +1723,7 @@ export default function LeadsPage() {
                   ) : (
                     <Button 
                       onClick={startMassMessage} 
-                      className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] hover:shadow-[0_0_25px_rgba(14,165,233,0.5)] transition-all"
+                      className="w-full h-12 bg-money hover:brightness-95 text-white shadow-[0_0_20px_rgba(46,125,84,0.3)] hover:shadow-[0_0_25px_rgba(46,125,84,0.5)] transition-all"
                       disabled={filteredLeads.length === 0 || instances.length === 0}
                     >
                       <Play className="w-5 h-5 mr-2" />
@@ -1826,50 +1823,6 @@ export default function LeadsPage() {
                   className="col-span-3" 
                 />
               </div>
-              <div className="col-span-4 rounded-md border border-border/50 bg-muted/30 p-3">
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingLead.whatsapp_opt_in === true}
-                    onChange={(event) => {
-                      const enabled = event.target.checked
-                      const now = new Date().toISOString()
-                      setEditingLead({
-                        ...editingLead,
-                        whatsapp_opt_in: enabled,
-                        whatsapp_opt_in_at: enabled ? (editingLead.whatsapp_opt_in_at || now) : null,
-                        whatsapp_opt_in_source: enabled ? (editingLead.whatsapp_opt_in_source || 'leads_edit') : null,
-                        whatsapp_opt_out: !enabled,
-                        whatsapp_opt_out_at: enabled ? null : now,
-                        whatsapp_opt_in_categories: enabled
-                          ? (editingLead.whatsapp_opt_in_categories?.length ? editingLead.whatsapp_opt_in_categories : ['marketing'])
-                          : [],
-                      })
-                    }}
-                  />
-                  <span><span className="font-medium">Lead autorizou mensagens pelo WhatsApp</span><span className="block text-xs text-muted-foreground">Sem autorização, campanhas ficam bloqueadas.</span></span>
-                </label>
-                {editingLead.whatsapp_opt_in === true && (
-                  <div className="mt-2 flex flex-wrap gap-3 pl-6 text-xs">
-                    {['operational', 'billing', 'marketing'].map((category) => (
-                      <label key={category} className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingLead.whatsapp_opt_in_categories?.includes(category) === true}
-                          onChange={(event) => {
-                            const categories = new Set(editingLead.whatsapp_opt_in_categories || [])
-                            if (event.target.checked) categories.add(category)
-                            else categories.delete(category)
-                            setEditingLead({ ...editingLead, whatsapp_opt_in_categories: [...categories] })
-                          }}
-                        />
-                        {category === 'marketing' ? 'Campanhas' : category === 'billing' ? 'Cobranças' : 'Operacional'}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Campos extras (custom_fields) */}
               {editingLead.custom_fields && Object.keys(editingLead.custom_fields).length > 0 && (
                 <>
@@ -1953,7 +1906,7 @@ export default function LeadsPage() {
             {mappingWarnings.length > 0 && (
               <div className="space-y-2">
                 {mappingWarnings.map((w, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <div key={i} className="flex items-center gap-2 text-sm p-2.5 rounded-lg bg-warning-bg text-warning-fg">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     {w}
                   </div>
@@ -1970,9 +1923,9 @@ export default function LeadsPage() {
                     {/* Indicador de confiança */}
                     <div className="shrink-0">
                       {mapping.confidence === 'high' ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <CheckCircle2 className="w-4 h-4 text-money" />
                       ) : mapping.confidence === 'medium' ? (
-                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <AlertCircle className="w-4 h-4 text-warning" />
                       ) : (
                         <Info className="w-4 h-4 text-muted-foreground" />
                       )}
@@ -2033,7 +1986,7 @@ export default function LeadsPage() {
                         {csvHeaders.map((h, colIdx) => (
                           <TableCell key={colIdx} className="text-xs whitespace-nowrap max-w-[200px] truncate">
                             {isScientificNotation(row[h] || '') ? (
-                              <span className="text-amber-500" title={`Corrigido: ${fixScientificNotation(row[h])}` }>
+                              <span className="text-warning" title={`Corrigido: ${fixScientificNotation(row[h])}` }>
                                 {row[h]} → {fixScientificNotation(row[h])}
                               </span>
                             ) : (
@@ -2050,15 +2003,15 @@ export default function LeadsPage() {
 
             {/* Resumo */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Mapeado automaticamente</span>
-              <span className="flex items-center gap-1"><AlertCircle className="w-3 h-3 text-amber-500" /> Sugestão parcial</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-money" /> Mapeado automaticamente</span>
+              <span className="flex items-center gap-1"><AlertCircle className="w-3 h-3 text-warning" /> Sugestão parcial</span>
               <span className="flex items-center gap-1"><Info className="w-3 h-3 text-muted-foreground" /> Campo extra</span>
             </div>
           </div>
 
           <DialogFooter className="border-t border-border/50 pt-4">
             <Button variant="outline" onClick={() => setIsMappingModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleConfirmImport} className="bg-sky-500 hover:bg-sky-600 text-white">
+            <Button onClick={handleConfirmImport} className="bg-money hover:brightness-95 text-white">
               <Upload className="w-4 h-4 mr-2" />
               Importar {csvRawData.length} Leads
             </Button>

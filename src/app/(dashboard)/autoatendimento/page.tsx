@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Bot, ClipboardCheck, Loader2, Save, UserRoundCheck } from "lucide-react"
+import { Bot, ClipboardCheck, Loader2, Save, TriangleAlert, UserRoundCheck } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,6 +11,17 @@ import { PageProtector } from "@/components/page-protector"
 import { CustomerExperienceNavigation } from "@/components/customer-experience-navigation"
 import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
 import { Card, CardContent } from "@/components/ui/card"
+
+type SelfServiceConfig = {
+  enabled: boolean
+  greetingMessage: string
+  transferMessage: string
+  invalidPlanMessage: string
+  pixErrorMessage: string
+}
+
+const FALLBACK_INVALID_PLAN = "Não consegui identificar o valor do seu plano. Por favor, escolha a opção 4 para falar com um atendente."
+const FALLBACK_PIX_ERROR = "Desculpe, ocorreu um erro ao gerar o seu PIX. O sistema pode estar indisponível."
 
 export default function AutoatendimentoPage() {
   const [loading, setLoading] = useState(true)
@@ -24,6 +35,11 @@ export default function AutoatendimentoPage() {
 
   const [pausedClients, setPausedClients] = useState<any[]>([])
   const [changeRequests, setChangeRequests] = useState<any[]>([])
+  // Guarda o que veio do servidor: sem isso não dá para saber se há alteração
+  // pendente nem para impedir que um carregamento falho salve campos vazios
+  // por cima da configuração real.
+  const [savedConfig, setSavedConfig] = useState<SelfServiceConfig | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   useEffect(() => {
     fetchConfig()
@@ -34,22 +50,39 @@ export default function AutoatendimentoPage() {
       const res = await fetch("/api/autoatendimento")
       const data = await res.json()
       if (res.ok) {
-        setEnabled(data.config.enabled)
-        setGreetingMessage(data.config.greetingMessage)
-        setTransferMessage(data.config.transferMessage)
-        setInvalidPlanMessage(data.config.invalidPlanMessage || "Não consegui identificar o valor do seu plano. Por favor, escolha a opção 4 para falar com um atendente.")
-        setPixErrorMessage(data.config.pixErrorMessage || "Desculpe, ocorreu um erro ao gerar o seu PIX. O sistema pode estar indisponível.")
+        const loaded: SelfServiceConfig = {
+          enabled: Boolean(data.config.enabled),
+          greetingMessage: data.config.greetingMessage || "",
+          transferMessage: data.config.transferMessage || "",
+          invalidPlanMessage: data.config.invalidPlanMessage || FALLBACK_INVALID_PLAN,
+          pixErrorMessage: data.config.pixErrorMessage || FALLBACK_PIX_ERROR,
+        }
+        setEnabled(loaded.enabled)
+        setGreetingMessage(loaded.greetingMessage)
+        setTransferMessage(loaded.transferMessage)
+        setInvalidPlanMessage(loaded.invalidPlanMessage)
+        setPixErrorMessage(loaded.pixErrorMessage)
+        setSavedConfig(loaded)
         setPausedClients(data.pausedClients || [])
+        setLoadFailed(false)
+      } else {
+        setLoadFailed(true)
       }
       const requestsRes = await fetch("/api/autoatendimento/requests")
       const requestsData = await requestsRes.json()
       if (requestsRes.ok) setChangeRequests(requestsData.requests || [])
     } catch (e) {
+      setLoadFailed(true)
       toast.error("Erro ao carregar configurações.")
     } finally {
       setLoading(false)
     }
   }
+
+  const currentConfig: SelfServiceConfig = { enabled, greetingMessage, transferMessage, invalidPlanMessage, pixErrorMessage }
+  const hasChanges = savedConfig
+    ? (Object.keys(currentConfig) as Array<keyof SelfServiceConfig>).some(key => currentConfig[key] !== savedConfig[key])
+    : false
 
   const handleSave = async () => {
     setSaving(true)
@@ -59,10 +92,11 @@ export default function AutoatendimentoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_config",
-          config: { enabled, greetingMessage, transferMessage, invalidPlanMessage, pixErrorMessage }
+          config: currentConfig
         })
       })
       if (res.ok) {
+        setSavedConfig(currentConfig)
         toast.success("Configurações salvas")
       } else {
         toast.error("Erro ao salvar configurações")
@@ -84,6 +118,8 @@ export default function AutoatendimentoPage() {
       if (res.ok) {
         toast.success(`Atendimento retomado para ${phone}`)
         setPausedClients(prev => prev.filter(p => p.phone !== phone))
+      } else {
+        toast.error("Não foi possível retomar o robô para esse número.")
       }
     } catch (e) {
       toast.error("Erro ao retomar robô")
@@ -113,35 +149,47 @@ export default function AutoatendimentoPage() {
 
   if (loading) {
     return (
-      <PageShell><div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed"><Loader2 className="size-5 animate-spin" /><span className="ml-3 text-sm text-muted-foreground">Carregando o autoatendimento...</span></div></PageShell>
+      <PageProtector>
+        <PageShell><div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed" role="status" aria-live="polite"><Loader2 className="size-5 animate-spin" aria-hidden="true" /><span className="ml-3 text-sm text-muted-foreground">Carregando o autoatendimento...</span></div></PageShell>
+      </PageProtector>
     )
   }
 
   return (
     <PageProtector>
       <PageShell width="default">
-        <div className="rounded-xl border bg-card p-5 sm:p-6">
-          <PageHeader
-            eyebrow="Experiência e operação"
-            title="Autoatendimento"
-            description="Acompanhe pendências humanas primeiro e configure as respostas automáticas que orientam seus clientes."
-            badge={enabled ? "Robô ativo" : "Robô inativo"}
-            actions={<Button
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
-            {saving ? "Salvando..." : "Salvar alterações"}
-          </Button>}
-          />
-        </div>
+        <PageHeader
+          eyebrow="Experiência e operação"
+          title="Autoatendimento"
+          description="Acompanhe pendências humanas primeiro e configure as respostas automáticas que orientam seus clientes."
+          badge={enabled ? "Robô ativo" : "Robô inativo"}
+          actions={
+            <div className="flex items-center gap-3">
+              {hasChanges && <span className="text-[11px] text-muted-foreground">alterações não salvas</span>}
+              <Button onClick={handleSave} disabled={saving || !savedConfig || !hasChanges}>
+                {saving ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : <Save className="mr-2 size-4" aria-hidden="true" />}
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </div>
+          }
+        />
 
         <CustomerExperienceNavigation active="self-service" />
 
+        {loadFailed && (
+          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-warning-fg">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold">Não foi possível carregar a configuração</p>
+              <p className="mt-0.5 text-xs leading-relaxed opacity-90">Os campos abaixo podem não refletir o que está salvo, por isso o botão de salvar está bloqueado — recarregue a página antes de editar.</p>
+            </div>
+          </div>
+        )}
+
         <MetricGrid columns={3}>
-          <Card className={enabled ? "border-emerald-500/20 bg-emerald-500/[0.06]" : "border-muted bg-muted/20"}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><Bot className="size-5" /></span><div><p className="text-xs text-muted-foreground">Operação</p><p className="text-lg font-semibold">{enabled ? "Atendimento ativo" : "Atendimento pausado"}</p></div></CardContent></Card>
-          <Card className={pausedClients.length ? "border-amber-500/25 bg-amber-500/[0.07]" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><UserRoundCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Atendimento humano</p><p className="text-lg font-semibold">{pausedClients.length} em pausa</p></div></CardContent></Card>
-          <Card className={changeRequests.length ? "border-sky-500/25 bg-sky-500/[0.07]" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><ClipboardCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Decisão necessária</p><p className="text-lg font-semibold">{changeRequests.length} solicitações</p></div></CardContent></Card>
+          <Card className={enabled ? "border-money/25 bg-success-bg" : "border-muted bg-muted/20"}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><Bot className="size-5" /></span><div><p className="text-xs text-muted-foreground">Operação</p><p className="text-lg font-semibold">{enabled ? "Atendimento ativo" : "Atendimento pausado"}</p></div></CardContent></Card>
+          <Card className={pausedClients.length ? "border-warning-border bg-warning-bg" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><UserRoundCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Atendimento humano</p><p className="text-lg font-semibold">{pausedClients.length} em pausa</p></div></CardContent></Card>
+          <Card className={changeRequests.length ? "border-interactive/25 bg-interactive-bg" : undefined}><CardContent className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-background shadow-sm"><ClipboardCheck className="size-5" /></span><div><p className="text-xs text-muted-foreground">Decisão necessária</p><p className="text-lg font-semibold">{changeRequests.length} solicitações</p></div></CardContent></Card>
         </MetricGrid>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -205,7 +253,7 @@ export default function AutoatendimentoPage() {
               <div className="p-4 space-y-5">
                 <div className="space-y-1.5">
                   <Label className="text-[13px] font-medium text-foreground flex gap-1.5 items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span className="status-dot bg-warning" aria-hidden="true"></span>
                     Plano Indefinido
                   </Label>
                   <p className="text-[10.5px] text-muted-foreground">
@@ -221,7 +269,7 @@ export default function AutoatendimentoPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-[13px] font-medium text-foreground flex gap-1.5 items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    <span className="status-dot bg-danger" aria-hidden="true"></span>
                     Falha na Geração do PIX
                   </Label>
                   <p className="text-[10.5px] text-muted-foreground">
@@ -290,7 +338,7 @@ export default function AutoatendimentoPage() {
                       <div key={client.phone} className="p-3 flex items-center justify-between">
                         <div>
                           <p className="text-[13px] font-medium text-foreground flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            <span className="status-dot bg-warning" aria-hidden="true"></span>
                             +{client.phone}
                           </p>
                           <p className="text-[11px] num text-muted-foreground mt-0.5 ml-3">
@@ -299,7 +347,7 @@ export default function AutoatendimentoPage() {
                         </div>
                         <button
                           onClick={() => handleUnpause(client.phone)}
-                          className="text-[12px] font-medium text-[var(--interactive)] hover:underline"
+                          className="text-[12px] font-medium text-interactive hover:underline"
                         >
                           Retomar robô
                         </button>

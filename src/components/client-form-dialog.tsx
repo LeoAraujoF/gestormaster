@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react"
+import { Loader2, Check, Eye, EyeOff, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { useForm, Controller } from "react-hook-form"
@@ -23,6 +23,11 @@ import {
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
+const FORM_STEPS = [
+  { key: 'dados' as const, label: 'Dados' },
+  { key: 'plano' as const, label: 'Plano' },
+]
+
 const clientSchema = z.object({
   name: z.string().min(2, "Nome é obrigatório"),
   phone: z.string().optional(),
@@ -34,8 +39,6 @@ const clientSchema = z.object({
   status: z.enum(['active', 'inactive', 'pending', 'vencido']),
   observation: z.string().optional(),
   description: z.string().optional(),
-  whatsapp_opt_in: z.boolean(),
-  whatsapp_opt_in_categories: z.array(z.enum(['operational', 'billing', 'marketing'])),
   send_welcome: z.boolean(),
   renewal_reminder_enabled: z.boolean(),
   renewal_reminder_days_before: z.number().int().min(1).max(60),
@@ -59,6 +62,12 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const [localVal, setLocalVal] = useState<string | null>(null)
   const supabase = createClient()
 
+  // O protótipo v2 divide o cadastro em duas etapas: "Dados" (quem é o cliente)
+  // e "Plano" (o que ele paga). Os campos da etapa oculta continuam registrados
+  // no react-hook-form — `shouldUnregister` é false por padrão —, então trocar
+  // de passo não descarta nada do que já foi digitado.
+  const [formStep, setFormStep] = useState<'dados' | 'plano'>('dados')
+
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
@@ -72,8 +81,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       status: 'active',
       observation: "",
        description: "",
-       whatsapp_opt_in: false,
-       whatsapp_opt_in_categories: [],
        send_welcome: false,
        renewal_reminder_enabled: false,
        renewal_reminder_days_before: 7,
@@ -86,8 +93,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const planValue = watch("plan_value")
   const screens = watch("screens") || 1
   const dueDate = watch("due_date")
-  const whatsappOptIn = watch("whatsapp_opt_in")
-  const whatsappOptInCategories = watch("whatsapp_opt_in_categories") || []
   const renewalReminderEnabled = watch("renewal_reminder_enabled")
   const initialBillingMonths = client
     ? 1
@@ -108,8 +113,19 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
   const firstSelectedService = servicesList.find(s => selectedServices.includes(s.id))
   const availablePlans: { name: string; price: number }[] = firstSelectedService?.plans ?? []
 
+  /** O passo do plano só faz sentido depois de identificar o cliente. */
+  const goToStep = (step: 'dados' | 'plano') => {
+    if (step === 'plano' && !(watch("name") || "").trim()) {
+      toast.error("Informe o nome do cliente antes de continuar.")
+      setFormStep('dados')
+      return
+    }
+    setFormStep(step)
+  }
+
   useEffect(() => {
     if (open) {
+      setFormStep('dados')
       if (client) {
         const accessFromClient: Record<string, { username?: string; password?: string }> = {}
         ;(client.client_services || []).forEach((cs: any) => {
@@ -127,8 +143,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           status: client.status || 'active',
           observation: client.observation || "",
            description: client.description || "",
-           whatsapp_opt_in: client.whatsapp_opt_in === true,
-           whatsapp_opt_in_categories: Array.isArray(client.whatsapp_opt_in_categories) ? client.whatsapp_opt_in_categories : [],
            send_welcome: false,
            renewal_reminder_enabled: client.renewal_reminder_enabled === true,
            renewal_reminder_days_before: client.renewal_reminder_days_before || 7,
@@ -147,8 +161,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           status: 'active',
           observation: "",
            description: "",
-           whatsapp_opt_in: false,
-            whatsapp_opt_in_categories: [],
             send_welcome: false,
             renewal_reminder_enabled: false,
             renewal_reminder_days_before: 7,
@@ -194,26 +206,10 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
         throw new Error("Número inválido. Informe o WhatsApp com DDI, por exemplo: +55 11 99999-9999 ou +1 202 555 0123.")
       }
 
-      const consentNow = new Date().toISOString()
-      const hadConsent = client?.whatsapp_opt_in === true
-      const hasOptOut = hadConsent || client?.whatsapp_opt_out === true
-      const whatsappConsent = data.whatsapp_opt_in
-        ? {
-            whatsapp_opt_in: true,
-            whatsapp_opt_in_at: client?.whatsapp_opt_in_at || consentNow,
-            whatsapp_opt_in_source: client?.whatsapp_opt_in_source || 'dashboard_client_form',
-            whatsapp_opt_in_categories: data.whatsapp_opt_in_categories,
-            whatsapp_opt_out: false,
-            whatsapp_opt_out_at: null,
-          }
-        : {
-            whatsapp_opt_in: false,
-            whatsapp_opt_in_at: null,
-            whatsapp_opt_in_source: null,
-            whatsapp_opt_in_categories: [],
-            whatsapp_opt_out: hasOptOut,
-            whatsapp_opt_out_at: hasOptOut ? (client?.whatsapp_opt_out_at || consentNow) : null,
-          }
+      // O opt-in deixou de existir. O formulário também não escreve mais
+      // `whatsapp_opt_out`: antes, salvar um cliente com a caixa desmarcada
+      // marcava como opt-out quem já tinha autorizado. Só o "PARAR" respondido
+      // no WhatsApp registra opt-out, e é o webhook que faz isso.
 
       if (client) {
         const clientUpdate = {
@@ -226,7 +222,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           status: data.status,
           observation: data.observation,
           description: data.description,
-          ...whatsappConsent,
           renewal_reminder_enabled: data.renewal_reminder_enabled,
           renewal_reminder_days_before: data.renewal_reminder_days_before,
         }
@@ -276,7 +271,6 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
           status: data.status,
           observation: data.observation,
           description: data.description,
-          ...whatsappConsent,
           renewal_reminder_enabled: data.renewal_reminder_enabled,
           renewal_reminder_days_before: data.renewal_reminder_days_before,
         }
@@ -346,7 +340,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
       }
 
       // Disparo de Boas Vindas se for um novo cliente
-      if (!client && clientId && data.send_welcome && data.whatsapp_opt_in && data.whatsapp_opt_in_categories.includes('operational')) {
+      if (!client && clientId && data.send_welcome) {
         const { data: rules } = await supabase
           .from('automations')
           .select('*')
@@ -401,35 +395,113 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
           showCloseButton={false}
-          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[640px] sm:max-w-[640px] data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 p-0 border-0 bg-transparent shadow-none ring-0 w-[calc(100%-24px)] max-w-[560px] sm:max-w-[560px] data-open:animate-none data-open:zoom-in-100 data-closed:animate-none data-closed:zoom-out-100 focus:outline-none"
         >
           <div className="modal-2a max-h-[90vh] flex flex-col">
 
             {/* HEADER */}
-            <div className="modal-header-2a flex-shrink-0">
-              <span className="w-[34px] h-[34px] rounded-[9px] bg-secondary flex items-center justify-center text-[15px]">
-                👤
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground">
-                  {client ? 'Editar cliente' : 'Novo cliente'}
+            <div className="flex-shrink-0 border-b border-border">
+              <div className="flex items-center gap-[11px] px-[22px] pt-[17px] pb-[14px]">
+                <span className="w-[34px] h-[34px] rounded-[9px] bg-interactive-bg text-interactive-fg flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-[16px] h-[16px]" aria-hidden="true" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[15px] tracking-[-0.01em] text-foreground truncate">
+                    {client ? 'Editar cliente' : 'Novo cliente'}
+                  </div>
+                  <div className="text-muted-foreground text-[11px] mt-[2px] truncate">
+                    {formStep === 'dados'
+                      ? 'Etapa 1 de 2 · nome, contato e situação'
+                      : 'Etapa 2 de 2 · serviços, valor e vencimento'}
+                  </div>
                 </div>
-                <div className="text-muted-foreground text-[11px] mt-[1px]">
-                  {client ? 'Atualize os dados e os acessos do assinante.' : 'Cadastre o assinante e os acessos de cada serviço.'}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  aria-label="Fechar"
+                  className="cursor-pointer border-none bg-transparent text-muted-foreground hover:text-secondary-foreground flex-shrink-0"
+                >
+                  <X className="w-[15px] h-[15px]" aria-hidden="true" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="cursor-pointer border-none bg-transparent text-muted-foreground text-[18px] hover:text-secondary-foreground"
-              >
-                ✕
-              </button>
+              <div className="flex gap-[6px] px-[22px] pb-[14px]">
+                {FORM_STEPS.map((step, index) => {
+                  const active = formStep === step.key
+                  return (
+                    <button
+                      key={step.key}
+                      type="button"
+                      onClick={() => goToStep(step.key)}
+                      aria-current={active ? 'step' : undefined}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-[7px] min-h-[34px] rounded-[8px] border-none cursor-pointer text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        active ? "bg-muted text-foreground font-semibold" : "bg-transparent text-muted-foreground font-medium hover:text-secondary-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 font-mono text-[10px] font-semibold",
+                          active ? "bg-foreground text-background" : "bg-border text-muted-foreground",
+                        )}
+                      >
+                        {index + 1}
+                      </span>
+                      {step.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Avisos do cadastro: valem para o envio inteiro, não para uma
+                  etapa só, então ficam no cabeçalho, visíveis nos dois passos.
+                  `register` funciona por ref — não precisam estar dentro do
+                  <form> para serem enviados. */}
+              <div className="flex flex-wrap items-center gap-x-[18px] gap-y-[8px] border-t border-border px-[22px] py-[10px]">
+                {!client && (
+                  <label className="flex items-center gap-[7px] text-[11px] cursor-pointer">
+                    <input type="checkbox" {...register("send_welcome")} />
+                    <span className="font-medium text-foreground">Enviar boas-vindas agora</span>
+                  </label>
+                )}
+                <label className="flex items-center gap-[7px] text-[11px] cursor-pointer">
+                  <input type="checkbox" {...register("renewal_reminder_enabled")} />
+                  <span className="font-medium text-foreground">Lembrete antes do vencimento</span>
+                </label>
+                {renewalReminderEnabled && (
+                  <div className="flex items-center gap-[6px]">
+                    <label htmlFor="renewalReminderDays" className="text-[10.5px] text-muted-foreground">Avisar com</label>
+                    <input
+                      id="renewalReminderDays"
+                      type="number"
+                      min="1"
+                      max="60"
+                      {...register("renewal_reminder_days_before", { valueAsNumber: true })}
+                      className="h-[26px] w-[56px] rounded-[6px] border border-input bg-card px-[6px] text-[11px] font-mono text-foreground"
+                    />
+                    <span className="text-[10.5px] text-muted-foreground">dia(s) antes</span>
+                  </div>
+                )}
+                <p className="w-full text-[10px] leading-snug text-muted-foreground">
+                  {client
+                    ? 'O lembrete vai para o seu WhatsApp de suporte, sem falar com o cliente.'
+                    : 'As boas-vindas exigem uma automação ativa. O lembrete vai para o seu WhatsApp de suporte, sem falar com o cliente.'}
+                </p>
+              </div>
             </div>
 
             {/* BODY */}
-            <form id="client-form" onSubmit={handleSubmit(onSubmit)} className="p-[20px_22px] overflow-y-auto flex-1">
+            <form
+              id="client-form"
+              onSubmit={handleSubmit(onSubmit, (formErrors) => {
+                // Um erro de campo da etapa 1 ficaria invisível com o passo do
+                // plano aberto — volta para onde o usuário precisa corrigir.
+                if (formErrors.name || formErrors.status) setFormStep('dados')
+              })}
+              className="p-[20px_22px] overflow-y-auto flex-1">
 
+              {/* PASSO 1 — DADOS: quem é o cliente */}
+              {formStep === 'dados' && (
+                <div>
               {/* DADOS PESSOAIS */}
               <div className="microlabel mb-[10px]">DADOS PESSOAIS</div>
               <div className="flex flex-col sm:flex-row gap-[12px] mb-[8px]">
@@ -457,122 +529,96 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                 </div>
               </div>
 
-              {/* WHATSAPP E NOTIFICAÇÕES */}
-              <div className="rounded-[8px] border border-border bg-muted/30 p-[12px] mt-[12px]">
-                <label className="flex items-start gap-[8px] text-[11px] text-secondary-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mt-[2px]"
-                    {...register("whatsapp_opt_in", {
-                      onChange: (event) => {
-                        if (event.target.checked && watch("whatsapp_opt_in_categories").length === 0) {
-                          setValue("whatsapp_opt_in_categories", ["operational"], { shouldValidate: true })
-                        }
-                      },
-                    })}
-                  />
-                  <span>
-                    <span className="block font-medium text-foreground">Cliente autorizou mensagens pelo WhatsApp</span>
-                    <span className="block mt-[2px] text-muted-foreground">Marque somente com autorização registrada do cliente.</span>
-                  </span>
-                </label>
-                {whatsappOptIn && (
-                  <div className="mt-[10px] pl-[24px] flex flex-wrap gap-x-[14px] gap-y-[6px]">
-                    {[
-                      ["operational", "Avisos operacionais"],
-                      ["billing", "Cobranças"],
-                      ["marketing", "Ofertas e campanhas"],
-                    ].map(([value, label]) => (
-                      <label key={value} className="flex items-center gap-[6px] text-[10.5px] text-secondary-foreground cursor-pointer">
-                        <input type="checkbox" value={value} {...register("whatsapp_opt_in_categories")} />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                )}
+              {/* Segmented Control de Status */}
+              <div className="bg-secondary rounded-[7px] p-[2px] flex flex-wrap sm:flex-nowrap">
+                <Controller
+                  control={control}
+                  name="status"
+                  render={({ field }) => (
+                    <>
+                      {statuses.map((st) => (
+                        <button
+                          key={st.value}
+                          type="button"
+                          onClick={() => field.onChange(st.value)}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-[6px] rounded-[5px] py-[6px] text-[11.5px] font-medium transition-all",
+                            field.value === st.value
+                              ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                              : "text-muted-foreground hover:text-secondary-foreground"
+                          )}
+                        >
+                          <span
+                            className="w-[6px] h-[6px] rounded-full"
+                            style={{ backgroundColor: st.color }}
+                          />
+                          {st.label}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                />
               </div>
 
-              {!client && (
-                <label className="mt-[10px] flex items-start gap-[8px] rounded-[8px] border border-border bg-card p-[10px] text-[11px] text-secondary-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mt-[2px]"
-                    disabled={!whatsappOptIn || !whatsappOptInCategories.includes("operational")}
-                    {...register("send_welcome")}
-                  />
-                  <span>
-                    <span className="block font-medium text-foreground">Enviar boas-vindas agora</span>
-                    <span className="block mt-[2px] text-muted-foreground">Só será enviado se houver consentimento operacional e uma automação ativa.</span>
-                  </span>
-                </label>
+              {/* OBSERVAÇÃO */}
+              <div className="microlabel mt-[20px] mb-[8px]">OBSERVAÇÃO</div>
+              <textarea
+                {...register("observation")}
+                placeholder="Anotações internas sobre o cliente (opcional)…"
+                className="input-2a min-h-[64px] resize-none leading-[1.55]"
+              />
+                </div>
               )}
 
-              <div className="mt-[10px] rounded-[8px] border border-border bg-card p-[10px]">
-                <label className="flex items-start gap-[8px] text-[11px] text-secondary-foreground cursor-pointer">
-                  <input type="checkbox" className="mt-[2px]" {...register("renewal_reminder_enabled")} />
-                  <span>
-                    <span className="block font-medium text-foreground">Lembrete interno antes do vencimento</span>
-                    <span className="block mt-[2px] text-muted-foreground">Envia o aviso para o seu WhatsApp de suporte, sem falar com o cliente.</span>
-                  </span>
-                </label>
-                {renewalReminderEnabled && (
-                  <div className="mt-[8px] flex items-center gap-[8px] pl-[24px]">
-                    <label htmlFor="renewalReminderDays" className="text-[10.5px] text-muted-foreground">Avisar com</label>
-                    <input
-                      id="renewalReminderDays"
-                      type="number"
-                      min="1"
-                      max="60"
-                      {...register("renewal_reminder_days_before", { valueAsNumber: true })}
-                      className="h-[30px] w-[64px] rounded-[6px] border border-input bg-card px-[8px] text-[11px] font-mono text-foreground"
-                    />
-                    <span className="text-[10.5px] text-muted-foreground">dia(s) antes · 1 a 60</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-[8px] mt-[20px] mb-[10px]">
+              {/* PASSO 2 — PLANO: o que ele paga e quando */}
+              {formStep === 'plano' && (
+                <div>
+              <div className="flex flex-wrap items-center gap-x-[8px] gap-y-[2px] mt-[20px] mb-[8px]">
                 <span className="microlabel m-0">SERVIÇOS E ACESSOS <span className="text-danger">*</span></span>
-                <span className="font-mono text-[9.5px] font-medium text-muted-foreground">usuário e senha são opcionais</span>
+                <span className="font-mono text-[9.5px] font-medium text-muted-foreground">marque os serviços · usuário e senha são opcionais</span>
               </div>
 
-              <div className="space-y-[8px]">
+              {/* Lista compacta: uma caixa só com divisórias, em vez de um cartão
+                  por serviço. Com muitos serviços cadastrados, os cartões de 52px
+                  viravam uma parede de rolagem dentro do modal. */}
+              <div>
                 {servicesList.length === 0 ? (
                   <p className="text-[12px] text-muted-foreground py-2">Nenhum serviço cadastrado no sistema ainda.</p>
                 ) : (
-                  servicesList.map((service) => {
+                  <div className="rounded-[8px] border border-border overflow-hidden divide-y divide-border">
+                  {servicesList.map((service) => {
                     const isSelected = selectedServices.includes(service.id)
                     const show = !!revealed[service.id]
                     return (
                       <div
                         key={service.id}
                         className={cn(
-                          "rounded-[8px] border overflow-hidden transition-colors",
-                          isSelected ? "border-interactive/40 bg-interactive-bg" : "border-border bg-card"
+                          "transition-colors",
+                          isSelected ? "bg-interactive-bg" : "bg-card"
                         )}
                       >
                         {/* linha de seleção */}
-                        <div
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
                           onClick={() => toggleService(service.id)}
-                          className="flex items-center gap-[10px] px-[12px] py-[12px] cursor-pointer"
+                          className="flex w-full items-center gap-[10px] px-[12px] py-[9px] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                         >
                           <span
                             className={cn(
-                              "w-[18px] h-[18px] rounded-[5px] flex items-center justify-center border",
+                              "w-[16px] h-[16px] rounded-[4px] flex items-center justify-center border flex-shrink-0",
                               isSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-card"
                             )}
                           >
-                            {isSelected && <CheckCircle2 className="w-[12px] h-[12px]" strokeWidth={3} />}
+                            {isSelected && <Check className="w-[11px] h-[11px]" strokeWidth={3} />}
                           </span>
-                          <span className="flex-1 text-[13px] font-medium text-foreground">{service.name}</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {isSelected ? "incluído" : "toque para adicionar"}
-                          </span>
-                        </div>
+                          <span className="flex-1 min-w-0 truncate text-[12px] font-medium text-foreground">{service.name}</span>
+                        </button>
 
                         {/* credenciais opcionais */}
                         {isSelected && (
-                          <div className="px-[12px] pb-[12px] grid grid-cols-2 gap-[8px] animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="px-[12px] pb-[10px] pl-[38px] grid grid-cols-2 gap-[8px] animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="space-y-[4px]">
                               <label className="text-[10.5px] text-muted-foreground font-medium">Usuário</label>
                               <input
@@ -604,28 +650,33 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                         )}
                       </div>
                     )
-                  })
+                  })}
+                  </div>
                 )}
                 {errors.selected_services && (
-                  <p className="text-[10px] text-danger">{errors.selected_services.message}</p>
+                  <p className="mt-[6px] text-[10px] text-danger">{errors.selected_services.message}</p>
                 )}
               </div>
 
               {/* COBRANÇA E PLANO */}
               <div className="microlabel mt-[20px] mb-[10px]">COBRANÇA E PLANO</div>
-              <div className="flex flex-col sm:flex-row gap-[12px] mb-[12px]">
-                <div className="flex-1">
-                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
-                    {client ? "Valor mensal" : "Valor pago"} <span className="text-danger">*</span>
+              {/* Planos do serviço: atalho que preenche valor e vencimento de uma
+                  vez. Ficam acima e ocupando a largura toda — dentro da coluna de
+                  um terço cada pílula tomava uma linha inteira e empurrava o campo
+                  de valor para o fim de uma pilha, longe de Telas e Vencimento. */}
+              {availablePlans.length > 0 && (
+                <div className="mb-[12px]">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[6px]">
+                    Planos do serviço
                   </div>
-
-                  {/* Chips de planos do serviço selecionado */}
-                  {availablePlans.length > 0 && (
-                    <div className="flex flex-wrap gap-[6px] mb-[8px]">
-                      {availablePlans.map((plan) => (
+                  <div className="flex flex-wrap gap-[6px]">
+                    {availablePlans.map((plan) => {
+                      const isActive = Math.abs(planValue - (client ? Number(plan.price) / billingMonthsFromPlanName(plan.name) : Number(plan.price))) < 0.001
+                      return (
                         <button
                           key={plan.name}
                           type="button"
+                          aria-pressed={isActive}
                           onClick={() => {
                             const planMonths = billingMonthsFromPlanName(plan.name)
                             setValue("plan_value", client ? Number(plan.price) / planMonths : Number(plan.price), { shouldValidate: true })
@@ -634,19 +685,25 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                             }
                           }}
                           className={cn(
-                            "px-[10px] py-[4px] rounded-[6px] text-[11px] font-medium border transition-all",
-                            Math.abs(planValue - (client ? Number(plan.price) / billingMonthsFromPlanName(plan.name) : Number(plan.price))) < 0.001
+                            "px-[10px] py-[5px] rounded-[6px] text-[11px] font-medium border transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            isActive
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-card text-secondary-foreground border-input hover:border-primary/50 hover:bg-muted"
                           )}
                         >
                           {plan.name} · R$ {Number(plan.price).toFixed(2).replace('.', ',')} total
                         </button>
-                      ))}
-                    </div>
-                  )}
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
-                  {/* Input de valor — editável (clique para personalizar) */}
+              <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_0.7fr_1.2fr] gap-[12px] mb-[12px]">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
+                    {client ? "Valor mensal" : "Valor pago"} <span className="text-danger">*</span>
+                  </div>
                   <div className="flex items-center border border-input rounded-[7px] bg-transparent transition-colors focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(64,85,200,0.12)]">
                     <span className="pl-[11px] pr-[4px] text-muted-foreground text-[12px] font-mono select-none whitespace-nowrap">R$</span>
                     <input
@@ -668,7 +725,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   {errors.plan_value && <p className="text-[10px] text-danger mt-1">{errors.plan_value.message}</p>}
                 </div>
 
-                <div className="flex-1">
+                <div className="min-w-0">
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Telas <span className="text-danger">*</span>
                   </div>
@@ -682,7 +739,7 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                   {errors.screens && <p className="text-[10px] text-danger mt-1">{errors.screens.message}</p>}
                 </div>
 
-                <div className="flex-[1.2]">
+                <div className="min-w-0">
                   <div className="text-[11px] font-medium text-secondary-foreground mb-[5px]">
                     Vencimento <span className="text-danger">*</span>
                   </div>
@@ -748,44 +805,8 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
                 </div>
               )}
 
-              {/* Segmented Control de Status */}
-              <div className="bg-secondary rounded-[7px] p-[2px] flex flex-wrap sm:flex-nowrap">
-                <Controller
-                  control={control}
-                  name="status"
-                  render={({ field }) => (
-                    <>
-                      {statuses.map((st) => (
-                        <button
-                          key={st.value}
-                          type="button"
-                          onClick={() => field.onChange(st.value)}
-                          className={cn(
-                            "flex-1 flex items-center justify-center gap-[6px] rounded-[5px] py-[6px] text-[11.5px] font-medium transition-all",
-                            field.value === st.value
-                              ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                              : "text-muted-foreground hover:text-secondary-foreground"
-                          )}
-                        >
-                          <span
-                            className="w-[6px] h-[6px] rounded-full"
-                            style={{ backgroundColor: st.color }}
-                          />
-                          {st.label}
-                        </button>
-                      ))}
-                    </>
-                  )}
-                />
-              </div>
-
-              {/* OBSERVAÇÃO */}
-              <div className="microlabel mt-[20px] mb-[8px]">OBSERVAÇÃO</div>
-              <textarea
-                {...register("observation")}
-                placeholder="Anotações internas sobre o cliente (opcional)…"
-                className="input-2a min-h-[64px] resize-none leading-[1.55]"
-              />
+                </div>
+              )}
 
             </form>
 
@@ -798,15 +819,34 @@ export function ClientFormDialog({ open, onOpenChange, client, servicesList, onS
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                form="client-form"
-                disabled={isSubmitting}
-                className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] hover:bg-foreground disabled:opacity-70"
-              >
-                {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
-                {client ? 'Salvar cliente' : 'Criar cliente'}
-              </button>
+              {formStep === 'dados' ? (
+                <button
+                  type="button"
+                  onClick={() => goToStep('plano')}
+                  className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] hover:bg-foreground"
+                >
+                  Avançar para o plano
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setFormStep('dados')}
+                    className="border border-input bg-card rounded-[7px] px-[16px] py-[9px] font-medium text-[12px] text-secondary-foreground hover:bg-muted"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="submit"
+                    form="client-form"
+                    disabled={isSubmitting}
+                    className="border-none bg-primary text-primary-foreground rounded-[7px] px-[20px] py-[9px] font-semibold text-[12px] flex items-center gap-[6px] hover:bg-foreground disabled:opacity-70"
+                  >
+                    {isSubmitting && <Loader2 className="w-[14px] h-[14px] animate-spin" />}
+                    {client ? 'Salvar cliente' : 'Criar cliente'}
+                  </button>
+                </>
+              )}
             </div>
 
           </div>

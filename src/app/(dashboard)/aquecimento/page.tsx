@@ -117,13 +117,13 @@ export default function AquecimentoPage() {
 
       {isLoading ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-[16px]" />)}</div>
           {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
+            <Skeleton key={i} className="h-40 w-full rounded-[16px]" />
           ))}
         </div>
       ) : instances.length === 0 ? (
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-4 py-16 text-center shadow-sm">
+        <div className="flex flex-col items-center rounded-[16px] border border-dashed border-border bg-card px-4 py-16 text-center shadow-sm">
           <span className="flex size-12 items-center justify-center rounded-xl bg-warning-bg text-warning-fg"><Smartphone className="size-6" aria-hidden="true" /></span>
           <h2 className="mt-4 font-semibold">Nenhum número cadastrado</h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">Conecte um WhatsApp na Central de Automação para começar a acompanhar o aquecimento.</p>
@@ -140,7 +140,7 @@ export default function AquecimentoPage() {
             const remaining = WARMUP_DAYS - day
 
             return (
-              <div key={inst.id} className={cn("rounded-2xl border bg-card p-4 shadow-sm sm:p-5", isConnected ? "border-border" : "border-danger-border")}>
+              <div key={inst.id} className={cn("rounded-[16px] border bg-card p-4 shadow-sm sm:p-5", isConnected ? "border-border" : "border-danger-border")}>
                 {/* Cabeçalho da linha */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -215,7 +215,7 @@ export default function AquecimentoPage() {
 
 function WarmupMetric({ icon: Icon, label, value, hint, tone = "neutral" }: { icon: LucideIcon; label: string; value: string; hint: string; tone?: "neutral" | "warning" | "success" }) {
   const toneClass = tone === "warning" ? "bg-warning-bg text-warning-fg" : tone === "success" ? "bg-success-bg text-success-fg" : "bg-secondary text-secondary-foreground"
-  return <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-    <div className="flex items-start justify-between gap-3"><div><p className="microlabel">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div><span className={`rounded-lg p-2 ${toneClass}`}><Icon className="size-4" aria-hidden="true" /></span></div>
+  return <div className="rounded-[16px] border border-border bg-card p-4 shadow-sm">
+    <div className="flex items-start justify-between gap-3"><div><p className="microlabel">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div><span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-xl", toneClass)}><Icon className="size-4" aria-hidden="true" /></span></div>
   </div>
 }

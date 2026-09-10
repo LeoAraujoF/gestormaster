@@ -65,8 +65,8 @@ export function FinancialPlanningOverview({
   }
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm" aria-labelledby="financial-planning-title">
-      <div className="flex flex-col gap-2 border-b border-border bg-muted/30 px-4 py-4 sm:px-5">
+    <section className="overflow-hidden rounded-lg border border-border bg-card" aria-labelledby="financial-planning-title">
+      <div className="flex flex-col gap-2 border-b border-border bg-muted px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
             <Target className="size-4" aria-hidden="true" />
@@ -169,9 +169,16 @@ export function FinancialPlanningOverview({
             </div>
           </div>
 
-          <div className="mt-6">
+          {/* Barra de meta do handoff v2: trilho em degradê suave e preenchimento
+              danger → warning → money. O protótipo usa hex fixos (#c0453f/#d9a418);
+              aqui os tokens equivalentes mantêm o mesmo significado e acompanham o tema. */}
+          <div className="relative mt-5" style={{ paddingRight: exceeded > 0 ? 34 : 0 }}>
             <div
-              className="h-2.5 overflow-hidden rounded-full bg-muted"
+              className="h-2.5 overflow-hidden rounded-full"
+              style={{
+                background:
+                  "linear-gradient(90deg, color-mix(in srgb, var(--danger) 18%, var(--muted)), color-mix(in srgb, var(--warning) 18%, var(--muted)), color-mix(in srgb, var(--money) 22%, var(--muted)))",
+              }}
               role="progressbar"
               aria-label="Progresso da meta mensal"
               aria-valuemin={0}
@@ -179,11 +186,38 @@ export function FinancialPlanningOverview({
               aria-valuenow={Math.min(100, Math.max(0, Math.round(progress)))}
             >
               <div
-                className="h-full rounded-full bg-money transition-[width] duration-500 motion-reduce:transition-none"
-                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-              />
+                className="relative h-full overflow-hidden rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                style={{
+                  width: `${Math.min(100, Math.max(0, progress))}%`,
+                  background: "linear-gradient(90deg, var(--danger), var(--warning), var(--money))",
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(110deg, transparent 0%, rgba(255,255,255,.55) 45%, transparent 65%)",
+                    backgroundSize: "200% 100%",
+                    animation: "goalShine 2.2s ease-in-out infinite",
+                  }}
+                />
+              </div>
             </div>
-            <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            {exceeded > 0 && monthlyGoal ? (
+              <span
+                className="num absolute right-0 top-1/2 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-money px-2 py-[3px] text-[9.5px] font-bold text-white"
+                style={{
+                  transform: "translate(40%,-50%)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--money) 45%, transparent)",
+                  animation: "goalPulse 1.6s ease-in-out infinite",
+                }}
+              >
+                ↑ {Math.round((exceeded / monthlyGoal) * 100)}%
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-2">
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>{monthlyGoal === null ? "Cadastre uma meta para acompanhar o progresso." : `${Math.round(progress)}% da meta realizada`}</span>
               {remaining !== null ? (
                 <span className="num font-medium text-foreground">
@@ -200,7 +234,7 @@ export function FinancialPlanningOverview({
           ) : null}
         </div>
 
-        <div className="grid h-fit gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
+        <div className="grid h-fit gap-2.5 border-t border-border bg-muted p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
           <PlanningSignal
             icon={TrendingUp}
             label={`Potencial de ${nextMonthLabel}`}
@@ -265,8 +299,8 @@ function PlanningSignal({
   }
 
   return (
-    <article className={cn("flex min-w-0 gap-3 rounded-2xl border p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)] sm:flex-col lg:flex-row", toneClasses[tone].surface)}>
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneClasses[tone].icon)}>
+    <article className={cn("flex min-w-0 gap-2.5 rounded-lg border p-3.5 sm:flex-col lg:flex-row", toneClasses[tone].surface)}>
+      <span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-lg", toneClasses[tone].icon)}>
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <div className="min-w-0">

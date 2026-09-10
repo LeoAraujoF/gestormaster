@@ -130,20 +130,20 @@ export function OnboardingProgress() {
   const nextStep = steps.find((step) => !step.completed)
 
   return (
-    <section className="overflow-hidden rounded-xl border border-interactive/20 bg-interactive-bg" aria-labelledby="onboarding-title">
-      <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-interactive-fg shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-border bg-card" aria-labelledby="onboarding-title">
+      <div className="flex items-start gap-3 px-5 py-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
           <Zap className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="onboarding-title" className="text-sm font-semibold text-foreground">Configure sua conta</h2>
-            <span className="num rounded-md bg-card px-2 py-0.5 text-[10px] font-semibold text-interactive-fg">
+            <span className="num rounded-[6px] bg-interactive-bg px-[7px] py-0.5 text-[10px] font-semibold text-interactive-fg">
               {completedCount}/{totalSteps}
             </span>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Complete os passos essenciais para começar a operar e faturar.</p>
-          <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-card/70" aria-label={`${Math.round(progressPercent)}% concluído`}>
+          <div className="relative mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`${Math.round(progressPercent)}% concluído`}>
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-interactive transition-all duration-700 ease-out"
               style={{ width: `${progressPercent}%` }}
@@ -161,7 +161,7 @@ export function OnboardingProgress() {
         </button>
       </div>
 
-      <div className="grid border-t border-interactive/15 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid border-t border-border sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => {
               const Icon = step.icon
               return (
@@ -170,18 +170,18 @@ export function OnboardingProgress() {
                   onClick={() => !step.completed && router.push(step.href)}
                   disabled={step.completed}
                   className={cn(
-                    "group flex min-h-20 items-start gap-3 border-b border-interactive/15 px-4 py-3 text-left transition-colors sm:border-r lg:border-b-0",
+                    "group flex min-h-20 items-start gap-2.5 border-b border-border px-4 py-3 text-left transition-colors motion-reduce:transition-none sm:border-r lg:border-b-0",
                     step.completed
                       ? "cursor-default bg-success-bg/40"
-                      : "cursor-pointer bg-card/45 hover:bg-card"
+                      : "cursor-pointer bg-card hover:bg-muted"
                   )}
                 >
                   <div
                     className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+                      "flex size-[30px] shrink-0 items-center justify-center rounded-[6px] transition-colors motion-reduce:transition-none",
                       step.completed
                         ? "bg-success-bg text-success-fg"
-                        : "bg-card text-muted-foreground group-hover:text-interactive"
+                        : "bg-muted text-muted-foreground group-hover:text-interactive"
                     )}
                   >
                     {step.completed ? (
@@ -212,9 +212,9 @@ export function OnboardingProgress() {
       </div>
 
       {nextStep ? (
-        <div className="flex flex-col gap-2 border-t border-interactive/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-border px-5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">Próximo passo: <strong className="text-foreground">{nextStep.title}</strong></p>
-          <Button size="sm" onClick={() => router.push(nextStep.href)} className="h-8 text-xs">Continuar configuração</Button>
+          <Button size="sm" onClick={() => router.push(nextStep.href)} className="h-[30px] shrink-0 rounded-lg text-xs font-semibold">Continuar configuração</Button>
         </div>
       ) : null}
     </section>

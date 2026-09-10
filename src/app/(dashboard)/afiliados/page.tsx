@@ -1,12 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { formatCurrency, cn } from "@/lib/utils"
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Check,
+  Clock3,
+  Copy,
+  Link2,
+  Percent,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { AccountTabs } from "@/components/account-tabs"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -18,15 +29,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { MetricGrid, PageHeader, PageSection, PageShell } from "@/components/page-layout"
+import { MetricGrid, PageHeader, PageShell, SectionCard } from "@/components/page-layout"
 
 const MONTHLY_COST = 20.00
 const MIN_WITHDRAWAL = 50.00
+const COMMISSION_RATE = 30
+const HOLD_DAYS = 7
+
+type ReferredUser = {
+  id: string
+  full_name: string | null
+  created_at: string
+}
+
+function initialsOf(name: string) {
+  const trimmed = name.trim()
+  if (!trimmed) return "?"
+  return trimmed.split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()
+}
+
+function monthYearOf(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+}
 
 export default function AfiliadosPage() {
   const supabase = createClient()
   const [userId, setUserId] = useState<string>("")
   const [earnings, setEarnings] = useState<any[]>([])
+  const [referredUsers, setReferredUsers] = useState<ReferredUser[]>([])
   const [stats, setStats] = useState({
     totalIndicados: 0,
     saldoPendente: 0,
@@ -34,6 +64,7 @@ export default function AfiliadosPage() {
     comissaoMes: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   // Modals
   const [isPixOpen, setIsPixOpen] = useState(false)
@@ -55,11 +86,14 @@ export default function AfiliadosPage() {
       if (!user) return
       setUserId(user.id)
 
-      // 1. Busca total de indicados
-      const { count: indicadosCount } = await supabase
+      // 1. Busca os negócios indicados (dados reais, mesma linha já permitida por RLS)
+      const { data: referred, error: referredErr } = await supabase
         .from('users')
-        .select('*', { count: 'exact', head: true })
+        .select('id, full_name, created_at')
         .eq('referred_by', user.id)
+        .order('created_at', { ascending: false })
+
+      if (referredErr) throw referredErr
 
       // 2. Busca os extratos de comissão em R$
       const { data: comissoes, error: comissoesErr } = await supabase
@@ -91,12 +125,13 @@ export default function AfiliadosPage() {
       })
 
       setStats({
-        totalIndicados: indicadosCount || 0,
+        totalIndicados: referred?.length || 0,
         saldoPendente: pendente,
         saldoDisponivel: disponivel,
         comissaoMes,
       })
 
+      setReferredUsers(referred || [])
       setEarnings(comissoes || [])
     } catch (error: any) {
       toast.error("Erro ao carregar painel: " + (error?.message || JSON.stringify(error)))
@@ -115,7 +150,9 @@ export default function AfiliadosPage() {
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(url)
+      setLinkCopied(true)
       toast.success("Link copiado! Compartilhe para ganhar comissões.")
+      setTimeout(() => setLinkCopied(false), 2000)
     } else {
       // Fallback para quando acessado via IP na rede local (http não-seguro)
       const textArea = document.createElement("textarea")
@@ -128,7 +165,9 @@ export default function AfiliadosPage() {
       textArea.select()
       try {
         document.execCommand('copy')
+        setLinkCopied(true)
         toast.success("Link copiado! Compartilhe para ganhar comissões.")
+        setTimeout(() => setLinkCopied(false), 2000)
       } catch (err) {
         console.error('Falha ao copiar link', err)
         toast.error("Não foi possível copiar automaticamente. Tente copiar manualmente.")
@@ -207,61 +246,198 @@ export default function AfiliadosPage() {
     return `Comissão · ${e.referred_user?.full_name || 'nova assinatura (link)'}`
   }
 
+  // Total já sacado via PIX (real, derivado do próprio extrato — não é saldo, é histórico de pagamentos recebidos)
+  const totalSacado = useMemo(() => {
+    return earnings
+      .filter((e) => Number(e.amount) < 0 && e.payment_id?.startsWith('withdrawal'))
+      .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0)
+  }, [earnings])
+
+  // Comissão gerada por cada indicado (real, somada a partir do próprio extrato)
+  const commissionByReferredUser = useMemo(() => {
+    const map = new Map<string, number>()
+    earnings.forEach((e) => {
+      if (e.referred_user_id && Number(e.amount) > 0) {
+        map.set(e.referred_user_id, (map.get(e.referred_user_id) || 0) + Number(e.amount))
+      }
+    })
+    return map
+  }, [earnings])
+
   return (
     <PageShell width="default">
-      <PageHeader eyebrow="Programa de indicação" title="Afiliados" description="Acompanhe comissões, saldo disponível e seu histórico de movimentações." badge="30% recorrente" actions={<Button variant="outline" onClick={() => setIsPixOpen(true)}>Solicitar saque</Button>} />
-      <AccountTabs />
+      <PageHeader
+        eyebrow="Programa de indicação"
+        title="Afiliados"
+        description="Indique o Lembrado para outros negócios e receba comissão recorrente enquanto o cliente indicado continuar ativo."
+        badge={`${COMMISSION_RATE}% recorrente`}
+        actions={<Button variant="outline" onClick={() => setIsPixOpen(true)}>Solicitar saque</Button>}
+      />
 
       {/* Link de indicação */}
-      <div className="rounded-lg border border-border bg-card px-4 py-4">
-        <p className="mb-2 text-[11.5px] font-medium">Seu link de indicação</p>
-        <div className="flex items-center gap-2 rounded-md bg-secondary py-1.5 pl-3 pr-1.5">
-          <span className="num min-w-0 flex-1 truncate text-xs text-foreground">{affiliateUrl}</span>
-          <Button size="sm" onClick={copyAffiliateLink} className="h-7 shrink-0 px-3 text-xs">
-            Copiar
-          </Button>
+      <div className="overflow-hidden rounded-2xl border border-interactive bg-interactive-bg">
+        <div className="flex flex-wrap items-center gap-4 px-5 py-5">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-interactive-fg">
+            <Link2 className="size-[18px]" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1" style={{ minWidth: 200 }}>
+            <p className="text-[13.5px] font-semibold text-foreground">Seu link de indicação</p>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">Cada cadastro feito por ele já entra vinculado à sua conta.</p>
+          </div>
+          <div className="flex min-w-[240px] flex-1 items-center gap-2">
+            <div className="num h-10 min-w-0 flex-1 truncate rounded-[9px] border border-border bg-card px-3 text-xs leading-10 text-foreground">
+              {affiliateUrl}
+            </div>
+            <Button onClick={copyAffiliateLink} className="h-10 shrink-0 gap-1.5 rounded-[9px] px-3.5 text-xs">
+              {linkCopied ? <Check className="size-3.5" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
+              {linkCopied ? "Copiado!" : "Copiar link"}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* KPIs (5g): cards hairline com microlabel + valor mono */}
       {isLoading ? (
         <MetricGrid columns={4}>
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[72px] rounded-lg" />)}
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[86px] rounded-2xl" />)}
         </MetricGrid>
       ) : (
         <MetricGrid columns={4}>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="microlabel">Indicados ativos</p>
-            <p className="num mt-1 text-[18px] font-semibold tracking-[-0.02em]">{stats.totalIndicados}</p>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="microlabel">Indicados</p>
+                <p className="num mt-2 text-[20px] font-semibold tracking-[-0.02em]">{stats.totalIndicados}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">negócios vinculados ao seu link</p>
+              </div>
+              <span className="shrink-0 rounded-lg bg-interactive-bg p-2 text-interactive-fg"><Users className="size-4" aria-hidden="true" /></span>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="microlabel">Comissão/mês</p>
-            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em] text-money">
-              {formatCurrency(stats.comissaoMes)}
-            </p>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="microlabel">Comissão/mês</p>
+                <p className="num mt-2 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-money">
+                  {formatCurrency(stats.comissaoMes)}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">gerada no mês corrente</p>
+              </div>
+              <span className="shrink-0 rounded-lg bg-success-bg p-2 text-success-fg"><TrendingUp className="size-4" aria-hidden="true" /></span>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="microlabel">Pendente</p>
-            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em] text-warning">
-              {formatCurrency(stats.saldoPendente)}
-            </p>
+          <div className="rounded-2xl border border-warning-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="microlabel">Pendente</p>
+                <p className="num mt-2 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em] text-warning">
+                  {formatCurrency(stats.saldoPendente)}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">libera em até {HOLD_DAYS} dias</p>
+              </div>
+              <span className="shrink-0 rounded-lg bg-warning-bg p-2 text-warning-fg"><Clock3 className="size-4" aria-hidden="true" /></span>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="microlabel">Saldo</p>
-            <p className="num mt-1 whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em]">
-              {formatCurrency(stats.saldoDisponivel)}
-            </p>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="microlabel">Saldo disponível</p>
+                <p className="num mt-2 whitespace-nowrap text-[20px] font-semibold tracking-[-0.02em]">
+                  {formatCurrency(stats.saldoDisponivel)}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">pronto para saque</p>
+              </div>
+              <span className="shrink-0 rounded-lg bg-secondary p-2 text-secondary-foreground"><Wallet className="size-4" aria-hidden="true" /></span>
+            </div>
           </div>
         </MetricGrid>
       )}
 
-      {/* Extrato: linhas flat hairline, valor mono à direita */}
-      <PageSection title="Extrato de comissões" description="Entradas, liberações, conversões e saques registrados na sua conta.">
-      <div className="rounded-lg border border-border bg-card">
+      {/* Como funciona: fatos reais do programa, sem faixas progressivas fictícias */}
+      <SectionCard title="Como funciona a comissão" description="Regras fixas do programa, válidas para todos os afiliados.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex items-start gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-interactive-bg text-interactive-fg"><Percent className="size-[15px]" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-foreground">{COMMISSION_RATE}% recorrente</p>
+              <p className="mt-0.5 text-[11px] leading-[1.5] text-muted-foreground">Sobre a mensalidade de cada indicado, todo mês em que ele estiver ativo.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-warning-bg text-warning-fg"><Clock3 className="size-[15px]" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-foreground">Libera em {HOLD_DAYS} dias</p>
+              <p className="mt-0.5 text-[11px] leading-[1.5] text-muted-foreground">Cada comissão fica pendente por {HOLD_DAYS} dias após o pagamento do indicado, evitando reembolsos.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-secondary text-secondary-foreground"><Wallet className="size-[15px]" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-foreground">Saque via PIX</p>
+              <p className="mt-0.5 text-[11px] leading-[1.5] text-muted-foreground">Peça o saque quando quiser, a partir de {formatCurrency(MIN_WITHDRAWAL)} de saldo disponível.</p>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Indicados: negócios reais trazidos pelo link, com a comissão que cada um já gerou */}
+      <SectionCard
+        title="Indicados"
+        description={stats.totalIndicados > 0 ? `${stats.totalIndicados} negócio${stats.totalIndicados === 1 ? "" : "s"} vinculado${stats.totalIndicados === 1 ? "" : "s"} ao seu link.` : undefined}
+        contentClassName="p-0"
+      >
         {isLoading ? (
-          <div className="px-4 py-8 text-center text-[11.5px] text-muted-foreground">Carregando…</div>
+          <div className="p-5 text-center text-[11.5px] text-muted-foreground">Carregando…</div>
+        ) : referredUsers.length === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <p className="text-[12.5px] font-semibold">Você ainda não tem indicados</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Compartilhe seu link acima para começar.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {referredUsers.map((r) => {
+              const generated = commissionByReferredUser.get(r.id) || 0
+              return (
+                <div key={r.id} className="flex items-center gap-3 px-5 py-3">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-interactive-bg text-[10.5px] font-semibold text-interactive-fg">
+                    {initialsOf(r.full_name || "?")}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12.5px] font-semibold text-foreground">{r.full_name || "Negócio indicado"}</p>
+                    <p className="mt-0.5 text-[10.5px] text-muted-foreground">desde {monthYearOf(r.created_at)}</p>
+                  </div>
+                  <span className={cn("num shrink-0 whitespace-nowrap text-[12px] font-semibold", generated > 0 ? "text-money" : "text-muted-foreground")}>
+                    {generated > 0 ? `${formatCurrency(generated)} gerados` : "Sem comissão ainda"}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Extrato: linhas flat hairline, valor mono à direita */}
+      <SectionCard
+        title="Extrato de comissões"
+        description={totalSacado > 0 ? `Entradas, liberações, conversões e saques. ${formatCurrency(totalSacado)} já sacados via PIX.` : "Entradas, liberações, conversões e saques registrados na sua conta."}
+        contentClassName="p-0"
+        footer={
+          <div className="flex w-full items-center justify-end gap-3">
+            <button
+              onClick={() => setIsConvertOpen(true)}
+              className="text-[11.5px] font-medium text-interactive hover:underline"
+            >
+              Trocar por mês grátis
+            </button>
+            <Button variant="outline" size="sm" onClick={() => setIsPixOpen(true)} className="h-8 text-xs">
+              Solicitar saque
+            </Button>
+          </div>
+        }
+      >
+        {isLoading ? (
+          <div className="px-5 py-8 text-center text-[11.5px] text-muted-foreground">Carregando…</div>
         ) : earnings.length === 0 ? (
-          <div className="px-4 py-10 text-center">
+          <div className="px-5 py-10 text-center">
             <p className="text-[12.5px] font-semibold">Nenhuma movimentação ainda</p>
             <p className="mt-1 text-[11px] text-muted-foreground">Compartilhe seu link para começar a ganhar.</p>
           </div>
@@ -270,9 +446,12 @@ export default function AfiliadosPage() {
             {earnings.map((e) => {
               const isSaque = Number(e.amount) < 0
               return (
-                <div key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="truncate text-[12.5px]">{rowDescription(e)}</span>
+                <div key={e.id} className="flex items-center gap-3 px-5 py-3">
+                  <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-[9px]", isSaque ? "bg-secondary text-secondary-foreground" : "bg-success-bg text-success-fg")}>
+                    {isSaque ? <ArrowDownRight className="size-[15px]" aria-hidden="true" /> : <ArrowUpRight className="size-[15px]" aria-hidden="true" />}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="truncate text-[12.5px] font-medium">{rowDescription(e)}</span>
                     <span className="num text-[10.5px] text-muted-foreground">
                       {new Date(e.created_at).toLocaleDateString('pt-BR')}
                     </span>
@@ -298,21 +477,7 @@ export default function AfiliadosPage() {
             })}
           </div>
         )}
-      </div>
-      </PageSection>
-
-      {/* Ações do extrato */}
-      <div className="flex items-center justify-end gap-3">
-        <button
-          onClick={() => setIsConvertOpen(true)}
-          className="text-[11.5px] font-medium text-interactive hover:underline"
-        >
-          Trocar por mês grátis
-        </button>
-        <Button variant="outline" size="sm" onClick={() => setIsPixOpen(true)} className="h-8 text-xs">
-          Solicitar saque
-        </Button>
-      </div>
+      </SectionCard>
 
       {/* Modal PIX */}
       <Dialog open={isPixOpen} onOpenChange={setIsPixOpen}>

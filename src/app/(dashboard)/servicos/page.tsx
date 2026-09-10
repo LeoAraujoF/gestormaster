@@ -27,6 +27,7 @@ function ServiceMetric({
   hint,
   emphasis = false,
   compactValue = false,
+  mono = true,
 }: {
   icon: LucideIcon
   label: string
@@ -34,16 +35,17 @@ function ServiceMetric({
   hint: string
   emphasis?: boolean
   compactValue?: boolean
+  mono?: boolean
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex items-start gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", emphasis ? "bg-interactive-bg text-interactive" : "bg-secondary text-secondary-foreground")}>
-          <Icon className="size-4" aria-hidden="true" />
+        <span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-xl", emphasis ? "bg-interactive-bg text-interactive" : "bg-secondary text-secondary-foreground")}>
+          <Icon className="size-[15px]" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="microlabel text-[9px]">{label}</p>
-          <p className={cn("num mt-1 font-semibold leading-tight", compactValue ? "whitespace-nowrap text-[15px] tracking-[-0.04em] sm:text-xl sm:tracking-tight" : "break-words text-[17px] tracking-tight sm:text-xl", emphasis ? "text-interactive" : "text-foreground")}>{value}</p>
+          <p className={cn("mt-1 font-semibold leading-tight", mono && "num", compactValue ? "whitespace-nowrap text-[15px] tracking-[-0.04em] sm:text-xl sm:tracking-tight" : "break-words text-[17px] tracking-tight sm:text-xl", emphasis ? "text-interactive" : "text-foreground")}>{value}</p>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{hint}</p>
         </div>
       </div>
@@ -150,7 +152,7 @@ export default function ServicosPage() {
             <ServiceMetric icon={Layers3} label="Portfólio" value={services.length} hint={`${servicesWithoutClients} sem clientes vinculados`} />
             <ServiceMetric icon={UsersRound} label="Vínculos da carteira" value={totalAssignments} hint="Soma dos clientes em todos os serviços" emphasis />
             <ServiceMetric icon={WalletCards} label="Custo operacional" value={formatCurrency(totalOperationalCost)} hint="Custo unitário × clientes vinculados" compactValue />
-            <ServiceMetric icon={BriefcaseBusiness} label="Maior base" value={leadingService?.name || "—"} hint={leadingService ? `${leadingService.client_count || 0} clientes vinculados` : "Cadastre o primeiro serviço"} />
+            <ServiceMetric icon={BriefcaseBusiness} label="Maior base" value={leadingService?.name || "—"} hint={leadingService ? `${leadingService.client_count || 0} clientes vinculados` : "Cadastre o primeiro serviço"} mono={false} />
           </MetricGrid>
         )}
       </section>
@@ -190,7 +192,7 @@ export default function ServicosPage() {
                     return (
                       <article key={service.id} className="space-y-4 p-4">
                         <div className="flex items-start gap-3">
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><ServiceIcon name={service.name} /></span>
+                          <span className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><ServiceIcon name={service.name} /></span>
                           <div className="min-w-0 flex-1">
                             <h3 className="truncate text-sm font-semibold text-foreground">{service.name}</h3>
                             <p className="mt-1 text-[11px] text-muted-foreground">{service.panel_type || "Painel não informado"} · {service.plans?.length || 0} plano{service.plans?.length === 1 ? "" : "s"}</p>
@@ -227,7 +229,7 @@ export default function ServicosPage() {
                       <TableRow key={service.id} className="group hover:bg-muted/45">
                         <TableCell className="pl-5 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><ServiceIcon name={service.name} /></span>
+                            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><ServiceIcon name={service.name} /></span>
                             <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{service.name}</p><p className="mt-0.5 text-[11px] text-muted-foreground">Oferta ativa no catálogo</p></div>
                           </div>
                         </TableCell>
@@ -237,8 +239,8 @@ export default function ServicosPage() {
                         <TableCell className="num whitespace-nowrap text-right text-sm font-semibold text-danger">{formatCurrency(Number(service.cost || 0) * (service.client_count || 0))}</TableCell>
                         <TableCell className="pr-5 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditService(service)} aria-label={`Editar ${service.name}`} title={`Editar ${service.name}`} className="size-9 text-muted-foreground hover:text-foreground"><Edit2 className="size-4" aria-hidden="true" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => openDeleteService(service)} aria-label={`Excluir ${service.name}`} title={`Excluir ${service.name}`} className="size-9 text-muted-foreground hover:bg-danger-bg hover:text-danger"><Trash2 className="size-4" aria-hidden="true" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => openEditService(service)} aria-label={`Editar ${service.name}`} title={`Editar ${service.name}`} className="size-8 text-muted-foreground hover:text-foreground"><Edit2 className="size-3.5" aria-hidden="true" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => openDeleteService(service)} aria-label={`Excluir ${service.name}`} title={`Excluir ${service.name}`} className="size-8 text-muted-foreground hover:bg-danger-bg hover:text-danger"><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

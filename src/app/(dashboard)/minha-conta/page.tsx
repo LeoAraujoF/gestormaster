@@ -7,27 +7,27 @@ import { toast } from "sonner"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
+import { Building2, KeyRound, Palette, ShieldCheck, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { AccountTabs } from "@/components/account-tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { PageHeader, PageShell } from "@/components/page-layout"
+import { PageHeader, PageShell, SectionCard } from "@/components/page-layout"
 import {
   fetchSecurityPinStatus,
   SecurityPinApiError,
   updateSecurityPin,
 } from "@/lib/security-pin-client"
 
-// Abas internas (5f): texto 11.5px, ativa com borda inferior 2px tinta
+// Seções desta página. Afiliados e Notificações não moram aqui: cada uma é um
+// destino próprio na navegação lateral, com cabeçalho e identidade próprios.
 const SECTIONS = [
-  { key: "empresa", label: "Empresa & PIX" },
-  { key: "seguranca", label: "Segurança" },
-  { key: "pin", label: "Cofre PIN" },
-  { key: "aparencia", label: "Aparência" },
-  { key: "plano", label: "Plano & consumo" },
+  { key: "empresa", label: "Empresa & PIX", icon: Building2 },
+  { key: "seguranca", label: "Segurança", icon: ShieldCheck },
+  { key: "pin", label: "Cofre PIN", icon: KeyRound },
+  { key: "aparencia", label: "Aparência", icon: Palette },
+  { key: "plano", label: "Plano & consumo", icon: Wallet },
 ] as const
 
 type SectionKey = (typeof SECTIONS)[number]["key"]
@@ -78,7 +78,6 @@ export default function MinhaContaPage() {
   const [pixName, setPixName] = useState("")
   const [pixBank, setPixBank] = useState("")
   const [whatsappChannelLink, setWhatsappChannelLink] = useState("")
-  const [timezone, setTimezone] = useState("-03:00")
   const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   // Aparência - números tabulares (preferência do dispositivo)
@@ -96,7 +95,6 @@ export default function MinhaContaPage() {
         setPixName(user.user_metadata.pix_name || "")
         setPixBank(user.user_metadata.pix_bank || "")
         setWhatsappChannelLink(user.user_metadata.whatsapp_channel_link || "")
-        setTimezone(user.user_metadata.timezone || "-03:00")
       }
 
       try {
@@ -213,11 +211,9 @@ export default function MinhaContaPage() {
           pix_name: pixName,
           pix_bank: pixBank,
           whatsapp_channel_link: whatsappChannelLink,
-          timezone: timezone
         }
       })
       if (error) throw error
-      window.dispatchEvent(new CustomEvent("gestor:timezone-change", { detail: { timezone } }))
       toast.success("Dados da empresa atualizados com sucesso!")
     } catch (error: unknown) {
       toast.error(errorMessage(error, "Erro ao salvar dados da empresa."))
@@ -286,37 +282,47 @@ export default function MinhaContaPage() {
   return (
     <PageShell width="default">
       <PageHeader eyebrow="Conta e assinatura" title="Minha conta" description="Gerencie empresa, segurança, aparência e os limites do seu plano." badge={planName} />
-      <AccountTabs />
 
-      {/* Abas internas 5f: underline, sem pills */}
-      <div className="flex items-center gap-5 overflow-x-auto border-b border-border pt-1">
-        {SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setSection(s.key)}
-            className={cn(
-              "-mb-px min-h-11 whitespace-nowrap border-b-2 px-1 text-xs transition-colors",
-              section === s.key
-                ? "border-primary font-semibold text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* Navegação das seções desta página — a única barra de navegação daqui.
+          Afiliados e Notificações são destinos próprios na navegação lateral,
+          não abas desta tela. */}
+      <nav aria-label="Seções de Minha conta" className="overflow-x-auto rounded-xl border border-border bg-muted/50 p-1">
+        <div className="grid min-w-[560px] grid-cols-5 gap-1">
+          {SECTIONS.map((s) => {
+            const Icon = s.icon
+            const active = section === s.key
+            return (
+              <button
+                key={s.key}
+                onClick={() => setSection(s.key)}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-[12.5px] font-medium text-muted-foreground transition-[background-color,color,box-shadow] hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active && "bg-background text-foreground shadow-sm"
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate">{s.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
-      {/* --- EMPRESA & PIX (5f) --- */}
+      {/* --- EMPRESA & PIX --- */}
       {section === "empresa" && (
         <div className="grid gap-4 pt-1 lg:grid-cols-[1fr_300px] lg:items-start">
-          <div className="rounded-lg border border-border bg-card">
-            <div className="border-b border-border px-5 py-4">
-              <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Dados da empresa</h2>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Viram variáveis nas mensagens: {"{{empresa}}"}, {"{{pix}}"}, {"{{telefone_suporte}}"}…
-              </p>
-            </div>
-            <div className="space-y-4 px-5 py-4">
+          <SectionCard
+            title="Dados da empresa"
+            description={<>Viram variáveis nas mensagens: {"{{empresa}}"}, {"{{pix}}"}, {"{{telefone_suporte}}"}…</>}
+            footer={
+              <Button size="sm" onClick={handleSaveProfile} disabled={isSavingProfile} className="ml-auto h-8 px-4 text-xs">
+                {isSavingProfile && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+                Salvar
+              </Button>
+            }
+          >
+            <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="companyName" className="text-[11.5px]">Nome da empresa</Label>
@@ -393,44 +399,34 @@ export default function MinhaContaPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 border-t border-border pt-4">
-                <p className="microlabel mb-3">Sistema</p>
-                <Label className="text-[11.5px]">Fuso horário</Label>
-                <Select value={timezone} onValueChange={(val) => val && setTimezone(val)}>
-                  <SelectTrigger className="h-9 w-full md:w-64">
-                    <SelectValue placeholder="Selecione o fuso horário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="-03:00">Horário de Brasília (UTC-3)</SelectItem>
-                    <SelectItem value="-04:00">Amazonas / NY (UTC-4)</SelectItem>
-                    <SelectItem value="-05:00">Acre (UTC-5)</SelectItem>
-                    <SelectItem value="+01:00">Portugal (Lisboa)</SelectItem>
-                    <SelectItem value="+00:00">Londres (UTC+0)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[10.5px] text-muted-foreground">
-                  Os disparos automáticos usam o seu horário local.
+              <div className="border-t border-border pt-4">
+                <p className="microlabel">Prévia da mensagem</p>
+                <div className="mt-2.5 max-w-[340px] rounded-[11px] rounded-bl-[3px] bg-success-bg px-3 py-2.5">
+                  <p className="text-[12px] leading-[1.55] text-foreground">Olá! Seu plano vence em 3 dias. Deseja renovar?</p>
+                  <p className="mt-2 text-[11px] font-semibold text-money">{companyName || "— Sua empresa"}</p>
+                </div>
+                <p className="mt-2 text-[10.5px] text-muted-foreground">
+                  O fuso horário dos disparos fica em{" "}
+                  <Link href="/configuracoes" className="font-medium text-interactive hover:underline">
+                    Configurações › Perfil
+                  </Link>
+                  .
                 </p>
               </div>
             </div>
-            <div className="flex justify-end border-t border-border px-5 py-3">
-              <Button size="sm" onClick={handleSaveProfile} disabled={isSavingProfile} className="h-8 px-4 text-xs">
-                {isSavingProfile && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-                Salvar
-              </Button>
-            </div>
-          </div>
+          </SectionCard>
 
           {/* Coluna direita: plano + segurança (resumo) */}
           <div className="space-y-4">
-            <div className="rounded-lg border border-border bg-card px-4 py-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-semibold">Plano {isAdmin ? "Master" : planName}</p>
+            <SectionCard
+              title={`Plano ${isAdmin ? "Master" : planName}`}
+              headerAction={
                 <button onClick={() => setSection("plano")} className="text-[11px] font-medium text-interactive hover:underline">
                   Gerenciar
                 </button>
-              </div>
-              <div className="mt-4 space-y-4">
+              }
+            >
+              <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between text-[11.5px]">
                     <span className="text-muted-foreground">Clientes</span>
@@ -453,11 +449,10 @@ export default function MinhaContaPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="rounded-lg border border-border bg-card px-4 py-4">
-              <p className="text-[13px] font-semibold">Segurança</p>
-              <div className="mt-3 space-y-2.5 text-[11.5px]">
+            <SectionCard title="Segurança">
+              <div className="space-y-2.5 text-[11.5px]">
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-muted-foreground">{userEmail || "Conta"}</span>
                 </div>
@@ -480,19 +475,30 @@ export default function MinhaContaPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </SectionCard>
           </div>
         </div>
       )}
 
       {/* --- SEGURANÇA (senha) --- */}
       {section === "seguranca" && (
-        <div className="max-w-md rounded-lg border border-border bg-card pt-1">
-          <div className="border-b border-border px-5 py-4">
-            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Senha</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Usada para entrar na sua conta ({userEmail}).</p>
-          </div>
-          <div className="space-y-4 px-5 py-4">
+        <div className="max-w-md pt-1">
+          <SectionCard
+            title="Senha"
+            description={`Usada para entrar na sua conta (${userEmail}).`}
+            footer={
+              <Button
+                size="sm"
+                onClick={handlePasswordChange}
+                disabled={!oldPassword || !newPassword || newPassword !== confirmPassword || isChangingPassword || passScore < 2}
+                className="ml-auto h-8 px-4 text-xs"
+              >
+                {isChangingPassword && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+                Atualizar senha
+              </Button>
+            }
+          >
+            <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="old-password" className="text-[11.5px]">Senha atual</Label>
               <Input
@@ -542,40 +548,34 @@ export default function MinhaContaPage() {
                 className="h-9"
               />
             </div>
-          </div>
-          <div className="flex justify-end border-t border-border px-5 py-3">
-            <Button
-              size="sm"
-              onClick={handlePasswordChange}
-              disabled={!oldPassword || !newPassword || newPassword !== confirmPassword || isChangingPassword || passScore < 2}
-              className="h-8 px-4 text-xs"
-            >
-              {isChangingPassword && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-              Atualizar senha
-            </Button>
-          </div>
+            </div>
+          </SectionCard>
         </div>
       )}
 
-      {/* --- COFRE PIN (11e) --- */}
+      {/* --- COFRE PIN --- */}
       {section === "pin" && (
-        <div className="max-w-md rounded-lg border border-border bg-card pt-1">
-          <div className="px-5 py-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Cofre PIN</h2>
-              {isPinLocked ? (
+        <div className="max-w-md pt-1">
+          <SectionCard
+            title="Cofre PIN"
+            headerBadge={
+              isPinLocked ? (
                 <span className="num rounded bg-danger-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-danger-fg">BLOQUEADO</span>
               ) : hasPin ? (
                 <span className="num rounded bg-success-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-success-fg">ATIVO</span>
               ) : (
                 <span className="num rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-secondary-foreground">INATIVO</span>
-              )}
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Autoriza exclusões irreversíveis sem expor o PIN na sessão ou no navegador.
-            </p>
-          </div>
-          <div className="space-y-3 px-5 pb-4">
+              )
+            }
+            description="Autoriza exclusões irreversíveis sem expor o PIN na sessão ou no navegador."
+            footer={
+              <div className="flex w-full items-center justify-between">
+                <span className="text-[11.5px] text-muted-foreground">Bloqueio obrigatório após 3 erros</span>
+                <span className="rounded bg-success-bg px-2 py-1 text-[10px] font-semibold text-success-fg">15 MIN</span>
+              </div>
+            }
+          >
+            <div className="space-y-3">
             <p className="text-[11.5px] font-medium">{hasPin ? "Alterar PIN" : "Criar PIN"}</p>
             {isPinLocked && (
               <p className="rounded-md border border-danger/30 bg-danger-bg px-3 py-2 text-[11px] text-danger-fg">
@@ -625,22 +625,24 @@ export default function MinhaContaPage() {
                 Esqueci meu PIN
               </Link>
             </div>
-          </div>
-          <div className="flex items-center justify-between border-t border-border px-5 py-3">
-            <span className="text-[11.5px] text-muted-foreground">Bloqueio obrigatório após 3 erros</span>
-            <span className="rounded bg-success-bg px-2 py-1 text-[10px] font-semibold text-success-fg">15 MIN</span>
-          </div>
+            </div>
+          </SectionCard>
         </div>
       )}
 
-      {/* --- APARÊNCIA (11e) --- */}
+      {/* --- APARÊNCIA --- */}
       {section === "aparencia" && (
-        <div className="max-w-md rounded-lg border border-border bg-card pt-1">
-          <div className="px-5 py-4">
-            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Aparência</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Vale para este dispositivo.</p>
-          </div>
-          <div className="px-5 pb-4">
+        <div className="max-w-md pt-1">
+          <SectionCard
+            title="Aparência"
+            description="Vale para este dispositivo."
+            footer={
+              <div className="flex w-full items-center justify-between">
+                <span className="text-[11.5px] text-muted-foreground">Números em fonte tabular (alinhar colunas)</span>
+                <Switch checked={tabularNums} onCheckedChange={handleToggleTabularNums} />
+              </div>
+            }
+          >
             <div className="grid grid-cols-3 gap-3">
               {([
                 { key: "light", label: "Claro" },
@@ -683,29 +685,34 @@ export default function MinhaContaPage() {
                 )
               })}
             </div>
-          </div>
-          <div className="flex items-center justify-between border-t border-border px-5 py-3">
-            <span className="text-[11.5px] text-muted-foreground">Números em fonte tabular (alinhar colunas)</span>
-            <Switch checked={tabularNums} onCheckedChange={handleToggleTabularNums} />
-          </div>
+          </SectionCard>
         </div>
       )}
 
-      {/* --- PLANO & CONSUMO (5f) --- */}
+      {/* --- PLANO & CONSUMO --- */}
       {section === "plano" && (
-        <div className="max-w-md rounded-lg border border-border bg-card pt-1">
-          <div className="border-b border-border px-5 py-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">Plano {isAdmin ? "Master" : planName}</h2>
-              <span className="num rounded bg-success-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-success-fg">ATIVO</span>
-            </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {planExpiresAt
-                ? `Vence em ${new Date(planExpiresAt).toLocaleDateString('pt-BR')}`
-                : "Pagamento em dia"}
-            </p>
-          </div>
-          <div className="space-y-4 px-5 py-4">
+        <div className="max-w-md pt-1">
+          <SectionCard
+            title={`Plano ${isAdmin ? "Master" : planName}`}
+            headerBadge={<span className="num rounded bg-success-bg px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.06em] text-success-fg">ATIVO</span>}
+            description={planExpiresAt ? `Vence em ${new Date(planExpiresAt).toLocaleDateString('pt-BR')}` : "Pagamento em dia"}
+            footer={
+              <div className="flex w-full items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManageSubscription}
+                  disabled={isPortalLoading}
+                  className="h-8 text-xs"
+                >
+                  {isPortalLoading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+                  Gerenciar assinatura
+                </Button>
+                <Button size="sm" onClick={() => { window.location.href = "/planos" }} className="h-8 px-4 text-xs">Ver planos e fazer upgrade</Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between text-[11.5px]">
                 <span className="text-muted-foreground">Clientes cadastrados</span>
@@ -731,20 +738,8 @@ export default function MinhaContaPage() {
                 <p className="mt-1 text-[10.5px] text-warning">Limite atingido. Faça upgrade para adicionar mais.</p>
               )}
             </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManageSubscription}
-              disabled={isPortalLoading}
-              className="h-8 text-xs"
-            >
-              {isPortalLoading && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-              Gerenciar assinatura
-            </Button>
-            <Button size="sm" onClick={() => { window.location.href = "/planos" }} className="h-8 px-4 text-xs">Ver planos e fazer upgrade</Button>
-          </div>
+            </div>
+          </SectionCard>
         </div>
       )}
 

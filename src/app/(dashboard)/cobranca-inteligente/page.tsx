@@ -228,14 +228,63 @@ function CollectionMetric({ icon: Icon, label, value, hint, tone = "neutral" }: 
 
 function StepEditor({ step, saving, onSave }: { step: Step; saving: boolean; onSave: (step: Step) => void }) {
   const [draft, setDraft] = useState(step)
-  useEffect(() => setDraft(step), [step])
+  const [syncedStep, setSyncedStep] = useState(step)
+  // O servidor devolve o horário como HH:MM:SS e o input type="time" trabalha em
+  // HH:MM. Comparar e enviar sempre pela forma curta evita divergência boba.
+  const draftTime = draft.send_time.slice(0, 5)
+  const savedTime = step.send_time.slice(0, 5)
+
+  // Ajuste durante o render é o padrão do React para reagir à troca de prop —
+  // faz o mesmo que o efeito que havia aqui, sem o render extra com valor velho.
+  if (syncedStep !== step) {
+    setSyncedStep(step)
+    setDraft(step)
+  }
+
+  // Espelha exatamente o que a rota valida (dia -15..30, HH:MM, mensagem de 1 a
+  // 1000 caracteres) para o erro aparecer aqui, e não como um 400 genérico.
+  const dayValid = Number.isInteger(draft.relative_day) && draft.relative_day >= -15 && draft.relative_day <= 30
+  const timeValid = /^\d{2}:\d{2}$/.test(draftTime)
+  const messageValid = draft.message_template.trim().length > 0 && draft.message_template.length <= 1000
+  const problem = !dayValid
+    ? "O dia relativo vai de -15 a 30."
+    : !timeValid
+      ? "Informe um horário válido."
+      : !messageValid
+        ? (draft.message_template.trim().length === 0 ? "A mensagem não pode ficar vazia." : "A mensagem passa de 1000 caracteres.")
+        : null
+
+  const dirty = draft.relative_day !== step.relative_day
+    || draftTime !== savedTime
+    || draft.message_template !== step.message_template
+    || draft.is_active !== step.is_active
+
   return <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3.5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      <label className="space-y-1.5"><span className="microlabel">Dia relativo</span><Input aria-label="Dia relativo ao vencimento" className="h-9 sm:w-28" type="number" value={draft.relative_day} onChange={event => setDraft({ ...draft, relative_day: Number(event.target.value) })} /></label>
-      <label className="space-y-1.5"><span className="microlabel">Horário</span><Input aria-label="Horário de envio" className="h-9 sm:w-32" type="time" value={draft.send_time.slice(0, 5)} onChange={event => setDraft({ ...draft, send_time: event.target.value })} /></label>
+      <label className="space-y-1.5"><span className="microlabel">Dia relativo</span><Input aria-label="Dia relativo ao vencimento" className="h-9 sm:w-28" type="number" min={-15} max={30} step={1} value={draft.relative_day} onChange={event => setDraft({ ...draft, relative_day: Number(event.target.value) })} /></label>
+      <label className="space-y-1.5"><span className="microlabel">Horário</span><Input aria-label="Horário de envio" className="h-9 sm:w-32" type="time" value={draftTime} onChange={event => setDraft({ ...draft, send_time: event.target.value })} /></label>
       <span className="pb-2 text-xs leading-relaxed text-muted-foreground">Negativo: antes do vencimento · positivo: recuperação</span>
     </div>
-    <label className="block space-y-1.5"><span className="microlabel">Mensagem enviada</span><Textarea aria-label="Mensagem da etapa" className="min-h-24 bg-card text-sm" value={draft.message_template} onChange={event => setDraft({ ...draft, message_template: event.target.value })} /></label>
-    <div className="flex items-center justify-between gap-3"><span className={`text-xs font-medium ${draft.is_active ? "text-money" : "text-muted-foreground"}`}>{draft.is_active ? "Etapa ativa" : "Etapa pausada"}</span><Button size="sm" disabled={saving} onClick={() => onSave(draft)}>Salvar etapa</Button></div>
+    <label className="block space-y-1.5">
+      <span className="microlabel">Mensagem enviada</span>
+      <Textarea aria-label="Mensagem da etapa" className="min-h-24 bg-card text-sm" maxLength={1000} value={draft.message_template} onChange={event => setDraft({ ...draft, message_template: event.target.value })} />
+    </label>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+      <label className="flex items-center gap-2.5">
+        <Switch
+          aria-label={draft.is_active ? "Pausar esta etapa" : "Ativar esta etapa"}
+          checked={draft.is_active}
+          disabled={saving}
+          onCheckedChange={next => setDraft({ ...draft, is_active: next })}
+        />
+        <span className={`text-xs font-medium ${draft.is_active ? "text-money" : "text-muted-foreground"}`}>{draft.is_active ? "Etapa ativa" : "Etapa pausada"}</span>
+      </label>
+      <div className="flex items-center gap-3">
+        {problem
+          ? <span className="text-[11px] font-medium text-danger-fg">{problem}</span>
+          : dirty && <span className="text-[11px] text-muted-foreground">alterações não salvas</span>}
+        <Button size="sm" disabled={saving || !dirty || Boolean(problem)} onClick={() => onSave({ ...draft, send_time: draftTime })}>Salvar etapa</Button>
+      </div>
+    </div>
   </div>
 }

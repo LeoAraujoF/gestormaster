@@ -106,7 +106,7 @@ export function FinancialReportFilters({
   return (
     <form
       onSubmit={handleSubmit(onApply)}
-      className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5"
+      className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5"
       aria-label="Filtros do relatório financeiro"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

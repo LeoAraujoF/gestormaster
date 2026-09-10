@@ -115,7 +115,7 @@ export function FixedCostsSection({ onTotalChange }: FixedCostsSectionProps) {
     .reduce((sum, c) => sum + Number(c.amount), 0)
 
   return (
-    <Card className="rounded-[24px] shadow-sm">
+    <Card className="rounded-lg shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

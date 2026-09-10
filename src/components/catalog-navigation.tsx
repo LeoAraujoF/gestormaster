@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BadgePercent, Layers3 } from "lucide-react"
+import { Layers3, Zap } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -8,7 +8,7 @@ type CatalogRoute = "services" | "promotions"
 export function CatalogNavigation({ active }: { active: CatalogRoute }) {
   const items = [
     { id: "services" as const, label: "Serviços", href: "/servicos", icon: Layers3 },
-    { id: "promotions" as const, label: "Promoções", href: "/promocoes", icon: BadgePercent },
+    { id: "promotions" as const, label: "Promoções", href: "/promocoes", icon: Zap },
   ]
 
   return (

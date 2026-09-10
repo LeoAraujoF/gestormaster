@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 
-import { DashboardOverview } from "@/components/dashboard-overview"
+import { DashboardOverview, buildDueDaySpark } from "@/components/dashboard-overview"
 import { DueDateMap } from "@/components/due-date-map"
 import { ExecutiveDashboardView } from "@/components/executive-dashboard-view"
+import { PainelHero } from "@/components/painel-hero"
 import { PrivacyProvider } from "@/hooks/use-privacy"
 import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
 
@@ -41,6 +42,8 @@ const previewData: ExecutiveDashboardDTO = {
 
 const previewClients = Array.from({ length: 96 }, (_, index) => ({
   id: `preview-${index}`,
+  name: `Cliente ${index + 1}`,
+  phone: index % 4 === 0 ? null : "+55 11 90000-0000",
   due_date: `2026-08-${String(((index * 7) % 31) + 1).padStart(2, "0")}`,
   plan_value: 79 + (index % 5) * 20,
 }))
@@ -51,6 +54,16 @@ export default function DashboardPreviewPage() {
     <PrivacyProvider>
       <main className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-[1500px] space-y-6">
+          <PainelHero
+            eyebrow="Terça-feira, 26 de agosto"
+            badge="PRO"
+            trackedAmountLabel="R$ 11.780,00"
+            overdueCount={26}
+            overdueAmountLabel="R$ 4.860,00"
+            dueTodayCount={8}
+            dueTodayAmountLabel="R$ 1.240,00"
+            confirmedAmountLabel="R$ 31.520,00"
+          />
           <DashboardOverview
           totalClients={312}
           activeClients={286}
@@ -66,11 +79,16 @@ export default function DashboardPreviewPage() {
           confirmedAmount="R$ 31.520,00"
           trackedAmount="R$ 11.780,00"
           advancedFinance
+          period={period}
+          onPeriodChange={setPeriod}
+          sparkTotal={buildDueDaySpark(previewClients)}
+          sparkActive={buildDueDaySpark(previewClients.slice(0, 86))}
+          sparkOverdue={buildDueDaySpark(previewClients.slice(0, 26))}
           onOverdueOpen={() => undefined}
           onTodayOpen={() => undefined}
           onNextSevenDaysOpen={() => undefined}
           />
-          <ExecutiveDashboardView data={{ ...previewData, period }} period={period} onPeriodChange={setPeriod} />
+          <ExecutiveDashboardView data={{ ...previewData, period }} period={period} />
           <DueDateMap clients={previewClients} />
         </div>
       </main>

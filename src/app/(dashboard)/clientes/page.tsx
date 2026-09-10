@@ -24,8 +24,7 @@ import { useConfirm } from "@/components/providers/confirm-provider"
 import { ClientGrowthChart, ClientRegistrationRhythmChart, ClientsByStatusChart } from "./components/client-widgets"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { usePlan } from '@/components/providers/plan-provider'
-import { PageSection, PageShell, ResponsiveDataView } from '@/components/page-layout'
-import { WorkspaceHeader } from '@/components/workspace-header'
+import { PageHeaderCard, PageShell, ResponsiveDataView } from '@/components/page-layout'
 
 type QuickFilter = "all" | "active" | "overdue" | "today" | "7days" | "attention" | "no_whatsapp" | "no_service" | "suspended" | "canceled"
 
@@ -584,18 +583,18 @@ export default function ClientesPage() {
 
   return (
     <PageShell>
-      <WorkspaceHeader
-        id="clients-page-title"
+      <PageHeaderCard
+        titleId="clients-page-title"
         icon={Users}
         eyebrow="Carteira operacional"
-        title="Clientes"
         badge={`${clients.length}${planContext.limits.clients === null ? "" : ` / ${planContext.limits.clients}`}`}
+        title="Clientes"
         description="Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação."
         actions={
           <>
             <DropdownMenu>
-              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "min-h-10 flex-1 gap-2 sm:flex-none" })}>
-                <FileText className="size-4" aria-hidden="true" /> Relatórios
+              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "h-[38px] gap-1.5 rounded-lg px-4 text-[13px] font-medium" })}>
+                <FileText className="size-3.5" aria-hidden="true" /> Relatórios
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuItem onClick={() => downloadReport("day")} className="items-start gap-3 py-2.5">
@@ -613,8 +612,8 @@ export default function ClientesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="min-h-10 flex-1 gap-2 sm:flex-none">
-              <Plus className="size-4" /> Novo cliente
+            <Button onClick={openCreateClient} disabled={planContext.limits.clients !== null && clients.length >= planContext.limits.clients} className="h-[38px] gap-1.5 rounded-lg px-4 text-[13px] font-semibold">
+              <Plus className="size-3.5" /> Novo cliente
             </Button>
           </>
         }
@@ -622,21 +621,20 @@ export default function ClientesPage() {
 
 
       {/* Tabela de Gestão */}
-      <div ref={portfolioSectionRef} tabIndex={-1} className="scroll-mt-20 rounded-[24px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
-      <PageSection title="Seus clientes" description="Busque pelo nome ou telefone, filtre por situação, serviço, vencimento ou cadastro e execute a próxima ação.">
+      <div ref={portfolioSectionRef} tabIndex={-1} className="flex scroll-mt-20 flex-col gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">
 
         {/* Busca + segmentos + filtros */}
-        <div className="rounded-[24px] border border-border bg-card p-3 shadow-sm sm:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <Input aria-label="Buscar clientes" placeholder="Buscar por nome, telefone ou serviço" className="h-11 border-input bg-background pl-9 text-sm lg:h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <div className="flex flex-col gap-3.5 rounded-lg border border-border bg-card px-4 py-3.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input aria-label="Buscar clientes" placeholder="Buscar por nome, telefone ou serviço" className="h-[38px] rounded-[7px] border-input bg-background pl-8 text-[13px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
               <Popover>
-                <PopoverTrigger className={buttonVariants({ variant: "outline", className: "relative h-11 flex-1 gap-2 lg:h-10 lg:flex-none" })}>
-                  <Filter className="size-4" /> Filtros
-                  {activeFilterCount > 0 && <span className="num inline-flex min-w-5 items-center justify-center rounded-full bg-interactive px-1.5 py-0.5 text-[10px] font-semibold text-interactive-fg">{activeFilterCount}</span>}
+                <PopoverTrigger className={buttonVariants({ variant: "outline", className: "relative h-[38px] gap-1.5 rounded-[7px] px-3.5 text-[12.5px] font-medium" })}>
+                  <Filter className="size-3.5" /> Filtros
+                  {activeFilterCount > 0 && <span className="num inline-flex size-[18px] items-center justify-center rounded-full bg-interactive text-[10px] font-bold text-white">{activeFilterCount}</span>}
                 </PopoverTrigger>
                 <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] p-4" align="end">
                   <div className="space-y-4">
@@ -674,78 +672,60 @@ export default function ClientesPage() {
                   </div>
                 </PopoverContent>
               </Popover>
-              {hasAnyFilter ? <Button variant="ghost" onClick={clearAllFilters} className="h-11 flex-1 text-xs text-muted-foreground lg:h-10 lg:flex-none">Limpar tudo</Button> : null}
+              {hasAnyFilter ? <Button variant="ghost" onClick={clearAllFilters} className="h-[38px] px-2.5 text-xs font-medium text-muted-foreground">Limpar tudo</Button> : null}
             </div>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-interactive/15 bg-interactive-bg/35 p-3 sm:p-4">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="size-4 text-interactive" aria-hidden="true" />
-                  <p className="text-xs font-semibold text-foreground">Filtrar pela data de cadastro</p>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4" role="group" aria-label="Período rápido de cadastro">
-                  {[
-                    { key: "all", label: "Todos" },
-                    { key: "today", label: "Hoje" },
-                    { key: "last7", label: "Últimos 7 dias" },
-                    { key: "month", label: "Este mês" },
-                  ].map((period) => (
-                    <button
-                      key={period.key}
-                      type="button"
-                      onClick={() => applyRegistrationPeriod(period.key as RegistrationPeriod)}
-                      aria-pressed={registrationPeriod === period.key}
-                      className={cn(
-                        "min-h-9 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        registrationPeriod === period.key
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-foreground hover:bg-muted"
-                      )}
-                    >
-                      {period.label}
-                    </button>
-                  ))}
-                </div>
+          {/* Período de cadastro */}
+          <div className="flex flex-wrap items-start justify-between gap-3.5 rounded-lg border border-border bg-muted px-3.5 py-3">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="size-[13px] text-interactive" aria-hidden="true" />
+                <p className="text-[11.5px] font-semibold text-foreground">Filtrar pela data de cadastro</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:min-w-[360px]">
-                <div className="space-y-1.5">
-                  <Label htmlFor="client-created-from" className="text-[11px]">Cadastrado de</Label>
-                  <Input id="client-created-from" type="date" max={registeredTo || todayKey} className="h-9 bg-card text-xs" value={registeredFrom} onChange={(event) => { setRegisteredFrom(event.target.value); setRegistrationPeriod("custom") }} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="client-created-to" className="text-[11px]">Até</Label>
-                  <Input id="client-created-to" type="date" min={registeredFrom} max={todayKey} className="h-9 bg-card text-xs" value={registeredTo} onChange={(event) => { setRegisteredTo(event.target.value); setRegistrationPeriod("custom") }} />
-                </div>
+              <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Período rápido de cadastro">
+                {[
+                  { key: "all", label: "Todos" },
+                  { key: "today", label: "Hoje" },
+                  { key: "last7", label: "Últimos 7 dias" },
+                  { key: "month", label: "Este mês" },
+                ].map((period) => (
+                  <button
+                    key={period.key}
+                    type="button"
+                    onClick={() => applyRegistrationPeriod(period.key as RegistrationPeriod)}
+                    aria-pressed={registrationPeriod === period.key}
+                    className={cn(
+                      "min-h-8 rounded-[6px] border px-2.5 text-[11.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                      registrationPeriod === period.key
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-card text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid min-w-[220px] grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="client-created-from" className="text-[10px] font-normal text-muted-foreground">Cadastrado de</Label>
+                <Input id="client-created-from" type="date" max={registeredTo || todayKey} className="mt-1 h-8 rounded-[6px] bg-card text-[11px]" value={registeredFrom} onChange={(event) => { setRegisteredFrom(event.target.value); setRegistrationPeriod("custom") }} />
+              </div>
+              <div>
+                <Label htmlFor="client-created-to" className="text-[10px] font-normal text-muted-foreground">Até</Label>
+                <Input id="client-created-to" type="date" min={registeredFrom} max={todayKey} className="mt-1 h-8 rounded-[6px] bg-card text-[11px]" value={registeredTo} onChange={(event) => { setRegisteredTo(event.target.value); setRegistrationPeriod("custom") }} />
               </div>
             </div>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-border bg-background p-3 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="size-4 text-interactive" aria-hidden="true" />
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Histórico recente de cadastros</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">Selecione um dia para ver exatamente quem entrou na base.</p>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => applyRegistrationPeriod("last7")}
-                aria-pressed={registrationPeriod === "last7"}
-                className={cn(
-                  "inline-flex min-h-9 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  registrationPeriod === "last7" ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:bg-muted"
-                )}
-              >
-                Ver últimos 7 dias
-              </button>
+          {/* Histórico de 7 dias */}
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-foreground">Histórico recente de cadastros</p>
+              <span className="text-[10px] text-muted-foreground">Selecione um dia para filtrar</span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" role="group" aria-label="Histórico de cadastros dos últimos 7 dias">
+            <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7" role="group" aria-label="Histórico de cadastros dos últimos 7 dias">
               {registrationHistory.map((entry) => {
                 const isSelected = selectedRegistrationDate === entry.dateKey
                 return (
@@ -755,59 +735,63 @@ export default function ClientesPage() {
                     onClick={() => applyRegistrationDate(entry.dateKey)}
                     aria-pressed={isSelected}
                     className={cn(
-                      "min-h-[84px] rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      isSelected ? "border-interactive bg-interactive-bg ring-1 ring-interactive/30" : "border-border bg-card hover:border-interactive/40 hover:bg-muted"
+                      "flex min-h-[66px] flex-col justify-between rounded-[7px] border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                      isSelected ? "border-interactive bg-interactive-bg" : "border-border bg-card hover:bg-muted"
                     )}
                   >
-                    <span className="microlabel block text-[8px]">{entry.label}</span>
-                    <span className={cn("num mt-1 block text-xl font-semibold", entry.count > 0 ? "text-foreground" : "text-muted-foreground")}>{entry.count}</span>
-                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{entry.date} · cadastro{entry.count === 1 ? "" : "s"}</span>
+                    <span className="font-mono text-[8.5px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">{entry.label}</span>
+                    <span className="num text-lg font-semibold leading-none text-foreground">{entry.count}</span>
+                    <span className="text-[9px] text-muted-foreground">{entry.date}</span>
                   </button>
                 )
               })}
             </div>
           </div>
 
-          <p className="microlabel mt-4 text-[9px]">Situação dos clientes</p>
-          <div className="mt-2 flex max-w-full items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Situação dos clientes">
-            {[
-              { key: "all", label: "Todos", count: clients.length },
-              { key: "overdue", label: "Vencidos", count: overduePortfolio.length },
-              { key: "today", label: "Vence hoje", count: dueTodayPortfolio.length },
-              { key: "7days", label: "Próximos 7 dias", count: dueSoonPortfolio.length },
-              { key: "suspended", label: "Suspensos", count: suspendedPortfolio.length },
-              { key: "canceled", label: "Cancelados", count: canceledPortfolio.length },
-              { key: "no_whatsapp", label: "Sem WhatsApp", count: noWhatsappPortfolio.length },
-              { key: "no_service", label: "Sem serviço", count: noServicePortfolio.length },
-            ].map((segment) => (
-              <button key={segment.key} type="button" onClick={() => setQuickFilter(segment.key as QuickFilter)} aria-pressed={quickFilter === segment.key}
-                className={cn("flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  quickFilter === segment.key ? "border-foreground bg-foreground font-semibold text-background" : "border-transparent bg-secondary text-secondary-foreground hover:border-border hover:bg-muted")}>
-                {segment.label}<span className={cn("num text-[10px]", quickFilter === segment.key ? "text-background/70" : "text-muted-foreground")}>{segment.count}</span>
-              </button>
-            ))}
+          {/* Situação */}
+          <div>
+            <p className="microlabel text-[9px]">Situação dos clientes</p>
+            <div className="mt-1.5 flex max-w-full items-center gap-1.5 overflow-x-auto pb-0.5" role="group" aria-label="Situação dos clientes">
+              {[
+                { key: "all", label: "Todos", count: clients.length },
+                { key: "overdue", label: "Vencidos", count: overduePortfolio.length },
+                { key: "today", label: "Vence hoje", count: dueTodayPortfolio.length },
+                { key: "7days", label: "Próximos 7 dias", count: dueSoonPortfolio.length },
+                { key: "suspended", label: "Suspensos", count: suspendedPortfolio.length },
+                { key: "canceled", label: "Cancelados", count: canceledPortfolio.length },
+                { key: "no_whatsapp", label: "Sem WhatsApp", count: noWhatsappPortfolio.length },
+                { key: "no_service", label: "Sem serviço", count: noServicePortfolio.length },
+              ].map((segment) => (
+                <button key={segment.key} type="button" onClick={() => setQuickFilter(segment.key as QuickFilter)} aria-pressed={quickFilter === segment.key}
+                  className={cn("flex min-h-8 shrink-0 items-center gap-1.5 rounded-[6px] border px-2.5 text-[11.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                    quickFilter === segment.key ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground")}>
+                  {segment.label}<span className={cn("num text-[10px] opacity-70", quickFilter === segment.key && "text-background")}>{segment.count}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground" aria-live="polite">
+
+          <p className="text-[11px] text-muted-foreground" aria-live="polite">
             Exibindo <strong className="font-semibold text-foreground">{sortedClients.length}</strong> de {clients.length} clientes{registrationPeriod === "today" ? " cadastrados hoje" : registrationPeriod === "last7" ? " cadastrados nos últimos 7 dias" : registrationPeriod === "month" ? " cadastrados neste mês" : registrationPeriod === "custom" ? " no período escolhido" : ""}. Hoje e próximos vencimentos primeiro; atrasos de 3+ dias no fim.
           </p>
         </div>
 
         {/* Barra de seleção em massa */}
         {selectedClients.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-interactive/30 bg-interactive-bg px-3 py-3 text-xs" role="status">
-            <span className="mr-1 font-semibold text-interactive-fg">{selectedClients.length} selecionado{selectedClients.length > 1 && "s"}</span>
-            <button onClick={handleBulkMessage} className="flex min-h-9 items-center gap-1.5 rounded-md px-2.5 font-medium text-interactive transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><MessageCircle className="size-3.5"/> WhatsApp</button>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-interactive bg-interactive-bg px-3.5 py-2.5 text-xs" role="status">
+            <span className="mr-1 text-[12px] font-semibold text-interactive-fg">{selectedClients.length} selecionado{selectedClients.length > 1 && "s"}</span>
+            <button onClick={handleBulkMessage} className="flex h-8 items-center gap-1.5 rounded-[6px] px-2.5 text-[11.5px] font-semibold text-interactive-fg transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"><MessageCircle className="size-3"/> WhatsApp</button>
             <PixRapidoModal>
-              <button className="flex min-h-9 items-center gap-1.5 rounded-md px-2.5 font-medium text-interactive transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Zap className="size-3.5"/> Gerar PIX</button>
+              <button className="flex h-8 items-center gap-1.5 rounded-[6px] px-2.5 text-[11.5px] font-semibold text-interactive-fg transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"><Zap className="size-3"/> Gerar PIX</button>
             </PixRapidoModal>
-            <button onClick={() => exportCSV(clients.filter((client) => selectedClients.includes(client.id)))} className="flex min-h-9 items-center gap-1.5 rounded-md px-2.5 font-medium text-interactive transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Download className="size-3.5"/> Exportar</button>
-            <button onClick={() => setIsBulkDeleteDialogOpen(true)} className="ml-auto min-h-9 rounded-md px-2.5 font-medium text-danger transition-colors hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Excluir</button>
-            <button type="button" onClick={() => setSelectedClients([])} className="min-h-9 rounded-md px-2.5 text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Limpar seleção</button>
+            <button onClick={() => exportCSV(clients.filter((client) => selectedClients.includes(client.id)))} className="flex h-8 items-center gap-1.5 rounded-[6px] px-2.5 text-[11.5px] font-semibold text-interactive-fg transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"><Download className="size-3"/> Exportar</button>
+            <button onClick={() => setIsBulkDeleteDialogOpen(true)} className="ml-auto h-8 rounded-[6px] px-2.5 text-[11.5px] font-semibold text-danger transition-colors hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">Excluir</button>
+            <button type="button" onClick={() => setSelectedClients([])} className="h-8 rounded-[6px] px-2.5 text-[11.5px] font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">Limpar seleção</button>
           </div>
         )}
 
         {/* Tabela */}
-        <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           {isLoading ? (
             <div className="divide-y divide-border">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -889,22 +873,28 @@ export default function ClientesPage() {
                                 {commSentDate(client.last_charge_sent_date)}
                               </div>
                             </div>
-                            <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                              <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-9 px-2 text-[11px]">
-                                {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleWhatsApp(client)}
+                                aria-label={`Conversar com ${client.name} no WhatsApp`}
+                                className="size-[30px] shrink-0 rounded-[6px] bg-card text-money"
+                              >
+                                <MessageCircle className="size-3.5" aria-hidden="true" />
                               </Button>
-                              <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-9 px-2 text-[11px]">
+                              <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-[30px] flex-1 rounded-[6px] px-2.5 text-[11px] font-semibold">
+                                {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin motion-reduce:animate-none" /> : "Cobrar"}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-[30px] flex-1 rounded-[6px] bg-card px-2.5 text-[11px] font-medium">
                                 Renovar
                               </Button>
-                              <Button variant="secondary" size="sm" onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }} className="col-span-2 h-9 px-2 text-[11px]">
-                                Ativar promoção
-                              </Button>
                               <DropdownMenu>
-                                <DropdownMenuTrigger className="col-start-3 row-span-2 row-start-1 flex size-9 self-center items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
+                                <DropdownMenuTrigger className="flex size-[30px] shrink-0 items-center justify-center rounded-[6px] border border-input bg-card text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground motion-reduce:transition-none" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-3.5" /></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => { setEditingClient(client); setIsDialogOpen(true) }}>Editar / Trocar Serviço</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleWhatsApp(client)}>Conversar no WhatsApp</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openProfile(client)}>Ficha do Cliente</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }}>Ativar promoção</DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem variant="destructive" onClick={() => { setDeletingClient(client); setIsDeleteDialogOpen(true) }}>Excluir</DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -984,21 +974,27 @@ export default function ClientesPage() {
                         </TableCell>
                         <TableCell className="pr-3 text-right">
                           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-7 rounded-md px-2.5 text-xs">
-                              {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin" /> : "Cobrar"}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleWhatsApp(client)}
+                              aria-label={`Conversar com ${client.name} no WhatsApp`}
+                              className="size-[30px] shrink-0 rounded-[6px] text-money"
+                            >
+                              <MessageCircle className="size-3.5" aria-hidden="true" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-7 rounded-md px-2.5 text-xs">
+                            <Button size="sm" onClick={() => handleCobrar(client)} disabled={chargingIds.has(client.id)} className="h-[30px] rounded-[6px] px-2.5 text-[11px] font-semibold">
+                              {chargingIds.has(client.id) ? <Loader2 className="size-3 animate-spin motion-reduce:animate-none" /> : "Cobrar"}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => { setRenewingClient(client); setIsRenewDialogOpen(true) }} className="h-[30px] rounded-[6px] px-2.5 text-[11px] font-medium">
                               Renovar
                             </Button>
-                            <Button variant="secondary" size="sm" onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }} className="h-7 rounded-md px-2.5 text-xs">
-                              Ativar promoção
-                            </Button>
                             <DropdownMenu>
-                              <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
+                              <DropdownMenuTrigger className="flex size-[30px] items-center justify-center rounded-[6px] border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground motion-reduce:transition-none" aria-label={`Mais ações para ${client.name}`}><MoreHorizontal className="size-3.5" /></DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => { setEditingClient(client); setIsDialogOpen(true) }}>Editar / Trocar Serviço</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleWhatsApp(client)}>Conversar no WhatsApp</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openProfile(client)}>Ficha do Cliente</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setPromoClient(client); setIsPromoDialogOpen(true) }}>Ativar promoção</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem variant="destructive" onClick={() => { setDeletingClient(client); setIsDeleteDialogOpen(true) }}>Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
@@ -1012,38 +1008,46 @@ export default function ClientesPage() {
               </Table>
                 }
               />
-              <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                 <p className="text-[11px] text-muted-foreground">{sortedClients.length} cliente{sortedClients.length !== 1 && "s"} · página {currentPage} de {totalPages}</p>
                 {totalPages > 1 && (
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                    <Button variant="outline" size="sm" className="h-9 px-3 text-xs" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>← Anterior</Button>
-                    <Button variant="outline" size="sm" className="h-9 px-3 text-xs" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}>Próxima →</Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="h-8 rounded-[6px] px-3 text-[11.5px] font-medium" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>← Anterior</Button>
+                    <Button variant="outline" size="sm" className="h-8 rounded-[6px] px-3 text-[11.5px] font-medium" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}>Próxima →</Button>
                   </div>
                 )}
               </div>
             </>
           )}
         </div>
-      </PageSection>
       </div>
 
-      <PageSection title="Acompanhamento da base" description="Gráficos simples para acompanhar cadastros recentes e a situação atual dos clientes.">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-h-[420px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="flex flex-col gap-4" aria-labelledby="clients-charts-title">
+        <div>
+          <p className="microlabel">Acompanhamento da base</p>
+          <h2 id="clients-charts-title" className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">
+            Cadastros e situação da carteira
+          </h2>
+        </div>
+        {/* Os widgets usam `h-full` + `flex-1` + ResponsiveContainer height="100%":
+            sem altura definida no contêiner o gráfico colapsa para 0. Manter os
+            `min-h-*` e não usar `items-start` nesta grade. */}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.75fr)]">
+          <div className="min-h-[420px] min-w-0 rounded-lg border border-border bg-card p-4 sm:p-5">
             <ClientGrowthChart data={clientGrowthSeries} currentMonth={currentMonthNewClients} previousMonth={previousMonthNewClients} />
           </div>
-          <div className="grid gap-4">
-            <div className="min-h-[260px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
-              <ClientRegistrationRhythmChart data={dailyRegistrationSeries} total={currentMonthNewClients} />
-            </div>
+          <div className="flex min-w-0 flex-col gap-4">
             {metrics ? (
-              <div className="min-h-[240px] rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-5">
+              <div className="min-h-[240px] min-w-0 rounded-lg border border-border bg-card p-4 sm:p-5">
                 <ClientsByStatusChart data={metrics.chart_clients_by_status} />
               </div>
             ) : null}
+            <div className="min-h-[260px] min-w-0 rounded-lg border border-border bg-card p-4 sm:p-5">
+              <ClientRegistrationRhythmChart data={dailyRegistrationSeries} total={currentMonthNewClients} />
+            </div>
           </div>
         </div>
-      </PageSection>
+      </section>
 
       {/* Dialogs */}
       <ClientFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} client={editingClient} servicesList={services} onSuccess={loadData} />
@@ -1062,49 +1066,46 @@ export default function ClientesPage() {
           </SheetHeader>
           {profileClient && (
             <div className="mt-5 space-y-6">
-              <div className={cn("rounded-xl border p-4", profileClient.status === "vencido" ? "border-danger-border bg-danger-bg/40" : "border-border bg-card")}>
-                <div className="flex items-start gap-3">
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">{getInitials(profileClient.name)}</span>
+              <div className={cn("rounded-lg border p-4", profileClient.status === "vencido" ? "border-danger-border bg-danger-bg/40" : "border-border bg-card")}>
+                <div className="flex items-center gap-3">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-[13px] font-semibold text-secondary-foreground">{getInitials(profileClient.name)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-lg font-semibold text-foreground">{profileClient.name}</h3>
+                      <h3 className="max-w-[220px] truncate text-base font-semibold text-foreground">{profileClient.name}</h3>
                       {statusBadge(profileClient.status)}
                     </div>
-            <p className="num mt-1 text-xs text-muted-foreground">{profileClient.phone_e164 || profileClient.phone ? phoneMask(profileClient.phone_e164 || profileClient.phone || "") : 'Sem telefone cadastrado'}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{profileClient.days_as_client} dias na base</p>
+                    <p className="num mt-[3px] text-[11px] text-muted-foreground">{profileClient.phone_e164 || profileClient.phone ? phoneMask(profileClient.phone_e164 || profileClient.phone || "") : 'Sem telefone cadastrado'}</p>
+                    <p className="mt-0.5 text-[10.5px] text-muted-foreground">{profileClient.days_as_client} dias na base</p>
                   </div>
                 </div>
                 {profileClient.status === "vencido" ? (
-                  <div className="mt-4 flex items-start gap-2 rounded-lg bg-card/80 p-3 text-xs text-danger-fg">
-                    <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <div className="mt-2.5 flex items-start gap-2 text-[11.5px] text-danger-fg">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                     <p><strong className="font-semibold">Ação recomendada:</strong> revisar o vencimento e entrar em contato com o cliente.</p>
                   </div>
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border bg-muted/60 p-3">
-                  <p className="microlabel text-[9px]">Tempo na base</p>
-                  <p className="num mt-1 text-base font-semibold text-foreground">{profileClient.days_as_client} dias</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/60 p-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-lg border border-border px-3 py-2.5">
                   <p className="microlabel text-[9px]">Vencimento</p>
-                  <p className="num mt-1 text-base font-semibold text-foreground">{profileClient.due_date ? new Date(`${profileClient.due_date}T00:00:00`).toLocaleDateString("pt-BR") : "Sem data"}</p>
+                  <p className="num mt-1.5 text-sm font-semibold text-foreground">{profileClient.due_date ? new Date(`${profileClient.due_date}T00:00:00`).toLocaleDateString("pt-BR") : "Sem data"}</p>
                   {profileClient.due_date ? <p className={cn("mt-0.5 text-[10px]", prazoColor(diffDays(profileClient.due_date)))}>{prazoLabel(diffDays(profileClient.due_date))}</p> : null}
                 </div>
-                <div className="rounded-xl border border-border bg-muted/60 p-3">
-                  <p className="microlabel text-[9px]">Serviços</p>
-                  <p className="num mt-1 text-base font-semibold text-foreground">{profileClient.client_services?.length || 0}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/60 p-3">
+                <div className="rounded-lg border border-border px-3 py-2.5">
                   <p className="microlabel text-[9px]">Renovações</p>
-                  <p className="num mt-1 text-base font-semibold text-foreground">{profilePayments.length}</p>
+                  <p className="num mt-1.5 text-sm font-semibold text-foreground">{profilePayments.length}</p>
                 </div>
+              </div>
+
+              <div>
+                <p className="microlabel">Valor do plano</p>
+                <p className="num mt-1.5 text-xl font-semibold text-money">{formatCurrency(profileClient.plan_value || 0)}</p>
               </div>
 
               {/* Serviços e Acessos */}
               {profileClient.client_services && profileClient.client_services.length > 0 && (
-                <div className="rounded-lg border border-border bg-card p-3 space-y-3 mt-4">
+                <div className="space-y-3 rounded-lg border border-border bg-card p-3">
                   <p className="microlabel mb-1">Serviços Contratados</p>
                   {profileClient.client_services.map((cs: any, idx: number) => (
                     <div key={idx} className="flex flex-col gap-1 text-sm border-b border-border pb-2 last:border-0 last:pb-0">

@@ -17,8 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts"
 import { usePlanCapability } from "@/components/providers/plan-provider"
 import { useOrganization } from "@/components/providers/organization-provider"
-import { PageSection, PageShell, ResponsiveDataView } from "@/components/page-layout"
-import { WorkspaceHeader } from "@/components/workspace-header"
+import { PageHeaderCard, PageShell, ResponsiveDataView } from "@/components/page-layout"
 import { toast } from "sonner"
 import { FinancialPlanningOverview } from "./financial-planning-overview"
 import { FinancialReportCharts } from "./financial-report-charts"
@@ -441,13 +440,12 @@ export default function FinanceiroPage() {
 
   return (
     <PageShell>
-      <WorkspaceHeader
-        id="financial-page-title"
+      <PageHeaderCard
+        titleId="financial-page-title"
         icon={WalletCards}
         eyebrow="Visão financeira"
         title="Financeiro"
         description="Planeje a receita, acompanhe riscos e confira cada entrada sem perder o contexto."
-        className="animate-in fade-in slide-in-from-bottom-2 duration-500"
       />
 
       {hasFinancialError ? (
@@ -474,7 +472,7 @@ export default function FinanceiroPage() {
       />
 
       {upgradeRequired && !hasAdvancedFinance && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-lg border border-accent bg-interactive-bg px-4 py-3 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-xs font-semibold text-interactive-fg">Visão financeira básica ativa</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Previsões por ciclo, risco e comparativos históricos estão disponíveis no Pro.</p>
@@ -484,32 +482,31 @@ export default function FinanceiroPage() {
       )}
 
       {pixMetrics && (
-        <section className="space-y-3" aria-labelledby="pix-overview-title">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <section className="flex flex-col gap-3" aria-labelledby="pix-overview-title">
+          <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <p className="microlabel">Recebimentos rápidos</p>
-              <h2 id="pix-overview-title" className="mt-1 text-base font-semibold tracking-tight text-foreground">PIX</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Acompanhe o que está em aberto e o que já entrou por este canal.</p>
+              <h2 id="pix-overview-title" className="mt-1 text-base font-semibold text-foreground">PIX</h2>
             </div>
-            <span className="num text-xs text-muted-foreground">{pixMetrics.paid_month_count} pagos no mês</span>
+            <span className="num text-[11px] text-muted-foreground">{pixMetrics.paid_month_count} pagos no mês</span>
           </div>
-          <div className="grid gap-3 rounded-[24px] border border-border bg-muted/30 p-3 shadow-sm sm:grid-cols-3">
-            <div className="rounded-2xl border border-warning-border bg-warning-bg/65 p-4">
-              <p className="microlabel">PIX pendentes</p>
+          <div className="grid gap-3 rounded-lg border border-border bg-muted p-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-warning-border bg-warning-bg/65 p-3.5">
+              <p className="microlabel text-[9.5px]">PIX pendentes</p>
               <p className="num mt-1 text-[18px] font-semibold text-warning-fg">
                 {displayValue(formatCurrency(pixMetrics.pending_amount))}
               </p>
               <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.pending_count} em aberto</p>
             </div>
-            <div className="rounded-2xl border border-success-border bg-success-bg/65 p-4">
-              <p className="microlabel">PIX pagos hoje</p>
+            <div className="rounded-lg border border-success-border bg-success-bg/65 p-3.5">
+              <p className="microlabel text-[9.5px]">PIX pagos hoje</p>
               <p className="num mt-1 text-[18px] font-semibold text-money">
                 {displayValue(formatCurrency(pixMetrics.paid_today_amount))}
               </p>
               <p className="mt-0.5 text-[10.5px] text-muted-foreground">{pixMetrics.paid_today_count} confirmações</p>
             </div>
-            <div className="rounded-2xl border border-interactive/20 bg-interactive-bg/65 p-4">
-              <p className="microlabel">PIX no mês</p>
+            <div className="rounded-lg border border-interactive/20 bg-interactive-bg/65 p-3.5">
+              <p className="microlabel text-[9.5px]">PIX no mês</p>
               <p className="num mt-1 text-[18px] font-semibold text-interactive-fg">
                 {displayValue(formatCurrency(pixMetrics.paid_month_amount))}
               </p>
@@ -526,7 +523,7 @@ export default function FinanceiroPage() {
       )}
 
       {pixCharges.length > 0 && (
-        <details className="group overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+        <details className="group overflow-hidden rounded-lg border border-border bg-card">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-foreground">Histórico de cobranças PIX</p>
@@ -626,34 +623,35 @@ export default function FinanceiroPage() {
         </details>
       )}
 
-      <PageSection
-        title="Relatório de recebimentos"
-        description="Filtre o período, confira a composição da receita e exporte os registros encontrados."
-        actions={
-          <>
+      <section className="flex flex-col gap-4" aria-labelledby="financial-report-title">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="microlabel">Relatório de recebimentos</p>
+            <h2 id="financial-report-title" className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">
+              Filtre, confira e exporte
+            </h2>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
-              size="lg"
               onClick={() => exportReport("pdf")}
               disabled={filteredReportPayments.length === 0 || isReportLoading || Boolean(exportingFormat)}
-              className="gap-1.5 text-xs"
+              className="h-9 gap-1.5 rounded-lg px-3.5 text-xs font-medium"
             >
-              {exportingFormat === "pdf" ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <FileText className="size-3.5" aria-hidden="true" />}
+              {exportingFormat === "pdf" ? <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <FileText className="size-3.5" aria-hidden="true" />}
               Exportar PDF
             </Button>
             <Button
               variant="outline"
-              size="lg"
               onClick={() => exportReport("excel")}
               disabled={filteredReportPayments.length === 0 || isReportLoading || Boolean(exportingFormat)}
-              className="gap-1.5 text-xs"
+              className="h-9 gap-1.5 rounded-lg px-3.5 text-xs font-medium"
             >
-              {exportingFormat === "excel" ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="size-3.5" aria-hidden="true" />}
+              {exportingFormat === "excel" ? <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <FileSpreadsheet className="size-3.5" aria-hidden="true" />}
               Exportar Excel
             </Button>
-          </>
-        }
-      >
+          </div>
+        </div>
         <FinancialReportFilters
           key={`${reportFilters.from}-${reportFilters.to}-${reportFilters.shortcut}-${reportFilters.status}-${reportFilters.paymentMethod}-${reportFilters.service}-${reportFilters.search}`}
           values={reportFilters}
@@ -678,7 +676,7 @@ export default function FinanceiroPage() {
           </div>
         ) : (
           <div className="mt-4 space-y-4">
-            <div className={cn("grid grid-cols-2 gap-3 rounded-[24px] border border-border bg-muted/30 p-3", hasAdvancedFinance ? "sm:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-3")}>
+            <div className={cn("grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3", hasAdvancedFinance ? "sm:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-3")}>
               <PeriodMetric label="Receita recebida" value={displayValue(formatCurrency(reportRevenue))} hint={`${filteredReportPayments.length} pagamento${filteredReportPayments.length === 1 ? "" : "s"}`} tone="success" />
               {hasAdvancedFinance ? (
                 <>
@@ -696,7 +694,7 @@ export default function FinanceiroPage() {
             </div>
 
             {hasAdvancedFinance ? (
-              <div className="rounded-[24px] border border-border bg-card p-4 shadow-sm">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[13px] font-semibold">
                     Entradas, custos e líquido <span className="ml-1 text-[11px] font-normal text-muted-foreground">{reportPeriodLabel.toLowerCase()}</span>
@@ -740,11 +738,17 @@ export default function FinanceiroPage() {
             />
           </div>
         )}
-      </PageSection>
+      </section>
 
-      <PageSection title="Movimentações detalhadas" description="Ordene, selecione e personalize as colunas da tabela com todos os resultados filtrados.">
+      <section className="flex flex-col gap-3.5" aria-labelledby="financial-movements-title">
+        <div>
+          <p className="microlabel">Movimentações detalhadas</p>
+          <h2 id="financial-movements-title" className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">
+            Todos os pagamentos filtrados
+          </h2>
+        </div>
         {hasReportError ? (
-          <div className="rounded-[24px] border border-warning-border bg-warning-bg px-4 py-10 text-center">
+          <div className="rounded-lg border border-warning-border bg-warning-bg px-4 py-10 text-center">
             <p className="text-sm font-medium text-warning-fg">Pagamentos indisponíveis</p>
             <p className="mt-1 text-xs text-muted-foreground">Tente aplicar os filtros novamente.</p>
             <Button
@@ -758,16 +762,16 @@ export default function FinanceiroPage() {
             </Button>
           </div>
         ) : isReportLoading ? (
-          <div className="space-y-2 rounded-[24px] border border-border bg-card p-4">
+          <div className="space-y-2 rounded-lg border border-border bg-card p-4">
             {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-11 w-full" />)}
           </div>
         ) : (
           <FinancialReportsTable data={filteredReportPayments} displayValue={displayValue} />
         )}
-      </PageSection>
+      </section>
 
       {hasAdvancedFinance ? (
-        <details className="group overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+        <details className="group overflow-hidden rounded-lg border border-border bg-card">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-foreground">Análises adicionais e custos fixos</p>
@@ -779,7 +783,7 @@ export default function FinanceiroPage() {
             <FixedCostsSection />
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="annual-cashflow-title">
+              <section className="overflow-hidden rounded-lg border border-border bg-card" aria-labelledby="annual-cashflow-title">
                 <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
                   <div>
                     <h2 id="annual-cashflow-title" className="text-sm font-semibold text-foreground">Evolução de caixa</h2>
@@ -815,7 +819,7 @@ export default function FinanceiroPage() {
                 </div>
               </section>
 
-              <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="service-distribution-title">
+              <section className="overflow-hidden rounded-lg border border-border bg-card" aria-labelledby="service-distribution-title">
                 <div className="border-b border-border px-4 py-4 sm:px-5">
                   <h2 id="service-distribution-title" className="text-sm font-semibold text-foreground">Distribuição por serviços</h2>
                   <p className="mt-1 text-xs text-muted-foreground">Participação real dos serviços nos vínculos da carteira.</p>
@@ -888,7 +892,7 @@ function PeriodMetric({
   }
 
   return (
-    <article className={cn("min-w-0 rounded-2xl border p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)]", surfaceClasses[tone])}>
+    <article className={cn("min-w-0 rounded-lg border p-4 shadow-[0_1px_2px_rgba(0,0,0,.03)]", surfaceClasses[tone])}>
       <p className="microlabel">{label}</p>
       <p className={cn(
         "num mt-1.5 text-lg font-semibold tracking-[-0.025em] text-foreground sm:text-xl",

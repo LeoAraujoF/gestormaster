@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
-import { BadgePercent, CalendarClock, CalendarDays, CheckCircle2, CirclePause, Edit2, Plus, TicketPercent, Trash2, type LucideIcon } from "lucide-react"
+import { CalendarClock, CalendarDays, CheckCircle2, CirclePause, Edit2, Plus, TicketPercent, Trash2, Zap, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { CatalogNavigation } from "@/components/catalog-navigation"
@@ -58,8 +58,8 @@ function PromotionMetric({
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex items-start gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", emphasis ? "bg-success-bg text-success-fg" : "bg-secondary text-secondary-foreground")}>
-          <Icon className="size-4" aria-hidden="true" />
+        <span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-xl", emphasis ? "bg-success-bg text-success-fg" : "bg-secondary text-secondary-foreground")}>
+          <Icon className="size-[15px]" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="microlabel text-[9px]">{label}</p>
@@ -156,7 +156,7 @@ export default function PromocoesPage() {
           </MetricGrid>
         ) : (
           <MetricGrid columns={4}>
-            <PromotionMetric icon={BadgePercent} label="Promoções" value={promotions.length} hint={`${pausedCount} pausada${pausedCount === 1 ? "" : "s"} · ${endedCount} encerrada${endedCount === 1 ? "" : "s"}`} />
+            <PromotionMetric icon={Zap} label="Promoções" value={promotions.length} hint={`${pausedCount} pausada${pausedCount === 1 ? "" : "s"} · ${endedCount} encerrada${endedCount === 1 ? "" : "s"}`} />
             <PromotionMetric icon={CheckCircle2} label="Ativas agora" value={activeCount} hint="Disponíveis para aplicação" emphasis />
             <PromotionMetric icon={CalendarClock} label="Agendadas" value={scheduledCount} hint="Começam em uma data futura" />
             <PromotionMetric icon={TicketPercent} label="Desconto médio" value={formatCurrency(averageDiscount)} hint="Média das promoções cadastradas" />
@@ -170,11 +170,11 @@ export default function PromocoesPage() {
       >
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-[310px] rounded-2xl" />)}
+            {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-[310px] rounded-[16px]" />)}
           </div>
         ) : promotions.length === 0 ? (
-          <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><BadgePercent className="size-5" aria-hidden="true" /></span>
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-[16px] border border-dashed border-border bg-card px-6 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><TicketPercent className="size-5" aria-hidden="true" /></span>
             <h3 className="mt-4 text-sm font-semibold text-foreground">Crie sua primeira promoção</h3>
             <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Defina um desconto e uma vigência para usar a oferta nas renovações dos clientes.</p>
             <Button onClick={openCreatePromo} className="mt-5 min-h-10 gap-2"><Plus className="size-4" aria-hidden="true" /> Criar promoção</Button>
@@ -182,9 +182,9 @@ export default function PromocoesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {promotionStates.map(({ promotion, state }) => (
-              <article key={promotion.id} className="flex min-h-[310px] flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
+              <article key={promotion.id} className="flex min-h-[310px] flex-col rounded-[16px] border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><BadgePercent className="size-4" aria-hidden="true" /></span>
+                  <span className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><TicketPercent className="size-4" aria-hidden="true" /></span>
                   <span className={cn("inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold", state.badgeClass)}>{state.label}</span>
                 </div>
 

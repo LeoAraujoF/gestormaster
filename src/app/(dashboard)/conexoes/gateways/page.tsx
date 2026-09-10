@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { format } from "date-fns"
 import { toast } from "sonner"
-import { Sparkles, CreditCard, CheckCircle2, AlertCircle, Copy, Check, Bot } from "lucide-react"
+import { Sparkles, CreditCard, CheckCircle2, AlertCircle, Copy, Check, Bot, KeyRound, Plus, Lock, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useConfirm } from "@/components/providers/confirm-provider"
@@ -51,6 +52,17 @@ const AVAILABLE_INTEGRATIONS = [
   }
 ]
 
+type ApiKey = {
+  id: string
+  name: string
+  created_at: string
+  last_used_at: string | null
+}
+
+// "loading" | "ready" (lista carregada) | "locked" (plano sem developer_api)
+// | "missing" (tabela api_keys ainda não criada) | "error"
+type KeysStatus = "loading" | "ready" | "locked" | "missing" | "error"
+
 export default function GatewaysPage() {
   const confirm = useConfirm()
   const supabase = createClient()
@@ -65,7 +77,39 @@ export default function GatewaysPage() {
   const [isSavingIntegration, setIsSavingIntegration] = useState(false)
   const [copiedWebhook, setCopiedWebhook] = useState(false)
 
-  const [apiKeys, setApiKeys] = useState<any[]>([])
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+  const [keysStatus, setKeysStatus] = useState<KeysStatus>("loading")
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false)
+  const [newKeyName, setNewKeyName] = useState("")
+  const [isCreatingKey, setIsCreatingKey] = useState(false)
+  const [createdKey, setCreatedKey] = useState<string | null>(null)
+  const [copiedKey, setCopiedKey] = useState(false)
+
+  const fetchApiKeys = async () => {
+    try {
+      const res = await fetch('/api/developer/keys')
+      if (res.status === 403) {
+        setApiKeys([])
+        setKeysStatus("locked")
+        return
+      }
+      if (!res.ok) {
+        setKeysStatus("error")
+        return
+      }
+      const data = await res.json()
+      if (data.missingTable) {
+        setApiKeys([])
+        setKeysStatus("missing")
+        return
+      }
+      setApiKeys(data.keys || [])
+      setKeysStatus("ready")
+    } catch (e) {
+      console.error(e)
+      setKeysStatus("error")
+    }
+  }
 
   const loadData = async () => {
     setIsLoading(true)
@@ -79,10 +123,9 @@ export default function GatewaysPage() {
         const dataInt = await resIntegrations.json()
         setIntegrations(dataInt.integrations || [])
       }
-      
-      const { data: keys } = await supabase.from('api_keys').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-      if (keys) setApiKeys(keys)
-      
+
+      await fetchApiKeys()
+
     } catch (e) {
       console.error(e)
     } finally {
@@ -145,31 +188,62 @@ export default function GatewaysPage() {
     }
   }
   
-  const handleGenerateKey = async () => {
-      try {
-        const res = await fetch('/api/admin/apikeys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'Chave de API Principal' })
-        })
-        if (res.ok) {
-          toast.success("Chave gerada com sucesso!")
-          loadData()
-        } else {
-          toast.error("Erro ao gerar chave.")
-        }
-      } catch (e) {
-        toast.error("Erro interno.")
-      }
+  const handleOpenKeyModal = () => {
+    setNewKeyName("")
+    setCreatedKey(null)
+    setCopiedKey(false)
+    setIsKeyModalOpen(true)
   }
-  
-  const handleRevokeKey = async (id: string) => {
-      if (!await confirm({ title: "Revogar chave?", description: "Isso quebrará as integrações atuais.", variant: "warning" })) return
+
+  const handleCreateKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error("Dê um nome para identificar esta chave.")
+      return
+    }
+    setIsCreatingKey(true)
+    try {
+      const res = await fetch('/api/developer/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newKeyName.trim() })
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setCreatedKey(data.key.plainToken)
+        setNewKeyName("")
+        toast.success("Chave gerada com sucesso!")
+        fetchApiKeys()
+      } else {
+        toast.error(data.error || "Erro ao gerar chave.")
+      }
+    } catch (e) {
+      toast.error("Erro interno ao gerar chave.")
+    } finally {
+      setIsCreatingKey(false)
+    }
+  }
+
+  const handleCopyCreatedKey = () => {
+    if (!createdKey) return
+    navigator.clipboard.writeText(createdKey)
+    setCopiedKey(true)
+    setTimeout(() => setCopiedKey(false), 2000)
+    toast.success("Chave copiada.")
+  }
+
+  const handleRevokeKey = async (key: ApiKey) => {
+      if (!await confirm({
+        title: "Revogar chave?",
+        description: `"${key.name}" deixará de funcionar imediatamente e as automações que a usam vão parar.`,
+        variant: "destructive"
+      })) return
       try {
-        const res = await fetch(`/api/admin/apikeys?id=${id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/developer/keys?id=${key.id}`, { method: 'DELETE' })
         if (res.ok) {
           toast.success("Chave revogada.")
-          loadData()
+          fetchApiKeys()
+        } else {
+          toast.error("Erro ao revogar chave.")
         }
       } catch (e) {
          toast.error("Erro ao revogar chave.")
@@ -193,7 +267,7 @@ export default function GatewaysPage() {
           <div className="space-y-3">
             {/* Mercado Pago */}
             {mpIntegration && mpIntegration.is_active ? (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-[16px] border border-border bg-card p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 bg-[#009EE3]/10 text-[#009EE3] rounded-lg flex items-center justify-center font-bold text-[13px]">
@@ -205,25 +279,25 @@ export default function GatewaysPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500">
-                      <span className="size-1.5 rounded-full bg-emerald-500"></span> Ativo
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-money">
+                      <span className="status-dot bg-money"></span> Ativo
                     </div>
                     <button onClick={() => handleOpenIntegrationModal('mercadopago')} className="text-[10px] text-muted-foreground hover:text-foreground hover:underline">Configurar</button>
                   </div>
                 </div>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => handleOpenIntegrationModal('mercadopago')}
-                className="w-full rounded-xl border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                className="w-full rounded-[16px] border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
               >
                 + Conectar Mercado Pago
               </button>
             )}
-            
+
             {/* Typebot */}
             {getIntegrationData('typebot')?.is_active ? (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-[16px] border border-border bg-card p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center font-bold text-[13px]">
@@ -235,25 +309,25 @@ export default function GatewaysPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500">
-                      <span className="size-1.5 rounded-full bg-emerald-500"></span> Ativo
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-money">
+                      <span className="status-dot bg-money"></span> Ativo
                     </div>
                     <button onClick={() => handleOpenIntegrationModal('typebot')} className="text-[10px] text-muted-foreground hover:text-foreground hover:underline">Configurar</button>
                   </div>
                 </div>
               </div>
             ) : (
-                <button 
+                <button
                 onClick={() => handleOpenIntegrationModal('typebot')}
-                className="w-full rounded-xl border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                className="w-full rounded-[16px] border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
               >
                 + Conectar Typebot
               </button>
             )}
-            
+
             {/* OpenAI / Groq */}
             {getIntegrationData('ai_assistant')?.is_active ? (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-[16px] border border-border bg-card p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 bg-emerald-500/10 text-emerald-500 rounded-lg flex items-center justify-center font-bold text-[13px]">
@@ -265,17 +339,17 @@ export default function GatewaysPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500">
-                      <span className="size-1.5 rounded-full bg-emerald-500"></span> Ativo
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-money">
+                      <span className="status-dot bg-money"></span> Ativo
                     </div>
                     <button onClick={() => handleOpenIntegrationModal('ai_assistant')} className="text-[10px] text-muted-foreground hover:text-foreground hover:underline">Configurar</button>
                   </div>
                 </div>
               </div>
             ) : (
-                <button 
+                <button
                 onClick={() => handleOpenIntegrationModal('ai_assistant')}
-                className="w-full rounded-xl border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                className="w-full rounded-[16px] border border-dashed border-border bg-card/50 p-4 text-[13px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
               >
                 + Conectar I.A.
               </button>
@@ -287,44 +361,88 @@ export default function GatewaysPage() {
         <div className="space-y-4">
           <h2 className="microlabel text-muted-foreground uppercase">API &middot; Desenvolvedor</h2>
           
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="font-semibold text-[15px]">Chaves de API</h3>
-                <p className="text-[12px] text-muted-foreground">N8N, Typebot, Make</p>
+          <div className="overflow-hidden rounded-[16px] border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-secondary text-secondary-foreground">
+                  <KeyRound className="size-[15px]" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-[14px]">Chaves de API</h3>
+                  <p className="text-[11px] text-muted-foreground">N8N, Typebot, Make</p>
+                </div>
               </div>
-              {!apiKeys.length && (
-                <button onClick={handleGenerateKey} className="text-[12px] font-semibold text-interactive hover:underline">
-                  + Gerar
-                </button>
+              {keysStatus === "ready" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-[30px] shrink-0 gap-1.5 px-2.5 text-[11.5px] font-medium"
+                  onClick={handleOpenKeyModal}
+                >
+                  <Plus className="size-3" aria-hidden="true" />
+                  Gerar
+                </Button>
               )}
             </div>
-            
-            {apiKeys.length > 0 ? (
-              apiKeys.map(k => (
-                <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg bg-secondary/50 p-3 mt-2">
-                  <code className="text-[12px] font-mono text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-[180px]">
-                    {k.key.substring(0, 8)}...{k.key.substring(k.key.length - 4)}
-                  </code>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(k.key)
-                        toast.success("Chave copiada!")
-                      }} 
-                      className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
+
+            {keysStatus === "loading" ? (
+              <div className="p-6 space-y-2" aria-busy="true">
+                <div className="h-[52px] animate-pulse rounded-[9px] bg-secondary" />
+                <div className="h-[52px] animate-pulse rounded-[9px] bg-secondary" />
+                <span className="sr-only">Carregando chaves de API</span>
+              </div>
+            ) : keysStatus === "locked" ? (
+              <div className="p-6 text-center">
+                <span className="mx-auto flex size-9 items-center justify-center rounded-[10px] bg-secondary text-secondary-foreground">
+                  <Lock className="size-4" aria-hidden="true" />
+                </span>
+                <p className="mt-3 text-[12.5px] font-semibold text-foreground">Disponível no plano Master</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">A API de desenvolvedor libera chaves para N8N, Make e scripts próprios.</p>
+              </div>
+            ) : keysStatus === "missing" || keysStatus === "error" ? (
+              <div className="p-6 text-center">
+                <span className="mx-auto flex size-9 items-center justify-center rounded-[10px] bg-warning-bg text-warning-fg">
+                  <TriangleAlert className="size-4" aria-hidden="true" />
+                </span>
+                <p className="mt-3 text-[12.5px] font-semibold text-foreground">
+                  {keysStatus === "missing" ? "Recurso ainda não habilitado" : "Não foi possível carregar as chaves"}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {keysStatus === "missing"
+                    ? "A tabela de chaves de API ainda não existe neste banco. Fale com o suporte."
+                    : "Tente novamente em instantes."}
+                </p>
+              </div>
+            ) : apiKeys.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {apiKeys.map(k => (
+                  <li key={k.id} className="flex flex-col gap-2.5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12.5px] font-semibold text-foreground">{k.name}</p>
+                      <p className="microlabel mt-1.5 text-muted-foreground">chave oculta · visível só na criação</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
+                        <span className="num text-[10px] text-muted-foreground">
+                          criada {format(new Date(k.created_at), "dd/MM/yyyy")}
+                        </span>
+                        <span className="num text-[10px] text-muted-foreground">
+                          último uso {k.last_used_at ? format(new Date(k.last_used_at), "dd/MM/yyyy") : "nunca"}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRevokeKey(k)}
+                      className="h-7 shrink-0 self-start rounded-md px-2 text-[11px] font-semibold text-danger hover:bg-danger-bg sm:self-auto"
                     >
-                      copiar
-                    </button>
-                    <button onClick={() => handleRevokeKey(k.id)} className="text-[11px] font-medium text-red-500 hover:text-red-600">
                       revogar
                     </button>
-                  </div>
-                </div>
-              ))
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <div className="flex items-center justify-center rounded-lg bg-secondary/30 p-3 text-[12px] text-muted-foreground">
-                Nenhuma chave ativa.
+              <div className="p-6 text-center">
+                <p className="text-[12.5px] font-semibold text-foreground">Nenhuma chave ativa</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">Gere uma chave para conectar N8N, Make ou seus próprios scripts.</p>
               </div>
             )}
           </div>
@@ -367,7 +485,7 @@ export default function GatewaysPage() {
                       setTimeout(() => setCopiedWebhook(false), 2000)
                     }}
                   >
-                    {copiedWebhook ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
+                    {copiedWebhook ? <Check className="w-4 h-4 text-money" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </div>
@@ -375,7 +493,7 @@ export default function GatewaysPage() {
           </div>
           <DialogFooter className="flex items-center justify-between w-full">
             {getIntegrationData(activeProviderDef?.id || '')?.is_active ? (
-              <Button type="button" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => { setIsIntegrationModalOpen(false); handleDisconnectIntegration(activeProviderDef!.id); }}>
+              <Button type="button" variant="ghost" className="text-danger hover:text-danger hover:bg-danger-bg" onClick={() => { setIsIntegrationModalOpen(false); handleDisconnectIntegration(activeProviderDef!.id); }}>
                 Desconectar
               </Button>
             ) : <div />}
@@ -388,7 +506,65 @@ export default function GatewaysPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
+      <Dialog open={isKeyModalOpen} onOpenChange={setIsKeyModalOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Nova chave de API</DialogTitle>
+            <DialogDescription>A chave completa aparece uma única vez.</DialogDescription>
+          </DialogHeader>
+
+          {createdKey ? (
+            <div className="rounded-[10px] border border-warning-border bg-warning-bg p-3">
+              <p className="text-[11px] font-semibold text-warning-fg">Copie agora — não será exibida novamente</p>
+              <code className="mt-2 block break-all rounded-md bg-card p-2.5 font-mono text-[11px] text-foreground">
+                {createdKey}
+              </code>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2.5 h-8 w-full text-[11.5px] font-medium"
+                onClick={handleCopyCreatedKey}
+              >
+                {copiedKey ? <Check className="size-3.5 text-money" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
+                {copiedKey ? "Copiado!" : "Copiar chave"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-1">
+              <div className="space-y-2">
+                <Label htmlFor="new-api-key-name">Nome da chave</Label>
+                <Input
+                  id="new-api-key-name"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="Ex: Automação N8N"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter" && !isCreatingKey) handleCreateKey() }}
+                />
+              </div>
+              <div className="rounded-[10px] border border-border bg-secondary/40 p-3">
+                <p className="microlabel text-muted-foreground">Permissão</p>
+                <p className="mt-1 text-[11.5px] text-secondary-foreground">
+                  Acesso total à API — o envio de mensagens é autenticado por <code className="font-mono">Bearer</code> nesta chave.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsKeyModalOpen(false)}>
+              {createdKey ? "Já copiei e guardei" : "Cancelar"}
+            </Button>
+            {!createdKey && (
+              <Button onClick={handleCreateKey} disabled={isCreatingKey}>
+                {isCreatingKey ? "Gerando..." : "Gerar chave"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </PageShell>
   )
 }

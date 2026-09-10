@@ -1,5 +1,5 @@
 "use client"
-// AutomaÃ§Ã£o â€” direÃ§Ã£o 2a (design_handoff/Automacao.dc.html + GUIA-AUTOMACAO-E-MODAIS PARTE 1)
+// Automação — direção 2a (design_handoff/Automacao.dc.html + GUIA-AUTOMACAO-E-MODAIS PARTE 1)
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -37,16 +37,16 @@ type ConnectionMethod = 'pairing' | 'qr'
 const clientErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Erro de conexão'
 
 const getDefaultTemplate = (type: string) => {
-  const base = "{OlÃ¡|Oi|Tudo bem} {{primeiro_nome}}?\\n"
-  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix: {{pix}}\\nTitular: {{titular_pix}}\\nBanco: {{banco_pix}}\\n\\nSe tiver alguma dÃºvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
+  const base = "{Olá|Oi|Tudo bem} {{primeiro_nome}}?\\n"
+  const pixStr = "\\n\\nCaso deseje pagar via pix, segue os dados abaixo:\\nChave pix: {{pix}}\\nTitular: {{titular_pix}}\\nBanco: {{banco_pix}}\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}"
   const defaults: Record<string, string> = {
-    before_due: base + "Seu plano vence amanhÃ£, deseja renovar lo?" + pixStr,
-    on_due: base + "Lembrando que o vencimento do seu plano Ã© hoje! Deseja renovar?" + pixStr,
-    after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativÃ¡-lo?" + pixStr,
-    renewal: "{OlÃ¡|Oi|Tudo Ã³timo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confianÃ§a Ã© essencial!\\n\\nSe tiver alguma dÃºvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}\\n\\nNÃ£o esqueÃ§a de seguir nosso canal para nÃ£o ficar de fora de promoÃ§Ãµes e novidades!\\nLink: {{link_canal}}",
-    promotion: base + "Temos uma oferta imperdÃ­vel para vocÃª! [Insira sua promoÃ§Ã£o aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
-    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso RÃ¡pido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
-    activation: "OlÃ¡ {{primeiro_nome}}! Seja muito bem-vindo(a)! ðŸŒŸ\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse nÃºmero aqui, ele serÃ¡ o nosso canal oficial de suporte tÃ©cnico e onde vocÃª receberÃ¡ seus avisos de vencimento, ok? ðŸ¤\\n\\nðŸ’° Valor do Plano: R$ {{plan_value}}\\nðŸ“… Seu Vencimento: {{due_date}}\\n\\nðŸŽ *PROMOÃ‡ÃƒO INDIQUE E GANHE*\\nSabia que vocÃª pode ganhar meses grÃ¡tis? Ã‰ muito simples: indicou um amigo e ele fechou com a gente, o seu prÃ³ximo mÃªs sai 100% DE GRAÃ‡A! Sem sorteio, indicou, ganhou! ðŸš€\\n\\nðŸ“± *NOSSO CANAL EXCLUSIVO*\\nNÃ£o fique de fora das novidades, manutenÃ§Ãµes programadas e promoÃ§Ãµes relÃ¢mpago! Entre agora no nosso canal oficial para clientes:\\nðŸ‘‰ {{link_canal}}\\n\\nQualquer dÃºvida, Ã© sÃ³ nos chamar por aqui. Aproveite!"
+    before_due: base + "Seu plano vence amanhã, deseja renovar lo?" + pixStr,
+    on_due: base + "Lembrando que o vencimento do seu plano é hoje! Deseja renovar?" + pixStr,
+    after_due: base + "Identificamos que seu plano venceu e encontra-se pendente. Deseja reativá-lo?" + pixStr,
+    renewal: "{Olá|Oi|Tudo ótimo} {{primeiro_nome}}!\\nMuito obrigado por renovar seu plano conosco. Sua confiança é essencial!\\n\\nSe tiver alguma dúvida, entre em contato conosco!\\n\\nAtenciosamente,\\nEquipe {{empresa}}\\n\\nNão esqueça de seguir nosso canal para não ficar de fora de promoções e novidades!\\nLink: {{link_canal}}",
+    promotion: base + "Temos uma oferta imperdível para você! [Insira sua promoção aqui]\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    quick_message: base + "Passando para lembrar do seu plano no valor de R$ {{plan_value}}. \\n\\nAcesso Rápido ao Suporte: {{telefone_suporte}}\\n\\nAtenciosamente,\\nEquipe {{empresa}}",
+    activation: "Olá {{primeiro_nome}}! Seja muito bem-vindo(a)! 🌟\\nSeu plano foi ativado com sucesso em nosso sistema!\\n\\nSalva esse número aqui, ele será o nosso canal oficial de suporte técnico e onde você receberá seus avisos de vencimento, ok? 🤝\\n\\n💰 Valor do Plano: R$ {{plan_value}}\\n📅 Seu Vencimento: {{due_date}}\\n\\n🎁 *PROMOÇÃO INDIQUE E GANHE*\\nSabia que você pode ganhar meses grátis? É muito simples: indicou um amigo e ele fechou com a gente, o seu próximo mês sai 100% DE GRAÇA! Sem sorteio, indicou, ganhou! 🚀\\n\\n📱 *NOSSO CANAL EXCLUSIVO*\\nNão fique de fora das novidades, manutenções programadas e promoções relâmpago! Entre agora no nosso canal oficial para clientes:\\n👉 {{link_canal}}\\n\\nQualquer dúvida, é só nos chamar por aqui. Aproveite!"
   }
   if (type === 'activation') {
     return "Ola {{primeiro_nome}}! Seja bem-vindo(a).\n\nSeu plano foi ativado com sucesso em nosso sistema.\n\nEste numero sera usado apenas para suporte tecnico e avisos operacionais autorizados. Se precisar de ajuda, responda esta mensagem.\n\nEquipe {{empresa}}"
@@ -73,7 +73,7 @@ function getLogDisplayStatus(log: AlertHistoryLog): LogDisplayStatus {
   return 'pending'
 }
 
-// Etiquetas dos templates (protÃ³tipo): cores por significado
+// Etiquetas dos templates (protótipo): cores por significado
 const BADGES = ['PIX', 'LOGIN', 'CAMPANHA', 'PROMO', 'AVISO'] as const
 const BADGE_CLS: Record<string, string> = {
   PIX: 'bg-secondary text-secondary-foreground',
@@ -90,7 +90,7 @@ type CollectionCoordination = {
   eligibility: { tracked: number; billable: number; readyForSend: number; withoutPositiveValue: number; withoutPhone: number }
 }
 
-// Toggle 22Ã—12 (design Â§7)
+// Toggle 22×12 (design §7)
 function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React.MouseEvent) => void; disabled?: boolean }) {
   return (
     <span
@@ -102,7 +102,7 @@ function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: (e: React
   )
 }
 
-// Stepper âˆ’/valor/+ (GUIA 1.4)
+// Stepper −/valor/+ (GUIA 1.4)
 function NumStepper({ value, onDown, onUp }: { value: number; onDown: () => void; onUp: () => void }) {
   return (
     <div className="flex items-center overflow-hidden rounded-[7px] border border-input">
@@ -157,17 +157,17 @@ export default function AutomacaoPage() {
   const [isTestingPhone, setIsTestingPhone] = useState(false)
 
   // Anti-ban + chamadas
-  const [antiBanConfig, setAntiBanConfig] = useState({ min_delay: 10, max_delay: 25 })
+  const [antiBanConfig, setAntiBanConfig] = useState({ min_delay: 10, max_delay: 25, burst_message_count: 0, burst_pause_minutes: 0 })
   const [isSavingAntiBan, setIsSavingAntiBan] = useState(false)
   const [rejectCalls, setRejectCalls] = useState(false)
-  const [rejectCallsMessage, setRejectCallsMessage] = useState("As chamadas de voz e vÃ­deo estÃ£o desativadas para este nÃºmero. Por favor, envie uma mensagem de texto.")
+  const [rejectCallsMessage, setRejectCallsMessage] = useState("As chamadas de voz e vídeo estão desativadas para este número. Por favor, envie uma mensagem de texto.")
   const [isSavingCallSettings, setIsSavingCallSettings] = useState(false)
 
   // Disparo em massa
   const [massAudience, setMassAudience] = useState<string>('all')
   const [massServiceId, setMassServiceId] = useState<string>('')
   const [massImage, setMassImage] = useState<File | null>(null)
-  const [massMessage, setMassMessage] = useState<string>('OlÃ¡ {{primeiro_nome}}, temos uma oferta especial para vocÃª!')
+  const [massMessage, setMassMessage] = useState<string>('Olá {{primeiro_nome}}, temos uma oferta especial para você!')
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
   const [isSendingMass, setIsSendingMass] = useState(false)
   const [estimatedAudience, setEstimatedAudience] = useState<number | null>(null)
@@ -180,7 +180,7 @@ export default function AutomacaoPage() {
     defaultValues: { baseUrl: "", apiKey: "", instanceName: "" }
   })
 
-  /* â€”â€”â€”â€”â€” carga inicial â€”â€”â€”â€”â€” */
+  /* ————— carga inicial ————— */
   useEffect(() => {
     checkAdminStatus()
     loadSettings()
@@ -205,7 +205,7 @@ export default function AutomacaoPage() {
     }
   }
 
-  /* â€”â€”â€”â€”â€” templates livres (message_templates) â€”â€”â€”â€”â€” */
+  /* ————— templates livres (message_templates) ————— */
   const loadTemplates = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -216,12 +216,12 @@ export default function AutomacaoPage() {
   const openTemplateDialog = (tpl: any | null) => {
     setEditingTemplate(tpl)
     if (tpl) setTemplateForm({ title: tpl.title, badge: tpl.badge, message: tpl.message, is_active: tpl.is_active })
-    else setTemplateForm({ title: '', badge: 'PIX', message: 'OlÃ¡ {{primeiro_nome}}, ', is_active: true })
+    else setTemplateForm({ title: '', badge: 'PIX', message: 'Olá {{primeiro_nome}}, ', is_active: true })
     setIsTemplateDialogOpen(true)
   }
 
   const handleTemplateSubmit = async () => {
-    if (!templateForm.title.trim()) return toast.error("DÃª um nome ao template.")
+    if (!templateForm.title.trim()) return toast.error("Dê um nome ao template.")
     if (!templateForm.message.trim()) return toast.error("Escreva a mensagem do template.")
     setIsSubmittingTemplate(true)
     try {
@@ -273,7 +273,12 @@ export default function AutomacaoPage() {
           setConnValue('apiKey', first.api_key || '')
           setConnectionMode('external')
         } else setConnectionMode('integrated')
-        setAntiBanConfig({ min_delay: first.min_delay || 10, max_delay: first.max_delay || 25 })
+        setAntiBanConfig({
+          min_delay: first.min_delay || 10,
+          max_delay: first.max_delay || 25,
+          burst_message_count: first.burst_message_count || 0,
+          burst_pause_minutes: first.burst_pause_minutes || 0,
+        })
         if (first.reject_calls !== undefined) setRejectCalls(first.reject_calls)
         if (first.reject_calls_message) setRejectCallsMessage(first.reject_calls_message)
         setStatus(data.some((i: any) => i.status === 'connected') ? 'connected' : 'disconnected')
@@ -305,7 +310,7 @@ export default function AutomacaoPage() {
     if (data) setServices(data)
   }
 
-  /* â€”â€”â€”â€”â€” pÃºblico estimado â€”â€”â€”â€”â€” */
+  /* ————— público estimado ————— */
   useEffect(() => {
     const calculateAudience = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -325,7 +330,7 @@ export default function AutomacaoPage() {
     calculateAudience()
   }, [massAudience, massServiceId])
 
-  /* â€”â€”â€”â€”â€” conexÃ£o â€”â€”â€”â€”â€” */
+  /* ————— conexão ————— */
   const getPairingPhone = () => {
     if (connectionMethod !== 'pairing') return undefined
     const normalizedPhone = normalizeWhatsAppNumber(pairingPhone)
@@ -428,7 +433,7 @@ export default function AutomacaoPage() {
   }
 
   const handleDisconnect = async (instanceName: string) => {
-    if (!await confirm({ title: "Desconectar WhatsApp", description: "Os disparos serÃ£o interrompidos atÃ© vocÃª conectar novamente.", variant: "warning" })) return
+    if (!await confirm({ title: "Desconectar WhatsApp", description: "Os disparos serão interrompidos até você conectar novamente.", variant: "warning" })) return
     setIsConnecting(true)
     try {
       const res = await fetch('/api/evolution/logout', {
@@ -453,9 +458,9 @@ export default function AutomacaoPage() {
         const errorData = await res.json()
         throw new Error(errorData.error || "Erro ao remover")
       }
-      toast.success("Limpeza profunda concluÃ­da! InstÃ¢ncia removida.")
+      toast.success("Limpeza profunda concluída! Instância removida.")
       loadSettings()
-    } catch (e: any) { toast.error(e.message || "Erro fatal ao remover instÃ¢ncia") } finally { setIsConnecting(false) }
+    } catch (e: any) { toast.error(e.message || "Erro fatal ao remover instância") } finally { setIsConnecting(false) }
   }
 
   const handleSetPrimary = async (instanceName: string) => {
@@ -469,28 +474,39 @@ export default function AutomacaoPage() {
       if (res.ok) {
         toast.success(data.message)
         setInstances(prev => prev.map(inst => ({ ...inst, is_primary: inst.instance_name === instanceName })))
-      } else toast.error(data.error || 'Erro ao definir instÃ¢ncia primÃ¡ria.')
-    } catch (error) { toast.error('Erro de conexÃ£o ao definir instÃ¢ncia primÃ¡ria.') } finally { setIsConnecting(false) }
+      } else toast.error(data.error || 'Erro ao definir instância primária.')
+    } catch (error) { toast.error('Erro de conexão ao definir instância primária.') } finally { setIsConnecting(false) }
   }
 
-  /* â€”â€”â€”â€”â€” anti-ban + chamadas â€”â€”â€”â€”â€” */
+  /* ————— anti-ban + chamadas ————— */
   const handleSaveAntiBan = async () => {
     setIsSavingAntiBan(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("NÃ£o autenticado")
+      if (!user) throw new Error("Não autenticado")
       const { error } = await supabase
         .from('evolution_instances')
         .update({
           min_delay: antiBanConfig.min_delay,
           max_delay: antiBanConfig.max_delay,
           message_min_interval_ms: antiBanConfig.min_delay * 1000,
+          burst_message_count: antiBanConfig.burst_message_count,
+          burst_pause_minutes: antiBanConfig.burst_pause_minutes,
         })
         .eq('user_id', user.id)
       if (error) throw error
-      logAuditClient({ action: 'antiban.update', resource: 'evolution_instances', details: { min_delay: antiBanConfig.min_delay, max_delay: antiBanConfig.max_delay } })
-      toast.success("ConfiguraÃ§Ãµes antibloqueio salvas!")
-    } catch (error) { toast.error("Erro ao salvar configuraÃ§Ãµes.") } finally { setIsSavingAntiBan(false) }
+      logAuditClient({
+        action: 'antiban.update',
+        resource: 'evolution_instances',
+        details: {
+          min_delay: antiBanConfig.min_delay,
+          max_delay: antiBanConfig.max_delay,
+          burst_message_count: antiBanConfig.burst_message_count,
+          burst_pause_minutes: antiBanConfig.burst_pause_minutes,
+        },
+      })
+      toast.success("Configurações antibloqueio salvas!")
+    } catch (error) { toast.error("Erro ao salvar configurações.") } finally { setIsSavingAntiBan(false) }
   }
 
   const handleSaveCallSettings = async (nextReject?: boolean) => {
@@ -506,7 +522,7 @@ export default function AutomacaoPage() {
     } catch (e: any) { toast.error(e.message || "Erro ao salvar") } finally { setIsSavingCallSettings(false) }
   }
 
-  /* â€”â€”â€”â€”â€” rÃ©gua + templates (automations) â€”â€”â€”â€”â€” */
+  /* ————— régua + templates (automations) ————— */
   const loadAutomations = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -560,10 +576,10 @@ export default function AutomacaoPage() {
   }
 
   const handleRuleSubmit = async () => {
-    if (isStarter && dlgKind === 'step') return toast.error('A rÃ©gua financeira estÃ¡ disponÃ­vel nos planos Pro e Master.')
-    if (isStarter && !(ruleForm.alert_type in STARTER_SYSTEM_TYPES)) return toast.error('Tipo de mensagem disponÃ­vel somente nos planos Pro e Master.')
+    if (isStarter && dlgKind === 'step') return toast.error('A régua financeira está disponível nos planos Pro e Master.')
+    if (isStarter && !(ruleForm.alert_type in STARTER_SYSTEM_TYPES)) return toast.error('Tipo de mensagem disponível somente nos planos Pro e Master.')
     if (isStarter && autoRules.some(rule => rule.alert_type === ruleForm.alert_type && rule.id !== editingRule?.id)) {
-      return toast.error('JÃ¡ existe uma mensagem deste tipo. Edite a configuraÃ§Ã£o existente.')
+      return toast.error('Já existe uma mensagem deste tipo. Edite a configuração existente.')
     }
     setIsSubmittingRule(true)
     try {
@@ -584,12 +600,12 @@ export default function AutomacaoPage() {
         const { error } = await supabase.from('automations').update(payload).eq('id', editingRule.id)
         if (error) throw error
         logAuditClient({ action: 'automation.update', resource: 'automations', resource_id: editingRule.id, details: { alert_type: ruleForm.alert_type } })
-        toast.success(dlgKind === 'step' ? "Etapa atualizada." : "Mensagem automÃ¡tica atualizada.")
+        toast.success(dlgKind === 'step' ? "Etapa atualizada." : "Mensagem automática atualizada.")
       } else {
         const { error } = await supabase.from('automations').insert(payload)
         if (error) throw error
         logAuditClient({ action: 'automation.create', resource: 'automations', details: { alert_type: ruleForm.alert_type } })
-        toast.success(dlgKind === 'step' ? "Etapa adicionada Ã  rÃ©gua." : "Mensagem automÃ¡tica criada.")
+        toast.success(dlgKind === 'step' ? "Etapa adicionada à régua." : "Mensagem automática criada.")
       }
       setIsRuleDialogOpen(false)
       loadAutomations()
@@ -609,7 +625,7 @@ export default function AutomacaoPage() {
     loadAutomations()
   }
 
-  // RÃ©gua master: liga/desliga todas as etapas de uma vez
+  // Régua master: liga/desliga todas as etapas de uma vez
   const stepRules = automations.filter(r => isStepType(r.alert_type)).sort((a, b) => {
     const off = (r: any) => r.alert_type === 'before_due' ? -Math.abs(r.days_offset) : r.alert_type === 'after_due' ? Math.abs(r.days_offset) : 0
     return off(a) - off(b)
@@ -624,7 +640,7 @@ export default function AutomacaoPage() {
     const next = !reguaActive
     await supabase.from('automations').update({ is_active: next })
       .eq('user_id', user.id).in('alert_type', ['before_due', 'on_due', 'after_due'])
-    toast.success(next ? "RÃ©gua ativada." : "RÃ©gua pausada.")
+    toast.success(next ? "Régua ativada." : "Régua pausada.")
     loadAutomations()
   }
 
@@ -634,7 +650,7 @@ export default function AutomacaoPage() {
     return 'D-0'
   }
 
-  /* â€”â€”â€”â€”â€” logs â€”â€”â€”â€”â€” */
+  /* ————— logs ————— */
   const loadLogs = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLogsLoading(true)
     try {
@@ -684,7 +700,7 @@ export default function AutomacaoPage() {
     }
   }
   const handleCancelLog = async (id: string) => {
-    await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuÃ¡rio' }).eq('id', id)
+    await supabase.from('alert_history').update({ status: 'failed', error_message: 'Cancelado pelo usuário' }).eq('id', id)
     logAuditClient({ action: 'alert.cancel', resource: 'alert_history', resource_id: id })
     toast.success("Cancelado.")
     loadLogs()
@@ -734,10 +750,10 @@ export default function AutomacaoPage() {
         const { error } = await supabase.from('alert_history').delete().eq('user_id', user.id)
         if (error) throw error
         logAuditClient({ action: 'alert.clear_all', resource: 'alert_history' })
-        toast.success("HistÃ³rico limpo.")
+        toast.success("Histórico limpo.")
       }
       loadLogs()
-    } catch (e: any) { toast.error("Erro na aÃ§Ã£o em lote: " + e.message) } finally { setIsBulkActioning(false) }
+    } catch (e: any) { toast.error("Erro na ação em lote: " + e.message) } finally { setIsBulkActioning(false) }
   }
 
   const handleTestConnection = async () => {
@@ -749,13 +765,13 @@ export default function AutomacaoPage() {
         body: JSON.stringify({ phone: testPhone })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao testar conexÃ£o')
+      if (!res.ok) throw new Error(data.error || 'Erro ao testar conexão')
       toast.success("Mensagem de teste enviada!")
       setIsTestDialogOpen(false)
     } catch (e: any) { toast.error(e.message) } finally { setIsTestingPhone(false) }
   }
 
-  /* â€”â€”â€”â€”â€” disparo em massa â€”â€”â€”â€”â€” */
+  /* ————— disparo em massa ————— */
   const handleSendMass = async () => {
     const previewRes = await fetch('/api/evolution/send-mass', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -765,11 +781,11 @@ export default function AutomacaoPage() {
       })
     })
     const previewData = await previewRes.json()
-    if (!previewRes.ok) return toast.error(previewData.error || 'NÃ£o foi possÃ­vel calcular a prÃ©via.')
+    if (!previewRes.ok) return toast.error(previewData.error || 'Não foi possível calcular a prévia.')
     const preview = previewData.preview
     if (!await confirm({
       title: "Disparo em massa",
-      description: `${preview.eligible} elegÃ­veis, ${preview.deferred} serÃ£o adiados por contato prioritÃ¡rio e ${preview.blocked} estÃ£o bloqueados pelo limite do plano. Deseja confirmar?`,
+      description: `${preview.eligible} elegíveis, ${preview.deferred} serão adiados por contato prioritário e ${preview.blocked} estão bloqueados pelo limite do plano. Deseja confirmar?`,
     })) return
     setIsSendingMass(true)
     try {
@@ -800,7 +816,7 @@ export default function AutomacaoPage() {
     } catch (e: any) { toast.error(e.message) } finally { setIsSendingMass(false) }
   }
 
-  /* â€”â€”â€”â€”â€” derivados â€”â€”â€”â€”â€” */
+  /* ————— derivados ————— */
   const onlineCount = instances.filter(i => i.status === 'connected').length
   const anyOnline = onlineCount > 0
   const pendingCount = logs.filter(l => getLogDisplayStatus(l) === 'pending').length
@@ -813,7 +829,7 @@ export default function AutomacaoPage() {
     ? { label: 'Reenviar todos', action: 'resend_failed' as const, cls: 'border-money/40 bg-success-bg text-success-fg' }
     : logFilter === 'pending'
       ? { label: 'Cancelar todos', action: 'cancel_pending' as const, cls: 'border-warning-border bg-warning-bg text-warning-fg' }
-      : { label: 'Limpar histÃ³rico', action: 'clear_all' as const, cls: 'border-danger-border bg-danger-bg text-danger-fg' }
+      : { label: 'Limpar histórico', action: 'clear_all' as const, cls: 'border-danger-border bg-danger-bg text-danger-fg' }
 
   const insertVar = (v: string, target: 'form' | 'mass') => {
     if (target === 'form') setRuleForm(f => ({ ...f, message_template: f.message_template + (f.message_template.endsWith(' ') || !f.message_template ? '' : ' ') + v }))
@@ -875,46 +891,46 @@ export default function AutomacaoPage() {
       )}
 
       <MetricGrid columns={4}>
-        <div className={cn("rounded-xl border bg-card p-4", anyOnline ? "border-money/30" : "border-danger-border")}>
+        <div className={cn("rounded-[16px] border bg-card p-4", anyOnline ? "border-success-border" : "border-danger-border")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Conexões online</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{onlineCount}<span className="text-base font-medium text-muted-foreground">/{instances.length}</span></p>
               <p className="mt-1 text-xs text-muted-foreground">{anyOnline ? "Canal disponível para envios" : "Conecte um número para operar"}</p>
             </div>
-            <span className={cn("rounded-lg p-2", anyOnline ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg")}>
+            <span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-xl", anyOnline ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg")}>
               {anyOnline ? <Wifi className="size-4" aria-hidden="true" /> : <WifiOff className="size-4" aria-hidden="true" />}
             </span>
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-[16px] border border-border bg-card p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Automações ativas</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{activeAutomationCount}</p>
               <p className="mt-1 text-xs text-muted-foreground">de {automations.length} configurações</p>
             </div>
-            <span className="rounded-lg bg-interactive-bg p-2 text-interactive-fg"><Activity className="size-4" aria-hidden="true" /></span>
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg"><Activity className="size-4" aria-hidden="true" /></span>
           </div>
         </div>
-        <button type="button" onClick={() => { setLogFilter('pending'); setActiveTab('logs') }} className="rounded-xl border border-warning-border bg-card p-4 text-left transition-colors hover:bg-warning-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
+        <button type="button" onClick={() => { setLogFilter('pending'); setActiveTab('logs') }} className="rounded-[16px] border border-warning-border bg-card p-4 text-left transition-colors hover:bg-warning-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Na fila</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{pendingCount}</p>
               <p className="mt-1 text-xs text-muted-foreground">Clique para acompanhar</p>
             </div>
-            <span className="rounded-lg bg-warning-bg p-2 text-warning-fg"><Clock3 className="size-4" aria-hidden="true" /></span>
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-warning-bg text-warning-fg"><Clock3 className="size-4" aria-hidden="true" /></span>
           </div>
         </button>
-        <button type="button" onClick={() => { setLogFilter('failed'); setActiveTab('logs') }} className={cn("rounded-xl border bg-card p-4 text-left transition-colors hover:bg-danger-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none", failedCount > 0 ? "border-danger-border" : "border-border")}>
+        <button type="button" onClick={() => { setLogFilter('failed'); setActiveTab('logs') }} className={cn("rounded-[16px] border bg-card p-4 text-left transition-colors hover:bg-danger-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none", failedCount > 0 ? "border-danger-border" : "border-border")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="microlabel">Falhas recentes</p>
               <p className={cn("mt-2 text-2xl font-semibold tracking-tight", failedCount > 0 && "text-danger-fg")}>{failedCount}</p>
               <p className="mt-1 text-xs text-muted-foreground">{failedCount > 0 ? "Exige revisão" : `${sentCount} envios concluídos`}</p>
             </div>
-            <span className={cn("rounded-lg p-2", failedCount > 0 ? "bg-danger-bg text-danger-fg" : "bg-success-bg text-success-fg")}>
+            <span className={cn("flex size-[34px] shrink-0 items-center justify-center rounded-xl", failedCount > 0 ? "bg-danger-bg text-danger-fg" : "bg-success-bg text-success-fg")}>
               {failedCount > 0 ? <CircleX className="size-4" aria-hidden="true" /> : <CircleCheckBig className="size-4" aria-hidden="true" />}
             </span>
           </div>
@@ -956,18 +972,18 @@ export default function AutomacaoPage() {
       </div>
       </div>
 
-      {/* ============ VISÃƒO GERAL ============ */}
+      {/* ============ VISÃO GERAL ============ */}
       {activeTab === 'overview' && (
         <div role="tabpanel" className="space-y-5">
-          {/* Cards de instÃ¢ncia */}
+          {/* Cards de instância */}
           <div className="flex flex-wrap gap-3.5">
             {instances.map((inst, idx) => {
               const online = inst.status === 'connected'
               const qr = !online && !!inst.qr_code
               return (
                 <div key={inst.id} className={cn(
-                  "min-w-[280px] flex-1 rounded-lg border bg-card p-3.5",
-                  online ? "border-money/30" : qr ? "border-warning-border" : "border-border"
+                  "min-w-[280px] flex-1 rounded-2xl border bg-card p-3.5",
+                  online ? "border-success-border" : qr ? "border-warning-border" : "border-border"
                 )}>
                   <div className="flex items-center gap-3">
                     <div className={cn(
@@ -1008,7 +1024,7 @@ export default function AutomacaoPage() {
                     </DropdownMenu>
                   </div>
 
-                  {/* QR fica no card â€” nÃ£o Ã© modal (GUIA 1.4) */}
+                  {/* QR fica no card — não é modal (GUIA 1.4) */}
                   {qr && (
                     <div className="mt-3 flex flex-col items-center gap-2 border-t border-border pt-3">
                       <div className="rounded-lg border border-border bg-white p-2.5">
@@ -1039,10 +1055,10 @@ export default function AutomacaoPage() {
             </button>
           </div>
 
-          {/* RÃ©gua + Templates */}
+          {/* Régua + Templates */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            {/* RÃ‰GUA */}
-            {!isStarter && <div className="min-w-0 flex-[1.4] rounded-lg border border-border bg-card p-4">
+            {/* RÉGUA */}
+            {!isStarter && <div className="min-w-0 flex-[1.4] rounded-[16px] border border-border bg-card p-4">
               <div className="mb-0.5 flex items-center">
                 <span className="text-[13px] font-semibold">Régua de cobrança</span>
                 <span className={cn("ml-auto flex cursor-pointer items-center gap-1.5 text-[10.5px] font-semibold", reguaActive ? "text-money" : "text-muted-foreground")} onClick={toggleRegua}>
@@ -1097,7 +1113,7 @@ export default function AutomacaoPage() {
 
             {/* TEMPLATES (livres: nome + etiqueta + mensagem) */}
             <div className="min-w-0 flex-1 space-y-4">
-              <div className="rounded-lg border border-border bg-card p-4">
+              <div className="rounded-[16px] border border-border bg-card p-4">
                 <div className="mb-3 flex items-center">
                   <span className="text-[13px] font-semibold">Templates</span>
                   <button onClick={() => openTemplateDialog(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Novo</button>
@@ -1106,7 +1122,7 @@ export default function AutomacaoPage() {
                   <p className="py-5 text-center text-[11px] text-muted-foreground">Nenhum template. Crie mensagens reutilizáveis para a régua e o disparo em massa.</p>
                 ) : (
                   templates.map(t => (
-                    <div key={t.id} onClick={() => openTemplateDialog(t)} className="mb-2 cursor-pointer rounded-[7px] border border-border p-2.5 transition-colors hover:bg-muted">
+                    <div key={t.id} onClick={() => openTemplateDialog(t)} className="mb-2 cursor-pointer rounded-[9px] border border-border p-2.5 transition-colors hover:bg-muted">
                       <div className="mb-1 flex items-center gap-1.5">
                         <span className="text-[11.5px] font-semibold">{t.title}</span>
                         <span className={cn("num rounded px-1.5 text-[9px] font-medium", BADGE_CLS[t.badge] || BADGE_CLS.PIX)}>{t.badge}</span>
@@ -1124,8 +1140,8 @@ export default function AutomacaoPage() {
                 )}
               </div>
 
-              {/* Mensagens automÃ¡ticas do robÃ´ (boas-vindas, renovaÃ§Ã£oâ€¦) */}
-              <div className="rounded-lg border border-border bg-card p-4">
+              {/* Mensagens automáticas do robô (boas-vindas, renovação…) */}
+              <div className="rounded-[16px] border border-border bg-card p-4">
                 <div className="mb-1 flex items-center">
                   <span className="text-[13px] font-semibold">Robô do sistema</span>
                   <button onClick={() => openAuto(null)} className="ml-auto text-[11px] font-medium text-interactive hover:underline">+ Nova</button>
@@ -1150,7 +1166,7 @@ export default function AutomacaoPage() {
 
           {/* Anti-ban + Chamadas */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
-            <div className="flex-1 rounded-lg border border-border bg-card p-4">
+            <div className="flex-1 rounded-[16px] border border-border bg-card p-4">
               <div className="mb-0.5 flex items-center gap-2">
                 <Shield className="size-3.5 text-warning" />
                 <span className="text-[12.5px] font-semibold">Antibloqueio</span>
@@ -1175,12 +1191,47 @@ export default function AutomacaoPage() {
                   />
                 </div>
               </div>
+
+              {/* Pausa por rajada: além do intervalo curto entre mensagens, insere uma
+                  pausa longa a cada N mensagens — mesmo padrão do disparo em massa
+                  (pauseCount/pauseDurationMinutes), agora valendo para qualquer envio
+                  desta instância. 0 em qualquer um dos dois campos desativa. */}
+              <div className="mt-3 border-t border-border pt-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-[10.5px] text-muted-foreground">pausa longa além do intervalo</p>
+                  <span className="num text-[10px] font-semibold text-muted-foreground">
+                    {antiBanConfig.burst_message_count > 0 && antiBanConfig.burst_pause_minutes > 0
+                      ? `a cada ${antiBanConfig.burst_message_count} · ${antiBanConfig.burst_pause_minutes}min`
+                      : 'desativada'}
+                  </span>
+                </div>
+                <div className="flex gap-2.5">
+                  <div className="flex-1">
+                    <p className="mb-1 text-[10px] font-medium text-secondary-foreground">A cada (msgs)</p>
+                    <NumStepper
+                      value={antiBanConfig.burst_message_count}
+                      onDown={() => setAntiBanConfig(c => ({ ...c, burst_message_count: Math.max(0, c.burst_message_count - 5) }))}
+                      onUp={() => setAntiBanConfig(c => ({ ...c, burst_message_count: Math.min(2000, c.burst_message_count + 5) }))}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="mb-1 text-[10px] font-medium text-secondary-foreground">Pausar por (min)</p>
+                    <NumStepper
+                      value={antiBanConfig.burst_pause_minutes}
+                      onDown={() => setAntiBanConfig(c => ({ ...c, burst_pause_minutes: Math.max(0, c.burst_pause_minutes - 5) }))}
+                      onUp={() => setAntiBanConfig(c => ({ ...c, burst_pause_minutes: Math.min(240, c.burst_pause_minutes + 5) }))}
+                    />
+                  </div>
+                </div>
+                <p className="mt-1.5 text-[9.5px] leading-snug text-muted-foreground">0 em qualquer um dos dois desativa a pausa por rajada.</p>
+              </div>
+
               <Button variant="outline" size="sm" onClick={handleSaveAntiBan} disabled={isSavingAntiBan} className="mt-3 h-7 w-full text-[11px]">
                 {isSavingAntiBan && <Loader2 className="mr-1 size-3 animate-spin" />} Salvar anti-ban
               </Button>
             </div>
 
-            <div className="flex-1 rounded-lg border border-border bg-card p-4">
+            <div className="flex-1 rounded-[16px] border border-border bg-card p-4">
               <div className="flex items-center gap-2.5">
                 <PhoneOff className="size-3.5 text-danger" />
                 <div className="flex-1">
@@ -1209,8 +1260,8 @@ export default function AutomacaoPage() {
 
       {/* ============ DISPARO EM MASSA ============ */}
       {activeTab === 'mass' && (
-        <div role="tabpanel" className="max-w-[760px]">
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div role="tabpanel" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,1fr)]">
+          <div className="overflow-hidden rounded-[16px] border border-border bg-card">
             <div className="border-b border-border px-4 py-3.5">
               <p className="text-[14px] font-semibold tracking-[-0.01em]">Disparo em massa</p>
               <p className="mt-1 text-[11px] leading-normal text-muted-foreground">Envie para um grupo de clientes de uma vez, respeitando o intervalo anti-ban.</p>
@@ -1249,10 +1300,6 @@ export default function AutomacaoPage() {
                   </Select>
                 </div>
               )}
-
-              <div className="mb-4 flex items-center gap-2 rounded-lg border border-accent bg-interactive-bg px-3 py-2 text-[11.5px] text-interactive-fg">
-                <b>Público estimado:</b> {estimatedAudience ?? '…'} clientes.
-              </div>
 
               {activeTemplates.length > 0 && (
                 <>
@@ -1331,12 +1378,28 @@ export default function AutomacaoPage() {
               </button>
             </div>
           </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="rounded-[16px] border border-interactive bg-interactive-bg p-[18px]">
+              <p className="microlabel !text-[9.5px] text-interactive-fg">Público estimado</p>
+              <p className="num mt-2 text-[32px] font-semibold tracking-[-0.03em] text-interactive-fg">{estimatedAudience ?? '…'}</p>
+              <p className="mt-1 text-[11px] text-interactive-fg opacity-85">clientes elegíveis para este disparo</p>
+            </div>
+            <div className="rounded-[16px] border border-border bg-card p-[18px] shadow-sm">
+              <p className="text-[12.5px] font-semibold">Boas práticas</p>
+              <ul className="mt-2.5 list-disc space-y-2 pl-4 text-[11.5px] leading-relaxed text-muted-foreground">
+                <li>Evite enviar para toda a base repetidamente — segmente por status.</li>
+                <li>Use uma imagem leve para não atrasar o disparo.</li>
+                <li>Mensagens muito longas aumentam o risco de bloqueio.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 
       {/* ============ LOGS ============ */}
       {activeTab === 'logs' && (
-        <div role="tabpanel" className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div role="tabpanel" className="overflow-hidden rounded-[16px] border border-border bg-card shadow-sm">
           <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-3">
             <div className="min-w-[160px] flex-1">
               <p className="text-[13px] font-semibold">Histórico de disparos</p>
@@ -1367,7 +1430,7 @@ export default function AutomacaoPage() {
             </button>
           </div>
 
-          {/* Nota anti-ban sÃ³ no filtro "Em andamento" (GUIA 1.8) */}
+          {/* Nota anti-ban só no filtro "Em andamento" (GUIA 1.8) */}
           {logFilter === 'pending' && filteredLogs.length > 0 && (
             <div className="border-b border-warning-border bg-warning-bg px-4 py-2 text-[10.5px] text-warning-fg">
               O horário agendado é o <b>início</b> — as mensagens saem gradualmente respeitando o delay anti-ban ({antiBanConfig.min_delay}–{antiBanConfig.max_delay}s).
@@ -1451,12 +1514,12 @@ export default function AutomacaoPage() {
         </div>
       )}
 
-      {/* ============ DIÃLOGO etapa/template ============ */}
+      {/* ============ DIÁLOGO etapa/template ============ */}
       <Dialog open={isRuleDialogOpen} onOpenChange={setIsRuleDialogOpen}>
         <DialogContent className="max-h-[90vh] w-[500px] max-w-[95vw] overflow-y-auto sm:max-w-none">
           <DialogHeader className="flex-row items-center gap-2.5 space-y-0">
             <span className={cn("flex size-[30px] items-center justify-center rounded-lg text-sm", dlgKind === 'step' ? "bg-warning-bg" : "bg-accent")}>
-              {dlgKind === 'step' ? 'â±' : 'âš¡'}
+              {dlgKind === 'step' ? '⏱' : '⚡'}
             </span>
             <div>
               <DialogTitle className="text-[13.5px] font-semibold">
@@ -1563,11 +1626,11 @@ export default function AutomacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÃLOGO template (nome + etiqueta + mensagem) ============ */}
+      {/* ============ DIÁLOGO template (nome + etiqueta + mensagem) ============ */}
       <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
         <DialogContent className="max-h-[90vh] w-[500px] max-w-[95vw] overflow-y-auto sm:max-w-none">
           <DialogHeader className="flex-row items-center gap-2.5 space-y-0">
-            <span className="flex size-[30px] items-center justify-center rounded-lg bg-accent text-sm">âœ‰</span>
+            <span className="flex size-[30px] items-center justify-center rounded-lg bg-accent text-sm">✉</span>
             <div>
               <DialogTitle className="text-[13.5px] font-semibold">
                 {editingTemplate ? 'Editar template' : 'Novo template'}
@@ -1649,7 +1712,7 @@ export default function AutomacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÃLOGO conectar nÃºmero ============ */}
+      {/* ============ DIÁLOGO conectar número ============ */}
       <Dialog open={isConnectDialogOpen} onOpenChange={handleConnectDialogChange}>
         <DialogContent className="w-[440px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>
@@ -1811,7 +1874,7 @@ export default function AutomacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ============ DIÃLOGO testar disparo ============ */}
+      {/* ============ DIÁLOGO testar disparo ============ */}
       <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
         <DialogContent className="w-[400px] max-w-[95vw] sm:max-w-none">
           <DialogHeader>

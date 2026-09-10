@@ -55,6 +55,8 @@
   --color-danger-border: var(--danger-border);
   --color-success-bg: var(--success-bg);
   --color-success-fg: var(--success-fg);
+  --color-ink: var(--ink);
+  --color-ink-fg: var(--ink-fg);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -95,6 +97,9 @@
   --warning-bg: #f2e8d4;  --warning-border: #e8d9b5;  --warning-fg: #8a6d1f;
   --danger-bg:  #f6e4e4;  --danger-fg:  #a13636;  --danger-border: #f0d9d9;
   --interactive-bg: #eef0ff;  --interactive-fg: #3140a8;
+
+  /* Superfície "ink" — sempre escura, não inverte com o tema (design_handoff v2, hero do Painel) */
+  --ink: #191a1e;  --ink-fg: #f5f4f0;
 
   --sidebar: #f5f5f3;
   --sidebar-foreground: #55565c;
@@ -140,6 +145,8 @@
   --warning-bg: #332b1c;  --warning-border: #4a3f28;  --warning-fg: #dfb35c;
   --danger-bg:  #3a2224;  --danger-fg:  #e57373;  --danger-border: #4a2c2e;
   --interactive-bg: #262a3d;  --interactive-fg: #aab6ff;
+
+  --ink: #101114;  --ink-fg: #ececed;
 
   --sidebar: #18191c;
   --sidebar-foreground: #a3a4a8;
@@ -357,6 +364,17 @@ html[data-tabular-nums="off"] .num {
 @keyframes dcpop {
   from { opacity: 0; transform: translateY(10px) scale(0.985); }
   to { opacity: 1; transform: none; }
+}
+
+/* Barra de meta mensal do Financeiro (handoff v2). O bloco global de
+   prefers-reduced-motion acima já neutraliza estas animações. */
+@keyframes goalShine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -40% 0; }
+}
+@keyframes goalPulse {
+  0%, 100% { transform: translate(40%, -50%) scale(1); }
+  50% { transform: translate(40%, -50%) scale(1.12); }
 }
 
 /* Recharts — contraste no dark mode */

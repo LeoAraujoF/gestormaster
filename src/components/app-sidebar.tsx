@@ -4,10 +4,12 @@ import * as React from "react"
 import type { LucideIcon } from "lucide-react"
 import {
   BarChart3,
+  Bell,
   Cable,
   ChevronRight,
   ContactRound,
   Ellipsis,
+  Handshake,
   LayoutDashboard,
   LifeBuoy,
   LockKeyhole,
@@ -139,6 +141,7 @@ const NAV_GROUPS: NavGroup[] = [
           { title: "Painéis IPTV", url: "/conexoes/paineis", capability: "iptv_panels" },
         ],
       },
+      { id: "affiliates", title: "Afiliados", url: "/afiliados", icon: Handshake },
       {
         id: "more",
         title: "Mais",
@@ -147,7 +150,6 @@ const NAV_GROUPS: NavGroup[] = [
           { title: "Portal do cliente", url: "/portal-cliente", capability: "client_portal", alwaysVisible: true },
           { title: "Autoatendimento", url: "/autoatendimento", capability: "self_service" },
           { title: "Revendas", url: "/revendas", capability: "resellers" },
-          { title: "Afiliados", url: "/afiliados" },
         ],
       },
     ],
@@ -155,6 +157,7 @@ const NAV_GROUPS: NavGroup[] = [
 ]
 
 const FOOTER_ITEMS: NavItem[] = [
+  { id: "notifications", title: "Notificações", url: "/atualizacoes", icon: Bell },
   { id: "settings", title: "Configurações", url: "/configuracoes", icon: Settings },
   { id: "support", title: "Suporte", url: "/suporte", icon: LifeBuoy },
 ]

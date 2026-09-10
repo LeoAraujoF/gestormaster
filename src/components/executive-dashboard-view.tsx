@@ -1,30 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { LucideIcon } from "lucide-react"
 import {
   AlertTriangle,
-  ArrowDownRight,
   ArrowRight,
-  ArrowUpRight,
-  BadgeDollarSign,
   CalendarRange,
   ChartColumn,
-  ChartPie,
-  CircleDollarSign,
   CreditCard,
   Layers3,
-  Minus,
-  RefreshCw,
-  ShieldCheck,
-  Target,
-  TrendingUp,
-  UsersRound,
   WalletCards,
 } from "lucide-react"
 import {
   Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -38,6 +25,7 @@ import {
 } from "recharts"
 
 import { Button } from "@/components/ui/button"
+import { ComingSoon } from "@/components/page-layout"
 import { usePrivacy } from "@/hooks/use-privacy"
 import type { ExecutiveDashboardDTO, ExecutivePeriod } from "@/lib/executive-metrics"
 import { cn, formatCurrency } from "@/lib/utils"
@@ -49,54 +37,26 @@ const periodLabels: Array<{ value: ExecutivePeriod; label: string }> = [
   { value: "12m", label: "12 meses" },
 ]
 
-type Tone = "neutral" | "success" | "danger" | "interactive" | "warning"
-type RankingTab = "services" | "payments" | "health"
-type SecondaryTab = "growth" | "insights"
-
-type SummaryMetric = {
-  label: string
-  value: string
-  current: number
-  previous: number
-  description: string
-  icon: LucideIcon
-  tone: Tone
-  inverse?: boolean
-  onClick?: () => void
-  actionLabel?: string
-}
+type RankingTab = "services" | "payments"
 
 type RankingRow = {
   label: string
   value: number
-  count: number
   countLabel: string
 }
 
-export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpen, compact = false }: {
+export function ExecutiveDashboardView({ data, period, onRiskOpen }: {
   data: ExecutiveDashboardDTO
   period: ExecutivePeriod
-  onPeriodChange: (period: ExecutivePeriod) => void
   onRiskOpen?: () => void
-  compact?: boolean
 }) {
   const { displayValue } = usePrivacy()
   const [reduceMotion, setReduceMotion] = useState(false)
   const [rankingTab, setRankingTab] = useState<RankingTab>("services")
-  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("growth")
   const money = (value: number) => String(displayValue(formatCurrency(value)))
-  const realizationRate = data.summary.forecast > 0
-    ? (data.summary.confirmed / data.summary.forecast) * 100
-    : 0
-  const riskShare = data.summary.forecast > 0
-    ? (data.summary.at_risk / data.summary.forecast) * 100
-    : 0
-  const totalPayments = data.breakdowns.payment_methods.reduce((sum, item) => sum + item.count, 0)
-  const averagePerBucket = data.series.length > 0 ? data.summary.confirmed / data.series.length : 0
-  const bestBucket = data.series.reduce<ExecutiveDashboardDTO["series"][number] | null>((best, item) => {
-    if (!best || item.confirmed > best.confirmed) return item
-    return best
-  }, null)
+  const realizationRate = data.summary.forecast > 0 ? (data.summary.confirmed / data.summary.forecast) * 100 : 0
+  const riskShare = data.summary.forecast > 0 ? (data.summary.at_risk / data.summary.forecast) * 100 : 0
+  const mrrChange = data.previous.mrr > 0 ? ((data.summary.mrr - data.previous.mrr) / data.previous.mrr) * 100 : null
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -106,82 +66,10 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
     return () => media.removeEventListener("change", update)
   }, [])
 
-  const summary: SummaryMetric[] = [
-    {
-      label: "Receita confirmada",
-      value: money(data.summary.confirmed),
-      current: data.summary.confirmed,
-      previous: data.previous.confirmed,
-      description: "Entradas realizadas",
-      icon: CircleDollarSign,
-      tone: "success",
-    },
-    {
-      label: "Receita prevista",
-      value: money(data.summary.forecast),
-      current: data.summary.forecast,
-      previous: data.previous.forecast,
-      description: "Potencial do período",
-      icon: TrendingUp,
-      tone: "interactive",
-    },
-    {
-      label: "Receita em risco",
-      value: money(data.summary.at_risk),
-      current: data.summary.at_risk,
-      previous: data.previous.at_risk,
-      description: `${riskShare.toFixed(1)}% da previsão`,
-      icon: AlertTriangle,
-      tone: data.summary.at_risk > 0 ? "danger" : "success",
-      inverse: true,
-      onClick: onRiskOpen,
-      actionLabel: "Abrir clientes relacionados à receita em risco",
-    },
-    {
-      label: "Receita recorrente",
-      value: money(data.summary.mrr),
-      current: data.summary.mrr,
-      previous: data.previous.mrr,
-      description: `${data.summary.active_clients} clientes ativos`,
-      icon: RefreshCw,
-      tone: "neutral",
-    },
-  ]
-
   return (
-    <section className="space-y-4" aria-labelledby="executive-dashboard-title">
-      <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-interactive-bg text-interactive-fg">
-              <BadgeDollarSign className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="microlabel">{compact ? "Visão financeira" : "Análises do negócio"}</p>
-                <span className="rounded-md bg-success-bg px-2 py-0.5 text-[9px] font-semibold text-success-fg">DADOS REAIS</span>
-              </div>
-              <h2 id="executive-dashboard-title" className="mt-1 text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                {compact ? "Previsão e risco" : "Desempenho financeiro e crescimento"}
-              </h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                Compare clientes, recebimentos, serviços e saúde da operação no período selecionado.
-              </p>
-            </div>
-          </div>
-
-          <PeriodSelector period={period} onPeriodChange={onPeriodChange} />
-        </div>
-
-        <div className="grid gap-px border-t border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
-          {(compact ? summary.slice(0, 3) : summary).map((item) => (
-            <ExecutiveMetric key={item.label} item={item} />
-          ))}
-        </div>
-      </div>
-
+    <>
       {data.coverage.partial ? (
-        <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg" role="status">
+        <div className="flex items-start gap-3 rounded-lg border border-warning-border bg-warning-bg px-4 py-3 text-xs text-warning-fg" role="status">
           <CalendarRange className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p className="leading-relaxed">
             <strong>Histórico em formação.</strong>{" "}
@@ -193,217 +81,176 @@ export function ExecutiveDashboardView({ data, period, onPeriodChange, onRiskOpe
         </div>
       ) : null}
 
-      {!compact ? (
-        <>
-          <FinancialActivityPanel
-            data={data}
-            period={period}
-            totalPayments={totalPayments}
-            averagePerBucket={averagePerBucket}
-            bestBucket={bestBucket}
-            reduceMotion={reduceMotion}
-            money={money}
-          />
-
-          {data.rates.default > 0 ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-danger-border bg-danger-bg/45 px-4 py-3 sm:flex-row sm:items-center">
-              <AlertTriangle className="size-4 shrink-0 text-danger" aria-hidden="true" />
-              <p className="flex-1 text-xs leading-relaxed text-danger-fg">
-                <strong>{data.rates.default.toFixed(1)}% de inadimplência.</strong> O indicador compara os ciclos vencidos em risco com o total que já venceu no período.
-              </p>
-              {onRiskOpen ? (
-                <Button variant="outline" size="sm" onClick={onRiskOpen} className="h-8 shrink-0 border-danger-border bg-card text-xs text-danger-fg hover:bg-danger-bg">
-                  Ver clientes <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="microlabel">Análises</p>
-                <h2 className="mt-1 text-sm font-semibold text-foreground">Aprofunde a leitura</h2>
-              </div>
-              <div className="flex gap-1 rounded-xl border border-border bg-muted p-1" role="tablist" aria-label="Tipo de análise">
-                <SecondaryTabButton icon={UsersRound} label="Crescimento" value="growth" selected={secondaryTab} onSelect={setSecondaryTab} />
-                <SecondaryTabButton icon={ChartPie} label="Ranking e indicadores" value="insights" selected={secondaryTab} onSelect={setSecondaryTab} />
-              </div>
-            </div>
-
-            <div id={`analysis-panel-${secondaryTab}`} role="tabpanel" aria-label={secondaryTab === "growth" ? "Crescimento da carteira" : "Ranking e indicadores"}>
-              {secondaryTab === "growth" ? (
-                <ClientGrowthPanel
-                  current={data.growth.new_clients}
-                  previous={data.growth.previous_new_clients}
-                  activeClients={data.summary.active_clients}
-                  cancellations={data.growth.cancellations}
-                  period={period}
-                  reduceMotion={reduceMotion}
-                />
-              ) : (
-                <RankingExplorer
-                  tab={rankingTab}
-                  onTabChange={setRankingTab}
-                  data={data}
-                  realizationRate={realizationRate}
-                  riskShare={riskShare}
-                  totalPayments={totalPayments}
-                  money={money}
-                  reduceMotion={reduceMotion}
-                />
-              )}
-            </div>
+      {/* INDICADORES AVANÇADOS */}
+      <section className="flex flex-col gap-4" aria-labelledby="executive-indicators-title">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="microlabel">Indicadores avançados</p>
+            <h2 id="executive-indicators-title" className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">
+              Saúde financeira da carteira
+            </h2>
           </div>
-        </>
+          <span className="rounded-lg border border-interactive/30 bg-interactive-bg px-2.5 py-[5px] text-[10px] font-semibold text-interactive-fg">
+            {data.entitlement.plan === "master" ? "Plano Master" : "Plano Pro"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <IndicatorCard
+            label="Receita recorrente (MRR)"
+            value={money(data.summary.mrr)}
+            hint={mrrChange === null
+              ? `${data.summary.active_clients} clientes ativos`
+              : `${mrrChange >= 0 ? "+" : ""}${mrrChange.toFixed(1)}% vs período anterior`}
+            hintClassName={mrrChange !== null && mrrChange >= 0 ? "text-money" : mrrChange !== null ? "text-danger" : undefined}
+          />
+          <IndicatorCard
+            label="Churn no período"
+            value={`${data.rates.cancellation.toFixed(1)}%`}
+            hint={`${data.growth.cancellations} cliente${data.growth.cancellations === 1 ? "" : "s"} no período`}
+          />
+          <IndicatorCard
+            label="Receita em risco"
+            value={money(data.summary.at_risk)}
+            valueClassName={data.summary.at_risk > 0 ? "text-danger" : undefined}
+            hint={`${riskShare.toFixed(1)}% da previsão`}
+            onClick={onRiskOpen}
+            actionLabel="Abrir clientes relacionados à receita em risco"
+          />
+          <HealthCard realizationRate={realizationRate} riskShare={riskShare} renewalRate={data.rates.renewal} />
+        </div>
+
+        <MissingIndicators />
+      </section>
+
+      {data.rates.default > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-danger-border bg-danger-bg/45 px-4 py-3 sm:flex-row sm:items-center">
+          <AlertTriangle className="size-4 shrink-0 text-danger" aria-hidden="true" />
+          <p className="flex-1 text-xs leading-relaxed text-danger-fg">
+            <strong>{data.rates.default.toFixed(1)}% de inadimplência.</strong> O indicador compara os ciclos vencidos em risco com o total que já venceu no período.
+          </p>
+          {onRiskOpen ? (
+            <Button variant="outline" size="sm" onClick={onRiskOpen} className="h-8 shrink-0 border-danger-border bg-card text-xs text-danger-fg hover:bg-danger-bg">
+              Ver clientes <ArrowRight className="ml-1.5 size-3.5" aria-hidden="true" />
+            </Button>
+          ) : null}
+        </div>
       ) : null}
-    </section>
-  )
-}
 
-function PeriodSelector({ period, onPeriodChange }: {
-  period: ExecutivePeriod
-  onPeriodChange: (period: ExecutivePeriod) => void
-}) {
-  return (
-    <div className="max-w-full overflow-x-auto pb-0.5">
-      <div className="flex min-w-max gap-1 rounded-xl border border-border bg-muted p-1" role="group" aria-label="Período das análises">
-        {periodLabels.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => onPeriodChange(item.value)}
-            aria-pressed={period === item.value}
-            className={cn(
-              "min-h-9 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              period === item.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
+      {/* ANÁLISES */}
+      <section className="flex flex-col gap-4" aria-labelledby="executive-analytics-title">
+        <div>
+          <p className="microlabel">Análises</p>
+          <h2 id="executive-analytics-title" className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">
+            Desempenho financeiro
+          </h2>
+        </div>
 
-function ExecutiveMetric({ item }: { item: SummaryMetric }) {
-  const tone = metricTone(item.tone)
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <span className={cn("flex size-9 items-center justify-center rounded-xl", tone.icon)}>
-          <item.icon className="size-4" aria-hidden="true" />
-        </span>
-        <TrendBadge current={item.current} previous={item.previous} inverse={item.inverse} />
-      </div>
-      <p className="mt-5 text-xs font-medium text-muted-foreground">{item.label}</p>
-      <p className={cn("num mt-1.5 truncate text-xl font-semibold tracking-[-0.035em] sm:text-2xl", tone.value)}>{item.value}</p>
-      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-        <span className="min-w-0 flex-1 truncate">{item.description}</span>
-        {item.onClick ? <ArrowRight className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
-      </div>
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.75fr)]">
+          <PaymentsPanel data={data} period={period} money={money} reduceMotion={reduceMotion} />
+          <RankingPanel data={data} tab={rankingTab} onTabChange={setRankingTab} money={money} reduceMotion={reduceMotion} />
+        </div>
+      </section>
     </>
   )
-  const className = cn(
-    "group min-h-[154px] min-w-0 bg-card p-4 text-left transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:p-5",
-    item.onClick && "hover:bg-muted/55"
-  )
+}
 
-  if (item.onClick) {
-    return <button type="button" onClick={item.onClick} aria-label={item.actionLabel || item.label} className={className}>{content}</button>
+function IndicatorCard({ label, value, valueClassName, hint, hintClassName, onClick, actionLabel }: {
+  label: string
+  value: string
+  valueClassName?: string
+  hint: string
+  hintClassName?: string
+  onClick?: () => void
+  actionLabel?: string
+}) {
+  const content = (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        {onClick ? <ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" /> : null}
+      </div>
+      <p className={cn("num mt-2 truncate text-[22px] font-semibold tracking-[-0.02em] text-foreground", valueClassName)}>{value}</p>
+      <p className={cn("mt-1 text-[10.5px] text-muted-foreground", hintClassName)}>{hint}</p>
+    </>
+  )
+  const className = "rounded-lg border border-border bg-card p-4 text-left"
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={actionLabel}
+        className={cn(className, "group transition-colors hover:bg-muted/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+      >
+        {content}
+      </button>
+    )
   }
   return <article className={className}>{content}</article>
 }
 
-function ClientGrowthPanel({ current, previous, activeClients, cancellations, period, reduceMotion }: {
-  current: number
-  previous: number
-  activeClients: number
-  cancellations: number
-  period: ExecutivePeriod
-  reduceMotion: boolean
+/**
+ * O protótipo mostra um "índice de saúde" em escala /100 e um "LTV médio", que
+ * não têm fonte real hoje. Este cartão ocupa o mesmo lugar usando a taxa de
+ * realização real (confirmado ÷ previsto), com o status derivado dela e do risco.
+ */
+function HealthCard({ realizationRate, riskShare, renewalRate }: {
+  realizationRate: number
+  riskShare: number
+  renewalRate: number
 }) {
-  const chartData = [
-    { label: "Anterior", clients: previous },
-    { label: period === "month" ? "Mês atual" : "Atual", clients: current },
-  ]
+  const healthy = realizationRate >= 80 && riskShare <= 10
+  const attention = !healthy && (realizationRate >= 50 || riskShare <= 25)
+  const status = healthy ? "Carteira estável" : attention ? "Requer atenção" : "Situação crítica"
 
   return (
-    <article className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="client-growth-title">
-      <PanelHeader
-        icon={UsersRound}
-        title="Crescimento da carteira"
-        description="Os números de novos clientes e variação já estão no resumo, acima. Aqui: a comparação visual e o contexto de retenção."
-        badge={periodLabel(period)}
-        tone="interactive"
-        titleId="client-growth-title"
-      />
-
-      <div className="h-[290px] bg-muted/20 px-2 py-4 sm:px-5">
-        <div className="h-full" role="img" aria-label={`Comparativo de novos clientes: ${previous} no período anterior e ${current} no atual`}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 560, height: 260 }}>
-            <BarChart data={chartData} margin={{ top: 14, right: 10, left: -22, bottom: 2 }} barCategoryGap="38%">
-              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-              <Tooltip
-                cursor={{ fill: "var(--muted)", opacity: 0.45 }}
-                formatter={(value) => [`${Number(value || 0)} clientes`, "Novos clientes"]}
-                contentStyle={tooltipStyle}
-              />
-              <Bar dataKey="clients" radius={[8, 8, 0, 0]} maxBarSize={92} isAnimationActive={!reduceMotion} animationDuration={650}>
-                <Cell fill="var(--chart-3)" />
-                <Cell fill="var(--interactive)" />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-px border-t border-border bg-border">
-        <ContextMetric label="Clientes ativos" value={String(activeClients)} />
-        <ContextMetric label="Cancelamentos" value={String(cancellations)} danger={cancellations > 0} />
-      </div>
+    <article className={cn(
+      "rounded-lg border p-4",
+      healthy ? "border-success-fg/25 bg-success-bg/35" : attention ? "border-warning-border bg-warning-bg/35" : "border-danger-border bg-danger-bg/35",
+    )}>
+      <p className="text-[11px] text-muted-foreground">Índice de saúde</p>
+      <p className={cn(
+        "num mt-2 text-[22px] font-semibold tracking-[-0.02em]",
+        healthy ? "text-success-fg" : attention ? "text-warning-fg" : "text-danger-fg",
+      )}>
+        {realizationRate.toFixed(0)}% realizado
+      </p>
+      <p className="mt-1 text-[10.5px] text-muted-foreground">{status} · {renewalRate.toFixed(0)}% de renovação</p>
     </article>
   )
 }
 
-function FinancialActivityPanel({ data, period, totalPayments, averagePerBucket, bestBucket, reduceMotion, money }: {
+function PaymentsPanel({ data, period, money, reduceMotion }: {
   data: ExecutiveDashboardDTO
   period: ExecutivePeriod
-  totalPayments: number
-  averagePerBucket: number
-  bestBucket: ExecutiveDashboardDTO["series"][number] | null
-  reduceMotion: boolean
   money: (value: number) => string
+  reduceMotion: boolean
 }) {
   return (
-    <article className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="payment-activity-title">
-      <PanelHeader
-        icon={WalletCards}
-        title="Pagamentos por período"
-        description="Receita confirmada, previsão e risco ao longo do tempo."
-        badge={periodLabel(period)}
-        tone="warning"
-        titleId="payment-activity-title"
-      />
-
-      <div className="grid grid-cols-2 gap-2 border-b border-border p-4 sm:grid-cols-4 sm:gap-3 sm:p-5">
-        <MiniMetric label="Total confirmado" value={money(data.summary.confirmed)} tone="warning" />
-        <MiniMetric label="Pagamentos" value={String(totalPayments)} tone="success" />
-        <MiniMetric label="Média por intervalo" value={money(averagePerBucket)} tone="interactive" />
-        <MiniMetric label="Melhor intervalo" value={money(bestBucket?.confirmed ?? 0)} tone="neutral" />
+    <article className="min-w-0 overflow-hidden border-t border-foreground" aria-labelledby="payment-activity-title">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning-bg text-warning-fg">
+            <WalletCards className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 id="payment-activity-title" className="text-sm font-semibold text-foreground">Pagamentos por período</h3>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Receita confirmada e prevista ao longo do tempo</p>
+          </div>
+        </div>
+        <span className="rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+          {periodLabels.find((item) => item.value === period)?.label ?? "Período"}
+        </span>
       </div>
 
-      <div className="h-[338px] bg-muted/20 px-1 py-4 sm:px-4">
+      <div className="h-[280px] min-w-0 px-1 py-4 sm:px-4">
         {data.series.length ? (
-          <div className="h-full" role="img" aria-label="Gráfico de receita confirmada, prevista e em risco no período">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 560, height: 300 }}>
+          <div className="h-full min-w-0" role="img" aria-label="Gráfico de receita confirmada, prevista e em risco no período">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 560, height: 260 }}>
               <ComposedChart data={data.series} margin={{ top: 10, right: 12, left: -10, bottom: 4 }}>
-                <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
+                <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 4" />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
@@ -412,14 +259,24 @@ function FinancialActivityPanel({ data, period, totalPayments, averagePerBucket,
                   tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   tickFormatter={(value) => formatChartDate(String(value), period)}
                 />
-                <YAxis axisLine={false} tickLine={false} width={54} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={compactCurrency} />
+                <YAxis axisLine={false} tickLine={false} width={54} tick={{ fontSize: 9, fill: "var(--muted-foreground)" }} tickFormatter={compactCurrency} />
                 <Tooltip
                   cursor={{ fill: "var(--muted)", opacity: 0.45 }}
                   contentStyle={tooltipStyle}
                   labelFormatter={(value) => formatChartDate(String(value), period, true)}
                   formatter={(value, name) => [money(Number(value || 0)), chartLabel(String(name))]}
                 />
-                <Bar dataKey="confirmed" name="confirmed" fill="var(--money)" fillOpacity={0.82} radius={[5, 5, 0, 0]} maxBarSize={28} isAnimationActive={!reduceMotion} animationDuration={650} />
+                <Bar
+                  dataKey="confirmed"
+                  name="confirmed"
+                  fill="var(--money)"
+                  fillOpacity={0.82}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={28}
+                  background={{ fill: "var(--muted)", opacity: 0.85, radius: 6 } as never}
+                  isAnimationActive={!reduceMotion}
+                  animationDuration={650}
+                />
                 <Line type="monotone" dataKey="forecast" name="forecast" stroke="var(--warning)" strokeWidth={2.5} dot={{ r: 2.5, fill: "var(--card)", strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={!reduceMotion} animationDuration={750} />
                 <Line type="monotone" dataKey="at_risk" name="at_risk" stroke="var(--danger)" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={!reduceMotion} animationDuration={800} />
               </ComposedChart>
@@ -428,7 +285,7 @@ function FinancialActivityPanel({ data, period, totalPayments, averagePerBucket,
         ) : <EmptyState label="Sem movimentação confiável neste período." />}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border px-4 py-3 text-[10px] text-muted-foreground" aria-label="Legenda do gráfico financeiro">
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border px-4 py-3 text-[10px] text-muted-foreground" aria-label="Legenda do gráfico financeiro">
         <LegendItem color="bg-money" label="Confirmado" shape="square" />
         <LegendItem color="bg-warning" label="Previsto" />
         <LegendItem color="border-danger" label="Em risco" dashed />
@@ -437,114 +294,96 @@ function FinancialActivityPanel({ data, period, totalPayments, averagePerBucket,
   )
 }
 
-function RankingExplorer({ tab, onTabChange, data, realizationRate, riskShare, totalPayments, money, reduceMotion }: {
+/**
+ * Painel "Top serviços" do handoff. O alternador Serviços/Pagamentos é um
+ * acréscimo ao protótipo para não perder o ranking real de meios de pagamento,
+ * que já existia na página antes deste redesign.
+ */
+function RankingPanel({ data, tab, onTabChange, money, reduceMotion }: {
+  data: ExecutiveDashboardDTO
   tab: RankingTab
   onTabChange: (tab: RankingTab) => void
-  data: ExecutiveDashboardDTO
-  realizationRate: number
-  riskShare: number
-  totalPayments: number
   money: (value: number) => string
   reduceMotion: boolean
 }) {
-  const services: RankingRow[] = data.breakdowns.services.slice(0, 5).map((item) => ({
-    label: item.service,
-    value: item.value,
-    count: item.clients,
-    countLabel: `${item.clients} cliente${item.clients === 1 ? "" : "s"}`,
-  }))
-  const payments: RankingRow[] = data.breakdowns.payment_methods.slice(0, 5).map((item) => ({
-    label: item.method,
-    value: item.value,
-    count: item.count,
-    countLabel: `${item.count} pagamento${item.count === 1 ? "" : "s"}`,
-  }))
-  const rows = tab === "services" ? services : payments
+  const rows: RankingRow[] = tab === "services"
+    ? data.breakdowns.services.slice(0, 5).map((item) => ({
+        label: item.service,
+        value: item.value,
+        countLabel: `${item.clients} cliente${item.clients === 1 ? "" : "s"}`,
+      }))
+    : data.breakdowns.payment_methods.slice(0, 5).map((item) => ({
+        label: item.method,
+        value: item.value,
+        countLabel: `${item.count} pagamento${item.count === 1 ? "" : "s"}`,
+      }))
+
   const total = rows.reduce((sum, row) => sum + row.value, 0)
-  const topShare = total > 0 && rows[0] ? (rows[0].value / total) * 100 : 0
+  const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm" aria-labelledby="ranking-title">
-      <div className="border-b border-border px-4 pt-4 sm:px-6 sm:pt-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-interactive-bg text-interactive-fg">
-              <ChartPie className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="microlabel">Ranking e composição</p>
-              <h2 id="ranking-title" className="mt-1 text-base font-semibold tracking-tight text-foreground">Top 5 da operação</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Explore a concentração de receita e os indicadores de saúde.</p>
-            </div>
-          </div>
-          <span className="w-fit rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">Período selecionado</span>
+    <article className="flex min-w-0 flex-col overflow-hidden border-t border-foreground" aria-labelledby="ranking-title">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0">
+          <h3 id="ranking-title" className="text-sm font-semibold text-foreground">
+            {tab === "services" ? "Top serviços" : "Top pagamentos"}
+          </h3>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Participação na receita do período</p>
         </div>
-
-        <div className="mt-5 flex max-w-full gap-1 overflow-x-auto" role="tablist" aria-label="Tipo de ranking">
+        <div className="flex shrink-0 gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Tipo de ranking">
           <RankingTabButton icon={Layers3} label="Serviços" value="services" selected={tab} onSelect={onTabChange} />
           <RankingTabButton icon={CreditCard} label="Pagamentos" value="payments" selected={tab} onSelect={onTabChange} />
-          <RankingTabButton icon={ShieldCheck} label="Indicadores" value="health" selected={tab} onSelect={onTabChange} />
         </div>
       </div>
 
-      {tab === "health" ? (
-        <HealthPanel data={data} realizationRate={realizationRate} riskShare={riskShare} />
-      ) : (
+      {rows.length && total > 0 ? (
         <>
-          <div className="grid gap-px border-b border-border bg-border sm:grid-cols-3">
-            {tab === "services" ? (
-              <>
-                <RankingSummary label="Receita recorrente" value={money(data.summary.mrr)} tone="interactive" />
-                <RankingSummary label="Serviços mapeados" value={String(data.breakdowns.services.length)} tone="success" />
-                <RankingSummary label="Maior participação" value={`${topShare.toFixed(1)}%`} tone="warning" />
-              </>
-            ) : (
-              <>
-                <RankingSummary label="Receita confirmada" value={money(data.summary.confirmed)} tone="success" />
-                <RankingSummary label="Total de pagamentos" value={String(totalPayments)} tone="interactive" />
-                <RankingSummary label="Ticket médio" value={money(data.rates.average_ticket)} tone="warning" />
-              </>
-            )}
+          <div className="relative flex justify-center px-5 pb-1.5 pt-5">
+            <div className="pointer-events-none absolute inset-x-5 inset-y-5 bottom-1.5 flex flex-col items-center justify-center gap-[3px]">
+              <span className="font-mono text-[8.5px] uppercase tracking-[0.04em] text-muted-foreground">Receita total</span>
+              <span className="num text-xs font-semibold text-foreground">{money(total)}</span>
+            </div>
+            <div className="size-40" role="img" aria-label={`Participação na receita. Total ${money(total)}`}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 160, height: 160 }}>
+                <PieChart>
+                  <Pie data={rows} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={51} outerRadius={73} paddingAngle={2} stroke="none" isAnimationActive={!reduceMotion} animationDuration={700}>
+                    {rows.map((row, index) => <Cell key={row.label} fill={colors[index % colors.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [money(Number(value || 0)), String(name)]} contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          <div id={`ranking-panel-${tab}`} role="tabpanel" className="grid gap-4 bg-muted/20 p-4 sm:p-5 lg:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">
-            <RankingDonut rows={rows} total={total} centerLabel={tab === "services" ? "Receita" : "Confirmado"} centerValue={money(total)} money={money} reduceMotion={reduceMotion} />
-            <RankingList rows={rows} total={total} money={money} />
+          <div className="flex flex-1 flex-col gap-2.5 px-[18px] pb-[18px] pt-1.5">
+            {rows.map((row, index) => {
+              const share = total > 0 ? (row.value / total) * 100 : 0
+              return (
+                <div key={row.label}>
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 shrink-0 rounded-full" style={{ background: colors[index % colors.length] }} aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate text-[11.5px] text-foreground">{row.label}</span>
+                    <span className="num text-[11px] font-semibold text-foreground">{money(row.value)}</span>
+                    <span className="num w-[34px] text-right text-[10px] text-muted-foreground">{share.toFixed(1)}%</span>
+                  </div>
+                  <div className="mt-[5px] h-1 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(4, share)}%`, background: colors[index % colors.length] }} />
+                  </div>
+                  <span className="sr-only">{row.countLabel}</span>
+                </div>
+              )
+            })}
           </div>
         </>
+      ) : (
+        <div className="p-5"><EmptyState label="Sem distribuição confiável neste período." /></div>
       )}
-    </section>
-  )
-}
-
-function SecondaryTabButton({ icon: Icon, label, value, selected, onSelect }: {
-  icon: LucideIcon
-  label: string
-  value: SecondaryTab
-  selected: SecondaryTab
-  onSelect: (tab: SecondaryTab) => void
-}) {
-  const active = selected === value
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      aria-controls={`analysis-panel-${value}`}
-      onClick={() => onSelect(value)}
-      className={cn(
-        "flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
-      )}
-    >
-      <Icon className="size-3.5" aria-hidden="true" />
-      {label}
-    </button>
+    </article>
   )
 }
 
 function RankingTabButton({ icon: Icon, label, value, selected, onSelect }: {
-  icon: LucideIcon
+  icon: typeof Layers3
   label: string
   value: RankingTab
   selected: RankingTab
@@ -554,243 +393,16 @@ function RankingTabButton({ icon: Icon, label, value, selected, onSelect }: {
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={active}
-      aria-controls={`ranking-panel-${value}`}
       onClick={() => onSelect(value)}
+      aria-pressed={active}
       className={cn(
-        "flex min-h-10 min-w-max items-center gap-2 border-b-2 px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        active ? "border-interactive text-interactive-fg" : "border-transparent text-muted-foreground hover:text-foreground"
+        "flex min-h-[30px] items-center gap-1.5 rounded-[6px] px-2.5 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+        active ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,.06)]" : "font-medium text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className="size-3.5" aria-hidden="true" />
+      <Icon className="size-3" aria-hidden="true" />
       {label}
     </button>
-  )
-}
-
-function RankingDonut({ rows, total, centerLabel, centerValue, money, reduceMotion }: {
-  rows: RankingRow[]
-  total: number
-  centerLabel: string
-  centerValue: string
-  money: (value: number) => string
-  reduceMotion: boolean
-}) {
-  const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
-  return (
-    <div className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">Participação no total</h3>
-        <p className="mt-1 text-[10px] text-muted-foreground">Distribuição proporcional dos cinco maiores grupos.</p>
-      </div>
-      {rows.length && total > 0 ? (
-        <div className="relative mt-3 h-[300px]" role="img" aria-label={`Gráfico de participação. Total ${centerValue}`}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 420, height: 280 }}>
-            <PieChart>
-              <Pie data={rows} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={72} outerRadius={110} paddingAngle={3} cornerRadius={7} stroke="none" isAnimationActive={!reduceMotion} animationDuration={700}>
-                {rows.map((row, index) => <Cell key={row.label} fill={colors[index % colors.length]} />)}
-              </Pie>
-              <Tooltip formatter={(value, name) => [money(Number(value || 0)), String(name)]} contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{centerLabel}</span>
-            <span className="num mt-1 max-w-32 truncate text-base font-semibold text-foreground">{centerValue}</span>
-          </div>
-        </div>
-      ) : <div className="mt-4"><EmptyState label="Sem distribuição confiável neste período." /></div>}
-    </div>
-  )
-}
-
-function RankingList({ rows, total, money }: { rows: RankingRow[]; total: number; money: (value: number) => string }) {
-  const colors = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"]
-  const max = Math.max(...rows.map((row) => row.value), 0)
-  return (
-    <div className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Ranking detalhado</h3>
-          <p className="mt-1 text-[10px] text-muted-foreground">Valor, participação e volume de cada grupo.</p>
-        </div>
-        <Target className="size-5 text-muted-foreground" aria-hidden="true" />
-      </div>
-
-      <div className="mt-5 space-y-3">
-        {rows.length ? rows.map((row, index) => {
-          const share = total > 0 ? (row.value / total) * 100 : 0
-          return (
-            <div key={row.label} className="rounded-xl border border-border bg-muted/25 p-3.5">
-              <div className="flex items-center gap-3">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-[10px] font-semibold text-secondary-foreground">{index + 1}</span>
-                <span className={cn("size-2.5 shrink-0 rounded-full", colors[index % colors.length])} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-foreground">{row.label}</p>
-                  <p className="mt-0.5 text-[9px] text-muted-foreground">{row.countLabel}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="num text-xs font-semibold text-foreground">{money(row.value)}</p>
-                  <p className="num mt-0.5 text-[9px] text-muted-foreground">{share.toFixed(1)}%</p>
-                </div>
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className={cn("h-full rounded-full", colors[index % colors.length])} style={{ width: `${max > 0 ? Math.max(4, (row.value / max) * 100) : 0}%` }} />
-              </div>
-            </div>
-          )
-        }) : <EmptyState label="Sem itens para compor este ranking." />}
-      </div>
-    </div>
-  )
-}
-
-function HealthPanel({ data, realizationRate, riskShare }: {
-  data: ExecutiveDashboardDTO
-  realizationRate: number
-  riskShare: number
-}) {
-  const healthy = realizationRate >= 80 && riskShare <= 10
-  const attention = !healthy && (realizationRate >= 50 || riskShare <= 25)
-  const status = healthy ? "Saudável" : attention ? "Atenção" : "Crítico"
-  const statusTone = healthy ? "success" : attention ? "warning" : "danger"
-
-  return (
-    <div id="ranking-panel-health" role="tabpanel" className="bg-muted/20 p-4 sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="rounded-[18px] border border-border bg-card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="microlabel">Leitura do período</p>
-              <h3 className="mt-1 text-sm font-semibold text-foreground">Saúde da operação</h3>
-            </div>
-            <ToneBadge tone={statusTone} label={status} />
-          </div>
-          <div className="mt-7 flex items-end gap-2">
-            <span className="num text-5xl font-semibold tracking-[-0.06em] text-foreground">{realizationRate.toFixed(0)}%</span>
-            <span className="pb-1.5 text-xs text-muted-foreground">realizado</span>
-          </div>
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Relação entre o que já entrou e o total previsto para o período selecionado.</p>
-          <div className="mt-6 border-t border-border pt-4">
-            <ContextRow label="Clientes ativos" value={String(data.summary.active_clients)} />
-            <ContextRow label="Novos clientes" value={String(data.growth.new_clients)} />
-            <ContextRow label="Cancelamentos" value={String(data.growth.cancellations)} danger={data.growth.cancellations > 0} />
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <HealthMetric label="Realização" value={realizationRate} description="Confirmado sobre o previsto" tone={realizationRate >= 80 ? "success" : "warning"} />
-          <HealthMetric label="Renovação" value={data.rates.renewal} description="Ciclos pagos no período" tone={data.rates.renewal >= 80 ? "success" : "interactive"} />
-          <HealthMetric label="Inadimplência" value={data.rates.default} description="Valor vencido em risco" tone={data.rates.default > 10 ? "danger" : "success"} />
-          <HealthMetric label="Cancelamentos" value={data.rates.cancellation} description="Perdas registradas no período" tone={data.rates.cancellation > 5 ? "danger" : "neutral"} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function HealthMetric({ label, value, description, tone }: { label: string; value: number; description: string; tone: Tone }) {
-  const toneClasses = metricTone(tone)
-  return (
-    <article className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold text-foreground">{label}</p>
-        <span className={cn("flex size-8 items-center justify-center rounded-lg", toneClasses.icon)}><Target className="size-3.5" aria-hidden="true" /></span>
-      </div>
-      <p className={cn("num mt-5 text-2xl font-semibold tracking-[-0.04em]", toneClasses.value)}>{value.toFixed(1)}%</p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{description}</p>
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`${Math.max(0, value).toFixed(1)}%`}>
-        <div className={cn("h-full rounded-full", progressClass(tone))} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
-      </div>
-    </article>
-  )
-}
-
-function PanelHeader({ icon: Icon, title, description, badge, tone, titleId }: {
-  icon: LucideIcon
-  title: string
-  description: string
-  badge: string
-  tone: Tone
-  titleId: string
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <div className="flex items-center gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", metricTone(tone).icon)}>
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <h3 id={titleId} className="truncate text-sm font-semibold text-foreground">{title}</h3>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <span className="w-fit rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">{badge}</span>
-    </div>
-  )
-}
-
-function MiniMetric({ label, value, tone }: { label: string; value: string; tone: Tone }) {
-  return (
-    <div className={cn("min-w-0 rounded-xl border p-3 text-center", miniMetricClass(tone))}>
-      <p className={cn("num truncate text-sm font-semibold sm:text-base", metricTone(tone).value)}>{value}</p>
-      <p className="mt-1 truncate text-[9px] text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
-function ContextMetric({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div className="bg-card px-4 py-3 text-center">
-      <p className={cn("num text-sm font-semibold text-foreground", danger && "text-danger")}>{value}</p>
-      <p className="mt-0.5 text-[9px] text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
-function RankingSummary({ label, value, tone }: { label: string; value: string; tone: Tone }) {
-  return (
-    <div className="bg-card p-4 text-center sm:p-5">
-      <p className={cn("num text-lg font-semibold sm:text-xl", metricTone(tone).value)}>{value}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
-function ContextRow({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2 text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn("num font-semibold text-foreground", danger && "text-danger")}>{value}</span>
-    </div>
-  )
-}
-
-function ToneBadge({ tone, label }: { tone: Tone; label: string }) {
-  const classes = {
-    neutral: "bg-secondary text-secondary-foreground",
-    success: "bg-success-bg text-success-fg",
-    danger: "bg-danger-bg text-danger-fg",
-    interactive: "bg-interactive-bg text-interactive-fg",
-    warning: "bg-warning-bg text-warning-fg",
-  }[tone]
-  return <span className={cn("rounded-lg px-2.5 py-1 text-[10px] font-semibold", classes)}>{label}</span>
-}
-
-function TrendBadge({ current, previous, inverse = false }: { current: number; previous: number; inverse?: boolean }) {
-  if (previous <= 0) return <span className="rounded-md bg-muted px-2 py-1 text-[9px] font-medium text-muted-foreground">Sem base</span>
-  const change = ((current - previous) / previous) * 100
-  const neutral = Math.abs(change) < 0.05
-  const improved = inverse ? change < 0 : change > 0
-  const Icon = neutral ? Minus : change > 0 ? ArrowUpRight : ArrowDownRight
-  return (
-    <span className={cn(
-      "num flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold",
-      neutral ? "bg-muted text-muted-foreground" : improved ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg"
-    )}>
-      <Icon className="size-3" aria-hidden="true" />
-      {Math.abs(change).toFixed(1)}%
-    </span>
   )
 }
 
@@ -804,46 +416,12 @@ function LegendItem({ color, label, shape = "line", dashed = false }: { color: s
 }
 
 function EmptyState({ label }: { label: string }) {
-  return <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-xs text-muted-foreground">{label}</div>
-}
-
-function metricTone(tone: Tone) {
-  return {
-    neutral: { icon: "bg-secondary text-secondary-foreground", value: "text-foreground" },
-    success: { icon: "bg-success-bg text-success-fg", value: "text-money" },
-    danger: { icon: "bg-danger-bg text-danger-fg", value: "text-danger" },
-    interactive: { icon: "bg-interactive-bg text-interactive-fg", value: "text-interactive-fg" },
-    warning: { icon: "bg-warning-bg text-warning-fg", value: "text-warning-fg" },
-  }[tone]
-}
-
-function miniMetricClass(tone: Tone) {
-  return {
-    neutral: "border-border bg-muted/25",
-    success: "border-success-border bg-success-bg/35",
-    danger: "border-danger-border bg-danger-bg/35",
-    interactive: "border-interactive/25 bg-interactive-bg/45",
-    warning: "border-warning-border bg-warning-bg/35",
-  }[tone]
-}
-
-function progressClass(tone: Tone) {
-  return {
-    neutral: "bg-foreground/60",
-    success: "bg-money",
-    danger: "bg-danger",
-    interactive: "bg-interactive",
-    warning: "bg-warning",
-  }[tone]
-}
-
-function periodLabel(period: ExecutivePeriod) {
-  return periodLabels.find((item) => item.value === period)?.label || "Período"
+  return <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-xs text-muted-foreground">{label}</div>
 }
 
 function compactCurrency(value: number) {
   if (Math.abs(value) >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)} mi`
-  if (Math.abs(value) >= 1_000) return `R$ ${(value / 1_000).toFixed(1)} mil`
+  if (Math.abs(value) >= 1_000) return `R$ ${(value / 1_000).toFixed(1)}k`
   return `R$ ${Math.round(value)}`
 }
 
@@ -865,7 +443,7 @@ function chartLabel(value: string) {
 }
 
 const tooltipStyle = {
-  borderRadius: "12px",
+  borderRadius: "8px",
   border: "1px solid var(--border)",
   background: "var(--popover)",
   color: "var(--popover-foreground)",
@@ -873,10 +451,36 @@ const tooltipStyle = {
   fontSize: "12px",
 }
 
+/**
+ * Cartões do protótipo que dependem de dado inexistente hoje (LTV médio e a
+ * previsão sazonal "Master") ficam como indisponíveis declarados, conforme a
+ * política de placeholder visível da Etapa 57.
+ */
+function MissingIndicators() {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <MissingIndicator label="LTV médio" hint="Depende de histórico de permanência ainda não consolidado." />
+      <MissingIndicator label="Previsão sazonal" hint="Exige seis ciclos completos de renovação para ser confiável." />
+    </div>
+  )
+}
+
+function MissingIndicator({ label, hint }: { label: string; hint: string }) {
+  return (
+    <article className="rounded-lg border border-dashed border-border bg-card px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <ComingSoon />
+      </div>
+      <p className="mt-1 text-[10.5px] text-muted-foreground">{hint}</p>
+    </article>
+  )
+}
+
 export function ExecutiveUpgrade() {
   return (
-    <div className="rounded-[24px] border border-border bg-card p-8 text-center shadow-sm sm:p-10">
-      <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-interactive-bg text-interactive-fg">
+    <div className="rounded-lg border border-border bg-card p-8 text-center sm:p-10">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-lg bg-interactive-bg text-interactive-fg">
         <ChartColumn className="size-6" aria-hidden="true" />
       </span>
       <p className="microlabel mt-5">Análises avançadas</p>

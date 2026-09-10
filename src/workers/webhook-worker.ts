@@ -5,6 +5,7 @@ import { Job, Worker } from 'bullmq'
 import { supabaseAdmin } from '../lib/supabase/service-role'
 import { redisConnection } from '../lib/redis'
 import { WEBHOOK_QUEUE_NAME, aiQueue, messageQueue } from '../lib/queue'
+import { MESSAGE_PRIORITY } from '../lib/message-priority'
 import { logger, runWithCorrelationId } from '../lib/logger'
 import { createMercadoPagoPixCharge } from '../lib/pix-charges'
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat'
@@ -40,6 +41,7 @@ import {
   buildReservationDeliveryUpdate,
   canApplyDeliveryStatus,
 } from '../lib/contact-delivery'
+import { recordWhatsAppRejection, resetWhatsAppRejections } from '../lib/whatsapp-safety'
 
 type BotState =
   | { step: 'main_menu'; clientId: string }
@@ -68,7 +70,7 @@ async function sendBotMessage(input: {
     finalMessage: input.message,
     interactiveMessage: input.interactiveMessage,
     source: 'autoatendimento',
-  })
+  }, { priority: MESSAGE_PRIORITY.conversational })
 }
 
 async function sendPixCopyPaste(input: {
@@ -157,8 +159,15 @@ async function handleMessageUpdate(payload: any) {
   if (!instanceName) return
 
   for (const item of updates) {
+    // A Evolution API v2.3.7 manda o id da mensagem em um campo plano `keyId`
+    // no evento messages.update, não mais aninhado em `key.id` (formato de
+    // versões antigas). Sem esse fallback, messageId ficava sempre null e
+    // toda confirmação/rejeição de entrega era silenciosamente descartada.
     const key = item?.key || item?.data?.key
-    const messageId = typeof key?.id === 'string' ? key.id : null
+    const flatKeyId = typeof item?.keyId === 'string'
+      ? item.keyId
+      : (typeof item?.data?.keyId === 'string' ? item.data.keyId : null)
+    const messageId = (typeof key?.id === 'string' ? key.id : null) || flatKeyId
     const statusValue = item?.update?.status ?? item?.status ?? item?.data?.update?.status
     const normalized = normalizeDeliveryStatus(statusValue)
     if (!messageId || !normalized) continue
@@ -185,6 +194,21 @@ async function handleMessageUpdate(payload: any) {
     }
     const { error: updateError } = await supabaseAdmin.from('alert_history').update(update).eq('id', history.id)
     if (updateError) throw updateError
+
+    if (normalized.status === 'failed') {
+      const { shouldPause } = await recordWhatsAppRejection(instanceName)
+      if (shouldPause) {
+        await supabaseAdmin.from('evolution_instances').update({
+          sending_paused: true,
+          sending_pause_reason: 'WHATSAPP_ANTISPAM_ERROR_BURST',
+          sending_paused_at: now,
+          updated_at: now,
+        }).eq('instance_name', instanceName)
+        logger.error(`[Webhook] Instância ${instanceName} pausada automaticamente: rajada de rejeições do WhatsApp (${normalized.providerStatus}).`)
+      }
+    } else if (normalized.status === 'sent' || normalized.status === 'delivered' || normalized.status === 'read') {
+      await resetWhatsAppRejections(instanceName)
+    }
 
     const isSuccessfulDelivery = normalized.status === 'sent' || normalized.status === 'delivered' || normalized.status === 'read'
     if (history.collection_dispatch_id) {
@@ -230,7 +254,7 @@ async function handleInboundMessage(payload: any) {
   if (!instance?.organization_id) return
 
   const organizationId = instance.organization_id
-  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories, client_services(services(name, plans))'
+  const clientSelect = 'id, user_id, name, plan_value, phone, phone_e164, status, whatsapp_opt_out, client_services(services(name, plans))'
   const [e164Result, legacyResult] = await Promise.all([
     supabaseAdmin
       .from('clients')

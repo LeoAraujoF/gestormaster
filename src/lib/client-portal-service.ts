@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { organizationHasCapability } from '@/lib/plan-catalog'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { rateLimit } from '@/lib/rate-limit'
 import { parseDueDate } from '@/lib/autoatendimento'
 import { normalizePhoneE164 } from '@/lib/phone'
@@ -143,7 +144,7 @@ export async function requestPortalCode(slug: string, rawPhone: string, ip: stri
   })
   if (error) return generic
   try {
-    await messageQueue.add('send-portal-login-code', { portalChallengeId: id }, { jobId: `portal-login-${id}` })
+    await messageQueue.add('send-portal-login-code', { portalChallengeId: id }, { jobId: `portal-login-${id}`, priority: MESSAGE_PRIORITY.interactive })
   } catch {
     await supabaseAdmin.from('client_portal_auth_challenges').update({ send_status: 'failed', error_code: 'QUEUE_UNAVAILABLE' }).eq('id', id)
   }
@@ -277,7 +278,7 @@ export async function requestPortalPhoneChange(session: PortalSession, rawPhone:
     client_id: session.clientId, new_phone_e164: phone, code_hash: hashPortalCode(id, code), code_ciphertext: SecretsManager.encrypt(code),
     send_status: 'pending', requested_via: 'portal', expires_at: new Date(Date.now() + OTP_SECONDS * 1000).toISOString() })
   if (error) throw new Error(error.message)
-  try { await messageQueue.add('send-portal-phone-code', { portalPhoneVerificationId: id }, { jobId: `portal-phone-${id}` }) }
+  try { await messageQueue.add('send-portal-phone-code', { portalPhoneVerificationId: id }, { jobId: `portal-phone-${id}`, priority: MESSAGE_PRIORITY.interactive }) }
   catch { await supabaseAdmin.from('phone_change_verifications').update({ send_status: 'failed', error_code: 'QUEUE_UNAVAILABLE' }).eq('id', id); throw new Error('QUEUE_UNAVAILABLE') }
   return { verificationId: id }
 }
@@ -297,5 +298,6 @@ export async function invitePortalClient(organizationId: string, clientId: strin
   ])
   if (!client?.phone_e164 || !instance) throw new Error('INVITE_BLOCKED')
   await messageQueue.add('send-message', { organizationId, userId: client.user_id, clientId, instanceName: instance.instance_name,
-    phone: client.phone_e164, message: `Acesse seu Portal do Cliente com segurança: ${link}` })
+    phone: client.phone_e164, message: `Acesse seu Portal do Cliente com segurança: ${link}` },
+    { priority: MESSAGE_PRIORITY.transactional })
 }

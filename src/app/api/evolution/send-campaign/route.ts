@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeCampaignPhone, parseLeadCampaignMessage } from '@/lib/lead-campaign'
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
     const { data: instances, error: instanceError } = await supabaseAdmin
       .from('evolution_instances')
-      .select('id, organization_id, instance_name, sending_paused, sending_pause_reason')
+      .select('id, organization_id, instance_name, sending_paused, sending_pause_reason, min_delay, message_min_interval_ms')
       .eq('user_id', user.id)
       .in('instance_name', instanceNames)
 
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
 
     const { data: leads, error: leadError } = await supabaseAdmin
       .from('leads')
-      .select('id, name, phone, email, status, custom_fields, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+      .select('id, name, phone, email, status, custom_fields')
       .eq('user_id', user.id)
       .in('id', input.leadIds)
 
@@ -124,6 +125,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, queued: true, queued_count: 0, queued_lead_ids: [], skipped })
     }
 
+    // O worker impõe um intervalo mínimo por instância (anti-bloqueio) que não
+    // pode ser afrouxado pela campanha. Pedir 5s quando o piso é 15s não
+    // acelerava nada — só fazia a tela mostrar um ritmo que nunca aconteceu.
+    // Aqui a cadência pedida é elevada ao piso e devolvida ao cliente.
+    const instanceFloorSeconds = Math.max(
+      0,
+      ...[...instancesByName.values()].map((instance) => Math.ceil(Math.max(
+        Number(instance.message_min_interval_ms) || 0,
+        (Number(instance.min_delay) || 0) * 1000,
+      ) / 1000)),
+    )
+    const effectiveMinDelaySeconds = Math.max(input.minDelaySeconds, instanceFloorSeconds)
+    const effectiveMaxDelaySeconds = Math.max(input.maxDelaySeconds, effectiveMinDelaySeconds)
+    const cadenceClamped = effectiveMinDelaySeconds !== input.minDelaySeconds
+      || effectiveMaxDelaySeconds !== input.maxDelaySeconds
+
     const queuedAt = new Date().toISOString()
     const { data: histories, error: historyError } = await supabaseAdmin
       .from('alert_history')
@@ -149,7 +166,7 @@ export async function POST(request: Request) {
     let cumulativeDelay = 0
     const jobs = eligibleLeads.map(({ lead, phone, instanceName, message }, index) => {
       if (index > 0) {
-        cumulativeDelay += randomInteger(input.minDelaySeconds, input.maxDelaySeconds) * 1000
+        cumulativeDelay += randomInteger(effectiveMinDelaySeconds, effectiveMaxDelaySeconds) * 1000
       }
       if (index > 0 && index % input.pauseCount === 0) {
         cumulativeDelay += input.pauseDurationMinutes * 60 * 1000
@@ -176,7 +193,7 @@ export async function POST(request: Request) {
           // com um único dois-pontos (`Custom Id cannot contain :`, job.js), o
           // que fazia toda campanha estourar no addBulk antes de tocar no Redis.
           jobId: `alert-history-${alertHistoryId}`,
-          priority: 5,
+          priority: MESSAGE_PRIORITY.bulk,
           delay: cumulativeDelay,
         },
       }
@@ -212,6 +229,12 @@ export async function POST(request: Request) {
       queued_count: queuedLeadIds.length,
       queued_lead_ids: queuedLeadIds,
       skipped,
+      cadence: {
+        min_delay_seconds: effectiveMinDelaySeconds,
+        max_delay_seconds: effectiveMaxDelaySeconds,
+        instance_floor_seconds: instanceFloorSeconds,
+        clamped: cadenceClamped,
+      },
     }, { status: 202 })
   } catch (error: unknown) {
     console.error('send-campaign error:', error)

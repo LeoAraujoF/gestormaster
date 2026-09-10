@@ -80,6 +80,19 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value)
 }
 
+/** Duração curta e legível; "—" quando não há espera acumulada. */
+function formatDuration(ms: number) {
+  if (ms <= 0) return "—"
+  const totalMinutes = Math.floor(ms / 60_000)
+  if (totalMinutes < 1) return `${Math.max(1, Math.round(ms / 1000))}s`
+  if (totalMinutes < 60) return `${totalMinutes} min`
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours < 24) return minutes ? `${hours}h ${minutes}min` : `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d ${hours % 24}h`
+}
+
 function formatDateTime(value: string | null) {
   if (!value) return "Sem registro"
   return new Intl.DateTimeFormat("pt-BR", {
@@ -328,13 +341,22 @@ export function QueueDashboard() {
 
       {data ? (
         <>
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumo das filas">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Resumo das filas">
             <MetricCard
               title="Backlog atual"
               value={formatNumber(data.totals.backlog)}
               description="Aguardando, adiados, priorizados, dependentes ou pausados."
               icon={Gauge}
               tone={data.totals.backlog > 0 ? "warning" : "default"}
+            />
+            <MetricCard
+              title="Atraso da fila"
+              value={formatDuration(data.totals.maxApproxLagMs)}
+              description={data.totals.maxApproxLagMs > 0
+                ? "Espera do pendente mais antigo. Adiados não contam."
+                : "Nenhuma espera acumulada nas filas."}
+              icon={Clock3}
+              tone={data.totals.maxApproxLagMs >= data.lagWarningMs ? "warning" : "default"}
             />
             <MetricCard
               title="Em processamento"
@@ -379,6 +401,7 @@ export function QueueDashboard() {
                     <TableHead className="pl-4">Fila</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Backlog</TableHead>
+                    <TableHead className="text-right">Atraso</TableHead>
                     <TableHead className="text-right">Ativos</TableHead>
                     <TableHead className="text-right">Workers</TableHead>
                     <TableHead className="text-right">Concluídos retidos</TableHead>
@@ -400,6 +423,12 @@ export function QueueDashboard() {
                           : <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Processando</Badge>}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">{formatNumber(queue.backlog)}</TableCell>
+                      <TableCell
+                        className={cn("text-right tabular-nums", queue.approxLagMs >= data.lagWarningMs && "font-medium text-amber-600 dark:text-amber-400")}
+                        title={queue.oldestPendingAt ? `Pendente mais antigo desde ${formatDateTime(queue.oldestPendingAt)}` : undefined}
+                      >
+                        {formatDuration(queue.approxLagMs)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{formatNumber(queue.counts.active)}</TableCell>
                       <TableCell className="text-right tabular-nums">{queue.workers === null ? "Indisponível" : formatNumber(queue.workers)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatNumber(queue.counts.completed)}</TableCell>

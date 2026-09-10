@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { redisConnection } from '@/lib/redis'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
 
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
     if (leadId) {
       const { data: lead } = await supabase
         .from('leads')
-        .select('id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+        .select('id')
         .eq('id', leadId)
         .eq('user_id', user.id)
         .maybeSingle()
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
       source: leadId ? 'lead_campaign' : 'manual_single',
     }, {
       jobId: `alert-history:${history.id}`,
-      priority: 5,
+      priority: leadId ? MESSAGE_PRIORITY.bulk : MESSAGE_PRIORITY.transactional,
     })
 
     await supabaseAdmin.from('alert_history')

@@ -12,6 +12,8 @@ import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { parseMessageTemplate } from '@/lib/message-parser'
 import { getOrganizationPlanContext } from '@/lib/plan-catalog'
 import { redisConnection } from '@/lib/redis'
+import { pickUsableInstance } from '@/lib/instance-routing'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
@@ -81,11 +83,10 @@ export async function POST(req: Request) {
 
     const clients: Array<{
       id: string; name: string; phone: string | null; phone_e164: string | null; plan_value: number; due_date: string; user_id: string;
-      whatsapp_opt_in?: boolean | null; whatsapp_opt_out?: boolean | null; whatsapp_opt_in_categories?: string[] | null;
     }> = []
     for (let from = 0; ; from += 1000) {
       let pageQuery = supabaseAdmin.from('clients')
-        .select('id, name, phone, phone_e164, plan_value, due_date, user_id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+        .select('id, name, phone, phone_e164, plan_value, due_date, user_id')
         .eq('organization_id', membership.organizationId)
         .range(from, from + 999)
       if (audience === 'active') pageQuery = pageQuery.eq('status', 'active')
@@ -130,12 +131,10 @@ export async function POST(req: Request) {
     }
     if (action === 'preview') return NextResponse.json({ preview })
 
-    const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id, sending_paused, sending_pause_reason')
-      .eq('organization_id', membership.organizationId).eq('status', 'connected')
-      .order('is_primary', { ascending: false }).limit(1).maybeSingle()
-    if (!instance) return NextResponse.json({ error: 'Nenhum WhatsApp conectado' }, { status: 400 })
-    if (instance.sending_paused) return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
+    // Prioriza a principal, mas não bloqueia o disparo em massa só porque ela
+    // está pausada — usa a próxima instância conectada da organização.
+    const instance = await pickUsableInstance({ organizationId: membership.organizationId })
+    if (!instance) return NextResponse.json({ error: 'Nenhum WhatsApp conectado (ou todas as instâncias estão pausadas)' }, { status: 400 })
 
     const { data: tempRule, error: ruleError } = await supabaseAdmin.from('automations').insert({
       user_id: user.id,
@@ -187,7 +186,7 @@ export async function POST(req: Request) {
         })
         if (reservation.decision === 'deferred') summary.deferred++
         else {
-          await enqueueContactReservation(reservation.reservationId, delay)
+          await enqueueContactReservation(reservation.reservationId, delay, 'initial', MESSAGE_PRIORITY.bulk)
           summary.queued++
         }
       } catch {

@@ -1,5 +1,5 @@
 import '../lib/env';
-import { Worker, Job } from 'bullmq';
+import { DelayedError, Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { MESSAGE_QUEUE_NAME } from '../lib/queue';
 import { supabaseAdmin } from '../lib/supabase/service-role';
@@ -15,7 +15,11 @@ import { buildBillingAlertButtons } from '../lib/whatsapp-interactive';
 import type { WhatsAppInteractiveMessage } from '../providers/whatsapp/IWhatsAppProvider';
 import { normalizeSendMessageJob } from '../lib/message-job-contract';
 import { normalizeWhatsAppNumber } from '../lib/phone';
-import { reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep } from '../lib/whatsapp-safety';
+import { MESSAGE_PRIORITY } from '../lib/message-priority';
+import { millisecondsUntilSendWindow } from '../lib/contact-policy';
+import { resolveOrganizationSendPolicy } from '../lib/organization-send-policy';
+import { releaseInstanceDailyQuota, reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep } from '../lib/whatsapp-safety';
+import { pickUsableInstance } from '../lib/instance-routing';
 import { isRetryableWhatsAppError, shouldPauseWhatsAppInstance, whatsappErrorCode } from '../providers/whatsapp/provider-error';
 
 startOperationalHeartbeat('message_worker');
@@ -34,13 +38,107 @@ function extractProviderMessageId(response: unknown): string | undefined {
   return candidates.find((candidate): candidate is string => typeof candidate === 'string' && candidate.length > 0);
 }
 
+/**
+ * Pacing e backpressure são resolvidos devolvendo o job ao Redis
+ * (`moveToDelayed` + `DelayedError`), nunca dormindo dentro do handler.
+ *
+ * Um `sleep` longo segura um slot de concorrência: com a fila em FIFO, uma única
+ * instância com backlog ocupava todos os slots e travava os demais tenants —
+ * o job N chegava a dormir N x intervalo (dezenas de minutos) em estado `active`.
+ * Esperas muito curtas continuam inline porque o requeue custaria mais que elas.
+ */
+const BACKPRESSURE_FIELD = 'backpressure';
+const MAX_INLINE_WAIT_MS = Math.max(0, Number(process.env.MESSAGE_INLINE_WAIT_MS) || 1500);
+const MAX_DEFERRALS = Math.max(1, Number(process.env.MESSAGE_MAX_DEFERRALS) || 60);
+const INSTANCE_PAUSED_RETRY_MS = Math.max(60_000, Number(process.env.INSTANCE_PAUSED_RETRY_MS) || 900_000);
+const INSTANCE_PAUSED_GRACE_MS = Math.max(0, Number(process.env.INSTANCE_PAUSED_GRACE_MS) || 3_600_000);
+const SEND_SLOT_MAX_HORIZON_MS = Math.max(60_000, Number(process.env.SEND_SLOT_MAX_HORIZON_MS) || 1_800_000);
+const MESSAGE_WORKER_CONCURRENCY = Math.max(1, Number(process.env.MESSAGE_WORKER_CONCURRENCY) || 25);
+const MESSAGE_WORKER_LIMITER_MAX = Math.max(1, Number(process.env.MESSAGE_WORKER_LIMITER_MAX) || 50);
+const MESSAGE_WORKER_LIMITER_DURATION_MS = Math.max(100, Number(process.env.MESSAGE_WORKER_LIMITER_DURATION_MS) || 1000);
+
+type BackpressureState = {
+  attempt: number;
+  deferrals: number;
+  reason: string;
+  readyAt: number;
+  quotaKey: string | null;
+  slotInstanceId: string | null;
+  /** Quando a instância foi vista pausada pela primeira vez por este job. */
+  pausedSince: number | null;
+};
+
+function readBackpressure(job: Job): BackpressureState | null {
+  const raw = (job.data as Record<string, unknown> | undefined)?.[BACKPRESSURE_FIELD];
+  if (!raw || typeof raw !== 'object') return null;
+  const state = raw as Partial<BackpressureState>;
+  if (typeof state.attempt !== 'number' || typeof state.readyAt !== 'number') return null;
+  return {
+    attempt: state.attempt,
+    deferrals: Number(state.deferrals) || 0,
+    reason: String(state.reason || 'unknown'),
+    readyAt: state.readyAt,
+    quotaKey: typeof state.quotaKey === 'string' ? state.quotaKey : null,
+    slotInstanceId: typeof state.slotInstanceId === 'string' ? state.slotInstanceId : null,
+    pausedSince: typeof state.pausedSince === 'number' ? state.pausedSince : null,
+  };
+}
+
+/**
+ * Quota e slot reservados valem apenas dentro da tentativa que os criou. Numa
+ * tentativa nova (falha real de entrega) o job precisa reservar de novo.
+ */
+function currentAttemptState(job: Job): BackpressureState | null {
+  const state = readBackpressure(job);
+  return state && state.attempt === job.attemptsMade ? state : null;
+}
+
+function isDelayedError(error: unknown) {
+  return error instanceof DelayedError || (error as { name?: string } | null)?.name === 'DelayedError';
+}
+
+/**
+ * Devolve o job ao Redis liberando o slot de concorrência. `moveToDelayed` usa
+ * `skipAttempt`, então backpressure não consome tentativas de entrega — mas os
+ * adiamentos são contados para o job não circular indefinidamente.
+ */
+async function deferJob(
+  job: Job,
+  delayMs: number,
+  reason: string,
+  patch: Partial<Pick<BackpressureState, 'quotaKey' | 'slotInstanceId' | 'pausedSince'>> = {},
+): Promise<never> {
+  const previous = readBackpressure(job);
+  const carried = currentAttemptState(job);
+  const next: BackpressureState = {
+    attempt: job.attemptsMade,
+    deferrals: (previous?.deferrals || 0) + 1,
+    reason,
+    readyAt: Date.now() + Math.max(0, delayMs),
+    quotaKey: patch.quotaKey !== undefined ? patch.quotaKey : (carried?.quotaKey ?? null),
+    slotInstanceId: patch.slotInstanceId !== undefined ? patch.slotInstanceId : (carried?.slotInstanceId ?? null),
+    // Sobrevive à troca de tentativa: a janela de espera por instância pausada
+    // conta desde a primeira vez que este job viu a pausa.
+    pausedSince: patch.pausedSince !== undefined ? patch.pausedSince : (previous?.pausedSince ?? null),
+  };
+  await job.updateData({ ...(job.data as Record<string, unknown>), [BACKPRESSURE_FIELD]: next });
+  await job.moveToDelayed(next.readyAt, job.token);
+  // O BullMQ só reconhece o reagendamento se o handler lançar DelayedError.
+  // Retornar normal faz o worker tentar completar um job que já perdeu o lock.
+  throw new DelayedError(reason);
+}
+
 const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   if (await processPortalOtpJob(job.data)) return;
   const normalizedJob = normalizeSendMessageJob(job.data);
+  // Um job devolvido por backpressure já reivindicou a reserva numa passagem
+  // anterior. Sem isto o re-claim (que só aceita 'reserved') falharia e a
+  // mensagem seria descartada em silêncio.
+  const requeuedByBackpressure = readBackpressure(job) !== null;
   let {
     clientId, phone, instanceUrl, apiKey, connectionMode,
     alertHistoryId, ruleId, userId, correlationId
-  } = normalizedJob as typeof normalizedJob & { clientId?: string; ruleId?: string; instanceUrl?: string; apiKey?: string; connectionMode?: string };
+  } = normalizedJob as typeof normalizedJob & { clientId?: string; ruleId?: string; instanceUrl?: string | null; apiKey?: string | null; connectionMode?: string | null };
   const manualRetry = normalizedJob.manualRetry === true;
   const jobSource = normalizedJob.source || undefined;
   const renewalReminderClientId = (job.data as Record<string, unknown>).renewalReminderClientId as string | undefined;
@@ -58,6 +156,9 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   let instanceDailyMessageLimit = 80;
   let instanceMessageMinIntervalMs = 15000;
   let instanceMessageMaxIntervalMs = 25000;
+  // Pausa por rajada ("além do intervalo de envio"): 0 em qualquer um desativa.
+  let instanceBurstMessageCount = 0;
+  let instanceBurstPauseMinutes = 0;
 
   let finalMessage = normalizedJob.finalMessage;
   let organizationId = normalizedJob.organizationId;
@@ -69,13 +170,13 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   if (contactReservationId) {
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_contact_reservation', {
       p_reservation_id: contactReservationId,
-      p_is_retry: manualRetry || job.attemptsMade > 0,
+      p_is_retry: manualRetry || job.attemptsMade > 0 || requeuedByBackpressure,
     });
     if (claimError) throw new Error(`Falha ao reservar contato coordenado: ${claimError.message}`);
     if (!claimed) return;
 
     const { data: reservation, error: reservationError } = await supabaseAdmin.from('contact_reservations')
-      .select('id, organization_id, client_id, requested_by, automation_id, alert_history_id, message_content, media_url, category, status')
+      .select('id, organization_id, client_id, requested_by, automation_id, alert_history_id, message_content, media_url, category, status, source')
       .eq('id', contactReservationId).maybeSingle();
     if (reservationError || !reservation) throw new Error('Reserva de contato não encontrada');
     if (reservation.status === 'cancelled') return;
@@ -88,14 +189,27 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         .eq('id', reservation.id);
       return;
     }
+    // A régua fixa (before_due/on_due/after_due) tem um botão "Pausar" em /automacao
+    // que desliga `is_active` em lote. Sem esta checagem, jobs que já estavam na
+    // fila quando o operador pausou continuavam disparando — a pausa só impedia o
+    // agendador de criar jobs *novos*, não parava os que já tinham partido.
+    // Escopado a `source === 'legacy_automation'`: um "Cobrar agora" manual deve
+    // funcionar mesmo com a regra desativada, exatamente como já funciona hoje.
+    if (reservation.source === 'legacy_automation' && reservation.automation_id) {
+      const { data: rule } = await supabaseAdmin.from('automations').select('is_active').eq('id', reservation.automation_id).maybeSingle();
+      if (rule && rule.is_active === false) {
+        await supabaseAdmin.from('contact_reservations')
+          .update({ status: 'cancelled', decision_reason: 'AUTOMATION_RULE_PAUSED', updated_at: new Date().toISOString() })
+          .eq('id', reservation.id).eq('status', 'processing');
+        logger.info(`[Job ${job.id}] Régua ${reservation.automation_id} pausada; contato liberado sem envio.`);
+        return;
+      }
+    }
     if (!client || !(client.phone_e164 || client.phone)) {
       await supabaseAdmin.from('contact_reservations').update({ status: 'failed', decision_reason: 'CLIENT_WITHOUT_PHONE' }).eq('id', reservation.id);
       throw new Error('Cliente sem telefone para contato coordenado');
     }
-    const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
-      .eq('organization_id', reservation.organization_id).eq('status', 'connected')
-      .order('is_primary', { ascending: false }).limit(1).maybeSingle();
+    const instance = await pickUsableInstance({ organizationId: reservation.organization_id });
     if (!instance) {
       await supabaseAdmin.from('contact_reservations').update({ status: 'failed', decision_reason: 'NO_CONNECTED_INSTANCE' }).eq('id', reservation.id);
       throw new Error('Nenhuma instância conectada para contato coordenado');
@@ -120,13 +234,15 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     instanceDailyMessageLimit = instance.daily_message_limit || instanceDailyMessageLimit;
     instanceMessageMinIntervalMs = Math.max(instance.message_min_interval_ms || 0, (instance.min_delay || 0) * 1000, 1000);
     instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (instance.max_delay || 25) * 1000);
+    instanceBurstMessageCount = instance.burst_message_count || 0;
+    instanceBurstPauseMinutes = instance.burst_pause_minutes || 0;
   }
 
   if (collectionDispatchId) {
     contactCategory = 'billing';
     const { data: claimed, error: claimError } = await supabaseAdmin.rpc('claim_collection_dispatch', {
       p_dispatch_id: collectionDispatchId,
-      p_is_retry: manualRetry || job.attemptsMade > 0,
+      p_is_retry: manualRetry || job.attemptsMade > 0 || requeuedByBackpressure,
     });
     if (claimError) throw new Error(`Falha ao reservar despacho inteligente: ${claimError.message}`);
     if (!claimed) return;
@@ -148,6 +264,23 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       }
       return;
     }
+    // Mesmo racional do bloco acima: a régua inteligente pode ser desligada em
+    // `collection_settings.enabled` depois que o despacho já está na fila.
+    const { data: collectionSettings } = await supabaseAdmin.from('collection_settings')
+      .select('enabled').eq('organization_id', dispatch.organization_id).maybeSingle();
+    if (collectionSettings && collectionSettings.enabled === false) {
+      await supabaseAdmin.from('collection_dispatches')
+        .update({ status: 'cancelled', error_message: 'INTELLIGENT_COLLECTIONS_DISABLED' })
+        .eq('id', dispatch.id).eq('status', 'processing');
+      if (contactReservationId) {
+        await supabaseAdmin.from('contact_reservations')
+          .update({ status: 'cancelled', decision_reason: 'INTELLIGENT_COLLECTIONS_DISABLED' })
+          .eq('id', contactReservationId)
+          .eq('status', 'processing');
+      }
+      logger.info(`[Job ${job.id}] Cobrança inteligente desativada para a organização; despacho liberado sem envio.`);
+      return;
+    }
     const { data: client } = await supabaseAdmin.from('clients')
       .select('id, phone_e164, phone, user_id, status')
       .eq('id', dispatch.client_id).eq('organization_id', dispatch.organization_id).maybeSingle();
@@ -166,9 +299,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       await supabaseAdmin.from('collection_dispatches').update({ status: 'failed', error_message: 'Cliente sem telefone para despacho inteligente' }).eq('id', dispatch.id);
       throw new Error('Cliente sem telefone para despacho inteligente');
     }
-    const { data: instance } = await supabaseAdmin.from('evolution_instances')
-      .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
-      .eq('organization_id', dispatch.organization_id).eq('status', 'connected').limit(1).maybeSingle();
+    const instance = await pickUsableInstance({ organizationId: dispatch.organization_id });
     if (!instance) {
       const status = dispatchFailureStatus(job.attemptsMade, job.opts.attempts);
       await supabaseAdmin.from('collection_dispatches').update({ status, error_message: 'Nenhuma instância conectada para despacho inteligente' }).eq('id', dispatch.id);
@@ -191,6 +322,8 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     instanceDailyMessageLimit = instance.daily_message_limit || instanceDailyMessageLimit;
     instanceMessageMinIntervalMs = Math.max(instance.message_min_interval_ms || 0, (instance.min_delay || 0) * 1000, 1000);
     instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (instance.max_delay || 25) * 1000);
+    instanceBurstMessageCount = instance.burst_message_count || 0;
+    instanceBurstPauseMinutes = instance.burst_pause_minutes || 0;
   }
 
   if (!interactiveMessage && contactCategory === 'billing') {
@@ -303,11 +436,42 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       }
     };
 
-    // 1. Checa Circuit Breaker (Backpressure global)
-    if (await CircuitBreaker.isTripped()) {
-      logger.warn(`[Job ${job.id}] 🛑 Circuit Breaker ABERTO! Evolution API parece estar instável. Atrasando mensagem.`);
-      if (collectionDispatchId || contactReservationId) await updateAlertStatus(dispatchFailureStatus(job.attemptsMade, job.opts.attempts), { error_message: 'CIRCUIT_BREAKER_OPEN' });
-      throw new Error('CIRCUIT_BREAKER_OPEN');
+    /**
+     * Devolve a reserva coordenada ao estado de espera para que o job possa ser
+     * reivindicado novamente quando voltar de um adiamento longo (limite diario,
+     * instancia pausada). Sem isso a reserva ficaria presa em `processing` e
+     * seria marcada como falha pela reconciliacao de reservas paradas.
+     */
+    const releaseCoordinationHold = async (reason: string) => {
+      if (contactReservationId) {
+        const { error } = await supabaseAdmin.from('contact_reservations').update({
+          status: 'reserved',
+          decision_reason: reason,
+          updated_at: new Date().toISOString(),
+        }).eq('id', contactReservationId);
+        if (error) logger.error(`[Job ${job.id}] Erro ao liberar reserva ${contactReservationId}: ${error.message}`);
+      }
+      if (collectionDispatchId) {
+        const { error } = await supabaseAdmin.from('collection_dispatches').update({
+          status: 'pending',
+          error_message: reason,
+          updated_at: new Date().toISOString(),
+        }).eq('id', collectionDispatchId);
+        if (error) logger.error(`[Job ${job.id}] Erro ao liberar despacho ${collectionDispatchId}: ${error.message}`);
+      }
+    };
+
+    // 1. Teto de adiamentos. Backpressure não gasta tentativas de entrega, então
+    // precisa de um freio próprio para o job não circular para sempre.
+    const backpressure = readBackpressure(job);
+    if (backpressure && backpressure.deferrals >= MAX_DEFERRALS) {
+      logger.error(`[Job ${job.id}] 🛑 Limite de adiamentos atingido (${backpressure.deferrals}x, último motivo: ${backpressure.reason}).`);
+      // Só libera a quota se ela ainda pertence a esta tentativa; a de tentativas
+      // anteriores já foi devolvida no catch e liberar de novo abriria uma vaga extra.
+      const heldQuotaKey = currentAttemptState(job)?.quotaKey;
+      if (heldQuotaKey) await releaseInstanceDailyQuota(heldQuotaKey);
+      await updateAlertStatus('failed', { error_message: `BACKPRESSURE_DEFERRAL_LIMIT:${backpressure.reason}` });
+      return;
     }
 
     // 2. Kill Switch (Verifica se o usuário foi banido/suspenso)
@@ -318,13 +482,14 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       throw new Error('USER_BANNED');
     }
 
-    // 3. Rate Limiter por organização
+    // 3. Rate Limiter por organização. Estourar o limite é backpressure, não
+    // falha de entrega: reagenda sem consumir tentativa.
     if (organizationId) {
       const { allowed, resetIn } = await RateLimiter.checkLimit(organizationId, 60, 60);
       if (!allowed) {
-        logger.warn(`[Job ${job.id}] Tenant ${organizationId} excedeu limite. Atrasando job em ${resetIn}s`);
-        if (collectionDispatchId || contactReservationId) await updateAlertStatus(dispatchFailureStatus(job.attemptsMade, job.opts.attempts), { error_message: `RATE_LIMIT_EXCEEDED:${resetIn}` });
-        throw new Error(`RATE_LIMIT_EXCEEDED:${resetIn}`);
+        logger.warn(`[Job ${job.id}] Tenant ${organizationId} excedeu limite. Reagendando em ${resetIn}s`);
+        await updateAlertStatus('pending', { error_message: `RATE_LIMIT_EXCEEDED:${resetIn}` });
+        await deferJob(job, resetIn * 1000 + Math.floor(Math.random() * 1000), `RATE_LIMIT_EXCEEDED:${resetIn}`);
       }
     }
 
@@ -332,7 +497,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     if (instanceId || instanceName) {
       let instanceQuery = supabaseAdmin
         .from('evolution_instances')
-        .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, organization_id, user_id, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
+        .select('id, instance_name, base_url, api_key, connection_mode, min_delay, max_delay, organization_id, user_id, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms, burst_message_count, burst_pause_minutes')
         .limit(1);
       if (instanceId) instanceQuery = instanceQuery.eq('id', instanceId);
       else if (instanceName) instanceQuery = instanceQuery.eq('instance_name', instanceName);
@@ -356,8 +521,36 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         instanceDailyMessageLimit = resolvedInstance.daily_message_limit || instanceDailyMessageLimit;
         instanceMessageMinIntervalMs = Math.max(resolvedInstance.message_min_interval_ms || 0, (resolvedInstance.min_delay || 0) * 1000, 1000);
         instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (resolvedInstance.max_delay || 25) * 1000);
+        instanceBurstMessageCount = resolvedInstance.burst_message_count || 0;
+        instanceBurstPauseMinutes = resolvedInstance.burst_pause_minutes || 0;
         organizationId = organizationId || resolvedInstance.organization_id;
         userId = userId || resolvedInstance.user_id;
+
+        // Falha (alternância principal -> secundária): o job nasceu preso a esta
+        // instância especificamente. Se ela caiu depois de enfileirada — o caso
+        // de uma fila grande que demora horas para escoar —, procura outra
+        // conectada e não pausada da mesma organização em vez de esperar esta
+        // voltar. Prioriza a principal (a busca já ordena por `is_primary`);
+        // nunca envia pelas duas ao mesmo tempo, porque só troca quando a
+        // originalmente escolhida está comprovadamente indisponível.
+        if (instanceSendingPaused) {
+          const fallback = await pickUsableInstance({ organizationId, userId, excludeInstanceId: instanceId });
+          if (fallback) {
+            logger.warn(`[Job ${job.id}] Instância ${instanceName} pausada (${instanceSendingPauseReason}); alternando para ${fallback.instance_name}.`);
+            instanceId = fallback.id;
+            instanceName = fallback.instance_name;
+            instanceUrl = fallback.base_url;
+            apiKey = fallback.api_key;
+            connectionMode = fallback.connection_mode;
+            instanceSendingPaused = false;
+            instanceSendingPauseReason = null;
+            instanceDailyMessageLimit = fallback.daily_message_limit || instanceDailyMessageLimit;
+            instanceMessageMinIntervalMs = Math.max(fallback.message_min_interval_ms || 0, (fallback.min_delay || 0) * 1000, 1000);
+            instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (fallback.max_delay || 25) * 1000);
+            instanceBurstMessageCount = fallback.burst_message_count || 0;
+            instanceBurstPauseMinutes = fallback.burst_pause_minutes || 0;
+          }
+        }
       }
     }
 
@@ -388,21 +581,19 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     // Fallback: busca no banco a instância conectada
     if (!targetInstanceName) {
-       let instanceQuery = supabaseAdmin.from('evolution_instances')
-         .select('id, instance_name, min_delay, max_delay, sending_paused, sending_pause_reason, daily_message_limit, message_min_interval_ms')
-         .eq('status', 'connected');
-      if (organizationId) instanceQuery = instanceQuery.eq('organization_id', organizationId);
-      else if (userId) instanceQuery = instanceQuery.eq('user_id', userId);
-
-      const { data: insts } = await instanceQuery.order('is_primary', { ascending: false }).limit(1);
-      if (insts && insts.length > 0) {
-        targetInstanceName = insts[0].instance_name;
-        instanceId = insts[0].id;
-        instanceSendingPaused = insts[0].sending_paused === true;
-        instanceSendingPauseReason = insts[0].sending_pause_reason || null;
-        instanceDailyMessageLimit = insts[0].daily_message_limit || instanceDailyMessageLimit;
-        instanceMessageMinIntervalMs = Math.max(insts[0].message_min_interval_ms || 0, (insts[0].min_delay || 0) * 1000, 1000);
-        instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (insts[0].max_delay || 25) * 1000);
+      // Jobs antigos sem instância no payload: a busca já prioriza a principal e
+      // ignora instâncias pausadas, então nunca cai numa que está fora do ar.
+      const fallbackInstance = await pickUsableInstance({ organizationId, userId });
+      if (fallbackInstance) {
+        targetInstanceName = fallbackInstance.instance_name;
+        instanceId = fallbackInstance.id;
+        instanceSendingPaused = false;
+        instanceSendingPauseReason = null;
+        instanceDailyMessageLimit = fallbackInstance.daily_message_limit || instanceDailyMessageLimit;
+        instanceMessageMinIntervalMs = Math.max(fallbackInstance.message_min_interval_ms || 0, (fallbackInstance.min_delay || 0) * 1000, 1000);
+        instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (fallbackInstance.max_delay || 25) * 1000);
+        instanceBurstMessageCount = fallbackInstance.burst_message_count || 0;
+        instanceBurstPauseMinutes = fallbackInstance.burst_pause_minutes || 0;
       }
     }
 
@@ -414,42 +605,105 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     logger.info(`[Job ${job.id}] Enviando para instância "${targetInstanceName}" → ${phone}`);
 
-    try {
-      if (instanceSendingPaused) {
-        const reason = instanceSendingPauseReason || 'INSTANCE_SENDING_PAUSED';
-        logger.warn(`[Job ${job.id}] Envio pausado para a instância ${targetInstanceName}: ${reason}`);
-        await updateAlertStatus('failed', { error_message: `INSTANCE_SENDING_PAUSED:${reason}` });
-        return;
-      }
+    // 6. Circuit breaker por provedor: uma Evolution externa de um tenant fora do
+    // ar não pode interromper os envios de quem usa outro servidor.
+    const providerScope = CircuitBreaker.scopeFor(finalUrl);
+    if (await CircuitBreaker.isTripped(providerScope)) {
+      const retryInMs = await CircuitBreaker.retryAfterMs(providerScope);
+      logger.warn(`[Job ${job.id}] ⛔ Circuit Breaker ABERTO para ${finalUrl}; reagendando em ${Math.ceil(retryInMs / 1000)}s.`);
+      await updateAlertStatus('pending', { error_message: 'CIRCUIT_BREAKER_OPEN' });
+      await deferJob(job, retryInMs + Math.floor(Math.random() * 5000), 'CIRCUIT_BREAKER_OPEN');
+    }
 
-      if (instanceId) {
-        const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit);
+    if (instanceSendingPaused) {
+      const reason = instanceSendingPauseReason || 'INSTANCE_SENDING_PAUSED';
+      // A pausa é liberada por um operador, então a mensagem espera uma janela
+      // antes de ser descartada em vez de morrer já na primeira passagem.
+      // A janela conta da primeira detecção, não de `job.timestamp`: um job
+      // agendado para dias à frente já nasceria com a janela vencida.
+      const pausedSince = readBackpressure(job)?.pausedSince ?? Date.now();
+      if (Date.now() - pausedSince < INSTANCE_PAUSED_GRACE_MS) {
+        logger.warn(`[Job ${job.id}] Envio pausado em ${targetInstanceName} (${reason}); reagendando.`);
+        await updateAlertStatus('pending', { error_message: `INSTANCE_SENDING_PAUSED:${reason}` });
+        await releaseCoordinationHold(`INSTANCE_SENDING_PAUSED:${reason}`);
+        await deferJob(job, INSTANCE_PAUSED_RETRY_MS, `INSTANCE_SENDING_PAUSED:${reason}`, { pausedSince });
+      }
+      logger.warn(`[Job ${job.id}] Envio pausado em ${targetInstanceName}: ${reason}. Janela de espera esgotada.`);
+      await updateAlertStatus('failed', { error_message: `INSTANCE_SENDING_PAUSED:${reason}` });
+      return;
+    }
+
+    const sendPolicy = await resolveOrganizationSendPolicy(organizationId);
+
+    // 7. Janela de horário da organização (`collection_settings`).
+    //
+    // Só vale para tráfego não urgente. A prioridade do job é o critério: código
+    // de acesso, resposta a quem acabou de escrever e aviso de pagamento saem a
+    // qualquer hora; cobrança, automação e disparo em massa esperam a janela
+    // abrir em vez de chegar de madrugada.
+    if ((job.opts.priority ?? 0) >= MESSAGE_PRIORITY.billing) {
+      const untilWindow = millisecondsUntilSendWindow(
+        new Date(),
+        sendPolicy.timeZone,
+        sendPolicy.windowStartMinute,
+        sendPolicy.windowEndMinute,
+      );
+      if (untilWindow > 0) {
+        logger.info(`[Job ${job.id}] Fora da janela de envio; reagendando em ${Math.ceil(untilWindow / 60000)} min.`);
+        await updateAlertStatus('pending', { error_message: 'OUTSIDE_SEND_WINDOW' });
+        await releaseCoordinationHold('OUTSIDE_SEND_WINDOW');
+        // Espalha a reabertura para a fila inteira não disparar no mesmo segundo.
+        await deferJob(job, untilWindow + Math.floor(Math.random() * 300_000), 'OUTSIDE_SEND_WINDOW');
+      }
+    }
+
+    // 8. Pacing da instância: quota diária + intervalo mínimo entre mensagens.
+    // Ambos são reservados antes do envio e viajam no job, para que o
+    // reagendamento não reserve duas vezes.
+    let reservedQuotaKey: string | null = null;
+    if (instanceId) {
+      const paced = currentAttemptState(job);
+      if (paced && paced.slotInstanceId === instanceId) {
+        reservedQuotaKey = paced.quotaKey;
+        const remainingMs = paced.readyAt - Date.now();
+        if (remainingMs > 0) await sleep(Math.min(remainingMs, MAX_INLINE_WAIT_MS));
+      } else {
+        const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit, sendPolicy.timeZone);
         if (!quota.allowed) {
           const delay = quota.resetInMs + Math.floor(Math.random() * 60000);
           logger.warn(`[Job ${job.id}] Limite diário da instância atingido; reagendando em ${Math.ceil(delay / 60000)} min.`);
           await updateAlertStatus('pending', { error_message: 'INSTANCE_DAILY_LIMIT_REACHED' });
-          if (contactReservationId) {
-            await supabaseAdmin.from('contact_reservations').update({
-              status: 'reserved',
-              decision_reason: 'INSTANCE_DAILY_LIMIT_REACHED',
-              updated_at: new Date().toISOString(),
-            }).eq('id', contactReservationId);
-          }
-          if (collectionDispatchId) {
-            await supabaseAdmin.from('collection_dispatches').update({
-              status: 'pending',
-              error_message: 'INSTANCE_DAILY_LIMIT_REACHED',
-              updated_at: new Date().toISOString(),
-            }).eq('id', collectionDispatchId);
-          }
-          await job.moveToDelayed(Date.now() + delay, job.token);
-          return;
+          await releaseCoordinationHold('INSTANCE_DAILY_LIMIT_REACHED');
+          await deferJob(job, delay, 'INSTANCE_DAILY_LIMIT_REACHED', { quotaKey: null, slotInstanceId: null });
         }
+        reservedQuotaKey = quota.key;
+
         const intervalRange = Math.max(0, instanceMessageMaxIntervalMs - instanceMessageMinIntervalMs);
         const interval = instanceMessageMinIntervalMs + Math.floor(Math.random() * (intervalRange + 1));
-        await sleep(await reserveInstanceSendSlot(instanceId, interval));
+        const waitMs = await reserveInstanceSendSlot(instanceId, interval, SEND_SLOT_MAX_HORIZON_MS, {
+          size: instanceBurstMessageCount,
+          pauseMs: instanceBurstPauseMinutes * 60_000,
+        });
+        if (waitMs === null) {
+          logger.warn(`[Job ${job.id}] Fila da instância ${targetInstanceName} saturada; reagendando sem reservar slot.`);
+          await releaseInstanceDailyQuota(reservedQuotaKey);
+          reservedQuotaKey = null;
+          await updateAlertStatus('pending', { error_message: 'INSTANCE_SEND_SLOT_SATURATED' });
+          await releaseCoordinationHold('INSTANCE_SEND_SLOT_SATURATED');
+          await deferJob(job, Math.floor(SEND_SLOT_MAX_HORIZON_MS / 2) + Math.floor(Math.random() * 60000), 'INSTANCE_SEND_SLOT_SATURATED', { quotaKey: null, slotInstanceId: null });
+        }
+        // `deferJob` sempre lança, então o ?? 0 é apenas defensivo para o narrowing.
+        const slotWaitMs = waitMs ?? 0;
+        // O slot já é nosso: devolve o job ao Redis e volta na hora marcada, em
+        // vez de segurar um slot de concorrência dormindo.
+        if (slotWaitMs > MAX_INLINE_WAIT_MS) {
+          await deferJob(job, slotWaitMs, 'INSTANCE_SEND_SLOT', { quotaKey: reservedQuotaKey, slotInstanceId: instanceId });
+        }
+        if (slotWaitMs > 0) await sleep(slotWaitMs);
       }
+    }
 
+    try {
       let sentMessageCount = 0;
       let providerMessageId: string | undefined;
       const rememberProviderResponse = (response: unknown) => {
@@ -554,7 +808,7 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       });
 
       logger.info(`[Job ${job.id}] ✅ Provider aceitou o envio; aguardando status de entrega.`);
-      await CircuitBreaker.recordSuccess();
+      await CircuitBreaker.recordSuccess(providerScope);
 
       // Incrementa a Quota do Mês no Redis
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -565,8 +819,19 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
       }
 
     } catch (err: any) {
+      // Reagendamento por backpressure não é falha de entrega: precisa subir intacto
+      // para o BullMQ, sem contar falha no circuit breaker nem marcar histórico.
+      if (isDelayedError(err)) throw err;
+
       // 8. Falha — Registra o erro
       logger.error(`[Job ${job.id}] ❌ Falha: ${err.message}`);
+
+      // A vaga do dia só deve ser consumida por mensagem que chegou ao provedor.
+      // Sem devolver, cada tentativa queima mais um slot do limite diário.
+      if (reservedQuotaKey) {
+        await releaseInstanceDailyQuota(reservedQuotaKey);
+        reservedQuotaKey = null;
+      }
 
       const retryable = isRetryableWhatsAppError(err);
       if (shouldPauseWhatsAppInstance(err) && instanceId) {
@@ -578,8 +843,8 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         }).eq('id', instanceId);
       }
 
-      if (!err.message.startsWith('RATE_LIMIT_EXCEEDED') && !err.message.startsWith('CIRCUIT_BREAKER_OPEN') && retryable) {
-        await CircuitBreaker.recordFailure();
+      if (retryable) {
+        await CircuitBreaker.recordFailure(providerScope);
       }
       await updateAlertStatus(
         retryable ? (collectionDispatchId || contactReservationId ? dispatchFailureStatus(job.attemptsMade, job.opts.attempts) : 'retryable') : 'failed',
@@ -600,10 +865,16 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   });
 }, {
   connection: redisConnection as any,
-  concurrency: 5,
+  // O ritmo de envio é garantido pelo slot por instância (Redis), não pela
+  // concorrência do worker. Com o pacing feito por `moveToDelayed`, os slots
+  // deixam de ficar presos dormindo e podem atender vários tenants em paralelo.
+  concurrency: MESSAGE_WORKER_CONCURRENCY,
+  // Teto de segurança contra disparada, não mecanismo de pacing. O valor
+  // anterior (1 job a cada QUEUE_DELAY_MS) limitava a plataforma inteira a ~12
+  // mensagens por minuto, somando todos os tenants.
   limiter: {
-    max: 1,
-    duration: parseInt(process.env.QUEUE_DELAY_MS || '5000')
+    max: MESSAGE_WORKER_LIMITER_MAX,
+    duration: MESSAGE_WORKER_LIMITER_DURATION_MS
   }
 });
 

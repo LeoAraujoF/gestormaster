@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
+import { MESSAGE_JOB_ATTEMPTS, MESSAGE_JOB_BACKOFF } from '@/lib/queue'
 import crypto from 'crypto'
 import { redisConnection } from '@/lib/redis'
 import { organizationHasCapability } from '@/lib/plan-catalog'
@@ -135,9 +137,9 @@ export async function POST(request: Request) {
 
     const job = await messageQueue.add('send-message', jobData, {
       jobId: `alert-history:${history.id}`,
-      priority: 5, // Prioridade média para envios via API geral
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 }
+      priority: MESSAGE_PRIORITY.transactional,
+      attempts: MESSAGE_JOB_ATTEMPTS,
+      backoff: MESSAGE_JOB_BACKOFF
     })
 
     return NextResponse.json({

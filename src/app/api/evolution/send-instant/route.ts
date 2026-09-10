@@ -14,6 +14,8 @@ import { logAudit, getIpFromRequest } from '@/lib/audit'
 import { parseMessageTemplate } from '@/lib/message-parser'
 import { organizationHasCapability } from '@/lib/plan-catalog'
 import { redisConnection } from '@/lib/redis'
+import { priorityForContactCategory } from '@/lib/message-priority'
+import { pickUsableInstance } from '@/lib/instance-routing'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { normalizePhoneE164 } from '@/lib/phone'
@@ -33,24 +35,20 @@ export async function POST(req: Request) {
 
     const { clientId, ruleId, confirmRecentContact = false } = await req.json()
     if (!clientId || !ruleId) return NextResponse.json({ error: 'Cliente e regra são obrigatórios' }, { status: 400 })
-    const [{ data: client }, { data: rule }, { data: instance }, { data: latestPayment }] = await Promise.all([
-      supabaseAdmin.from('clients').select('id, name, phone, phone_e164, plan_value, due_date, user_id, whatsapp_opt_in, whatsapp_opt_out, whatsapp_opt_in_categories')
+    const [{ data: client }, { data: rule }, instance, { data: latestPayment }] = await Promise.all([
+      supabaseAdmin.from('clients').select('id, name, phone, phone_e164, plan_value, due_date, user_id')
         .eq('id', clientId).eq('organization_id', membership.organizationId).maybeSingle(),
       supabaseAdmin.from('automations').select('id, alert_type, message_template')
         .eq('id', ruleId).eq('organization_id', membership.organizationId).maybeSingle(),
-      supabaseAdmin.from('evolution_instances').select('id, sending_paused, sending_pause_reason')
-        .eq('organization_id', membership.organizationId).eq('status', 'connected')
-        .order('is_primary', { ascending: false }).limit(1).maybeSingle(),
+      // Prioriza a principal, mas cai para a secundária se ela estiver pausada.
+      pickUsableInstance({ organizationId: membership.organizationId }),
       supabaseAdmin.from('payments').select('amount_paid, created_at')
         .eq('client_id', clientId).eq('organization_id', membership.organizationId)
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
     if (!rule) return NextResponse.json({ error: 'Regra de automação não encontrada' }, { status: 404 })
-    if (!instance) return NextResponse.json({ error: 'WhatsApp não configurado ou desconectado' }, { status: 400 })
-    if (instance.sending_paused) {
-      return NextResponse.json({ error: `Envios pausados nesta instância: ${instance.sending_pause_reason || 'revisão necessária'}` }, { status: 409 })
-    }
+    if (!instance) return NextResponse.json({ error: 'WhatsApp não configurado, desconectado ou pausado' }, { status: 400 })
     if (!normalizePhoneE164(client.phone_e164 || client.phone || '')) {
       return NextResponse.json({ error: 'Cliente não possui um WhatsApp válido. Use o código do país, por exemplo +55 ou +1.' }, { status: 400 })
     }
@@ -119,7 +117,9 @@ export async function POST(req: Request) {
       reason: reservation.reason,
       scheduledAt: reservation.nextAttemptDate ? `${reservation.nextAttemptDate}T08:00:00-03:00` : now.toISOString(),
     })
-    if (reservation.decision !== 'deferred') await enqueueContactReservation(reservation.reservationId)
+    if (reservation.decision !== 'deferred') {
+      await enqueueContactReservation(reservation.reservationId, 0, 'initial', priorityForContactCategory(category))
+    }
 
     await logAudit({
       organization_id: membership.organizationId,

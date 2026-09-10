@@ -38,12 +38,21 @@ export class RateLimiter {
     }
 
     const allowed = count <= limit;
+
+    if (!allowed) {
+      // Uma requisição bloqueada não pode contar contra a janela: senão cada
+      // reagendamento do mesmo job realimenta o próprio bloqueio e o tenant
+      // nunca sai do limite.
+      const rolledBack = await redisConnection.decr(key);
+      if (rolledBack < 0) await redisConnection.del(key);
+    }
+
     const remaining = Math.max(0, limit - count);
 
     return {
       allowed,
       remaining,
-      resetIn: ttl
+      resetIn: ttl > 0 ? ttl : durationSegundos
     };
   }
 }

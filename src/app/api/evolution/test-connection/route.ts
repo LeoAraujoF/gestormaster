@@ -2,6 +2,7 @@ import { normalizeWhatsAppNumber } from '@/lib/phone'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { SecretsManager } from "@/lib/encryption";
 
 export async function POST(req: Request) {
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
       phone: parsedPhone,
       finalMessage: testMessage,
       source: 'connection_test',
-    }, { priority: 8 })
+    }, { priority: MESSAGE_PRIORITY.transactional })
 
     return NextResponse.json({ success: true, message: "Mensagem de teste enfileirada com proteção de ritmo!" }, { status: 202 })
   } catch (error: any) {

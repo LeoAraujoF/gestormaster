@@ -1,7 +1,8 @@
 import '../lib/env';
 import cron from 'node-cron';
 import { supabaseAdmin } from '../lib/supabase/service-role';
-import { messageQueue, healthQueue } from '../lib/queue';
+import { MESSAGE_JOB_ATTEMPTS, MESSAGE_JOB_BACKOFF, messageQueue, healthQueue } from '../lib/queue';
+import { MESSAGE_PRIORITY } from '../lib/message-priority';
 import { logger, runWithCorrelationId } from '../lib/logger';
 import { parseMessageTemplate } from '../lib/message-parser';
 import { prepareIntelligentCollectionData, resolveIntelligentRecoveryCoverage, scheduleIntelligentCollections } from '../lib/intelligent-collections';
@@ -11,6 +12,7 @@ import { createCoordinatedAlert, reconcileStaleContactReservations, releaseDefer
 import { startOperationalHeartbeat } from '../lib/operational-heartbeat';
 import { decideFixedBillingRule, type FixedBillingAlertType } from '../lib/collection-orchestration';
 import { normalizePhoneE164 } from '../lib/phone';
+import { pickUsableInstance } from '../lib/instance-routing';
 
 startOperationalHeartbeat('scheduler');
 
@@ -40,6 +42,7 @@ async function scheduleRenewalReminders(todayDate: string): Promise<number> {
     .select('id, user_id, organization_id, name, plan_value, due_date, renewal_reminder_days_before, renewal_reminder_last_sent_due_date')
     .eq('renewal_reminder_enabled', true)
     .eq('status', 'active')
+    .eq('whatsapp_opt_out', false)
     .gte('due_date', todayDate)
     .lte('due_date', reminderWindowEnd);
 
@@ -68,17 +71,9 @@ async function scheduleRenewalReminders(todayDate: string): Promise<number> {
 
     const instanceKey = client.organization_id ? `org:${client.organization_id}` : `user:${client.user_id}`;
     if (!instanceCache.has(instanceKey)) {
-      let instanceQuery = supabaseAdmin
-        .from('evolution_instances')
-        .select('id, instance_name, phone_number')
-        .eq('status', 'connected')
-        .order('is_primary', { ascending: false })
-        .limit(1);
-      instanceQuery = client.organization_id
-        ? instanceQuery.eq('organization_id', client.organization_id)
-        : instanceQuery.eq('user_id', client.user_id);
-      const { data: instances } = await instanceQuery;
-      instanceCache.set(instanceKey, instances?.[0] || null);
+      // Prioriza a principal; cai para a secundária conectada se ela estiver pausada.
+      const picked = await pickUsableInstance({ organizationId: client.organization_id, userId: client.user_id });
+      instanceCache.set(instanceKey, picked);
     }
     const instance = instanceCache.get(instanceKey);
     if (!instance) {
@@ -132,8 +127,9 @@ async function scheduleRenewalReminders(todayDate: string): Promise<number> {
         correlationId: logger.bindings()?.correlationId,
       }, {
         jobId: `renewal-reminder-${client.id}-${client.due_date}`,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 60000 },
+        priority: MESSAGE_PRIORITY.automation,
+        attempts: MESSAGE_JOB_ATTEMPTS,
+        backoff: MESSAGE_JOB_BACKOFF,
         removeOnComplete: { age: 86400, count: 1000 },
         removeOnFail: { age: 604800, count: 1000 },
       });
@@ -265,6 +261,10 @@ cron.schedule('*/5 * * * *', async () => {
 
       const localNowMins = localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
       const localTodayStr = localDate.toISOString().split('T')[0];
+      // Início do dia LOCAL em UTC. Usar `${localTodayStr}T00:00:00Z` deslocava a
+      // janela pelo offset do fuso e deixava a checagem de duplicidade olhando
+      // para o dia errado nas pontas.
+      const localDayStartIso = new Date(Date.parse(`${localTodayStr}T00:00:00Z`) - offsetMs).toISOString();
 
       const [h, m] = rule.send_time.split(':').map(Number);
       const ruleMins = h * 60 + m;
@@ -331,23 +331,32 @@ cron.schedule('*/5 * * * *', async () => {
         })
         : new Map();
 
-      // Busca uma instância da Evolution conectada para disparar
-      let instanceQuery = supabaseAdmin.from('evolution_instances')
-        .select('*')
-        .eq('status', 'connected');
-
-      if (rule.organization_id) {
-        instanceQuery = instanceQuery.eq('organization_id', rule.organization_id);
-      } else {
-        instanceQuery = instanceQuery.eq('user_id', rule.user_id);
-      }
-
-      const { data: instances } = await instanceQuery.limit(1);
-      if (!instances || instances.length === 0) {
-        logger.warn(`[Scheduler] ⚠️ Regra ${rule.id}: Nenhuma instância WhatsApp conectada para disparar.`);
+      // Busca uma instância da Evolution conectada para disparar. Prioriza a
+      // principal; se ela estiver pausada, usa a secundária da organização —
+      // nunca as duas ao mesmo tempo.
+      const instance = await pickUsableInstance({ organizationId: rule.organization_id, userId: rule.user_id });
+      if (!instance) {
+        logger.warn(`[Scheduler] ⚠️ Regra ${rule.id}: Nenhuma instância WhatsApp conectada (ou todas pausadas) para disparar.`);
         continue;
       }
-      const instance = instances[0];
+
+      // Duplicidade em lote: antes era uma consulta por cliente dentro do laço.
+      const alreadyContacted = new Set<string>();
+      const ruleClientIds = clients.map((client) => client.id);
+      for (let index = 0; index < ruleClientIds.length; index += 500) {
+        const { data: history, error: historyError } = await supabaseAdmin.from('alert_history')
+          .select('client_id')
+          .eq('automation_id', rule.id)
+          .gte('created_at', localDayStartIso)
+          .in('client_id', ruleClientIds.slice(index, index + 500));
+        if (historyError) {
+          logger.error(`[Scheduler] Falha ao checar duplicidade da regra ${rule.id}: ${historyError.message}`);
+          continue;
+        }
+        for (const row of history || []) {
+          if (row.client_id) alreadyContacted.add(row.client_id);
+        }
+      }
 
       const jobsToQueue = [];
 
@@ -369,14 +378,7 @@ cron.schedule('*/5 * * * *', async () => {
         }
 
         // Proteção contra envios duplicados no mesmo dia para a mesma automação
-        const { data: historyCheck } = await supabaseAdmin.from('alert_history')
-          .select('id')
-          .eq('client_id', client.id)
-          .eq('automation_id', rule.id)
-          .gte('created_at', `${localTodayStr}T00:00:00Z`)
-          .limit(1);
-
-        if (historyCheck && historyCheck.length > 0) continue;
+        if (alreadyContacted.has(client.id)) continue;
 
         // Construir a mensagem dinâmica com Spintax e Variáveis Duplas
         const finalMsg = parseMessageTemplate(rule.message_template || '', client, userMeta);
@@ -426,10 +428,10 @@ cron.schedule('*/5 * * * *', async () => {
               clientId: client.id,
               phone: clientPhone,
               finalMessage: finalMsg,
-              instanceUrl: instance.base_url,
-              apiKey: instance.api_key,
+              // Sem credenciais no payload: elas ficariam gravadas no Redis e
+              // visíveis no Bull Board. O worker resolve a instância pelo id.
+              instanceId: instance.id,
               instanceName: instance.instance_name,
-              connectionMode: instance.connection_mode,
               alertHistoryId: insertedAlertId,
               contactReservationId: reservation.reservationId,
               ruleId: rule.id,
@@ -439,6 +441,7 @@ cron.schedule('*/5 * * * *', async () => {
             },
             opts: {
               removeOnComplete: { age: 86400, count: 1000 },
+              priority: MESSAGE_PRIORITY.automation,
               jobId: `auto-${rule.id}-${client.id}-${localTodayStr}`
             }
           });

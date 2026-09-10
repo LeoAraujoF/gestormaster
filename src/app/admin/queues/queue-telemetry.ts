@@ -1,5 +1,11 @@
 export const HEARTBEAT_STALE_AFTER_MS = 3 * 60 * 1000
 
+/** Quantos jobs pendentes são inspecionados em cada ponta da fila. */
+export const QUEUE_LAG_SAMPLE_SIZE = 250
+
+/** A partir daqui a fila é considerada atrasada, não apenas ocupada. */
+export const QUEUE_LAG_WARNING_MS = 15 * 60 * 1000
+
 export type QueueCounts = {
   waiting: number
   active: number
@@ -19,12 +25,25 @@ export type QueueTelemetry = {
   backlog: number
   workers: number | null
   latestFailureAt: string | null
+  /**
+   * Idade do job pendente mais antigo que foi visto na amostragem.
+   *
+   * Contadores não mostram atraso: uma fila com 200 itens pode estar fluindo ou
+   * parada há seis horas. Jobs `delayed` ficam de fora de propósito — pacing e
+   * campanhas agendadas estão esperando porque devem, não porque atrasaram.
+   *
+   * É um piso, não um valor exato: `prioritized` é um ZSET ordenado por
+   * prioridade, então o mais antigo pode estar fora da amostra das pontas.
+   */
+  approxLagMs: number
+  oldestPendingAt: string | null
 }
 
 export type QueueTotals = QueueCounts & {
   backlog: number
   workers: number
   workersComplete: boolean
+  maxApproxLagMs: number
 }
 
 export type HeartbeatSummary = {
@@ -39,6 +58,7 @@ export type HeartbeatSummary = {
 
 export type QueueTelemetryResponse = {
   generatedAt: string
+  lagWarningMs: number
   redis: {
     latencyMs: number
   }
@@ -79,6 +99,21 @@ export function normalizeQueueCounts(raw: Record<string, unknown>): QueueCounts 
   }
 }
 
+/** Menor timestamp válido da amostra, ou null se nada pendente foi visto. */
+export function oldestPendingTimestamp(timestamps: Array<number | null | undefined>): number | null {
+  let oldest: number | null = null
+  for (const value of timestamps) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) continue
+    if (oldest === null || value < oldest) oldest = value
+  }
+  return oldest
+}
+
+export function calculateLagMs(oldestTimestamp: number | null, nowMs = Date.now()) {
+  if (oldestTimestamp === null) return 0
+  return Math.max(0, nowMs - oldestTimestamp)
+}
+
 export function calculateBacklog(counts: QueueCounts) {
   return counts.waiting + counts.delayed + counts.prioritized + counts.waitingChildren + counts.paused
 }
@@ -96,6 +131,7 @@ export function calculateQueueTotals(queues: QueueTelemetry[]): QueueTotals {
     backlog: 0,
     workers: 0,
     workersComplete: true,
+    maxApproxLagMs: 0,
   }
 
   for (const queue of queues) {
@@ -103,6 +139,7 @@ export function calculateQueueTotals(queues: QueueTelemetry[]): QueueTotals {
       totals[key] += queue.counts[key]
     }
     totals.backlog += queue.backlog
+    totals.maxApproxLagMs = Math.max(totals.maxApproxLagMs, queue.approxLagMs)
     if (queue.workers === null) totals.workersComplete = false
     else totals.workers += queue.workers
   }

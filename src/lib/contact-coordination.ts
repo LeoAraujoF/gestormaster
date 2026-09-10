@@ -1,6 +1,8 @@
 import 'server-only'
 
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY, priorityForContactCategory, type MessagePriority } from '@/lib/message-priority'
+import { resolveOrganizationTimezone } from '@/lib/organization-send-policy'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { dateInTimezone, type ContactCategory, type ContactSource } from '@/lib/contact-policy'
 import {
@@ -20,13 +22,9 @@ export type ContactReservationResult = {
   nextAttemptDate: string | null
 }
 
+/** Mantido como fachada; a resolução (com cache) vive em organization-send-policy. */
 export async function organizationTimezone(organizationId: string) {
-  const { data } = await supabaseAdmin
-    .from('collection_settings')
-    .select('timezone')
-    .eq('organization_id', organizationId)
-    .maybeSingle()
-  return data?.timezone || 'America/Sao_Paulo'
+  return resolveOrganizationTimezone(organizationId)
 }
 
 export async function reserveContact(input: {
@@ -106,10 +104,16 @@ export async function createCoordinatedAlert(input: {
   return data.id as string
 }
 
-export async function enqueueContactReservation(reservationId: string, delay = 0, runKey = 'initial') {
+export async function enqueueContactReservation(
+  reservationId: string,
+  delay = 0,
+  runKey = 'initial',
+  priority: MessagePriority = MESSAGE_PRIORITY.bulk,
+) {
   await messageQueue.add('send-coordinated-contact', { contactReservationId: reservationId }, {
     jobId: `contact-${reservationId}-${runKey}`,
     delay: Math.max(0, delay),
+    priority,
   })
 }
 
@@ -211,7 +215,7 @@ export async function reconcileStaleContactReservations(now = new Date()) {
 
 export async function releaseDeferredContacts(now = new Date()) {
   const { data, error } = await supabaseAdmin.from('contact_reservations')
-    .select('id, timezone, deferred_until')
+    .select('id, timezone, deferred_until, category')
     .eq('status', 'deferred')
     .limit(500)
   if (error) throw new Error(`Falha ao consultar contatos adiados: ${error.message}`)
@@ -224,7 +228,12 @@ export async function releaseDeferredContacts(now = new Date()) {
     if (activationError) throw new Error(`Falha ao reavaliar contato adiado: ${activationError.message}`)
     const result = Array.isArray(activation) ? activation[0] : activation
     if (result?.decision === 'reserved') {
-      await enqueueContactReservation(item.id, 0, `release-${dateInTimezone(now, item.timezone)}`)
+      await enqueueContactReservation(
+        item.id,
+        0,
+        `release-${dateInTimezone(now, item.timezone)}`,
+        priorityForContactCategory(item.category as ContactCategory),
+      )
       queued++
     }
   }

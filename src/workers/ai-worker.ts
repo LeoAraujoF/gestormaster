@@ -2,6 +2,7 @@ import '../lib/env';
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { AI_QUEUE_NAME, messageQueue } from '../lib/queue';
+import { MESSAGE_PRIORITY } from '../lib/message-priority';
 import { logger } from '../lib/logger';
 import OpenAI from 'openai';
 import { supabaseAdmin } from '../lib/supabase/service-role';
@@ -91,7 +92,7 @@ const worker = new Worker(AI_QUEUE_NAME, async (job: Job) => {
       phone: remoteJid.split('@')[0],
       message: aiReply,
       source: 'ai_assistant'
-    });
+    }, { priority: MESSAGE_PRIORITY.conversational });
 
     logger.info(`[AI Job ${job.id}] ✅ IA respondeu com sucesso para ${remoteJid}`);
 

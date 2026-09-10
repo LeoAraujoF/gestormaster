@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { getTrustedAppUrl } from '@/lib/access-control'
 import { recordApprovedCollectionPayment } from '@/lib/intelligent-collections'
 import { buildMercadoPagoPixPayload } from '@/lib/mercadopago-pix-payload'
@@ -369,7 +370,7 @@ export async function processApprovedPixPayment(input: ProcessApprovedPaymentInp
       phone: finalCharge.phone,
       message: `✅ *Pagamento confirmado!*\n\nRecebemos ${formatBRL(finalCharge.amount)}.${dueLine}`,
       source: 'mercadopago_webhook',
-    })
+    }, { priority: MESSAGE_PRIORITY.transactional })
   }
 
   return {

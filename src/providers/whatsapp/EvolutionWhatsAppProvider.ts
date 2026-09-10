@@ -6,6 +6,12 @@ import {
 } from './IWhatsAppProvider';
 import { EvolutionApiError } from './provider-error';
 
+/** Teto de espera por chamada à Evolution. 408 é tratado como reententável. */
+const EVOLUTION_HTTP_TIMEOUT_MS = Math.max(
+  1000,
+  Number(process.env.EVOLUTION_HTTP_TIMEOUT_MS) || 20000,
+);
+
 type EvolutionQrResponse = {
   base64?: string
   code?: string
@@ -43,14 +49,26 @@ export class EvolutionWhatsAppProvider implements IWhatsAppProvider {
   }
 
   private async request<T = Record<string, unknown>>(endpoint: string, method: string = 'GET', body?: Record<string, unknown>): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': this.apiKey
-      },
-      body: body ? JSON.stringify(body) : undefined
-    });
+    // Sem timeout explícito o fetch do Node fica pendurado por minutos numa
+    // Evolution travada, segurando o slot de concorrência do worker sem nunca
+    // falhar — o circuit breaker não abre porque nada retorna erro.
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.apiKey
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(EVOLUTION_HTTP_TIMEOUT_MS)
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+        throw new EvolutionApiError(408, `Timeout de ${EVOLUTION_HTTP_TIMEOUT_MS}ms em ${method} ${endpoint}`);
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();

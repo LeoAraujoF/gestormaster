@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { messageQueue } from "@/lib/queue"
+import { MESSAGE_PRIORITY } from "@/lib/message-priority"
 import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
             phone: cleanPhone,
             finalMessage: message,
             source: 'reseller_notification',
-          }, { priority: 8 })
+          }, { priority: MESSAGE_PRIORITY.transactional })
         }
       }
     } else if (actionType === "notify_reseller_completed") {
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
             phone: cleanPhone,
             finalMessage: message,
             source: 'reseller_notification',
-          }, { priority: 8 })
+          }, { priority: MESSAGE_PRIORITY.transactional })
         }
       }
     }

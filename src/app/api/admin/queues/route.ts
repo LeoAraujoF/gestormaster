@@ -13,9 +13,13 @@ import { redisConnection } from "@/lib/redis"
 import { supabaseAdmin } from "@/lib/supabase/service-role"
 import {
   HEARTBEAT_STALE_AFTER_MS,
+  QUEUE_LAG_SAMPLE_SIZE,
+  QUEUE_LAG_WARNING_MS,
   calculateBacklog,
+  calculateLagMs,
   calculateQueueTotals,
   normalizeQueueCounts,
+  oldestPendingTimestamp,
   summarizeHeartbeats,
   type QueueTelemetry,
   type QueueTelemetryResponse,
@@ -61,12 +65,33 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 }
 
+/**
+ * Amostra as pontas das filas pendentes para estimar o atraso.
+ *
+ * Em `waiting` (lista FIFO) o mais antigo fica na cauda, e `asc: true` faz o
+ * BullMQ ler a partir dela — ali o valor é exato. Em `prioritized` (ZSET por
+ * prioridade) o mais antigo não tem posição fixa, então lemos as duas pontas e
+ * ficamos com um piso do atraso real.
+ */
+async function collectOldestPending(queue: (typeof queues)[number]["queue"]) {
+  const [waitingTail, prioritizedBest, prioritizedWorst] = await Promise.all([
+    withTimeout(queue.getJobs("waiting", 0, QUEUE_LAG_SAMPLE_SIZE - 1, true), REDIS_TIMEOUT_MS).catch(() => []),
+    withTimeout(queue.getJobs("prioritized", 0, QUEUE_LAG_SAMPLE_SIZE - 1, true), REDIS_TIMEOUT_MS).catch(() => []),
+    withTimeout(queue.getJobs("prioritized", 0, QUEUE_LAG_SAMPLE_SIZE - 1, false), REDIS_TIMEOUT_MS).catch(() => []),
+  ])
+
+  return oldestPendingTimestamp(
+    [...waitingTail, ...prioritizedBest, ...prioritizedWorst].map((job) => job?.timestamp),
+  )
+}
+
 async function collectQueueTelemetry(entry: (typeof queues)[number]): Promise<QueueTelemetry> {
-  const [rawCounts, workers, failedJobs, isPaused] = await Promise.all([
+  const [rawCounts, workers, failedJobs, isPaused, oldestPending] = await Promise.all([
     withTimeout(entry.queue.getJobCounts(...JOB_STATES), REDIS_TIMEOUT_MS),
     withTimeout(entry.queue.getWorkersCount(), REDIS_TIMEOUT_MS).catch(() => null),
     withTimeout(entry.queue.getJobs("failed", 0, 0, false), REDIS_TIMEOUT_MS).catch(() => []),
     withTimeout(entry.queue.isPaused(), REDIS_TIMEOUT_MS),
+    collectOldestPending(entry.queue).catch(() => null),
   ])
   const counts = normalizeQueueCounts(rawCounts)
   const latestFailure = failedJobs[0]
@@ -80,6 +105,8 @@ async function collectQueueTelemetry(entry: (typeof queues)[number]): Promise<Qu
     backlog: calculateBacklog(counts),
     workers,
     latestFailureAt: latestFailureTimestamp ? new Date(latestFailureTimestamp).toISOString() : null,
+    approxLagMs: calculateLagMs(oldestPending),
+    oldestPendingAt: oldestPending ? new Date(oldestPending).toISOString() : null,
   }
 }
 
@@ -120,6 +147,7 @@ export async function GET() {
     const board = getBullBoardAvailability()
     const response: QueueTelemetryResponse = {
       generatedAt: new Date().toISOString(),
+      lagWarningMs: QUEUE_LAG_WARNING_MS,
       redis: { latencyMs: redisLatencyMs },
       totals: calculateQueueTotals(queueTelemetry),
       queues: queueTelemetry,

@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { logAudit, getIpFromRequest } from '@/lib/audit'
-import { messageQueue } from '@/lib/queue'
+import { MESSAGE_JOB_ATTEMPTS, MESSAGE_JOB_BACKOFF, messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 
@@ -218,9 +219,9 @@ export async function POST(request: Request) {
       try {
         const job = await messageQueue.add('send-message', payload, {
           jobId: retryJobId,
-          priority: 5,
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
+          priority: MESSAGE_PRIORITY.interactive,
+          attempts: MESSAGE_JOB_ATTEMPTS,
+          backoff: MESSAGE_JOB_BACKOFF,
         })
         await supabaseAdmin.from('alert_history')
           .update({ source_job_id: String(job.id), queued_at: new Date().toISOString() })

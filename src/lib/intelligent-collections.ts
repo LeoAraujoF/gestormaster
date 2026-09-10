@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/service-role'
 import { messageQueue } from '@/lib/queue'
+import { MESSAGE_PRIORITY } from '@/lib/message-priority'
 import { resolveProfileCode, type CollectionProfileCode } from '@/lib/collection-score'
 import { createCoordinatedAlert, reserveContact } from '@/lib/contact-coordination'
 import type { IntelligentRecoveryCoverage } from '@/lib/collection-orchestration'
@@ -286,7 +287,7 @@ export async function scheduleIntelligentCollections(now = new Date()) {
         await messageQueue.add('send-intelligent-collection', {
           collectionDispatchId: dispatch.id,
           contactReservationId: reservation.reservationId,
-        }, { jobId: `collection-${dispatch.id}` })
+        }, { jobId: `collection-${dispatch.id}`, priority: MESSAGE_PRIORITY.billing })
         queued++
       }
     }

@@ -1,13 +1,30 @@
 import { Queue } from 'bullmq';
 import { redisConnection } from './redis';
+import { MESSAGE_PRIORITY } from './message-priority';
 
 export const MESSAGE_QUEUE_NAME = 'messages-queue';
+
+/**
+ * Tentativas de entrega precisam sobreviver à janela do circuit breaker (120s).
+ * Com 3 tentativas e backoff de 5s o job morria em ~35s, ou seja: toda mensagem
+ * em voo durante uma instabilidade curta da Evolution era perdida.
+ * 5 tentativas com base de 30s cobrem ~7,5 min (30s/1m/2m/4m).
+ *
+ * Backpressure (circuit breaker, rate limit, pacing, limite diário) NÃO consome
+ * estas tentativas: o worker usa `moveToDelayed` + `DelayedError` nesses casos.
+ */
+export const MESSAGE_JOB_ATTEMPTS = 5;
+export const MESSAGE_JOB_BACKOFF = { type: 'exponential' as const, delay: 30000 };
 
 export const messageQueue = new Queue(MESSAGE_QUEUE_NAME, {
   connection: redisConnection as any,
   defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
+    attempts: MESSAGE_JOB_ATTEMPTS,
+    backoff: MESSAGE_JOB_BACKOFF,
+    // Piso de segurança: no BullMQ v5 um job sem prioridade vai para `wait`, que é
+    // drenada antes do ZSET `prioritized` — ou seja, esquecer a prioridade fazia o
+    // job atropelar toda a fila. Com este default ele cai no fim dela.
+    priority: MESSAGE_PRIORITY.bulk,
     removeOnComplete: { age: 86400, count: 1000 }, // Manter por 24h ou até 1000 jobs
     removeOnFail: { age: 604800, count: 5000 }, // 7 dias ou 5000 jobs
   },

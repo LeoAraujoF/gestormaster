@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/service-role"
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 import { messageQueue } from "@/lib/queue"
+import { MESSAGE_PRIORITY } from "@/lib/message-priority"
 import { normalizeWhatsAppNumber } from "@/lib/phone"
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
           phone: cleanPhone,
           finalMessage: message,
           source: 'reseller_notification',
-        }, { priority: 8 })
+        }, { priority: MESSAGE_PRIORITY.transactional })
       }
     }
 

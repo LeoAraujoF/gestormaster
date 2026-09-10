@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:1fr;}}
+    [data-tier-grid]{grid-template-columns:repeat(3,minmax(0,1fr));}
+    @media (max-width:900px){[data-tier-grid]{grid-template-columns:1fr;}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Central de automação') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Central de automação</a>
+          <a href="#" onclick="{{ toastNav('Aquecimento') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Leads') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Analytics') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Analytics</span>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Gateways e API') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Gateways e API</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px"><a href="Afiliados.dc.html" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m20.5 8-8.5-5-8.5 5 8.5 5 8.5-5Z"></path><path d="M3.5 8v8l8.5 5 8.5-5V8"></path><path d="M12 13v8"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Afiliados</span>
+      </a></div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="margin-bottom:4px"><a href="#" onclick="{{ toastNav('Configurações') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Configurações</span>
+      </a></div>
+      <div style="margin-bottom:8px"><a href="#" onclick="{{ toastNav('Suporte') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle><path d="m6 6 3.2 3.2M18 6l-3.2 3.2M18 18l-3.2-3.2M6 18l3.2-3.2"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Suporte</span>
+      </a></div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- PAGE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Programa de indicação</p>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Afiliados</h1>
+          <p style="margin:8px 0 0;max-width:600px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Indique o Lembrado para outros negócios e receba comissão recorrente enquanto o cliente indicado continuar ativo.</p>
+        </div>
+        <button type="button" onclick="{{ openPayoutSettings }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M3 12h2M19 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4"></path></svg>
+          Dados de recebimento
+        </button>
+      </section>
+
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Indicados ativos</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ activeReferrals }}<span style="font-size:13px;font-weight:500;color:var(--muted-foreground)">/{{ totalReferrals }}</span></p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ referralHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--warning-border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comissão pendente</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--warning-fg)">{{ pendingAmountLabel }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ nextPayoutHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Já recebido</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--money)">{{ paidAmountLabel }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">desde {{ memberSince }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Sua comissão atual</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ currentTierPct }}%</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ nextTierHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ tierIconBg }};color:{{ tierIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"></path></svg></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- REFERRAL LINK -->
+      <section style="overflow:hidden;border-radius:16px;border:1px solid var(--interactive);background:var(--interactive-bg)">
+        <div style="display:flex;align-items:center;gap:16px;padding:20px 22px;flex-wrap:wrap">
+          <span style="width:42px;height:42px;border-radius:12px;background:var(--card);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 1 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 1 0 5.7 5.7l1-1"></path></svg></span>
+          <div style="flex:1;min-width:220px">
+            <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--foreground)">Seu link de indicação</p>
+            <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Cada cadastro feito por ele já entra vinculado à sua conta.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:280px">
+            <div style="flex:1;min-width:0;height:40px;display:flex;align-items:center;border:1px solid var(--border);background:var(--card);border-radius:9px;padding:0 12px;font-family:'Geist Mono',monospace;font-size:12px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ referralLink }}</div>
+            <button type="button" onclick="{{ copyLink }}" style="height:40px;padding:0 14px;border-radius:9px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap">{{ copyLinkLabel }}</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;border-top:1px solid color-mix(in srgb, var(--interactive) 18%, transparent);padding:12px 22px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted-foreground)">Código:</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:var(--interactive-fg)">{{ referralCode }}</span>
+          <div style="flex:1"></div>
+          <button type="button" onclick="{{ shareWhatsapp }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>
+            Compartilhar
+          </button>
+        </div>
+      </section>
+
+      <!-- TIERS -->
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Como a comissão cresce</p>
+          <h2 style="margin:4px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--foreground)">Faixas de comissão recorrente</h2>
+        </div>
+        <div data-tier-grid style="display:grid;gap:12px">
+          <sc-for list="{{ tiers }}" as="tier" hint-placeholder-count="3">
+            <div style="{{ tier.cardStyle }}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ tier.label }}</p>
+                <sc-if value="{{ tier.isCurrent }}"><span style="flex-shrink:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;background:var(--interactive);color:#fff;border-radius:5px;padding:3px 7px;white-space:nowrap">ATUAL</span></sc-if>
+              </div>
+              <p style="margin:10px 0 0;font-family:'Geist Mono',monospace;font-size:28px;font-weight:600;letter-spacing:-.03em;color:{{ tier.pctColor }}">{{ tier.pct }}%</p>
+              <p style="margin:6px 0 0;font-size:11px;color:var(--muted-foreground)">{{ tier.range }}</p>
+              <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+                <p style="margin:0;font-size:11px;line-height:1.55;color:var(--muted-foreground)">{{ tier.description }}</p>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- REFERRALS LIST -->
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div>
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Sua rede</p>
+            <h2 style="margin:4px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--foreground)">Indicados</h2>
+          </div>
+          <div style="display:inline-flex;gap:4px;border-radius:9px;background:var(--muted);padding:4px">
+            <sc-for list="{{ statusFilters }}" as="sf" hint-placeholder-count="3">
+              <button type="button" onclick="{{ sf.onClick }}" style="{{ sf.style }}">{{ sf.label }} <span style="font-family:'Geist Mono',monospace;opacity:.7">{{ sf.count }}</span></button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+          <sc-if value="{{ referralsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:48px 20px;text-align:center">
+              <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">{{ emptyTitle }}</p>
+              <p style="margin:5px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ emptySubtitle }}</p>
+            </div>
+          </sc-if>
+          <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.4fr) 100px 110px 110px 100px;gap:12px;align-items:center;padding:10px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">
+            <span>Negócio</span><span>Status</span><span>Desde</span><span style="text-align:right">Plano</span><span style="text-align:right">Comissão/mês</span>
+          </div>
+          <sc-for list="{{ referrals }}" as="ref" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:minmax(0,1.4fr) 100px 110px 110px 100px;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="width:32px;height:32px;border-radius:9px;background:{{ ref.avatarBg }};color:{{ ref.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;flex-shrink:0">{{ ref.initials }}</span>
+                <div style="min-width:0">
+                  <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ref.name }}</p>
+                  <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-hide-narrow="true">{{ ref.email }}</p>
+                </div>
+              </div>
+              <span><span style="{{ ref.statusStyle }}">{{ ref.statusLabel }}</span></span>
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ ref.sinceLabel }}</span>
+              <span style="text-align:right;font-size:11.5px;color:var(--muted-foreground)">{{ ref.planLabel }}</span>
+              <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:{{ ref.commissionColor }}">{{ ref.commissionLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- PAYOUT HISTORY -->
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Extrato</p>
+          <h2 style="margin:4px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--foreground)">Histórico de pagamentos</h2>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+          <sc-for list="{{ payouts }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border)">
+              <span style="width:32px;height:32px;border-radius:9px;background:{{ p.iconBg }};color:{{ p.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+              <div style="flex:1;min-width:0">
+                <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ p.label }}</p>
+                <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ p.dateLabel }} · PIX</p>
+              </div>
+              <span style="{{ p.statusStyle }}">{{ p.statusLabel }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground);flex-shrink:0;width:90px;text-align:right">{{ p.amountLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- PAYOUT SETTINGS MODAL -->
+  <sc-if value="{{ payoutModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:95" onclick="{{ closePayoutSettings }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Dados de recebimento</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Pagamos toda comissão liberada via PIX</p></div>
+          <button type="button" onclick="{{ closePayoutSettings }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <label style="display:block">
+            <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Chave PIX</span>
+            <input value="{{ pixKey }}" oninput="{{ setPixKey }}" placeholder="CPF, e-mail, telefone ou aleatória" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          </label>
+          <div style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:12px 14px">
+            <p style="margin:0;font-size:11px;line-height:1.55;color:var(--muted-foreground)">Comissões liberam <strong style="color:var(--foreground)">30 dias</strong> após o pagamento do indicado, evitando reembolsos. O pagamento é feito automaticamente todo dia 5.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closePayoutSettings }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ savePixKey }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const TIERS = [
+  { key: 'starter', label: 'Até 5 indicados ativos', pct: 15, range: 'faixa inicial', description: 'Comissão recorrente sobre a mensalidade de cada indicado, todo mês em que ele estiver ativo.' },
+  { key: 'growth', label: '6 a 15 indicados ativos', pct: 20, range: 'faixa intermediária', description: 'A comissão sobe automaticamente para toda a rede assim que você atinge a faixa — inclusive nos indicados antigos.' },
+  { key: 'pro', label: '16+ indicados ativos', pct: 25, range: 'faixa máxima', description: 'Nível máximo do programa. Válido também para revendas que indicam outras revendas.' },
+];
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function monthsAgo(n) { const d = new Date(); d.setMonth(d.getMonth() - n); return d; }
+
+function buildReferrals() {
+  return [
+    { id: 'r1', name: 'Painel Fácil IPTV', email: 'contato@painelfacil.com.br', status: 'active', since: monthsAgo(7), plan: 'Pro', mrr: 149.9 },
+    { id: 'r2', name: 'Rede Cast Streaming', email: 'financeiro@redecast.com.br', status: 'active', since: monthsAgo(4), plan: 'Starter', mrr: 59.9 },
+    { id: 'r3', name: 'Turbo IPTV Distribuidora', email: 'admin@turboiptv.com', status: 'active', since: monthsAgo(2), plan: 'Master', mrr: 299.9 },
+    { id: 'r4', name: 'Conecta Play', email: 'suporte@conectaplay.com.br', status: 'trial', since: monthsAgo(0), plan: 'Trial', mrr: 0 },
+    { id: 'r5', name: 'Vision Stream MG', email: 'financeiro@visionstream.com.br', status: 'churned', since: monthsAgo(9), plan: '—', mrr: 0 },
+  ];
+}
+function buildPayouts() {
+  return [
+    { id: 'p1', label: 'Pagamento mensal', date: monthsAgo(0), status: 'scheduled', amount: 61.47 },
+    { id: 'p2', label: 'Pagamento mensal', date: monthsAgo(1), status: 'paid', amount: 58.2 },
+    { id: 'p3', label: 'Pagamento mensal', date: monthsAgo(2), status: 'paid', amount: 44.98 },
+    { id: 'p4', label: 'Pagamento mensal', date: monthsAgo(3), status: 'paid', amount: 26.98 },
+  ];
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], statusFilter: 'all', linkCopied: false,
+    referrals: buildReferrals(), payouts: buildPayouts(),
+    payoutModalOpen: false, pixKey: 'contato@voce.com.br',
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3000);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  setStatusFilter(k) { this.setState({ statusFilter: k }); }
+  copyLink = () => { this.setState({ linkCopied: true }); this.addToast({ title: 'Link copiado.' }); setTimeout(() => this.setState({ linkCopied: false }), 2000); };
+  shareWhatsapp = () => this.addToast({ title: 'Abriria o WhatsApp com a mensagem pronta.' });
+
+  openPayoutSettings = () => this.setState({ payoutModalOpen: true });
+  closePayoutSettings = () => this.setState({ payoutModalOpen: false });
+  setPixKey = (e) => this.setState({ pixKey: e.target.value });
+  savePixKey = () => {
+    if (!this.state.pixKey.trim()) { this.addToast({ title: 'Informe uma chave PIX válida.' }); return; }
+    this.setState({ payoutModalOpen: false });
+    this.addToast({ title: 'Chave PIX salva.' });
+  };
+
+  initialsOf(name) { return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
+  relMonths(d) {
+    const now = new Date();
+    const diff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    if (diff <= 0) return 'este mês';
+    if (diff === 1) return 'há 1 mês';
+    return `há ${diff} meses`;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const activeReferrals = s.referrals.filter((r) => r.status === 'active');
+    const totalReferrals = s.referrals.length;
+    const currentTier = activeReferrals.length >= 16 ? TIERS[2] : activeReferrals.length >= 6 ? TIERS[1] : TIERS[0];
+    const nextTier = currentTier.key === 'pro' ? null : (currentTier.key === 'starter' ? TIERS[1] : TIERS[2]);
+    const nextTierThreshold = currentTier.key === 'starter' ? 6 : 16;
+
+    const monthlyMrr = activeReferrals.reduce((t, r) => t + r.mrr, 0);
+    const pendingAmount = monthlyMrr * (currentTier.pct / 100);
+    const paidAmount = s.payouts.filter((p) => p.status === 'paid').reduce((t, p) => t + p.amount, 0);
+
+    const statusDefs = [
+      { key: 'all', label: 'Todos', count: s.referrals.length },
+      { key: 'active', label: 'Ativos', count: s.referrals.filter((r) => r.status === 'active').length },
+      { key: 'trial', label: 'Em teste', count: s.referrals.filter((r) => r.status === 'trial').length },
+    ];
+    const statusFilters = statusDefs.map((d) => ({
+      key: d.key, label: d.label, count: d.count, onClick: () => this.setStatusFilter(d.key),
+      style: `min-height:32px;border-radius:6px;padding:0 12px;font-size:12px;font-weight:${s.statusFilter === d.key ? '600' : '500'};border:none;cursor:pointer;background:${s.statusFilter === d.key ? 'var(--card)' : 'transparent'};color:${s.statusFilter === d.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.statusFilter === d.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+
+    const statusMeta = {
+      active: { label: 'Ativo', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+      trial: { label: 'Em teste', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      churned: { label: 'Cancelado', bg: 'var(--secondary)', fg: 'var(--secondary-foreground)' },
+    };
+    const filtered = s.referrals.filter((r) => s.statusFilter === 'all' || r.status === s.statusFilter);
+    const referrals = filtered.map((r) => {
+      const meta = statusMeta[r.status];
+      const commission = r.mrr * (currentTier.pct / 100);
+      return {
+        id: r.id, name: r.name, email: r.email, initials: this.initialsOf(r.name),
+        avatarBg: r.status === 'active' ? 'var(--interactive-bg)' : 'var(--secondary)',
+        avatarFg: r.status === 'active' ? 'var(--interactive-fg)' : 'var(--secondary-foreground)',
+        statusLabel: meta.label, statusStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        sinceLabel: this.relMonths(r.since), planLabel: r.plan,
+        commissionLabel: r.status === 'active' ? fmt(commission) + '/mês' : '—',
+        commissionColor: r.status === 'active' ? 'var(--money)' : 'var(--muted-foreground)',
+      };
+    });
+    const emptyMeta = {
+      active: { title: 'Nenhum indicado ativo ainda', subtitle: 'Compartilhe seu link para começar a receber comissão.' },
+      trial: { title: 'Nenhum indicado em teste', subtitle: 'Cadastros recentes pelo seu link aparecem aqui primeiro.' },
+      all: { title: 'Você ainda não tem indicados', subtitle: 'Compartilhe seu link acima para começar.' },
+    }[s.statusFilter] || { title: 'Nada aqui', subtitle: '' };
+
+    const payoutStatusMeta = {
+      scheduled: { label: 'Agendado', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      paid: { label: 'Pago', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+    };
+    const payouts = s.payouts.map((p) => {
+      const meta = payoutStatusMeta[p.status];
+      return {
+        id: p.id, label: p.label, dateLabel: p.date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+        amountLabel: fmt(p.amount), statusLabel: meta.label,
+        statusStyle: `flex-shrink:0;display:inline-block;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        iconBg: p.status === 'paid' ? 'var(--success-bg)' : 'var(--warning-bg)', iconFg: p.status === 'paid' ? 'var(--success-fg)' : 'var(--warning-fg)',
+      };
+    });
+
+    const tiers = TIERS.map((t) => {
+      const isCurrent = t.key === currentTier.key;
+      return {
+        key: t.key, label: t.label, pct: t.pct, range: t.range, description: t.description, isCurrent,
+        pctColor: isCurrent ? 'var(--interactive-fg)' : 'var(--foreground)',
+        cardStyle: `position:relative;border-radius:16px;border:1px solid ${isCurrent ? 'var(--interactive)' : 'var(--border)'};background:${isCurrent ? 'var(--interactive-bg)' : 'var(--card)'};box-shadow:0 1px 2px rgba(0,0,0,.04);padding:18px`,
+      };
+    });
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      activeReferrals: activeReferrals.length, totalReferrals,
+      referralHint: `${totalReferrals - activeReferrals.length} em outro status`,
+      pendingAmountLabel: fmt(pendingAmount), nextPayoutHint: 'próximo pagamento dia 5',
+      paidAmountLabel: fmt(paidAmount), memberSince: 'fev/2025',
+      currentTierPct: currentTier.pct,
+      nextTierHint: nextTier ? `+${nextTierThreshold - activeReferrals.length} para ${nextTier.pct}%` : 'faixa máxima atingida',
+      tierIconBg: currentTier.key === 'pro' ? 'var(--warning-bg)' : 'var(--interactive-bg)',
+      tierIconFg: currentTier.key === 'pro' ? 'var(--warning-fg)' : 'var(--interactive-fg)',
+
+      referralLink: 'lembrado.app/r/voce-almeida', referralCode: 'VOCE-ALM7',
+      copyLink: this.copyLink, copyLinkLabel: s.linkCopied ? 'Copiado!' : 'Copiar link', shareWhatsapp: this.shareWhatsapp,
+
+      tiers,
+
+      statusFilters, referrals, referralsEmpty: referrals.length === 0,
+      emptyTitle: emptyMeta.title, emptySubtitle: emptyMeta.subtitle,
+
+      payouts,
+
+      payoutModalOpen: s.payoutModalOpen, openPayoutSettings: this.openPayoutSettings, closePayoutSettings: this.closePayoutSettings,
+      pixKey: s.pixKey, setPixKey: this.setPixKey, savePixKey: this.savePixKey,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

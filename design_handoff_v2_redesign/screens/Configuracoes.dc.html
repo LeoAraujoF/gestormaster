@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-settings-shell]{grid-template-columns:216px minmax(0,1fr);}
+    @media (max-width:900px){[data-settings-shell]{grid-template-columns:minmax(0,1fr);}}
+    [data-two]{grid-template-columns:repeat(2,minmax(0,1fr));}
+    @media (max-width:720px){[data-two]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Central de automação') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Central de automação</a>
+          <a href="#" onclick="{{ toastNav('Aquecimento') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Leads') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Insights</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Analytics') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Analytics</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Gateways e API') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Gateways e API</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mais</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="Afiliados.dc.html" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Afiliados</a>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="margin-bottom:4px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+          <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Configurações</span>
+        </div>
+      </div>
+      <div style="margin-bottom:8px"><a href="#" onclick="{{ toastNav('Suporte') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle><path d="m6 6 3.2 3.2M18 6l-3.2 3.2M18 18l-3.2-3.2M6 18l3.2-3.2"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Suporte</span>
+      </a></div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- PAGE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Conta e workspace</p>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Configurações</h1>
+          <p style="margin:8px 0 0;max-width:620px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Perfil, identidade do negócio, preferências de operação, segurança e equipe.</p>
+        </div>
+        <sc-if value="{{ isDirty }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;border-radius:10px;border:1px solid var(--warning-border);background:var(--warning-bg);padding:8px 10px 8px 14px;flex-shrink:0;animation:dcpop .18s ease-out">
+            <span style="font-size:11.5px;font-weight:600;color:var(--warning-fg);white-space:nowrap">Alterações não salvas</span>
+            <button type="button" onclick="{{ discardAll }}" style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer">Descartar</button>
+            <button type="button" onclick="{{ saveAll }}" style="height:32px;padding:0 14px;border-radius:7px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">Salvar tudo</button>
+          </div>
+        </sc-if>
+      </section>
+
+      <section data-settings-shell style="display:grid;gap:20px;align-items:start">
+
+        <!-- SETTINGS NAV -->
+        <nav style="position:sticky;top:76px;display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="7">
+            <button type="button" onclick="{{ sec.onClick }}" style="{{ sec.style }}">
+              <span style="{{ sec.iconStyle }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <sc-if value="{{ sec.isProfile }}"><circle cx="12" cy="8" r="3.6"></circle><path d="M4.5 20c0-4 3.4-6.6 7.5-6.6s7.5 2.6 7.5 6.6"></path></sc-if>
+                  <sc-if value="{{ sec.isBrand }}"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"></path><path d="M9 21v-7h6v7"></path></sc-if>
+                  <sc-if value="{{ sec.isOps }}"><path d="M4 19h16M4 15h10M4 11h16M4 7h7"></path></sc-if>
+                  <sc-if value="{{ sec.isNotif }}"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M9.5 20a2.5 2.5 0 0 0 5 0"></path></sc-if>
+                  <sc-if value="{{ sec.isSecurity }}"><path d="M12 22s8-4.5 8-11.8A8 8 0 0 0 4 10.2C4 17.5 12 22 12 22Z"></path></sc-if>
+                  <sc-if value="{{ sec.isTeam }}"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path></sc-if>
+                  <sc-if value="{{ sec.isData }}"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></sc-if>
+                </svg>
+              </span>
+              <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sec.label }}</span>
+              <sc-if value="{{ sec.hasBadge }}"><span style="{{ sec.badgeStyle }}">{{ sec.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </nav>
+
+        <!-- PANELS -->
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+
+          <!-- ===== PERFIL ===== -->
+          <sc-if value="{{ isProfileTab }}" hint-placeholder-val="{{ true }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Perfil pessoal</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Como você aparece no sistema e recebe comunicações</p>
+              </div>
+              <div style="padding:20px">
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                  <div style="width:60px;height:60px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;flex-shrink:0">{{ avatarInitials }}</div>
+                  <div style="min-width:0">
+                    <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Foto do perfil</p>
+                    <p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">PNG ou JPG, no máximo 2 MB</p>
+                    <div style="display:flex;gap:7px;margin-top:9px">
+                      <button type="button" onclick="{{ uploadAvatar }}" style="height:30px;padding:0 11px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">Enviar imagem</button>
+                      <button type="button" onclick="{{ removeAvatar }}" style="height:30px;padding:0 11px;border-radius:7px;border:none;background:none;color:var(--muted-foreground);font-size:11.5px;font-weight:500;cursor:pointer">Remover</button>
+                    </div>
+                  </div>
+                </div>
+                <div data-two style="display:grid;gap:12px;margin-top:20px">
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Nome completo</span>
+                    <input value="{{ profile.name }}" oninput="{{ setProfileName }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">E-mail</span>
+                    <input value="{{ profile.email }}" oninput="{{ setProfileEmail }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">WhatsApp pessoal</span>
+                    <input value="{{ profile.phone }}" oninput="{{ setProfilePhone }}" placeholder="+55 11 99999-9999" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Fuso horário</span>
+                    <select onchange="{{ setTimezone }}" style="margin-top:6px;width:100%;height:39px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+                      <sc-for list="{{ timezoneOptions }}" as="tz" hint-placeholder-count="5"><option value="{{ tz.value }}" selected="{{ tz.selected }}">{{ tz.label }}</option></sc-for>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== MARCA / EMPRESA ===== -->
+          <sc-if value="{{ isBrandTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Identidade do negócio</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Aparece nas mensagens automáticas e no portal do cliente</p>
+              </div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div data-two style="display:grid;gap:12px">
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Nome do negócio</span>
+                    <input value="{{ brand.name }}" oninput="{{ setBrandName }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">WhatsApp de atendimento</span>
+                    <input value="{{ brand.supportPhone }}" oninput="{{ setBrandPhone }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                </div>
+                <label style="display:block">
+                  <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Assinatura das mensagens</span>
+                  <textarea value="{{ brand.signature }}" oninput="{{ setBrandSignature }}" rows="2" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+                  <span style="display:block;margin-top:5px;font-size:10px;color:var(--muted-foreground)">Adicionada ao fim de toda mensagem automática.</span>
+                </label>
+                <div>
+                  <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Cor da marca</p>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <sc-for list="{{ brandColors }}" as="bc" hint-placeholder-count="5">
+                      <button type="button" onclick="{{ bc.onSelect }}" title="{{ bc.name }}" style="{{ bc.style }}"><sc-if value="{{ bc.selected }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="border-radius:11px;border:1px solid var(--border);background:var(--muted);padding:14px 16px">
+                  <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Prévia da mensagem</p>
+                  <div style="margin-top:10px;max-width:340px;border-radius:11px 11px 11px 3px;background:var(--success-bg);padding:10px 12px">
+                    <p style="margin:0;font-size:12px;line-height:1.55;color:var(--foreground)">Olá Ana! Seu plano vence em 3 dias. Deseja renovar?</p>
+                    <p style="margin:8px 0 0;font-size:11px;font-weight:600;color:{{ brand.color }}">{{ brand.signature }}</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== OPERAÇÃO ===== -->
+          <sc-if value="{{ isOpsTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Padrões de operação</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Valores pré-preenchidos ao cadastrar clientes e cobranças</p>
+              </div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div data-two style="display:grid;gap:12px">
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Ciclo padrão de cobrança</span>
+                    <select onchange="{{ setCycle }}" style="margin-top:6px;width:100%;height:39px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+                      <sc-for list="{{ cycleOptions }}" as="co" hint-placeholder-count="4"><option value="{{ co.value }}" selected="{{ co.selected }}">{{ co.label }}</option></sc-for>
+                    </select>
+                  </label>
+                  <label style="display:block">
+                    <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Forma de pagamento preferida</span>
+                    <select onchange="{{ setPayment }}" style="margin-top:6px;width:100%;height:39px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+                      <sc-for list="{{ paymentOptions }}" as="po" hint-placeholder-count="3"><option value="{{ po.value }}" selected="{{ po.selected }}">{{ po.label }}</option></sc-for>
+                    </select>
+                  </label>
+                </div>
+                <div>
+                  <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Tolerância de atraso</p>
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;overflow:hidden;border-radius:8px;border:1px solid var(--input);width:150px;flex-shrink:0">
+                      <button type="button" onclick="{{ graceDown }}" style="flex:1;height:36px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                      <span style="width:62px;text-align:center;font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600">{{ graceLabel }}</span>
+                      <button type="button" onclick="{{ graceUp }}" style="flex:1;height:36px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                    </div>
+                    <p style="margin:0;flex:1;min-width:200px;font-size:11px;line-height:1.5;color:var(--muted-foreground)">{{ graceHint }}</p>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <sc-for list="{{ opsToggles }}" as="ot" hint-placeholder-count="4">
+                    <button type="button" onclick="{{ ot.onToggle }}" style="display:flex;align-items:flex-start;gap:12px;border:none;background:none;padding:13px 0;cursor:pointer;text-align:left;border-bottom:1px solid var(--border);width:100%">
+                      <span style="{{ ot.trackStyle }}"><span style="{{ ot.thumbStyle }}"></span></span>
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ ot.label }}</span>
+                        <span style="display:block;margin-top:3px;font-size:11px;line-height:1.5;color:var(--muted-foreground)">{{ ot.description }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== NOTIFICAÇÕES ===== -->
+          <sc-if value="{{ isNotifTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">O que você quer receber</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Escolha o canal de cada tipo de aviso</p>
+              </div>
+              <div style="padding:0 20px">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 62px 62px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)">
+                  <span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">Evento</span>
+                  <span style="text-align:center;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">App</span>
+                  <span style="text-align:center;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">E-mail</span>
+                  <span style="text-align:center;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">Zap</span>
+                </div>
+                <sc-for list="{{ notifRows }}" as="nr" hint-placeholder-count="5">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 62px 62px;gap:10px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)">
+                    <div style="min-width:0">
+                      <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ nr.label }}</p>
+                      <p style="margin:3px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ nr.description }}</p>
+                    </div>
+                    <sc-for list="{{ nr.channels }}" as="ch" hint-placeholder-count="3">
+                      <div style="display:flex;justify-content:center">
+                        <button type="button" onclick="{{ ch.onToggle }}" style="{{ ch.style }}"><sc-if value="{{ ch.on }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;flex-wrap:wrap">
+                <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Resumo diário da operação</p><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">Um e-mail por dia com vencimentos, recebimentos e falhas</p></div>
+                <div style="display:flex;align-items:center;gap:9px;flex-shrink:0">
+                  <input value="{{ digestTime }}" type="time" oninput="{{ setDigestTime }}" style="border:1px solid var(--input);border-radius:7px;padding:8px 10px;font-family:'Geist Mono',monospace;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  <button type="button" onclick="{{ toggleDigest }}" style="{{ digestTrackStyle }}"><span style="{{ digestThumbStyle }}"></span></button>
+                </div>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== SEGURANÇA ===== -->
+          <sc-if value="{{ isSecurityTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Acesso e proteção</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Senha, verificação em duas etapas e sessões ativas</p>
+              </div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:11px;border:1px solid var(--border);padding:14px 16px;flex-wrap:wrap">
+                  <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Senha</p><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">Alterada há {{ passwordAge }}</p></div>
+                  <button type="button" onclick="{{ openPassword }}" style="height:32px;padding:0 13px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0">Alterar senha</button>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:11px;border:1px solid {{ mfaBorder }};background:{{ mfaBg }};padding:14px 16px;flex-wrap:wrap">
+                  <div style="min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Verificação em duas etapas</p><span style="{{ mfaBadgeStyle }}">{{ mfaBadgeLabel }}</span></div>
+                    <p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ mfaHint }}</p>
+                  </div>
+                  <button type="button" onclick="{{ toggleMfa }}" style="{{ mfaTrackStyle }}"><span style="{{ mfaThumbStyle }}"></span></button>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                    <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Sessões ativas</p>
+                    <button type="button" onclick="{{ askRevokeAll }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--danger);cursor:pointer;padding:0">Encerrar todas as outras</button>
+                  </div>
+                  <div style="margin-top:10px;border-radius:11px;border:1px solid var(--border);overflow:hidden">
+                    <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--border)">
+                        <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ ss.isMobile }}"><rect x="7" y="2" width="10" height="20" rx="2.4"></rect><path d="M11 18h2"></path></sc-if><sc-if value="{{ ss.isDesktop }}"><rect x="2.5" y="4" width="19" height="12.5" rx="2"></rect><path d="M8 20h8"></path></sc-if></svg>
+                        </span>
+                        <div style="flex:1;min-width:0">
+                          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ss.device }}</p><sc-if value="{{ ss.isCurrent }}"><span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;background:var(--success-bg);color:var(--success-fg);border-radius:4px;padding:2px 5px">ESTE</span></sc-if></div>
+                          <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ss.location }} · {{ ss.lastActive }}</p>
+                        </div>
+                        <sc-if value="{{ ss.canRevoke }}"><button type="button" onclick="{{ ss.onRevoke }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--danger);cursor:pointer;flex-shrink:0;padding:0">encerrar</button></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== EQUIPE ===== -->
+          <sc-if value="{{ isTeamTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+                <div style="min-width:0">
+                  <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Equipe</h2>
+                  <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ memberCountLabel }} · {{ seatHint }}</p>
+                </div>
+                <button type="button" onclick="{{ openInvite }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:7px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Convidar</button>
+              </div>
+              <sc-for list="{{ members }}" as="mb" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border)">
+                  <span style="width:34px;height:34px;border-radius:9999px;background:{{ mb.avatarBg }};color:{{ mb.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex-shrink:0">{{ mb.initials }}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mb.name }}</p><sc-if value="{{ mb.isPending }}"><span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;background:var(--warning-bg);color:var(--warning-fg);border-radius:4px;padding:2px 5px">PENDENTE</span></sc-if></div>
+                    <p style="margin:3px 0 0;font-size:10.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mb.email }}</p>
+                  </div>
+                  <select onchange="{{ mb.onRoleChange }}" disabled="{{ mb.isOwner }}" style="width:132px;flex-shrink:0;height:32px;border:1px solid var(--input);border-radius:7px;padding:0 8px;font-size:11.5px;background:none;color:var(--foreground);opacity:{{ mb.roleOpacity }}">
+                    <sc-for list="{{ mb.roleOptions }}" as="ro" hint-placeholder-count="3"><option value="{{ ro.value }}" selected="{{ ro.selected }}">{{ ro.label }}</option></sc-for>
+                  </select>
+                  <sc-if value="{{ mb.canRemove }}"><button type="button" onclick="{{ mb.onRemove }}" title="Remover" style="width:30px;height:30px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"></path></svg></button></sc-if>
+                </div>
+              </sc-for>
+              <div style="padding:14px 20px;background:var(--muted);border-top:1px solid var(--border)">
+                <p style="margin:0;font-size:11px;line-height:1.55;color:var(--muted-foreground)"><strong style="color:var(--foreground);font-weight:600">Administrador</strong> acessa tudo. <strong style="color:var(--foreground);font-weight:600">Operador</strong> gerencia clientes e cobranças, sem ver o financeiro consolidado. <strong style="color:var(--foreground);font-weight:600">Somente leitura</strong> apenas visualiza.</p>
+              </div>
+            </article>
+          </sc-if>
+
+          <!-- ===== DADOS ===== -->
+          <sc-if value="{{ isDataTab }}" hint-placeholder-val="{{ false }}">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+                <h2 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">Seus dados</h2>
+                <p style="margin:3px 0 0;font-size:11.5px;color:var(--muted-foreground)">Exportação, backup e retenção</p>
+              </div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ dataActions }}" as="da" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:11px;border:1px solid var(--border);padding:14px 16px;flex-wrap:wrap">
+                    <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ da.label }}</p><p style="margin:3px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">{{ da.description }}</p></div>
+                    <button type="button" onclick="{{ da.onClick }}" style="height:32px;padding:0 13px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0">{{ da.cta }}</button>
+                  </div>
+                </sc-for>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:11px;border:1px solid var(--border);padding:14px 16px;flex-wrap:wrap">
+                  <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Backup automático</p><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ backupHint }}</p></div>
+                  <button type="button" onclick="{{ toggleBackup }}" style="{{ backupTrackStyle }}"><span style="{{ backupThumbStyle }}"></span></button>
+                </div>
+              </div>
+            </article>
+
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--danger-border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="border-bottom:1px solid var(--danger-border);background:var(--danger-bg);padding:14px 20px">
+                <h2 style="margin:0;font-size:13.5px;font-weight:600;color:var(--danger-fg)">Zona de risco</h2>
+                <p style="margin:3px 0 0;font-size:11px;color:var(--danger-fg);opacity:.85">Ações irreversíveis — confirmação obrigatória</p>
+              </div>
+              <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Excluir workspace</p><p style="margin:3px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">Remove clientes, cobranças, automações e histórico. Não há como desfazer.</p></div>
+                <button type="button" onclick="{{ askDeleteWorkspace }}" style="height:32px;padding:0 13px;border-radius:7px;border:1px solid var(--danger-border);background:var(--danger-bg);color:var(--danger-fg);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Excluir</button>
+              </div>
+            </article>
+          </sc-if>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- PASSWORD MODAL -->
+  <sc-if value="{{ passwordOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:95;overflow:auto" onclick="{{ closePassword }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Alterar senha</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Mínimo de 8 caracteres</p></div>
+          <button type="button" onclick="{{ closePassword }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+          <input value="{{ pwForm.current }}" type="password" oninput="{{ setPwCurrent }}" placeholder="Senha atual" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <input value="{{ pwForm.next }}" type="password" oninput="{{ setPwNext }}" placeholder="Nova senha" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <div>
+            <div style="display:flex;gap:4px">
+              <sc-for list="{{ pwStrengthBars }}" as="pb" hint-placeholder-count="4"><div style="flex:1;height:4px;border-radius:9999px;background:{{ pb.color }}"></div></sc-for>
+            </div>
+            <p style="margin:6px 0 0;font-size:10.5px;color:{{ pwStrengthColor }}">{{ pwStrengthLabel }}</p>
+          </div>
+          <input value="{{ pwForm.confirm }}" type="password" oninput="{{ setPwConfirm }}" placeholder="Confirmar nova senha" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <sc-if value="{{ pwMismatch }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:11px;color:var(--danger-fg)">As senhas não coincidem.</p></sc-if>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closePassword }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitPassword }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Salvar senha</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- INVITE MODAL -->
+  <sc-if value="{{ inviteOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:95;overflow:auto" onclick="{{ closeInvite }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M17 8v5M14.5 10.5h5"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Convidar para a equipe</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">O convite chega por e-mail</p></div>
+          <button type="button" onclick="{{ closeInvite }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <input value="{{ inviteEmail }}" oninput="{{ setInviteEmail }}" placeholder="email@exemplo.com" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Permissão</p>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <sc-for list="{{ inviteRoleOptions }}" as="ir" hint-placeholder-count="3">
+                <button type="button" onclick="{{ ir.onSelect }}" style="{{ ir.style }}">
+                  <span style="{{ ir.dotStyle }}"><sc-if value="{{ ir.selected }}"><span style="width:7px;height:7px;border-radius:9999px;background:#fff;display:block"></span></sc-if></span>
+                  <span style="flex:1;min-width:0;text-align:left">
+                    <span style="display:block;font-size:12.5px;font-weight:600">{{ ir.label }}</span>
+                    <span style="display:block;margin-top:2px;font-size:10.5px;line-height:1.45;color:var(--muted-foreground)">{{ ir.description }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeInvite }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitInvite }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Enviar convite</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CONFIRM MODAL -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.46);display:flex;align-items:center;justify-content:center;padding:24px;z-index:98" onclick="{{ closeConfirm }}">
+      <div style="width:100%;max-width:410px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="padding:20px 22px;display:flex;gap:12px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--danger-bg);color:var(--danger-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19Z"></path><path d="M12 10v4M12 17h.01"></path></svg></span>
+          <div style="min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ confirmTitle }}</h3><p style="margin:7px 0 0;font-size:12px;line-height:1.55;color:var(--muted-foreground)">{{ confirmBody }}</p></div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeConfirm }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmAction }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:13px;font-weight:600;cursor:pointer">{{ confirmCta }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const SECTIONS = [
+  { key: 'profile', label: 'Perfil' },
+  { key: 'brand', label: 'Negócio' },
+  { key: 'ops', label: 'Operação' },
+  { key: 'notif', label: 'Notificações' },
+  { key: 'security', label: 'Segurança' },
+  { key: 'team', label: 'Equipe' },
+  { key: 'data', label: 'Dados' },
+];
+const TIMEZONES = [
+  { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3)' },
+  { value: 'America/Manaus', label: 'Manaus (GMT-4)' },
+  { value: 'America/Rio_Branco', label: 'Rio Branco (GMT-5)' },
+  { value: 'America/Belem', label: 'Belém (GMT-3)' },
+  { value: 'America/Noronha', label: 'Fernando de Noronha (GMT-2)' },
+];
+const BRAND_COLORS = [
+  { value: '#176B4D', name: 'Verde Lembrado' },
+  { value: '#3140a8', name: 'Azul técnico' },
+  { value: '#5b3fd4', name: 'Violeta' },
+  { value: '#a13636', name: 'Vermelho' },
+  { value: '#715815', name: 'Âmbar' },
+];
+const CYCLES = [
+  { value: 'monthly', label: 'Mensal' }, { value: 'quarterly', label: 'Trimestral' },
+  { value: 'semiannual', label: 'Semestral' }, { value: 'annual', label: 'Anual' },
+];
+const PAYMENTS = [{ value: 'pix', label: 'PIX' }, { value: 'cartao', label: 'Cartão' }, { value: 'dinheiro', label: 'Dinheiro' }];
+const NOTIF_EVENTS = [
+  { key: 'due', label: 'Vencimentos do dia', description: 'Clientes que vencem hoje' },
+  { key: 'overdue', label: 'Cliente ficou vencido', description: 'Passou da tolerância de atraso' },
+  { key: 'payment', label: 'Pagamento confirmado', description: 'PIX ou cartão com baixa automática' },
+  { key: 'failure', label: 'Falha de automação', description: 'Chip desconectado ou envio não entregue' },
+  { key: 'lead', label: 'Novo lead recebido', description: 'Entrada por qualquer canal' },
+];
+const ROLES = [
+  { value: 'owner', label: 'Proprietário', description: 'Controle total, incluindo cobrança do plano.' },
+  { value: 'admin', label: 'Administrador', description: 'Acessa tudo, menos a cobrança do plano.' },
+  { value: 'operator', label: 'Operador', description: 'Gerencia clientes e cobranças, sem o financeiro consolidado.' },
+  { value: 'viewer', label: 'Somente leitura', description: 'Apenas visualiza dados, sem editar nada.' },
+];
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], section: 'profile', dirty: {},
+    profile: { name: 'Vitor Almeida', email: 'vitor@lembrado.com.br', phone: '+55 11 98812-4471', timezone: 'America/Sao_Paulo' },
+    brand: { name: 'Lembrado Streaming', supportPhone: '+55 11 3003-1180', signature: '— Equipe Lembrado', color: '#176B4D' },
+    ops: { cycle: 'monthly', payment: 'pix', graceDays: 3, autoRenew: true, blockOnOverdue: false, roundValues: true, requireWhatsapp: true },
+    notif: {
+      due: { app: true, email: true, zap: false },
+      overdue: { app: true, email: true, zap: true },
+      payment: { app: true, email: false, zap: false },
+      failure: { app: true, email: true, zap: true },
+      lead: { app: true, email: false, zap: false },
+    },
+    digestOn: true, digestTime: '08:00',
+    mfaOn: false, passwordOpen: false, pwForm: { current: '', next: '', confirm: '' },
+    sessions: [
+      { id: 's1', device: 'Chrome · macOS', location: 'São Paulo, BR', lastActive: 'agora', current: true, mobile: false },
+      { id: 's2', device: 'App Android', location: 'São Paulo, BR', lastActive: 'há 2 h', current: false, mobile: true },
+      { id: 's3', device: 'Safari · iPhone', location: 'Campinas, BR', lastActive: 'há 3 dias', current: false, mobile: true },
+    ],
+    members: [
+      { id: 'm1', name: 'Vitor Almeida', email: 'vitor@lembrado.com.br', role: 'owner', pending: false },
+      { id: 'm2', name: 'Camila Ferraz', email: 'camila@lembrado.com.br', role: 'operator', pending: false },
+      { id: 'm3', name: 'joao.suporte@gmail.com', email: 'Convite enviado há 2 dias', role: 'viewer', pending: true },
+    ],
+    inviteOpen: false, inviteEmail: '', inviteRole: 'operator',
+    backupOn: true, confirm: null,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3000);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  markDirty(section) { this.setState((s) => ({ dirty: { ...s.dirty, [section]: true } })); }
+  setSection(k) { this.setState({ section: k }); }
+  saveAll = () => { this.setState({ dirty: {} }); this.addToast({ title: 'Configurações salvas.' }); };
+  discardAll = () => { this.setState({ dirty: {} }); this.addToast({ title: 'Alterações descartadas.' }); };
+
+  setProfileName = (e) => { const v = e.target.value; this.setState((s) => ({ profile: { ...s.profile, name: v } })); this.markDirty('profile'); };
+  setProfileEmail = (e) => { const v = e.target.value; this.setState((s) => ({ profile: { ...s.profile, email: v } })); this.markDirty('profile'); };
+  setProfilePhone = (e) => { const v = e.target.value; this.setState((s) => ({ profile: { ...s.profile, phone: v } })); this.markDirty('profile'); };
+  setTimezone = (e) => { const v = e.target.value; this.setState((s) => ({ profile: { ...s.profile, timezone: v } })); this.markDirty('profile'); };
+  uploadAvatar = () => this.addToast({ title: 'Abriria o seletor de imagem.' });
+  removeAvatar = () => this.addToast({ title: 'Foto removida.' });
+
+  setBrandName = (e) => { const v = e.target.value; this.setState((s) => ({ brand: { ...s.brand, name: v } })); this.markDirty('brand'); };
+  setBrandPhone = (e) => { const v = e.target.value; this.setState((s) => ({ brand: { ...s.brand, supportPhone: v } })); this.markDirty('brand'); };
+  setBrandSignature = (e) => { const v = e.target.value; this.setState((s) => ({ brand: { ...s.brand, signature: v } })); this.markDirty('brand'); };
+  setBrandColor(v) { this.setState((s) => ({ brand: { ...s.brand, color: v } })); this.markDirty('brand'); }
+
+  setCycle = (e) => { const v = e.target.value; this.setState((s) => ({ ops: { ...s.ops, cycle: v } })); this.markDirty('ops'); };
+  setPayment = (e) => { const v = e.target.value; this.setState((s) => ({ ops: { ...s.ops, payment: v } })); this.markDirty('ops'); };
+  graceDown = () => { this.setState((s) => ({ ops: { ...s.ops, graceDays: Math.max(0, s.ops.graceDays - 1) } })); this.markDirty('ops'); };
+  graceUp = () => { this.setState((s) => ({ ops: { ...s.ops, graceDays: Math.min(30, s.ops.graceDays + 1) } })); this.markDirty('ops'); };
+  toggleOps(key) { this.setState((s) => ({ ops: { ...s.ops, [key]: !s.ops[key] } })); this.markDirty('ops'); }
+
+  toggleNotif(eventKey, channel) {
+    this.setState((s) => ({ notif: { ...s.notif, [eventKey]: { ...s.notif[eventKey], [channel]: !s.notif[eventKey][channel] } } }));
+    this.markDirty('notif');
+  }
+  toggleDigest = () => { this.setState((s) => ({ digestOn: !s.digestOn })); this.markDirty('notif'); };
+  setDigestTime = (e) => { const v = e.target.value; this.setState({ digestTime: v }); this.markDirty('notif'); };
+
+  toggleMfa = () => {
+    const next = !this.state.mfaOn;
+    this.setState({ mfaOn: next });
+    this.addToast({ title: next ? 'Verificação em duas etapas ativada.' : 'Verificação em duas etapas desativada.' });
+  };
+  openPassword = () => this.setState({ passwordOpen: true, pwForm: { current: '', next: '', confirm: '' } });
+  closePassword = () => this.setState({ passwordOpen: false });
+  setPwCurrent = (e) => { const v = e.target.value; this.setState((s) => ({ pwForm: { ...s.pwForm, current: v } })); };
+  setPwNext = (e) => { const v = e.target.value; this.setState((s) => ({ pwForm: { ...s.pwForm, next: v } })); };
+  setPwConfirm = (e) => { const v = e.target.value; this.setState((s) => ({ pwForm: { ...s.pwForm, confirm: v } })); };
+  submitPassword = () => {
+    const { current, next, confirm } = this.state.pwForm;
+    if (!current || !next) { this.addToast({ title: 'Preencha a senha atual e a nova.' }); return; }
+    if (next.length < 8) { this.addToast({ title: 'A nova senha precisa de 8 caracteres.' }); return; }
+    if (next !== confirm) { this.addToast({ title: 'As senhas não coincidem.' }); return; }
+    this.setState({ passwordOpen: false });
+    this.addToast({ title: 'Senha alterada com sucesso.' });
+  };
+  revokeSession(id) {
+    const ss = this.state.sessions.find((x) => x.id === id);
+    this.setState((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
+    this.addToast({ title: `Sessão em ${ss.device} encerrada.` });
+  }
+  askRevokeAll = () => {
+    const others = this.state.sessions.filter((x) => !x.current).length;
+    if (!others) { this.addToast({ title: 'Nenhuma outra sessão ativa.' }); return; }
+    this.setState({
+      confirm: {
+        title: 'Encerrar as outras sessões?', body: `${others} dispositivos serão desconectados e precisarão entrar novamente.`, cta: 'Encerrar',
+        action: () => { this.setState((s) => ({ sessions: s.sessions.filter((x) => x.current), confirm: null })); this.addToast({ title: 'Outras sessões encerradas.' }); },
+      },
+    });
+  };
+
+  openInvite = () => this.setState({ inviteOpen: true, inviteEmail: '', inviteRole: 'operator' });
+  closeInvite = () => this.setState({ inviteOpen: false });
+  setInviteEmail = (e) => this.setState({ inviteEmail: e.target.value });
+  setInviteRole(v) { this.setState({ inviteRole: v }); }
+  submitInvite = () => {
+    const email = this.state.inviteEmail.trim();
+    if (!email.includes('@')) { this.addToast({ title: 'Informe um e-mail válido.' }); return; }
+    this.setState((s) => ({
+      members: [...s.members, { id: 'm' + Date.now(), name: email, email: 'Convite enviado agora', role: s.inviteRole, pending: true }],
+      inviteOpen: false,
+    }));
+    this.addToast({ title: `Convite enviado para ${email}.` });
+  };
+  setMemberRole(id, e) {
+    const v = e.target.value;
+    this.setState((s) => ({ members: s.members.map((m) => m.id === id ? { ...m, role: v } : m) }));
+    this.addToast({ title: 'Permissão atualizada.' });
+  }
+  askRemoveMember(id) {
+    const m = this.state.members.find((x) => x.id === id);
+    this.setState({
+      confirm: {
+        title: m.pending ? 'Cancelar convite?' : 'Remover da equipe?',
+        body: m.pending ? `O convite para ${m.name} será invalidado.` : `${m.name} perde o acesso ao workspace imediatamente.`,
+        cta: m.pending ? 'Cancelar convite' : 'Remover',
+        action: () => { this.setState((s) => ({ members: s.members.filter((x) => x.id !== id), confirm: null })); this.addToast({ title: m.pending ? 'Convite cancelado.' : 'Membro removido.' }); },
+      },
+    });
+  }
+
+  toggleBackup = () => { this.setState((s) => ({ backupOn: !s.backupOn })); this.addToast({ title: this.state.backupOn ? 'Backup automático desativado.' : 'Backup automático ativado.' }); };
+  exportData(kind) { this.addToast({ title: `Exportação de ${kind} iniciada — você recebe por e-mail.` }); }
+  askDeleteWorkspace = () => this.setState({
+    confirm: {
+      title: 'Excluir workspace?', body: 'Todos os clientes, cobranças, automações e histórico serão apagados. Esta ação não pode ser desfeita.', cta: 'Excluir tudo',
+      action: () => { this.setState({ confirm: null }); this.addToast({ title: 'Pedido de exclusão registrado — confirme pelo e-mail.' }); },
+    },
+  });
+  closeConfirm = () => this.setState({ confirm: null });
+
+  initialsOf(name) {
+    const clean = name.includes('@') ? name.split('@')[0].replace(/[._]/g, ' ') : name;
+    return clean.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  }
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const track = (on) => `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${on ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0;border:none;cursor:pointer`;
+    const thumb = (on) => `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${on ? '14px' : '0'});transition:transform .15s;display:block`;
+    const checkbox = (on) => `width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid ${on ? 'var(--interactive)' : 'var(--input)'};background:${on ? 'var(--interactive)' : 'none'};padding:0`;
+
+    const dirtyCount = Object.keys(s.dirty).length;
+    const sections = SECTIONS.map((sec) => {
+      const active = s.section === sec.key;
+      const dirty = !!s.dirty[sec.key];
+      return {
+        key: sec.key, label: sec.label, onClick: () => this.setSection(sec.key),
+        style: `width:100%;display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:9px;border:none;cursor:pointer;background:${active ? 'var(--card)' : 'none'};color:${active ? 'var(--foreground)' : 'var(--muted-foreground)'};font-size:13px;font-weight:${active ? '600' : '500'};box-shadow:${active ? '0 1px 2px rgba(0,0,0,.05)' : 'none'};box-sizing:border-box`,
+        iconStyle: `width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${active ? 'var(--interactive-bg)' : 'transparent'};color:${active ? 'var(--interactive-fg)' : 'var(--muted-foreground)'}`,
+        hasBadge: dirty, badge: '•',
+        badgeStyle: 'flex-shrink:0;font-size:16px;line-height:1;color:var(--warning-fg)',
+        isProfile: sec.key === 'profile', isBrand: sec.key === 'brand', isOps: sec.key === 'ops',
+        isNotif: sec.key === 'notif', isSecurity: sec.key === 'security', isTeam: sec.key === 'team', isData: sec.key === 'data',
+      };
+    });
+
+    const brandColors = BRAND_COLORS.map((c) => ({
+      value: c.value, name: c.name, selected: s.brand.color === c.value,
+      onSelect: () => this.setBrandColor(c.value),
+      style: `width:34px;height:34px;border-radius:9px;background:${c.value};border:2px solid ${s.brand.color === c.value ? 'var(--foreground)' : 'transparent'};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0`,
+    }));
+
+    const opsToggleDefs = [
+      { key: 'autoRenew', label: 'Renovação automática sugerida', description: 'Ao confirmar pagamento, já propõe o próximo vencimento.' },
+      { key: 'blockOnOverdue', label: 'Suspender acesso ao vencer', description: 'Marca o cliente como suspenso assim que passa da tolerância.' },
+      { key: 'roundValues', label: 'Arredondar valores no cadastro', description: 'Ajusta centavos para o múltiplo mais próximo de R$ 0,50.' },
+      { key: 'requireWhatsapp', label: 'Exigir WhatsApp no cadastro', description: 'Impede salvar cliente sem número — garante a cobrança automática.' },
+    ];
+    const opsToggles = opsToggleDefs.map((t) => ({
+      key: t.key, label: t.label, description: t.description,
+      trackStyle: track(s.ops[t.key]), thumbStyle: thumb(s.ops[t.key]),
+      onToggle: () => this.toggleOps(t.key),
+    }));
+
+    const notifRows = NOTIF_EVENTS.map((ev) => ({
+      key: ev.key, label: ev.label, description: ev.description,
+      channels: ['app', 'email', 'zap'].map((ch) => ({
+        key: ch, on: s.notif[ev.key][ch], style: checkbox(s.notif[ev.key][ch]),
+        onToggle: () => this.toggleNotif(ev.key, ch),
+      })),
+    }));
+
+    const sessions = s.sessions.map((ss) => ({
+      id: ss.id, device: ss.device, location: ss.location, lastActive: ss.lastActive,
+      isCurrent: ss.current, canRevoke: !ss.current, isMobile: ss.mobile, isDesktop: !ss.mobile,
+      onRevoke: () => this.revokeSession(ss.id),
+    }));
+
+    const roleLabelOf = (v) => (ROLES.find((r) => r.value === v) || { label: v }).label;
+    const members = s.members.map((m) => ({
+      id: m.id, name: m.name, email: m.email, initials: this.initialsOf(m.name),
+      isPending: m.pending, isOwner: m.role === 'owner', canRemove: m.role !== 'owner',
+      roleOpacity: m.role === 'owner' ? '.6' : '1',
+      avatarBg: m.pending ? 'var(--warning-bg)' : m.role === 'owner' ? 'var(--interactive-bg)' : 'var(--secondary)',
+      avatarFg: m.pending ? 'var(--warning-fg)' : m.role === 'owner' ? 'var(--interactive-fg)' : 'var(--secondary-foreground)',
+      roleOptions: ROLES.map((r) => ({ value: r.value, label: r.label, selected: m.role === r.value })),
+      onRoleChange: (e) => this.setMemberRole(m.id, e),
+      onRemove: () => this.askRemoveMember(m.id),
+    }));
+
+    const inviteRoleOptions = ROLES.filter((r) => r.value !== 'owner').map((r) => {
+      const sel = s.inviteRole === r.value;
+      return {
+        value: r.value, label: r.label, description: r.description, selected: sel,
+        onSelect: () => this.setInviteRole(r.value),
+        style: `display:flex;align-items:flex-start;gap:10px;width:100%;border-radius:9px;padding:11px 12px;cursor:pointer;border:1px solid ${sel ? 'var(--interactive)' : 'var(--border)'};background:${sel ? 'var(--interactive-bg)' : 'var(--card)'};color:${sel ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+        dotStyle: `width:15px;height:15px;border-radius:9999px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;border:1.5px solid ${sel ? 'var(--interactive)' : 'var(--input)'};background:${sel ? 'var(--interactive)' : 'none'}`,
+      };
+    });
+
+    const dataActions = [
+      { key: 'clients', label: 'Exportar clientes', description: 'CSV com dados cadastrais, plano e vencimento.', cta: 'Exportar', onClick: () => this.exportData('clientes') },
+      { key: 'finance', label: 'Exportar financeiro', description: 'Todas as movimentações, com status e forma de pagamento.', cta: 'Exportar', onClick: () => this.exportData('financeiro') },
+      { key: 'full', label: 'Backup completo', description: 'Arquivo único com toda a base do workspace.', cta: 'Gerar', onClick: () => this.exportData('backup completo') },
+    ];
+
+    const pwLen = s.pwForm.next.length;
+    const hasMix = /[a-z]/.test(s.pwForm.next) && /[A-Z0-9]/.test(s.pwForm.next);
+    const hasSymbol = /[^a-zA-Z0-9]/.test(s.pwForm.next);
+    let strength = 0;
+    if (pwLen >= 8) strength = 1;
+    if (pwLen >= 8 && hasMix) strength = 2;
+    if (pwLen >= 10 && hasMix && hasSymbol) strength = 3;
+    if (pwLen >= 14 && hasMix && hasSymbol) strength = 4;
+    const strengthMeta = [
+      { label: 'Digite uma senha', color: 'var(--muted-foreground)', fill: 'var(--muted)' },
+      { label: 'Fraca', color: 'var(--danger)', fill: 'var(--danger)' },
+      { label: 'Razoável', color: '#d9a418', fill: '#d9a418' },
+      { label: 'Boa', color: 'var(--money)', fill: 'var(--money)' },
+      { label: 'Excelente', color: 'var(--money)', fill: 'var(--money)' },
+    ][strength];
+    const pwStrengthBars = [0, 1, 2, 3].map((i) => ({ key: i, color: i < strength ? strengthMeta.fill : 'var(--muted)' }));
+
+    const graceLabel = s.ops.graceDays === 0 ? 'imediato' : `${s.ops.graceDays} ${s.ops.graceDays === 1 ? 'dia' : 'dias'}`;
+    const pendingCount = s.members.filter((m) => m.pending).length;
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      sections, isDirty: dirtyCount > 0, saveAll: this.saveAll, discardAll: this.discardAll,
+      isProfileTab: s.section === 'profile', isBrandTab: s.section === 'brand', isOpsTab: s.section === 'ops',
+      isNotifTab: s.section === 'notif', isSecurityTab: s.section === 'security', isTeamTab: s.section === 'team', isDataTab: s.section === 'data',
+
+      profile: s.profile, avatarInitials: this.initialsOf(s.profile.name),
+      setProfileName: this.setProfileName, setProfileEmail: this.setProfileEmail, setProfilePhone: this.setProfilePhone,
+      timezoneOptions: TIMEZONES.map((t) => ({ value: t.value, label: t.label, selected: s.profile.timezone === t.value })),
+      setTimezone: this.setTimezone, uploadAvatar: this.uploadAvatar, removeAvatar: this.removeAvatar,
+
+      brand: s.brand, setBrandName: this.setBrandName, setBrandPhone: this.setBrandPhone, setBrandSignature: this.setBrandSignature, brandColors,
+
+      cycleOptions: CYCLES.map((c) => ({ value: c.value, label: c.label, selected: s.ops.cycle === c.value })),
+      paymentOptions: PAYMENTS.map((p) => ({ value: p.value, label: p.label, selected: s.ops.payment === p.value })),
+      setCycle: this.setCycle, setPayment: this.setPayment,
+      graceLabel, graceDown: this.graceDown, graceUp: this.graceUp,
+      graceHint: s.ops.graceDays === 0 ? 'O cliente entra como vencido no mesmo dia do vencimento.' : `O cliente só é marcado como vencido ${graceLabel} após a data.`,
+      opsToggles,
+
+      notifRows, digestOn: s.digestOn, digestTime: s.digestTime, setDigestTime: this.setDigestTime,
+      digestTrackStyle: track(s.digestOn), digestThumbStyle: thumb(s.digestOn), toggleDigest: this.toggleDigest,
+
+      passwordAge: '4 meses', openPassword: this.openPassword,
+      mfaOn: s.mfaOn, toggleMfa: this.toggleMfa,
+      mfaTrackStyle: track(s.mfaOn), mfaThumbStyle: thumb(s.mfaOn),
+      mfaBorder: s.mfaOn ? 'color-mix(in srgb, var(--money) 30%, var(--border))' : 'var(--warning-border)',
+      mfaBg: s.mfaOn ? 'color-mix(in srgb, var(--success-bg) 40%, transparent)' : 'var(--warning-bg)',
+      mfaBadgeLabel: s.mfaOn ? 'ATIVA' : 'RECOMENDADA',
+      mfaBadgeStyle: `font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;background:${s.mfaOn ? 'var(--success-bg)' : 'var(--card)'};color:${s.mfaOn ? 'var(--success-fg)' : 'var(--warning-fg)'}`,
+      mfaHint: s.mfaOn ? 'Código do app autenticador exigido a cada novo acesso.' : 'Protege o acesso mesmo se a senha for descoberta.',
+      sessions, askRevokeAll: this.askRevokeAll,
+
+      members, memberCountLabel: s.members.length === 1 ? '1 pessoa' : `${s.members.length} pessoas`,
+      seatHint: pendingCount ? `${pendingCount} ${pendingCount === 1 ? 'convite pendente' : 'convites pendentes'}` : 'nenhum convite pendente',
+      openInvite: this.openInvite, inviteOpen: s.inviteOpen, closeInvite: this.closeInvite,
+      inviteEmail: s.inviteEmail, setInviteEmail: this.setInviteEmail, inviteRoleOptions, submitInvite: this.submitInvite,
+
+      dataActions, backupOn: s.backupOn, toggleBackup: this.toggleBackup,
+      backupTrackStyle: track(s.backupOn), backupThumbStyle: thumb(s.backupOn),
+      backupHint: s.backupOn ? 'Diário às 03:00 · últimos 30 dias mantidos' : 'Desativado — nenhuma cópia sendo guardada',
+      askDeleteWorkspace: this.askDeleteWorkspace,
+
+      passwordOpen: s.passwordOpen, closePassword: this.closePassword, pwForm: s.pwForm,
+      setPwCurrent: this.setPwCurrent, setPwNext: this.setPwNext, setPwConfirm: this.setPwConfirm, submitPassword: this.submitPassword,
+      pwStrengthBars, pwStrengthLabel: strengthMeta.label, pwStrengthColor: strengthMeta.color,
+      pwMismatch: !!s.pwForm.confirm && s.pwForm.next !== s.pwForm.confirm,
+
+      confirmOpen: !!s.confirm, closeConfirm: this.closeConfirm,
+      confirmTitle: s.confirm ? s.confirm.title : '', confirmBody: s.confirm ? s.confirm.body : '',
+      confirmCta: s.confirm ? s.confirm.cta : '', confirmAction: s.confirm ? s.confirm.action : this.closeConfirm,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

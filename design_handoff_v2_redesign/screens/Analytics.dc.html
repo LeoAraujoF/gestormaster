@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-kpi-grid]{grid-template-columns:repeat(5,minmax(0,1fr));}
+    @media (max-width:1280px){[data-kpi-grid]{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media (max-width:720px){[data-kpi-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    [data-split]{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);}
+    @media (max-width:1024px){[data-split]{grid-template-columns:minmax(0,1fr);}}
+    [data-half]{grid-template-columns:repeat(2,minmax(0,1fr));}
+    @media (max-width:1024px){[data-half]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Insights</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <div style="padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-accent-fg);background:var(--sidebar-accent);font-weight:600">Analytics</div>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--money)">{{ planLabel }}</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano {{ planLabel }}</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--money)">
+              <span style="width:7px;height:7px;border-radius:9999px;background:var(--money);animation:pulseDot 2s ease-in-out infinite"></span>
+              Insights
+            </span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--success-bg);color:var(--success-fg);border-radius:6px;padding:2px 7px">{{ planLabel }}</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Analytics</h1>
+          <p style="margin:8px 0 0;max-width:620px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">MRR, churn, retenção por coorte, LTV e previsão de receita — a leitura completa da saúde do seu negócio.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <button type="button" onclick="{{ exportCsv }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 19h16"></path></svg>
+            Exportar CSV
+          </button>
+          <button type="button" onclick="{{ togglePlan }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"></path></svg>
+            {{ planToggleLabel }}
+          </button>
+        </div>
+      </section>
+
+      <!-- FILTER BAR -->
+      <section style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:10px 14px">
+        <div style="display:inline-flex;gap:4px;border-radius:8px;background:var(--muted);padding:3px;flex-shrink:0">
+          <sc-for list="{{ rangeTabs }}" as="rt" hint-placeholder-count="4">
+            <button type="button" onclick="{{ rt.onClick }}" style="{{ rt.style }}">{{ rt.label }}</button>
+          </sc-for>
+        </div>
+        <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+        <div style="position:relative;flex-shrink:0">
+          <button type="button" onclick="{{ toggleServiceMenu }}" style="display:flex;align-items:center;gap:7px;height:34px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:500;border:1px solid var(--input);background:var(--background);color:var(--foreground);cursor:pointer">
+            Serviços <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ serviceSelectedLabel }}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{ serviceMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:38px;left:0;width:230px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;z-index:50">
+              <sc-for list="{{ serviceOptions }}" as="so" hint-placeholder-count="6">
+                <button type="button" onclick="{{ so.onClick }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:8px;border:none;background:none;border-radius:6px;font-size:12px;color:var(--foreground);cursor:pointer;text-align:left">
+                  <span style="{{ so.checkStyle }}"><sc-if value="{{ so.active }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                  <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ so.label }}</span>
+                </button>
+              </sc-for>
+              <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+                <button type="button" onclick="{{ resetServices }}" style="width:100%;text-align:center;border:none;background:none;padding:6px;font-size:11px;font-weight:600;color:var(--interactive);cursor:pointer">Selecionar todos</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <button type="button" onclick="{{ toggleCompare }}" style="display:flex;align-items:center;gap:8px;height:34px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:500;border:1px solid var(--input);background:var(--background);color:var(--foreground);cursor:pointer;flex-shrink:0">
+          <span style="{{ compareTrackStyle }}"><span style="{{ compareThumbStyle }}"></span></span>
+          Comparar período anterior
+        </button>
+        <div style="flex:1"></div>
+        <span style="font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground);flex-shrink:0">{{ rangeSummaryLabel }}</span>
+      </section>
+
+      <!-- KPI ROW -->
+      <section data-kpi-grid style="display:grid;gap:12px">
+        <sc-for list="{{ kpis }}" as="kpi" hint-placeholder-count="5">
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px;position:relative;overflow:hidden">
+            <span style="position:absolute;inset:0 0 auto 0;height:3px;background:{{ kpi.accent }}"></span>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">{{ kpi.label }}</p>
+              <span title="{{ kpi.hint }}" style="width:15px;height:15px;border-radius:9999px;border:1px solid var(--border);color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;cursor:help">i</span>
+            </div>
+            <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ kpi.value }}</p>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <span style="display:inline-flex;align-items:center;gap:3px;font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:700;color:{{ kpi.deltaColor }}">{{ kpi.deltaArrow }}{{ kpi.delta }}</span>
+              <sc-if value="{{ compareOn }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">vs {{ kpi.prev }}</span></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- MRR MOVEMENT -->
+      <section data-split style="display:grid;gap:16px;align-items:start">
+        <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:36px;height:36px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 10 11l4 4 6-9"></path></svg></span>
+              <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Evolução do MRR</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Receita recorrente mensal e composição do crescimento</p></div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <sc-for list="{{ mrrLegend }}" as="ml" hint-placeholder-count="3">
+                <span style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted-foreground)"><span style="width:9px;height:9px;border-radius:3px;background:{{ ml.color }}"></span>{{ ml.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding:20px">
+            <div style="display:flex;align-items:flex-end;gap:6px;height:190px">
+              <sc-for list="{{ mrrBars }}" as="bar" hint-placeholder-count="12">
+                <div onmouseenter="{{ bar.onHover }}" onmouseleave="{{ clearHover }}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative;cursor:default;gap:2px">
+                  <sc-if value="{{ bar.hovered }}">
+                    <div style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--popover);border:1px solid var(--border);border-radius:7px;padding:8px 10px;box-shadow:0 10px 26px rgba(0,0,0,.16);white-space:nowrap;z-index:20;min-width:132px">
+                      <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:700;color:var(--foreground)">{{ bar.monthLabel }}</p>
+                      <p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">MRR {{ bar.totalLabel }}</p>
+                      <p style="margin:3px 0 0;font-size:9.5px;color:var(--money)">+ novo {{ bar.newLabel }}</p>
+                      <p style="margin:2px 0 0;font-size:9.5px;color:var(--interactive-fg)">+ expansão {{ bar.expLabel }}</p>
+                      <p style="margin:2px 0 0;font-size:9.5px;color:var(--danger)">− churn {{ bar.churnLabel }}</p>
+                    </div>
+                  </sc-if>
+                  <div style="border-radius:3px 3px 0 0;background:var(--danger);height:{{ bar.churnPct }}%;min-height:1px;transition:height .4s ease-out"></div>
+                  <div style="background:var(--interactive);height:{{ bar.expPct }}%;min-height:1px;transition:height .4s ease-out"></div>
+                  <div style="border-radius:0 0 3px 3px;background:var(--money);height:{{ bar.basePct }}%;min-height:2px;transition:height .4s ease-out"></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <sc-for list="{{ mrrBars }}" as="lbl" hint-placeholder-count="12">
+                <span style="flex:1;text-align:center;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">{{ lbl.shortLabel }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--border)">
+            <sc-for list="{{ mrrBreakdown }}" as="mb" hint-placeholder-count="4">
+              <div style="padding:13px 16px;border-right:1px solid var(--border)">
+                <p style="margin:0;font-size:10px;color:var(--muted-foreground)">{{ mb.label }}</p>
+                <p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:13.5px;font-weight:600;color:{{ mb.color }}">{{ mb.value }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </article>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- FORECAST -->
+          <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+              <span style="width:32px;height:32px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c3-6 5 2 8-4s4 4 10-6"></path></svg></span>
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Previsão de receita</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Projeção para os próximos 6 meses</p></div>
+            </div>
+            <div style="padding:16px 18px">
+              <div style="display:flex;align-items:flex-end;gap:6px;height:110px">
+                <sc-for list="{{ forecastBars }}" as="fb" hint-placeholder-count="6">
+                  <div onmouseenter="{{ fb.onHover }}" onmouseleave="{{ clearHover }}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative;cursor:default">
+                    <sc-if value="{{ fb.hovered }}">
+                      <div style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--popover);border:1px solid var(--border);border-radius:6px;padding:6px 9px;box-shadow:0 8px 22px rgba(0,0,0,.15);white-space:nowrap;z-index:20">
+                        <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:700;color:var(--foreground)">{{ fb.label }} · {{ fb.valueLabel }}</p>
+                        <p style="margin:3px 0 0;font-size:9px;color:var(--muted-foreground)">faixa {{ fb.rangeLabel }}</p>
+                      </div>
+                    </sc-if>
+                    <div style="border-radius:4px 4px 2px 2px;background:{{ fb.color }};height:{{ fb.heightPct }}%;min-height:3px;transition:height .4s ease-out"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:7px">
+                <sc-for list="{{ forecastBars }}" as="fl" hint-placeholder-count="6">
+                  <span style="flex:1;text-align:center;font-family:'Geist Mono',monospace;font-size:8.5px;color:var(--muted-foreground)">{{ fl.label }}</span>
+                </sc-for>
+              </div>
+              <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span style="font-size:10.5px;color:var(--muted-foreground)">MRR projetado em 6 meses</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">{{ forecast6mLabel }}</span>
+              </div>
+              <p style="margin:8px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Baseado na régua de vencimentos, churn médio dos últimos 3 meses e taxa de expansão atual.</p>
+            </div>
+          </article>
+
+          <!-- HEALTH -->
+          <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+              <span style="width:32px;height:32px;border-radius:9px;background:{{ healthIconBg }};color:{{ healthIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.8A8 8 0 0 0 4 10.2C4 17.5 12 22 12 22Z"></path><path d="m8.8 12 2.2 2.2 4.2-4.4"></path></svg></span>
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Saúde da carteira</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Risco de churn por comportamento</p></div>
+            </div>
+            <div style="padding:16px 18px">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:600;letter-spacing:-.04em;color:{{ healthIconFg }}">{{ healthScore }}</span>
+                <span style="font-size:11px;color:var(--muted-foreground)">/100 · {{ healthLabel }}</span>
+              </div>
+              <div style="margin-top:11px;height:7px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:linear-gradient(90deg,#c0453f,#d9a418,var(--money));width:{{ healthScore }}%;transition:width .5s ease-out"></div></div>
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ riskBuckets }}" as="rb" hint-placeholder-count="3">
+                  <button type="button" onclick="{{ rb.onOpen }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;cursor:pointer;text-align:left;width:100%">
+                    <span style="width:8px;height:8px;border-radius:9999px;background:{{ rb.color }};flex-shrink:0"></span>
+                    <span style="flex:1;min-width:0;font-size:11.5px;color:var(--foreground)">{{ rb.label }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground);flex-shrink:0">{{ rb.valueLabel }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground);flex-shrink:0;min-width:22px;text-align:right">{{ rb.count }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- COHORT RETENTION -->
+      <section style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M9 9v11"></path></svg></span>
+            <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Retenção por coorte</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">% de clientes ativos por mês desde a entrada</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--muted-foreground)">
+            <span>Menor</span>
+            <span style="width:13px;height:13px;border-radius:3px;background:color-mix(in srgb, var(--money) 18%, transparent)"></span>
+            <span style="width:13px;height:13px;border-radius:3px;background:color-mix(in srgb, var(--money) 45%, transparent)"></span>
+            <span style="width:13px;height:13px;border-radius:3px;background:color-mix(in srgb, var(--money) 70%, transparent)"></span>
+            <span style="width:13px;height:13px;border-radius:3px;background:var(--money)"></span>
+            <span>Maior</span>
+          </div>
+        </div>
+        <div style="padding:18px 20px;overflow-x:auto">
+          <div style="min-width:660px">
+            <div style="display:grid;grid-template-columns:106px 62px repeat(6,minmax(0,1fr));gap:5px;margin-bottom:6px">
+              <span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">Coorte</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);text-align:center">Clientes</span>
+              <sc-for list="{{ cohortHeaders }}" as="ch" hint-placeholder-count="6">
+                <span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);text-align:center">{{ ch.label }}</span>
+              </sc-for>
+            </div>
+            <sc-for list="{{ cohortRows }}" as="cr" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:106px 62px repeat(6,minmax(0,1fr));gap:5px;margin-bottom:5px;align-items:center">
+                <span style="font-size:11.5px;font-weight:600;color:var(--foreground)">{{ cr.label }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground);text-align:center">{{ cr.size }}</span>
+                <sc-for list="{{ cr.cells }}" as="cc" hint-placeholder-count="6">
+                  <div onmouseenter="{{ cc.onHover }}" onmouseleave="{{ clearHover }}" style="position:relative;display:flex;align-items:center;justify-content:center;min-height:38px;border-radius:7px;background:{{ cc.bg }};color:{{ cc.fg }};font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;cursor:default">
+                    {{ cc.label }}
+                    <sc-if value="{{ cc.hovered }}">
+                      <div style="position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:var(--popover);border:1px solid var(--border);border-radius:6px;padding:6px 9px;box-shadow:0 8px 22px rgba(0,0,0,.15);white-space:nowrap;z-index:20">
+                        <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:700;color:var(--foreground)">{{ cc.tipTitle }}</p>
+                        <p style="margin:3px 0 0;font-size:9.5px;color:var(--muted-foreground)">{{ cc.tipBody }}</p>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--border);background:var(--muted);padding:12px 20px;flex-wrap:wrap">
+          <span style="font-size:10.5px;color:var(--muted-foreground)">Retenção média no mês 3</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ avgM3Label }}</span>
+        </div>
+      </section>
+
+      <!-- LTV / SERVICE PERFORMANCE -->
+      <section data-half style="display:grid;gap:16px;align-items:start">
+        <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px">
+            <span style="width:36px;height:36px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v1M12 16v1M9 9.5c0-1.4 1.3-2.3 3-2.3s3 .8 3 2.1c0 2.7-6 1.3-6 4.1 0 1.3 1.3 2.1 3 2.1s3-.9 3-2.3"></path></svg></span>
+            <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">LTV, CAC e payback</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Economia unitária por cliente</p></div>
+          </div>
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ unitEconomics }}" as="ue" hint-placeholder-count="5">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                  <span style="font-size:12px;color:var(--foreground)">{{ ue.label }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:{{ ue.color }}">{{ ue.value }}</span>
+                </div>
+                <div style="margin-top:6px;height:6px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ ue.color }};width:{{ ue.pct }}%;transition:width .5s ease-out"></div></div>
+                <p style="margin:5px 0 0;font-size:10px;color:var(--muted-foreground)">{{ ue.hint }}</p>
+              </div>
+            </sc-for>
+            <div style="border-top:1px solid var(--border);padding-top:13px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div><p style="margin:0;font-size:10.5px;color:var(--muted-foreground)">Razão LTV / CAC</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:{{ ltvRatioColor }}">{{ ltvRatioLabel }}</p></div>
+              <span style="{{ ltvRatioBadgeStyle }}">{{ ltvRatioVerdict }}</span>
+            </div>
+          </div>
+        </article>
+
+        <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:36px;height:36px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg></span>
+              <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Performance por serviço</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Receita, churn e crescimento</p></div>
+            </div>
+            <div style="display:inline-flex;gap:3px;border-radius:7px;background:var(--muted);padding:3px">
+              <sc-for list="{{ serviceSortTabs }}" as="st" hint-placeholder-count="3">
+                <button type="button" onclick="{{ st.onClick }}" style="{{ st.style }}">{{ st.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.4fr) 82px 66px 68px;gap:10px;align-items:center;padding:9px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">
+              <span>Serviço</span><span style="text-align:right">Receita</span><span style="text-align:right">Churn</span><span style="text-align:right">Cresc.</span>
+            </div>
+            <sc-for list="{{ serviceRows }}" as="sr" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1.4fr) 82px 66px 68px;gap:10px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--border)">
+                <div style="min-width:0">
+                  <p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sr.label }}</p>
+                  <div style="margin-top:5px;height:4px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ sr.color }};width:{{ sr.sharePct }}%"></div></div>
+                </div>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:500;color:var(--foreground)">{{ sr.revenueLabel }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;color:{{ sr.churnColor }}">{{ sr.churnLabel }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;color:{{ sr.growthColor }}">{{ sr.growthLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </article>
+      </section>
+
+      <!-- CHANNELS -->
+      <section data-split style="display:grid;gap:16px;align-items:start">
+        <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px">
+            <span style="width:36px;height:36px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8Z"></path></svg></span>
+            <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Aquisição por canal</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Leads, conversão e receita gerada por origem</p></div>
+          </div>
+          <div>
+            <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.2fr) 62px 74px 84px;gap:10px;align-items:center;padding:9px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground)">
+              <span>Canal</span><span style="text-align:right">Leads</span><span style="text-align:right">Conversão</span><span style="text-align:right">Receita</span>
+            </div>
+            <sc-for list="{{ channelRows }}" as="ch" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:minmax(0,1.2fr) 62px 74px 84px;gap:10px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:9px;min-width:0">
+                  <span style="width:8px;height:8px;border-radius:3px;background:{{ ch.color }};flex-shrink:0"></span>
+                  <span style="min-width:0;font-size:12px;font-weight:500;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.label }}</span>
+                </div>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;color:var(--muted-foreground)">{{ ch.leads }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;color:{{ ch.convColor }}">{{ ch.convLabel }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:500;color:var(--foreground)">{{ ch.revenueLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </article>
+
+        <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+            <span style="width:32px;height:32px;border-radius:9px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+            <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Leituras do período</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Geradas a partir dos seus dados</p></div>
+          </div>
+          <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ insights }}" as="ins" hint-placeholder-count="4">
+              <div style="display:flex;align-items:flex-start;gap:9px">
+                <span style="width:7px;height:7px;border-radius:9999px;background:{{ ins.color }};margin-top:5px;flex-shrink:0"></span>
+                <p style="margin:0;font-size:11.5px;line-height:1.55;color:var(--muted-foreground)"><strong style="color:var(--foreground);font-weight:600">{{ ins.title }}</strong> {{ ins.body }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </article>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- RISK DRILL-DOWN -->
+  <sc-if value="{{ drillOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.42);display:flex;align-items:flex-start;justify-content:center;padding:32px;z-index:95;overflow:auto" onclick="{{ closeDrill }}">
+      <div style="width:100%;max-width:520px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:{{ drillIconBg }};color:{{ drillIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ drillTitle }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ drillSubtitle }}</p></div>
+          <button type="button" onclick="{{ closeDrill }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="max-height:60vh;overflow-y:auto">
+          <sc-for list="{{ drillRows }}" as="dr" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 22px;border-bottom:1px solid var(--border)">
+              <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ dr.initials }}</span>
+              <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dr.name }}</p><p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dr.reason }}</p></div>
+              <span style="font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;color:var(--foreground);flex-shrink:0">{{ dr.valueLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeDrill }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Fechar</button>
+          <button type="button" onclick="{{ drillAction }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Criar campanha de retenção</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const MONTHS = ['set/25','out/25','nov/25','dez/25','jan/26','fev/26','mar/26','abr/26','mai/26','jun/26','jul/26','ago/26'];
+const MRR_SERIES = [
+  { base: 3120, added: 380, expansion: 90, churned: 210 },
+  { base: 3380, added: 420, expansion: 110, churned: 180 },
+  { base: 3730, added: 460, expansion: 130, churned: 240 },
+  { base: 4080, added: 510, expansion: 120, churned: 260 },
+  { base: 4450, added: 470, expansion: 150, churned: 190 },
+  { base: 4880, added: 520, expansion: 170, churned: 230 },
+  { base: 5340, added: 560, expansion: 140, churned: 280 },
+  { base: 5760, added: 610, expansion: 180, churned: 250 },
+  { base: 6300, added: 580, expansion: 200, churned: 310 },
+  { base: 6770, added: 640, expansion: 190, churned: 270 },
+  { base: 7330, added: 690, expansion: 220, churned: 290 },
+  { base: 7950, added: 720, expansion: 240, churned: 260 },
+];
+const COHORTS = [
+  { label: 'mar/26', size: 24, values: [100, 92, 83, 79, 75, 71] },
+  { label: 'abr/26', size: 31, values: [100, 90, 84, 77, 74, null] },
+  { label: 'mai/26', size: 28, values: [100, 93, 86, 82, null, null] },
+  { label: 'jun/26', size: 35, values: [100, 89, 81, null, null, null] },
+  { label: 'jul/26', size: 42, values: [100, 94, null, null, null, null] },
+  { label: 'ago/26', size: 38, values: [100, null, null, null, null, null] },
+];
+const SERVICE_PERF = [
+  { label: 'IPTV Ultra', revenue: 2840, churn: 3.1, growth: 12.4, color: '#4055c8' },
+  { label: 'IPTV Gold', revenue: 1960, churn: 4.8, growth: 6.1, color: '#5b3fd4' },
+  { label: 'Combo Streaming', revenue: 1520, churn: 2.4, growth: 18.7, color: '#2e7d54' },
+  { label: 'Netflix Premium', revenue: 890, churn: 6.2, growth: -3.2, color: '#d9a418' },
+  { label: 'Disney+ Premium', revenue: 540, churn: 7.4, growth: -1.8, color: '#c47a18' },
+  { label: 'VPN Premium', revenue: 200, churn: 5.1, growth: 4.3, color: '#6f6e69' },
+];
+const CHANNELS = [
+  { label: 'Indicação', leads: 84, conv: 42, revenue: 2610, color: '#4055c8' },
+  { label: 'WhatsApp', leads: 112, conv: 31, revenue: 2180, color: '#2e7d54' },
+  { label: 'Instagram', leads: 96, conv: 22, revenue: 1340, color: '#5b3fd4' },
+  { label: 'Grupo/Telegram', leads: 63, conv: 27, revenue: 980, color: '#d9a418' },
+  { label: 'Site/Portal', leads: 41, conv: 14, revenue: 420, color: '#6f6e69' },
+];
+const RISK_CLIENTS = {
+  alto: [
+    { name: 'Anderson Melo', reason: '3 atrasos consecutivos · último pago com 9 dias', value: 54.9 },
+    { name: 'Priscila Dantas', reason: 'Reduziu de 3 para 1 tela em jun/26', value: 19.9 },
+    { name: 'Eduardo Prates', reason: 'Sem resposta às últimas 4 cobranças', value: 89.9 },
+    { name: 'Vanessa Lopes', reason: '2 atrasos no trimestre · plano mais barato', value: 33.9 },
+  ],
+  medio: [
+    { name: 'Thiago Barros', reason: '1 atraso recente · pagamento em dia antes', value: 54.9 },
+    { name: 'Marcelo Vieira', reason: 'Renovação mensal sem upgrade há 6 meses', value: 64.9 },
+    { name: 'Larissa Monteiro', reason: 'Abriu ticket de suporte 2x no mês', value: 45.9 },
+  ],
+  baixo: [
+    { name: 'Rodrigo Alencar', reason: 'Pagamento antecipado · upgrade em jul/26', value: 79.9 },
+    { name: 'Camila Ferraz', reason: '11 meses sem atraso · 3 telas', value: 69.9 },
+    { name: 'Sabrina Rocha', reason: 'Anual pago à vista', value: 84.9 },
+  ],
+};
+const RANGE_SCALE = { '3m': 0.28, '6m': 0.55, '12m': 1, 'ytd': 0.72 };
+
+function fmt(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+function fmt2(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function pct(v) { return `${v > 0 ? '+' : ''}${v.toFixed(1)}%`; }
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], plan: 'pro', range: '12m', compare: true,
+    activeServices: SERVICE_PERF.reduce((a, s) => ({ ...a, [s.label]: true }), {}), serviceMenuOpen: false,
+    serviceSort: 'revenue', hovered: null, drillKey: null,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3000);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  togglePlan = () => {
+    const next = this.state.plan === 'pro' ? 'master' : 'pro';
+    this.setState({ plan: next });
+    this.addToast({ title: next === 'master' ? 'Visualizando como Master.' : 'Visualizando como Pro.' });
+  };
+  setRange(r) { this.setState({ range: r }); }
+  toggleCompare = () => this.setState((s) => ({ compare: !s.compare }));
+  toggleServiceMenu = () => this.setState((s) => ({ serviceMenuOpen: !s.serviceMenuOpen }));
+  toggleService(label) { this.setState((s) => ({ activeServices: { ...s.activeServices, [label]: !s.activeServices[label] } })); }
+  resetServices = () => this.setState({ activeServices: SERVICE_PERF.reduce((a, s) => ({ ...a, [s.label]: true }), {}) });
+  setServiceSort(k) { this.setState({ serviceSort: k }); }
+  setHover(key) { this.setState({ hovered: key }); }
+  clearHover = () => this.setState({ hovered: null });
+  exportCsv = () => this.addToast({ title: 'Relatório exportado em CSV.' });
+  openDrill(key) { this.setState({ drillKey: key }); }
+  closeDrill = () => this.setState({ drillKey: null });
+  drillAction = () => { this.setState({ drillKey: null }); this.addToast({ title: 'Campanha de retenção criada na Automação.' }); };
+
+  initialsOf(name) { return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const toggleTrack = (on) => `display:inline-flex;align-items:center;width:30px;height:17px;border-radius:9999px;background:${on ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0`;
+    const toggleThumb = (on) => `width:13px;height:13px;border-radius:9999px;background:#fff;transform:translateX(${on ? '13px' : '0'});transition:transform .15s;display:block`;
+
+    const monthsShown = { '3m': 3, '6m': 6, '12m': 12, 'ytd': 8 }[s.range];
+    const series = MRR_SERIES.slice(-monthsShown);
+    const labels = MONTHS.slice(-monthsShown);
+    const activeServiceList = SERVICE_PERF.filter((sv) => s.activeServices[sv.label]);
+    const serviceShare = activeServiceList.reduce((t, sv) => t + sv.revenue, 0) / SERVICE_PERF.reduce((t, sv) => t + sv.revenue, 0) || 0;
+
+    const last = series[series.length - 1];
+    const prev = series[series.length - 2] || last;
+    const currentMrr = (last.base + last.added + last.expansion - last.churned) * serviceShare;
+    const prevMrr = (prev.base + prev.added + prev.expansion - prev.churned) * serviceShare;
+    const mrrDelta = prevMrr ? ((currentMrr - prevMrr) / prevMrr) * 100 : 0;
+
+    const churnRate = last.base ? (last.churned / last.base) * 100 : 0;
+    const prevChurnRate = prev.base ? (prev.churned / prev.base) * 100 : 0;
+    const nrr = last.base ? ((last.base + last.expansion - last.churned) / last.base) * 100 : 0;
+    const prevNrr = prev.base ? ((prev.base + prev.expansion - prev.churned) / prev.base) * 100 : 0;
+    const activeClients = Math.round(112 * serviceShare);
+    const arpu = activeClients ? currentMrr / activeClients : 0;
+    const prevArpu = activeClients ? prevMrr / activeClients : 0;
+    const lifetimeMonths = churnRate > 0 ? 100 / churnRate : 24;
+    const ltv = arpu * lifetimeMonths;
+    const cac = 42.5;
+    const paybackMonths = arpu ? cac / arpu : 0;
+    const ltvRatio = cac ? ltv / cac : 0;
+
+    const kpiOf = (label, value, deltaVal, prevLabel, accent, hint, invert) => {
+      const good = invert ? deltaVal < 0 : deltaVal > 0;
+      return {
+        label, value, hint, accent,
+        delta: `${Math.abs(deltaVal).toFixed(1)}%`,
+        deltaArrow: deltaVal >= 0 ? '↑ ' : '↓ ',
+        deltaColor: Math.abs(deltaVal) < 0.05 ? 'var(--muted-foreground)' : good ? 'var(--money)' : 'var(--danger)',
+        prev: prevLabel,
+      };
+    };
+    const kpis = [
+      kpiOf('MRR', fmt(currentMrr), mrrDelta, fmt(prevMrr), 'var(--money)', 'Receita recorrente mensal dos clientes ativos'),
+      kpiOf('Churn mensal', `${churnRate.toFixed(1)}%`, churnRate - prevChurnRate, `${prevChurnRate.toFixed(1)}%`, 'var(--danger)', 'Receita perdida no mês sobre a base inicial', true),
+      kpiOf('NRR', `${nrr.toFixed(0)}%`, nrr - prevNrr, `${prevNrr.toFixed(0)}%`, 'var(--interactive)', 'Retenção líquida de receita: expansão menos churn'),
+      kpiOf('ARPU', fmt2(arpu), prevArpu ? ((arpu - prevArpu) / prevArpu) * 100 : 0, fmt2(prevArpu), '#5b3fd4', 'Receita média por cliente ativo'),
+      kpiOf('LTV', fmt(ltv), 8.4, fmt(ltv * 0.92), '#d9a418', 'Valor médio gerado por cliente durante toda a relação'),
+    ];
+
+    const rangeTabs = [
+      { key: '3m', label: '3 meses' }, { key: '6m', label: '6 meses' }, { key: '12m', label: '12 meses' }, { key: 'ytd', label: 'Ano atual' },
+    ].map((r) => ({
+      key: r.key, label: r.label, onClick: () => this.setRange(r.key),
+      style: `min-height:28px;border-radius:6px;padding:0 11px;font-size:11.5px;font-weight:${s.range === r.key ? '600' : '500'};border:none;cursor:pointer;background:${s.range === r.key ? 'var(--card)' : 'transparent'};color:${s.range === r.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.range === r.key ? '0 1px 2px rgba(0,0,0,.05)' : 'none'}`,
+    }));
+
+    const serviceOptions = SERVICE_PERF.map((sv) => {
+      const active = !!s.activeServices[sv.label];
+      return {
+        key: sv.label, label: sv.label, active,
+        checkStyle: `width:16px;height:16px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px solid ${active ? 'var(--interactive)' : 'var(--input)'};background:${active ? 'var(--interactive)' : 'none'}`,
+        onClick: () => this.toggleService(sv.label),
+      };
+    });
+
+    // MRR stacked bars
+    const totals = series.map((m) => (m.base + m.added + m.expansion - m.churned) * serviceShare);
+    const maxTotal = Math.max(...totals, 1);
+    const mrrBars = series.map((m, i) => {
+      const total = totals[i];
+      const scale = total / maxTotal * 100;
+      const parts = m.base + m.added + m.expansion + m.churned;
+      return {
+        key: i, monthLabel: labels[i], shortLabel: labels[i].split('/')[0],
+        totalLabel: fmt(total), newLabel: fmt(m.added * serviceShare), expLabel: fmt(m.expansion * serviceShare), churnLabel: fmt(m.churned * serviceShare),
+        basePct: Math.round(scale * ((m.base + m.added) / parts) * 1.55),
+        expPct: Math.max(1, Math.round(scale * (m.expansion / parts) * 1.55)),
+        churnPct: Math.max(1, Math.round(scale * (m.churned / parts) * 1.55)),
+        hovered: s.hovered === 'mrr' + i, onHover: () => this.setHover('mrr' + i),
+      };
+    });
+    const mrrLegend = [
+      { label: 'Base + novos', color: 'var(--money)' },
+      { label: 'Expansão', color: 'var(--interactive)' },
+      { label: 'Churn', color: 'var(--danger)' },
+    ];
+    const mrrBreakdown = [
+      { label: 'MRR novo', value: fmt(last.added * serviceShare), color: 'var(--money)' },
+      { label: 'Expansão', value: fmt(last.expansion * serviceShare), color: 'var(--interactive-fg)' },
+      { label: 'Churn de receita', value: '−' + fmt(last.churned * serviceShare), color: 'var(--danger)' },
+      { label: 'Crescimento líquido', value: fmt((last.added + last.expansion - last.churned) * serviceShare), color: 'var(--foreground)' },
+    ];
+
+    // Forecast
+    const growthRate = (last.added + last.expansion - last.churned) / (last.base || 1);
+    const forecastMonths = ['set','out','nov','dez','jan','fev'];
+    let running = currentMrr;
+    const forecastRaw = forecastMonths.map(() => { running = running * (1 + growthRate); return running; });
+    const maxForecast = Math.max(...forecastRaw, 1);
+    const forecastBars = forecastRaw.map((v, i) => ({
+      key: i, label: forecastMonths[i], valueLabel: fmt(v),
+      rangeLabel: `${fmt(v * 0.9)} – ${fmt(v * 1.1)}`,
+      heightPct: Math.round((v / maxForecast) * 100),
+      color: i < 2 ? 'var(--money)' : `color-mix(in srgb, var(--money) ${Math.max(28, 80 - i * 12)}%, transparent)`,
+      hovered: s.hovered === 'fc' + i, onHover: () => this.setHover('fc' + i),
+    }));
+
+    // Health
+    const healthScore = Math.max(0, Math.min(100, Math.round(100 - churnRate * 6 - RISK_CLIENTS.alto.length * 2)));
+    const riskBuckets = [
+      { key: 'alto', label: 'Risco alto', color: 'var(--danger)', list: RISK_CLIENTS.alto },
+      { key: 'medio', label: 'Risco moderado', color: '#d9a418', list: RISK_CLIENTS.medio },
+      { key: 'baixo', label: 'Saudáveis', color: 'var(--money)', list: RISK_CLIENTS.baixo },
+    ].map((b) => ({
+      key: b.key, label: b.label, color: b.color, count: b.list.length,
+      valueLabel: fmt(b.list.reduce((t, c) => t + c.value, 0)),
+      onOpen: () => this.openDrill(b.key),
+    }));
+
+    // Cohorts
+    const cohortHeaders = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5'].map((l, i) => ({ key: i, label: l }));
+    const cohortRows = COHORTS.map((c, ri) => ({
+      key: c.label, label: c.label, size: c.size,
+      cells: c.values.map((v, ci) => {
+        if (v === null) return { key: ci, label: '—', bg: 'var(--muted)', fg: 'var(--muted-foreground)', hovered: false, onHover: this.clearHover, tipTitle: '', tipBody: '' };
+        const ratio = v / 100;
+        const bg = ratio >= 0.95 ? 'var(--money)' : ratio >= 0.85 ? 'color-mix(in srgb, var(--money) 70%, transparent)' : ratio >= 0.75 ? 'color-mix(in srgb, var(--money) 45%, transparent)' : 'color-mix(in srgb, var(--money) 18%, transparent)';
+        const fg = ratio >= 0.85 ? '#fff' : 'var(--foreground)';
+        return {
+          key: ci, label: `${v}%`, bg, fg,
+          hovered: s.hovered === `co${ri}-${ci}`, onHover: () => this.setHover(`co${ri}-${ci}`),
+          tipTitle: `${c.label} · M${ci}`,
+          tipBody: `${Math.round((c.size * v) / 100)} de ${c.size} clientes ativos`,
+        };
+      }),
+    }));
+    const m3Values = COHORTS.map((c) => c.values[3]).filter((v) => v !== null);
+    const avgM3Label = m3Values.length ? `${Math.round(m3Values.reduce((a, b) => a + b, 0) / m3Values.length)}%` : '—';
+
+    // Unit economics
+    const unitEconomics = [
+      { label: 'ARPU mensal', value: fmt2(arpu), pct: 100, color: 'var(--money)', hint: 'Receita média por cliente ativo no período.' },
+      { label: 'Tempo médio de vida', value: `${lifetimeMonths.toFixed(1)} meses`, pct: Math.min(100, (lifetimeMonths / 36) * 100), color: 'var(--interactive)', hint: 'Derivado do churn médio do período.' },
+      { label: 'LTV', value: fmt(ltv), pct: Math.min(100, (ltv / 1500) * 100), color: '#5b3fd4', hint: 'ARPU × tempo médio de vida.' },
+      { label: 'CAC', value: fmt2(cac), pct: Math.min(100, (cac / 200) * 100), color: '#d9a418', hint: 'Custo médio para adquirir um cliente.' },
+      { label: 'Payback', value: `${paybackMonths.toFixed(1)} meses`, pct: Math.min(100, (paybackMonths / 12) * 100), color: paybackMonths <= 2 ? 'var(--money)' : 'var(--danger)', hint: 'Tempo para recuperar o CAC.' },
+    ];
+    const ltvVerdict = ltvRatio >= 3 ? { label: 'Saudável', bg: 'var(--success-bg)', fg: 'var(--success-fg)' } : ltvRatio >= 1.5 ? { label: 'Atenção', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' } : { label: 'Crítico', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' };
+
+    // Service performance
+    const sortKey = s.serviceSort;
+    const maxRevenue = Math.max(...SERVICE_PERF.map((sv) => sv.revenue), 1);
+    const serviceRows = activeServiceList.slice().sort((a, b) => {
+      if (sortKey === 'revenue') return b.revenue - a.revenue;
+      if (sortKey === 'churn') return b.churn - a.churn;
+      return b.growth - a.growth;
+    }).map((sv) => ({
+      key: sv.label, label: sv.label, color: sv.color,
+      revenueLabel: fmt(sv.revenue), sharePct: Math.round((sv.revenue / maxRevenue) * 100),
+      churnLabel: `${sv.churn.toFixed(1)}%`, churnColor: sv.churn >= 6 ? 'var(--danger)' : sv.churn >= 4 ? '#d9a418' : 'var(--money)',
+      growthLabel: pct(sv.growth), growthColor: sv.growth >= 0 ? 'var(--money)' : 'var(--danger)',
+    }));
+    const serviceSortTabs = [
+      { key: 'revenue', label: 'Receita' }, { key: 'churn', label: 'Churn' }, { key: 'growth', label: 'Cresc.' },
+    ].map((t) => ({
+      key: t.key, label: t.label, onClick: () => this.setServiceSort(t.key),
+      style: `min-height:26px;border-radius:5px;padding:0 9px;font-size:10.5px;font-weight:${sortKey === t.key ? '600' : '500'};border:none;cursor:pointer;background:${sortKey === t.key ? 'var(--card)' : 'transparent'};color:${sortKey === t.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${sortKey === t.key ? '0 1px 2px rgba(0,0,0,.05)' : 'none'}`,
+    }));
+
+    // Channels
+    const channelRows = CHANNELS.map((c) => ({
+      key: c.label, label: c.label, color: c.color, leads: c.leads,
+      convLabel: `${c.conv}%`, convColor: c.conv >= 35 ? 'var(--money)' : c.conv >= 22 ? '#d9a418' : 'var(--danger)',
+      revenueLabel: fmt(c.revenue),
+    }));
+
+    // Insights
+    const bestChannel = CHANNELS.slice().sort((a, b) => b.conv - a.conv)[0];
+    const worstService = SERVICE_PERF.slice().sort((a, b) => b.churn - a.churn)[0];
+    const bestService = SERVICE_PERF.slice().sort((a, b) => b.growth - a.growth)[0];
+    const insights = [
+      { title: `${bestChannel.label} converte ${bestChannel.conv}%.`, body: `É o melhor canal da base — vale concentrar esforço de aquisição aí.`, color: 'var(--money)' },
+      { title: `${worstService.label} tem o maior churn (${worstService.churn.toFixed(1)}%).`, body: 'Revise preço ou qualidade de entrega desse serviço.', color: 'var(--danger)' },
+      { title: `${bestService.label} cresce ${pct(bestService.growth)}.`, body: 'Bom candidato para upgrade dos clientes de planos menores.', color: 'var(--interactive)' },
+      { title: `Payback em ${paybackMonths.toFixed(1)} meses.`, body: `Com LTV/CAC de ${ltvRatio.toFixed(1)}x, o crescimento se paga rápido.`, color: '#d9a418' },
+      { title: `Retenção no M3 é ${avgM3Label}.`, body: 'Os três primeiros meses concentram a maior perda — reforce o onboarding.', color: '#5b3fd4' },
+    ];
+
+    // Drill-down
+    const drillMeta = {
+      alto: { title: 'Clientes com risco alto', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+      medio: { title: 'Clientes com risco moderado', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      baixo: { title: 'Clientes saudáveis', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+    };
+    const dm = s.drillKey ? drillMeta[s.drillKey] : null;
+    const drillList = s.drillKey ? RISK_CLIENTS[s.drillKey] : [];
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      planLabel: s.plan === 'master' ? 'Master' : 'Pro',
+      planToggleLabel: s.plan === 'master' ? 'Ver como Pro' : 'Ver como Master',
+      togglePlan: this.togglePlan, exportCsv: this.exportCsv,
+
+      rangeTabs, compareOn: s.compare, toggleCompare: this.toggleCompare,
+      compareTrackStyle: toggleTrack(s.compare), compareThumbStyle: toggleThumb(s.compare),
+      serviceMenuOpen: s.serviceMenuOpen, toggleServiceMenu: this.toggleServiceMenu, serviceOptions, resetServices: this.resetServices,
+      serviceSelectedLabel: `${activeServiceList.length}/${SERVICE_PERF.length}`,
+      rangeSummaryLabel: `${labels[0]} – ${labels[labels.length - 1]}`,
+
+      kpis, mrrBars, mrrLegend, mrrBreakdown, clearHover: this.clearHover,
+
+      forecastBars, forecast6mLabel: fmt(forecastRaw[forecastRaw.length - 1]),
+
+      healthScore, healthLabel: healthScore >= 75 ? 'carteira saudável' : healthScore >= 55 ? 'atenção moderada' : 'risco elevado',
+      healthIconBg: healthScore >= 75 ? 'var(--success-bg)' : healthScore >= 55 ? 'var(--warning-bg)' : 'var(--danger-bg)',
+      healthIconFg: healthScore >= 75 ? 'var(--success-fg)' : healthScore >= 55 ? 'var(--warning-fg)' : 'var(--danger-fg)',
+      riskBuckets,
+
+      cohortHeaders, cohortRows, avgM3Label,
+
+      unitEconomics, ltvRatioLabel: `${ltvRatio.toFixed(1)}x`,
+      ltvRatioColor: ltvRatio >= 3 ? 'var(--money)' : ltvRatio >= 1.5 ? '#d9a418' : 'var(--danger)',
+      ltvRatioVerdict: ltvVerdict.label,
+      ltvRatioBadgeStyle: `display:inline-block;border-radius:6px;padding:4px 9px;font-size:10.5px;font-weight:700;background:${ltvVerdict.bg};color:${ltvVerdict.fg}`,
+
+      serviceRows, serviceSortTabs, channelRows, insights,
+
+      drillOpen: !!s.drillKey, closeDrill: this.closeDrill, drillAction: this.drillAction,
+      drillTitle: dm ? dm.title : '', drillIconBg: dm ? dm.bg : 'var(--muted)', drillIconFg: dm ? dm.fg : 'var(--foreground)',
+      drillSubtitle: `${drillList.length} clientes · ${fmt(drillList.reduce((t, c) => t + c.value, 0))} em mensalidades`,
+      drillRows: drillList.map((c, i) => ({ key: i, name: c.name, initials: this.initialsOf(c.name), reason: c.reason, valueLabel: fmt2(c.value) })),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

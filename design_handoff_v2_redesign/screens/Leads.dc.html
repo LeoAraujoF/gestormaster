@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:minmax(0,1fr);}}
+    [data-board]{grid-template-columns:repeat(5,minmax(0,1fr));}
+    @media (max-width:1280px){[data-board]{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media (max-width:820px){[data-board]{grid-template-columns:minmax(0,1fr);}}
+    [data-split]{grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);}
+    @media (max-width:1024px){[data-split]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Central de automação') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Central de automação</a>
+          <a href="#" onclick="{{ toastNav('Aquecimento') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span>
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--interactive-fg)">
+              <span style="width:7px;height:7px;border-radius:9999px;background:var(--interactive);animation:pulseDot 2s ease-in-out infinite"></span>
+              Comunicação
+            </span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);border-radius:6px;padding:2px 7px">Beta</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Leads</h1>
+          <p style="margin:8px 0 0;max-width:600px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Acompanhe o funil de novos interessados, priorize contatos quentes e converta em clientes com um clique.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <button type="button" onclick="{{ openImport }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 19h16"></path></svg>
+            Importar CSV
+          </button>
+          <button type="button" onclick="{{ setViewToggle }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ isBoardView }}" hint-placeholder-val="{{ true }}"><path d="M4 6h16M4 12h16M4 18h10"></path></sc-if><sc-if value="{{ isListView }}" hint-placeholder-val="{{ false }}"><rect x="3" y="4" width="5" height="16" rx="1.4"></rect><rect x="10" y="4" width="5" height="16" rx="1.4"></rect><rect x="17" y="4" width="4" height="16" rx="1.4"></rect></sc-if></svg>
+            {{ viewToggleLabel }}
+          </button>
+          <button type="button" onclick="{{ openNewLead }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Novo lead
+          </button>
+        </div>
+      </section>
+
+      <!-- PAGE TABS -->
+      <nav style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;max-width:420px">
+          <sc-for list="{{ pageTabs }}" as="pt" hint-placeholder-count="2">
+            <button type="button" onclick="{{ pt.onClick }}" style="{{ pt.style }}">
+              {{ pt.label }}
+              <sc-if value="{{ pt.hasBadge }}"><span style="font-family:'Geist Mono',monospace;background:var(--danger-bg);color:var(--danger-fg);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">{{ pt.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </nav>
+
+      <sc-if value="{{ isFunnelPage }}" hint-placeholder-val="{{ true }}">
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Leads no funil</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ openLeadCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ newThisWeek }} entraram nesta semana</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg></span>
+          </div>
+        </div>
+        <button type="button" onclick="{{ filterHot }}" style="text-align:left;cursor:pointer;border-radius:16px;border:1px solid var(--warning-border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Leads quentes</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--warning-fg)">{{ hotCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Clique para filtrar</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4.2 0 7-2.7 7-6.5 0-4.8-5-7-5-11.5-3 1.5-4.5 4-4.5 6.5 0 1.5-1 2-1.7 1.2C6.4 10 6 8.8 6 8c-1.3 1.8-2 4-2 6.5C4 19 7.5 22 12 22Z"></path></svg></span>
+          </div>
+        </button>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Taxa de conversão</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--money)">{{ conversionRate }}%</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ wonCount }} convertidos de {{ totalLeadCount }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 10 11l4 4 6-9"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Receita potencial</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ pipelineValue }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Ticket médio {{ avgTicket }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v1M12 16v1M9 9.5c0-1.4 1.3-2.3 3-2.3s3 .8 3 2.1c0 2.7-6 1.3-6 4.1 0 1.3 1.3 2.1 3 2.1s3-.9 3-2.3"></path></svg></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FILTER BAR -->
+      <section style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px;flex:1 1 200px;min-width:180px;max-width:300px;border:1px solid var(--input);border-radius:7px;padding:0 10px;height:34px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-foreground);flex-shrink:0"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input value="{{ search }}" oninput="{{ setSearch }}" placeholder="Nome, telefone ou origem…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-size:12px;color:var(--foreground);font-family:inherit"/>
+        </div>
+        <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+        <div style="display:inline-flex;gap:4px;border-radius:8px;background:var(--muted);padding:3px;flex-shrink:0">
+          <sc-for list="{{ tempFilters }}" as="tf" hint-placeholder-count="4">
+            <button type="button" onclick="{{ tf.onClick }}" style="{{ tf.style }}"><span style="width:6px;height:6px;border-radius:9999px;background:{{ tf.dot }};flex-shrink:0"></span>{{ tf.label }}</button>
+          </sc-for>
+        </div>
+        <div style="position:relative;flex-shrink:0">
+          <button type="button" onclick="{{ toggleSourceMenu }}" style="display:flex;align-items:center;gap:7px;height:34px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:500;border:1px solid var(--input);background:var(--background);color:var(--foreground);cursor:pointer">
+            Origem <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ sourceSelectedLabel }}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{ sourceMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:38px;left:0;width:210px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;z-index:50">
+              <sc-for list="{{ sourceOptions }}" as="so" hint-placeholder-count="5">
+                <button type="button" onclick="{{ so.onClick }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:8px;border:none;background:none;border-radius:6px;font-size:12px;color:var(--foreground);cursor:pointer;text-align:left">
+                  <span style="{{ so.checkStyle }}"><sc-if value="{{ so.active }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                  <span style="flex:1">{{ so.label }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ so.count }}</span>
+                </button>
+              </sc-for>
+              <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+                <button type="button" onclick="{{ resetSources }}" style="width:100%;text-align:center;border:none;background:none;padding:6px;font-size:11px;font-weight:600;color:var(--interactive);cursor:pointer">Selecionar todas</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <button type="button" onclick="{{ onSelectAllFiltered }}" style="display:flex;align-items:center;gap:7px;height:34px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:500;border:1px solid var(--input);background:var(--background);color:var(--foreground);cursor:pointer;flex-shrink:0">
+          <span style="{{ selectAllStyle }}"><sc-if value="{{ allFilteredSelected }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+          Selecionar todos
+        </button>
+        <div style="flex:1"></div>
+        <span style="font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground);flex-shrink:0">{{ resultCountLabel }}</span>
+      </section>
+
+      <!-- SELECTION BAR -->
+      <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+        <section style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--interactive);background:var(--interactive-bg);padding:12px 16px;animation:dcpop .18s ease-out">
+          <span style="width:32px;height:32px;border-radius:9px;background:var(--card);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg></span>
+          <div style="min-width:0">
+            <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--interactive-fg)">{{ selectionLabel }}</p>
+            <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ selectionReachLabel }}</p>
+          </div>
+          <div style="flex:1"></div>
+          <button type="button" onclick="{{ clearSelection }}" style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;flex-shrink:0">Limpar</button>
+          <button type="button" onclick="{{ openBlast }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:7px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+            Disparar mensagem
+          </button>
+        </section>
+      </sc-if>
+
+      <!-- ===== BOARD VIEW ===== -->
+      <sc-if value="{{ isBoardView }}" hint-placeholder-val="{{ true }}">
+        <section data-board style="display:grid;gap:12px;align-items:start">
+          <sc-for list="{{ columns }}" as="col" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid var(--border);background:var(--muted);overflow:hidden;min-height:200px">
+              <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card)">
+                <span style="width:8px;height:8px;border-radius:9999px;background:{{ col.color }};flex-shrink:0"></span>
+                <span style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ col.label }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;background:var(--muted);color:var(--secondary-foreground);border-radius:5px;padding:2px 6px;flex-shrink:0">{{ col.count }}</span>
+                <sc-if value="{{ col.count }}" hint-placeholder-val="{{ true }}"><button type="button" onclick="{{ col.onSelectAll }}" style="{{ col.selectAllStyle }}">{{ col.selectAllLabel }}</button></sc-if>
+              </div>
+              <div style="flex:1;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto">
+                <sc-for list="{{ col.leads }}" as="lead" hint-placeholder-count="2">
+                  <button type="button" onclick="{{ lead.onOpen }}" style="text-align:left;cursor:pointer;border-radius:11px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:12px;display:flex;flex-direction:column;gap:9px">
+                    <div style="display:flex;align-items:flex-start;gap:9px">
+                      <span onclick="{{ lead.onSelect }}" style="{{ lead.checkStyle }}"><sc-if value="{{ lead.selected }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                      <span style="width:30px;height:30px;border-radius:9px;background:{{ lead.avatarBg }};color:{{ lead.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;flex-shrink:0">{{ lead.initials }}</span>
+                      <div style="flex:1;min-width:0">
+                        <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ lead.name }}</p>
+                        <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ lead.phone }}</p>
+                      </div>
+                      <span style="{{ lead.tempStyle }}">{{ lead.tempLabel }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                      <span style="font-size:10.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ lead.sourceLabel }} · {{ lead.serviceLabel }}</span>
+                      <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground);flex-shrink:0">{{ lead.valueLabel }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding-top:8px">
+                      <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:{{ lead.ageColor }}">{{ lead.ageLabel }}</span>
+                      <span style="display:flex;gap:3px">
+                        <sc-if value="{{ lead.canAdvance }}"><span onclick="{{ lead.onAdvance }}" title="Avançar etapa" style="width:24px;height:24px;border-radius:6px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></sc-if>
+                        <span onclick="{{ lead.onWhats }}" title="Abrir WhatsApp" style="width:24px;height:24px;border-radius:6px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></span>
+                      </span>
+                    </div>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ col.isEmpty }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:14px 4px;text-align:center;font-size:11px;color:var(--muted-foreground)">Nenhum lead nesta etapa</p>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+      </sc-if>
+
+      <!-- ===== LIST VIEW ===== -->
+      <sc-if value="{{ isListView }}" hint-placeholder-val="{{ false }}">
+        <section data-split style="display:grid;gap:16px;align-items:start">
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+            <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.5fr) 100px minmax(0,1fr) 92px 84px;gap:12px;align-items:center;padding:10px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">
+              <span style="padding-left:27px">Lead</span><span>Etapa</span><span data-hide-narrow="true">Origem</span><span style="text-align:right">Valor</span><span style="text-align:right">Ações</span>
+            </div>
+            <sc-for list="{{ listRows }}" as="row" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1.5fr) 100px minmax(0,1fr) 92px 84px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span onclick="{{ row.onSelect }}" style="{{ row.checkStyle }}"><sc-if value="{{ row.selected }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                <button type="button" onclick="{{ row.onOpen }}" style="flex:1;display:flex;align-items:center;gap:10px;min-width:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">
+                  <span style="width:32px;height:32px;border-radius:9px;background:{{ row.avatarBg }};color:{{ row.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;flex-shrink:0">{{ row.initials }}</span>
+                  <div style="min-width:0">
+                    <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.name }}</p>
+                    <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ row.phone }}</p>
+                  </div>
+                </button>
+                </div>
+                <span><span style="{{ row.stageStyle }}">{{ row.stageLabel }}</span></span>
+                <span data-hide-narrow="true" style="min-width:0;font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.sourceLabel }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:500;color:var(--foreground)">{{ row.valueLabel }}</span>
+                <div style="display:flex;gap:3px;justify-content:flex-end">
+                  <sc-if value="{{ row.canAdvance }}"><button type="button" onclick="{{ row.onAdvance }}" title="Avançar etapa" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></sc-if>
+                  <button type="button" onclick="{{ row.onWhats }}" title="WhatsApp" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--money);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></button>
+                  <button type="button" onclick="{{ row.onDelete }}" title="Descartar" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"></path></svg></button>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:56px 16px;text-align:center"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhum lead encontrado</p><p style="margin:4px 0 0;font-size:11.5px;color:var(--muted-foreground)">Ajuste a busca ou os filtros de origem e temperatura.</p></div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8Z"></path></svg></span>
+                <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Funil por etapa</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Distribuição dos leads filtrados</p></div>
+              </div>
+              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ funnelRows }}" as="fr" hint-placeholder-count="5">
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:11.5px;color:var(--muted-foreground)">{{ fr.label }}</span><span style="font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;color:var(--foreground)">{{ fr.count }}</span></div>
+                    <div style="margin-top:5px;height:6px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ fr.color }};width:{{ fr.pct }}%;transition:width .5s ease-out"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </article>
+
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg></span>
+                <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Origens</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">De onde vêm seus leads</p></div>
+              </div>
+              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ sourceRows }}" as="sr" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:8px;height:8px;border-radius:3px;background:{{ sr.color }};flex-shrink:0"></span>
+                    <span style="flex:1;min-width:0;font-size:11.5px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sr.label }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground);flex-shrink:0">{{ sr.pct }}%</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;color:var(--foreground);flex-shrink:0;min-width:20px;text-align:right">{{ sr.count }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </article>
+          </div>
+        </section>
+      </sc-if>
+      </sc-if>
+
+      <!-- ===== DISPATCH SUBPAGE ===== -->
+      <sc-if value="{{ isDispatchPage }}" hint-placeholder-val="{{ false }}">
+        <section data-metric-grid style="display:grid;gap:12px">
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Concluídos</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--money)">{{ sentTotal }}</p>
+            <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ deliveryRate }}% de entrega</p>
+          </div>
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Na fila</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--warning-fg)">{{ queuedTotal }}</p>
+            <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Intervalo médio {{ avgDelay }}s</p>
+          </div>
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Erros</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--danger)">{{ failedTotal }}</p>
+            <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Precisam de reenvio</p>
+          </div>
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Limite diário</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ dailyCap }}</p>
+            <div style="margin-top:8px;height:5px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ capBarColor }};width:{{ capUsedPct }}%;transition:width .5s ease-out"></div></div>
+            <p style="margin:6px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ capUsedLabel }}</p>
+          </div>
+        </section>
+
+        <section data-split style="display:grid;gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div style="display:inline-flex;gap:4px;border-radius:9px;background:var(--muted);padding:4px">
+                <sc-for list="{{ dispatchFilters }}" as="df" hint-placeholder-count="4">
+                  <button type="button" onclick="{{ df.onClick }}" style="{{ df.style }}">{{ df.label }} <span style="font-family:'Geist Mono',monospace;opacity:.7">{{ df.count }}</span></button>
+                </sc-for>
+              </div>
+              <button type="button" onclick="{{ retryAllFailed }}" style="height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--success-bg);background:var(--success-bg);color:var(--success-fg);font-size:12px;font-weight:600;cursor:pointer">Reenviar erros</button>
+            </div>
+
+            <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+              <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 78px 92px 66px;gap:12px;align-items:center;padding:10px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">
+                <span>Destinatário</span><span data-hide-narrow="true">Campanha</span><span>Hora</span><span>Status</span><span style="text-align:right">Ações</span>
+              </div>
+              <sc-for list="{{ dispatchRows }}" as="d" hint-placeholder-count="8">
+                <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 78px 92px 66px;gap:12px;align-items:center">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                      <span style="width:30px;height:30px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ d.initials }}</span>
+                      <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</p><p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ d.chip }}</p></div>
+                    </div>
+                    <span data-hide-narrow="true" style="min-width:0;font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.campaign }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ d.timeLabel }}</span>
+                    <span><span style="{{ d.statusStyle }}">{{ d.statusLabel }}</span></span>
+                    <div style="display:flex;gap:3px;justify-content:flex-end">
+                      <sc-if value="{{ d.canRetry }}"><button type="button" onclick="{{ d.onRetry }}" title="Reenviar" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--money);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-2.7-6.2M21 3v5.3h-5.3"></path></svg></button></sc-if>
+                      <sc-if value="{{ d.canCancel }}"><button type="button" onclick="{{ d.onCancel }}" title="Cancelar" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--warning-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6"></path></svg></button></sc-if>
+                    </div>
+                  </div>
+                  <sc-if value="{{ d.hasError }}">
+                    <p style="margin:8px 0 0 40px;font-size:11px;color:var(--danger-fg);background:var(--danger-bg);border-radius:6px;padding:6px 9px;display:inline-block">{{ d.error }}</p>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ dispatchEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:56px 16px;text-align:center"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhum envio nesta fila</p><p style="margin:4px 0 0;font-size:11.5px;color:var(--muted-foreground)">Os disparos aparecem aqui conforme são processados.</p></div>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.8A8 8 0 0 0 4 10.2C4 17.5 12 22 12 22Z"></path></svg></span>
+                  <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Antibanimento</h3><p style="margin:1px 0 0;font-size:10.5px;font-weight:600;color:{{ antiBanRiskColor }}">{{ antiBanRiskLabel }}</p></div>
+                </div>
+                <button type="button" onclick="{{ toggleAntiBan }}" style="{{ antiBanTrackStyle }}"><span style="{{ antiBanThumbStyle }}"></span></button>
+              </div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+                <div>
+                  <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Atraso entre envios</p>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                    <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                      <button type="button" onclick="{{ delayMinDown }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                      <span style="flex:1.2;text-align:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600">{{ dispatchDelayMin }}s</span>
+                      <button type="button" onclick="{{ delayMinUp }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                    </div>
+                    <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                      <button type="button" onclick="{{ delayMaxDown }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                      <span style="flex:1.2;text-align:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600">{{ dispatchDelayMax }}s</span>
+                      <button type="button" onclick="{{ delayMaxUp }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                    </div>
+                  </div>
+                  <p style="margin:6px 0 0;font-size:10px;color:var(--muted-foreground)">Mínimo e máximo — o intervalo real é sorteado nessa faixa.</p>
+                </div>
+                <div>
+                  <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Limite diário</p>
+                  <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input);width:140px">
+                    <button type="button" onclick="{{ dailyCapDown }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                    <span style="width:52px;text-align:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600">{{ dailyCap }}</span>
+                    <button type="button" onclick="{{ dailyCapUp }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                  </div>
+                </div>
+                <div>
+                  <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Lotes</p>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                    <div>
+                      <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                        <button type="button" onclick="{{ batchSizeDown }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                        <span style="flex:1.2;text-align:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600">{{ batchSize }}</span>
+                        <button type="button" onclick="{{ batchSizeUp }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                      </div>
+                      <p style="margin:5px 0 0;font-size:9.5px;color:var(--muted-foreground)">msgs por lote</p>
+                    </div>
+                    <div>
+                      <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                        <button type="button" onclick="{{ batchPauseDown }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                        <span style="flex:1.2;text-align:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600">{{ batchPauseMin }}m</span>
+                        <button type="button" onclick="{{ batchPauseUp }}" style="flex:1;height:32px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                      </div>
+                      <p style="margin:5px 0 0;font-size:9.5px;color:var(--muted-foreground)">pausa entre lotes</p>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onclick="{{ toggleRandomOrder }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;padding:0;text-align:left">
+                  <span style="{{ randomTrackStyle }}"><span style="{{ randomThumbStyle }}"></span></span>
+                  <span style="font-size:11.5px;color:var(--foreground)">Ordem aleatória dos destinatários</span>
+                </button>
+                <button type="button" onclick="{{ toggleBusinessHours }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;padding:0;text-align:left">
+                  <span style="{{ hoursTrackStyle }}"><span style="{{ hoursThumbStyle }}"></span></span>
+                  <span style="font-size:11.5px;color:var(--foreground)">Enviar só em horário comercial</span>
+                </button>
+                <button type="button" onclick="{{ saveAntiBan }}" style="height:34px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">Salvar configuração</button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- LEAD DETAIL PANEL -->
+  <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.36);z-index:88" onclick="{{ closeDetail }}"></div>
+    <aside style="position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;z-index:89;background:var(--card);border-left:1px solid var(--border);box-shadow:-16px 0 48px rgba(0,0,0,.16);display:flex;flex-direction:column;animation:dcpop .2s ease-out">
+      <div style="flex-shrink:0;display:flex;align-items:flex-start;gap:11px;border-bottom:1px solid var(--border);padding:18px 20px">
+        <span style="width:40px;height:40px;border-radius:12px;background:{{ detail.avatarBg }};color:{{ detail.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0">{{ detail.initials }}</span>
+        <div style="flex:1;min-width:0">
+          <h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ detail.name }}</h3>
+          <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ detail.phone }}</p>
+        </div>
+        <button type="button" onclick="{{ closeDetail }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="{{ detail.tempStyle }}">{{ detail.tempLabel }}</span>
+          <span style="{{ detail.stageStyle }}">{{ detail.stageLabel }}</span>
+          <span style="display:inline-block;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground)">{{ detail.sourceLabel }}</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:12px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Valor estimado</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:var(--foreground)">{{ detail.valueLabel }}</p>
+          </div>
+          <div style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:12px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">No funil há</p>
+            <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:{{ detail.ageColor }}">{{ detail.ageLabel }}</p>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Interesse</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:10px;border:1px solid var(--border);padding:12px 14px">
+            <span style="font-size:12.5px;font-weight:500;color:var(--foreground)">{{ detail.serviceLabel }}</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ detail.screensLabel }}</span>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Mover para etapa</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+            <sc-for list="{{ detailStageOptions }}" as="dso" hint-placeholder-count="5">
+              <button type="button" onclick="{{ dso.onSelect }}" style="{{ dso.style }}">{{ dso.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Histórico</p>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <sc-for list="{{ detail.timeline }}" as="ev" hint-placeholder-count="3">
+              <div style="display:flex;gap:11px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+                  <span style="width:9px;height:9px;border-radius:9999px;background:{{ ev.color }};margin-top:5px"></span>
+                  <sc-if value="{{ ev.hasLine }}"><span style="flex:1;width:1px;background:var(--border);min-height:22px"></span></sc-if>
+                </div>
+                <div style="padding-bottom:14px;min-width:0">
+                  <p style="margin:0;font-size:12px;font-weight:500;color:var(--foreground)">{{ ev.label }}</p>
+                  <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ ev.timeLabel }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Anotação</p>
+          <textarea value="{{ detail.note }}" oninput="{{ setDetailNote }}" rows="3" placeholder="Registre o que foi combinado…" style="width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+        </div>
+      </div>
+
+      <div style="flex-shrink:0;display:flex;gap:8px;border-top:1px solid var(--border);padding:14px 20px">
+        <button type="button" onclick="{{ detailWhats }}" style="flex:1;height:38px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>
+          WhatsApp
+        </button>
+        <button type="button" onclick="{{ openConvert }}" style="flex:1.3;height:38px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg>
+          Converter em cliente
+        </button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- SMART IMPORT MODAL -->
+  <sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:95;overflow:auto" onclick="{{ closeImport }}">
+      <div style="width:100%;max-width:660px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 19h16"></path></svg></span>
+          <div style="flex:1;min-width:0">
+            <h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Importação inteligente</h3>
+            <p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">
+              <sc-if value="{{ importStep1 }}" hint-placeholder-val="{{ true }}">Passo 1 de 2 · Cole o conteúdo do arquivo</sc-if>
+              <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">Passo 2 de 2 · Confirme as colunas detectadas</sc-if>
+            </p>
+          </div>
+          <button type="button" onclick="{{ closeImport }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+
+        <div style="max-height:64vh;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ importStep1 }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px dashed var(--input);border-radius:11px;padding:18px;text-align:center">
+              <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Arraste o arquivo .csv aqui</p>
+              <p style="margin:5px 0 0;font-size:11px;color:var(--muted-foreground)">ou cole o conteúdo no campo abaixo — detectamos o separador e as colunas automaticamente</p>
+              <button type="button" onclick="{{ loadSampleCsv }}" style="margin-top:11px;height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">Usar exemplo</button>
+            </div>
+            <textarea value="{{ importRaw }}" oninput="{{ setImportRaw }}" rows="8" placeholder="Nome;Telefone;Origem;Plano;Valor" style="width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical"></textarea>
+          </sc-if>
+
+          <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;border-radius:10px;border:1px solid var(--success-bg);background:var(--success-bg);padding:11px 13px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success-fg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12l5 5L20 6"></path></svg>
+              <p style="margin:0;font-size:11.5px;font-weight:600;color:var(--success-fg)">{{ importDetectedLabel }} · {{ importRowCount }} linhas encontradas</p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ importColumns }}" as="ic" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:11px;border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:10px 12px">
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ic.header }}</p><span style="{{ ic.badgeStyle }}">{{ ic.badgeLabel }}</span></div>
+                    <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ex: {{ ic.sample }}</p>
+                  </div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                  <select onchange="{{ ic.onChange }}" style="width:170px;flex-shrink:0;height:34px;border:1px solid var(--input);border-radius:7px;padding:0 9px;font-size:11.5px;background:var(--card);color:var(--foreground)">
+                    <sc-for list="{{ ic.fieldOptions }}" as="fo" hint-placeholder-count="8"><option value="{{ fo.value }}" selected="{{ fo.selected }}">{{ fo.label }}</option></sc-for>
+                  </select>
+                </div>
+              </sc-for>
+            </div>
+
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Prévia</p>
+              <div style="border:1px solid var(--border);border-radius:9px;overflow:auto">
+                <div style="display:flex;gap:0;background:var(--muted);border-bottom:1px solid var(--border)">
+                  <sc-for list="{{ importHeaders }}" as="ih" hint-placeholder-count="5">
+                    <span style="min-width:118px;flex:1;padding:8px 10px;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:{{ ih.dim }}">{{ ih.label }}</span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ previewRows }}" as="pr" hint-placeholder-count="4">
+                  <div style="display:flex;gap:0;border-bottom:1px solid var(--border)">
+                    <sc-for list="{{ pr.cells }}" as="pc" hint-placeholder-count="5">
+                      <span style="min-width:118px;flex:1;padding:8px 10px;font-size:11px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:{{ pc.dim }}">{{ pc.value }}</span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <sc-if value="{{ importReady }}" hint-placeholder-val="{{ true }}"></sc-if>
+            <p style="margin:0;font-size:11px;color:var(--danger-fg)">{{ importBlockedLabel }}</p>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onclick="{{ backImportStep }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer;margin-right:auto">Voltar</button>
+          </sc-if>
+          <button type="button" onclick="{{ closeImport }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <sc-if value="{{ importStep1 }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onclick="{{ analyzeCsv }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Analisar colunas</button>
+          </sc-if>
+          <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onclick="{{ confirmImport }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ importCtaLabel }}</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- BLAST MODAL -->
+  <sc-if value="{{ blastOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:95;overflow:auto" onclick="{{ closeBlast }}">
+      <div style="width:100%;max-width:520px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Disparar mensagem</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ selectionLabel }} · {{ selectionReachLabel }}</p></div>
+          <button type="button" onclick="{{ closeBlast }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+
+        <div style="max-height:66vh;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Modelo</p>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ blastTemplates }}" as="bt" hint-placeholder-count="4"><button type="button" onclick="{{ bt.onSelect }}" style="{{ bt.style }}">{{ bt.label }}</button></sc-for>
+            </div>
+          </div>
+
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Mensagem</p>
+            <textarea value="{{ blastMessage }}" oninput="{{ setBlastMessage }}" rows="4" style="width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ blastVarChips }}" as="bv" hint-placeholder-count="4"><button type="button" onclick="{{ bv.onInsert }}" style="height:26px;padding:0 9px;border-radius:6px;border:1px solid var(--border);background:var(--muted);color:var(--secondary-foreground);font-family:'Geist Mono',monospace;font-size:10.5px;cursor:pointer">{{ bv.label }}</button></sc-for>
+              </div>
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ blastCharCount }}</span>
+            </div>
+          </div>
+
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Prévia · {{ blastPreviewName }}</p>
+            <div style="border-radius:10px;background:var(--muted);border:1px solid var(--border);padding:12px 14px">
+              <div style="max-width:88%;border-radius:10px 10px 10px 3px;background:var(--success-bg);padding:9px 11px">
+                <p style="margin:0;font-size:12px;line-height:1.55;color:var(--foreground);white-space:pre-wrap">{{ blastPreview }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Envio</p>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ blastScheduleOptions }}" as="bs" hint-placeholder-count="2"><button type="button" onclick="{{ bs.onSelect }}" style="{{ bs.style }}">{{ bs.label }}</button></sc-for>
+            </div>
+            <sc-if value="{{ blastIsScheduled }}" hint-placeholder-val="{{ false }}">
+              <input value="{{ blastTime }}" type="time" oninput="{{ setBlastTime }}" style="margin-top:9px;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+            </sc-if>
+            <p style="margin:9px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ blastSpacingLabel }}</p>
+          </div>
+
+          <sc-if value="{{ blastNoReach }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid var(--danger-border);background:var(--danger-bg);padding:11px 13px"><p style="margin:0;font-size:11.5px;color:var(--danger-fg)">Nenhum lead selecionado possui WhatsApp cadastrado.</p></div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeBlast }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmBlast }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ blastCtaLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- NEW LEAD MODAL -->
+  <sc-if value="{{ newLeadOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto" onclick="{{ closeNewLead }}">
+      <div style="width:100%;max-width:480px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.24);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Novo lead</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Entra no funil na etapa "Novo"</p></div>
+          <button type="button" onclick="{{ closeNewLead }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input value="{{ form.name }}" oninput="{{ setFormName }}" placeholder="Nome do lead *" style="grid-column:span 2;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+            <input value="{{ form.phone }}" oninput="{{ setFormPhone }}" placeholder="WhatsApp *" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+            <input value="{{ form.value }}" oninput="{{ setFormValue }}" placeholder="Valor estimado" style="border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Origem</p>
+            <select onchange="{{ setFormSource }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+              <sc-for list="{{ formSourceOptions }}" as="fso" hint-placeholder-count="5"><option value="{{ fso.value }}" selected="{{ fso.selected }}">{{ fso.label }}</option></sc-for>
+            </select>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviço de interesse</p>
+            <select onchange="{{ setFormService }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+              <sc-for list="{{ formServiceOptions }}" as="fsv" hint-placeholder-count="5"><option value="{{ fsv.value }}" selected="{{ fsv.selected }}">{{ fsv.label }}</option></sc-for>
+            </select>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Temperatura</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <sc-for list="{{ formTempOptions }}" as="fto" hint-placeholder-count="3"><button type="button" onclick="{{ fto.onSelect }}" style="{{ fto.style }}">{{ fto.label }}</button></sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeNewLead }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitNewLead }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Adicionar lead</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CONVERT MODAL -->
+  <sc-if value="{{ convertOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:95" onclick="{{ closeConvert }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.28);overflow:hidden" onclick="{{ stop }}">
+        <div style="padding:20px 22px">
+          <span style="width:38px;height:38px;border-radius:11px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+          <h3 style="margin:14px 0 0;font-size:15px;font-weight:600;color:var(--foreground)">Converter {{ convertName }} em cliente?</h3>
+          <p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted-foreground)">O lead sai do funil e um cadastro de cliente é criado com o serviço e valor informados. Você poderá completar os dados na tela de Clientes.</p>
+          <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:10px;background:var(--muted);padding:12px 14px">
+            <div><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Serviço</p><p style="margin:3px 0 0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ convertService }}</p></div>
+            <div style="text-align:right"><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Valor</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;color:var(--money)">{{ convertValue }}</p></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeConvert }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmConvert }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Converter</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const STAGES = [
+  { key: 'novo', label: 'Novo', color: '#4055c8' },
+  { key: 'contato', label: 'Em contato', color: '#5b3fd4' },
+  { key: 'teste', label: 'Em teste', color: '#d9a418' },
+  { key: 'negociacao', label: 'Negociação', color: '#c47a18' },
+  { key: 'ganho', label: 'Convertido', color: '#2e7d54' },
+];
+const STAGE_META = {
+  novo: { bg: 'var(--interactive-bg)', fg: 'var(--interactive-fg)' },
+  contato: { bg: '#efe9ff', fg: '#5b3fd4' },
+  teste: { bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+  negociacao: { bg: '#f7ead6', fg: '#8a5f0e' },
+  ganho: { bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+};
+const TEMPS = [
+  { key: 'quente', label: 'Quente', dot: 'var(--danger)', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+  { key: 'morno', label: 'Morno', dot: '#d9a418', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+  { key: 'frio', label: 'Frio', dot: 'var(--interactive)', bg: 'var(--interactive-bg)', fg: 'var(--interactive-fg)' },
+];
+const SOURCES = [
+  { key: 'whatsapp', label: 'WhatsApp', color: '#2e7d54' },
+  { key: 'indicacao', label: 'Indicação', color: '#4055c8' },
+  { key: 'instagram', label: 'Instagram', color: '#5b3fd4' },
+  { key: 'grupo', label: 'Grupo/Telegram', color: '#d9a418' },
+  { key: 'site', label: 'Site/Portal', color: '#6f6e69' },
+];
+const SERVICES = ['IPTV Ultra', 'IPTV Gold', 'Combo Streaming', 'Netflix Premium', 'Disney+ Premium', 'VPN Premium'];
+
+function buildLeads() {
+  const raw = [
+    ['Rodrigo Alencar', '+55 11 98221-4410', 'whatsapp', 'IPTV Ultra', 2, 79.9, 'quente', 'negociacao', 2],
+    ['Camila Ferraz', '+55 21 99730-1188', 'indicacao', 'Combo Streaming', 3, 69.9, 'quente', 'teste', 4],
+    ['Thiago Barros', '+55 31 98844-7702', 'instagram', 'IPTV Gold', 1, 54.9, 'morno', 'contato', 6],
+    ['Larissa Monteiro', '+55 11 97009-5521', 'grupo', 'Netflix Premium', 1, 45.9, 'quente', 'novo', 1],
+    ['Eduardo Prates', '+55 41 98330-6674', 'site', 'IPTV Ultra', 4, 89.9, 'frio', 'contato', 12],
+    ['Vanessa Lopes', '+55 85 99112-3390', 'whatsapp', 'Disney+ Premium', 1, 33.9, 'morno', 'novo', 2],
+    ['Bruno Cardoso', '+55 51 98776-2214', 'indicacao', 'IPTV Gold', 2, 59.9, 'quente', 'negociacao', 3],
+    ['Priscila Dantas', '+55 62 99441-8807', 'instagram', 'VPN Premium', 1, 19.9, 'frio', 'novo', 9],
+    ['Marcelo Vieira', '+55 11 98003-1129', 'grupo', 'Combo Streaming', 2, 64.9, 'morno', 'teste', 5],
+    ['Sabrina Rocha', '+55 27 99658-4432', 'whatsapp', 'IPTV Ultra', 3, 84.9, 'quente', 'ganho', 7],
+    ['Anderson Melo', '+55 71 98220-7745', 'site', 'IPTV Gold', 1, 54.9, 'frio', 'contato', 15],
+    ['Juliana Aguiar', '+55 11 99334-2201', 'indicacao', 'Netflix Premium', 2, 55.9, 'morno', 'ganho', 11],
+  ];
+  return raw.map((r, i) => ({
+    id: 'l' + i, name: r[0], phone: r[1], source: r[2], service: r[3], screens: r[4],
+    value: r[5], temp: r[6], stage: r[7], ageDays: r[8], note: '',
+  }));
+}
+
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+const CSV_FIELDS = [
+  { key: 'ignore', label: 'Ignorar coluna' },
+  { key: 'name', label: 'Nome' },
+  { key: 'phone', label: 'WhatsApp' },
+  { key: 'email', label: 'E-mail' },
+  { key: 'source', label: 'Origem' },
+  { key: 'service', label: 'Serviço de interesse' },
+  { key: 'value', label: 'Valor estimado' },
+  { key: 'note', label: 'Observação' },
+];
+const HEADER_HINTS = {
+  name: ['nome', 'name', 'cliente', 'lead', 'contato'],
+  phone: ['whats', 'telefone', 'fone', 'celular', 'phone', 'numero', 'número', 'tel'],
+  email: ['email', 'e-mail', 'mail'],
+  source: ['origem', 'source', 'canal', 'fonte'],
+  service: ['servico', 'serviço', 'plano', 'produto', 'interesse', 'service'],
+  value: ['valor', 'value', 'preco', 'preço', 'ticket', 'mensalidade'],
+  note: ['obs', 'observ', 'nota', 'note', 'coment'],
+};
+const SAMPLE_CSV = `Nome completo;Celular;E-mail;Canal de origem;Plano de interesse;Valor mensal;Observações
+Rafael Queiroz;+55 11 98120-7741;rafael.q@email.com;Instagram;IPTV Ultra;79,90;Pediu teste de 24h
+Beatriz Nogueira;+55 21 99450-2210;bia.nog@email.com;Indicação;Combo Streaming;69,90;Indicada pela Camila
+Otávio Simões;+55 31 98771-3345;;WhatsApp;IPTV Gold;54,90;Só responde à noite
+Helena Braga;+55 41 99002-6618;helena.b@email.com;Site;Netflix Premium;45,90;
+Gustavo Rezende;+55 51 98334-1102;gu.rez@email.com;Grupo;IPTV Ultra;84,90;Quer 3 telas`;
+
+function detectField(header, taken) {
+  const h = header.toLowerCase().trim();
+  for (const [field, hints] of Object.entries(HEADER_HINTS)) {
+    if (taken.has(field)) continue;
+    if (hints.some((hint) => h.includes(hint))) return field;
+  }
+  return 'ignore';
+}
+function parseCsv(raw) {
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return { headers: [], rows: [] };
+  const delim = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ';' : ',';
+  const split = (line) => line.split(delim).map((c) => c.trim().replace(/^"|"$/g, ''));
+  return { headers: split(lines[0]), rows: lines.slice(1).map(split) };
+}
+function buildDispatches() {
+  const names = ['Rodrigo Alencar', 'Camila Ferraz', 'Thiago Barros', 'Larissa Monteiro', 'Eduardo Prates', 'Vanessa Lopes', 'Bruno Cardoso', 'Priscila Dantas', 'Marcelo Vieira', 'Sabrina Rocha', 'Anderson Melo', 'Juliana Aguiar'];
+  const statuses = ['sent', 'sent', 'sent', 'failed', 'sent', 'queued', 'sent', 'queued', 'sent', 'failed', 'sent', 'queued'];
+  const campaigns = ['Oferecer teste', 'Enviar preços', 'Retomar contato', 'Promoção'];
+  const errors = ['Número inválido no WhatsApp', 'Chip desconectado durante o envio'];
+  const now = new Date();
+  return names.map((name, i) => ({
+    id: 'd' + i, name, status: statuses[i], campaign: campaigns[i % campaigns.length],
+    time: new Date(now.getTime() - i * 14 * 60000),
+    error: statuses[i] === 'failed' ? errors[i % errors.length] : '',
+    chip: `Chip 0${(i % 3) + 1}`,
+  }));
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], view: 'board', leads: buildLeads(),
+    search: '', tempFilter: 'all', activeSources: SOURCES.reduce((a, s) => ({ ...a, [s.key]: true }), {}), sourceMenuOpen: false,
+    detailId: null, newLeadOpen: false, convertOpen: false,
+    page: 'funnel',
+    importOpen: false, importStep: 1, importRaw: '', importMapping: {}, importSkipFirst: true,
+    dispatchFilter: 'all', dispatchDelayMin: 25, dispatchDelayMax: 90,
+    antiBanEnabled: true, dailyCap: 120, batchSize: 20, batchPauseMin: 15, randomOrder: true, businessHoursOnly: true,
+    dispatches: buildDispatches(),
+    selectedIds: {}, blastOpen: false,
+    blastMessage: 'Olá {{primeiro_nome}}! Vi que você se interessou pelo nosso serviço. Quer testar 24h grátis?',
+    blastTemplate: 'teste', blastSchedule: 'now', blastTime: '09:00', blastSent: false,
+    form: { name: '', phone: '', value: '', source: 'whatsapp', service: SERVICES[0], temp: 'morno' },
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3000);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  setViewToggle = () => this.setState((s) => ({ view: s.view === 'board' ? 'list' : 'board' }));
+  setSearch = (e) => this.setState({ search: e.target.value });
+  setTempFilter(t) { this.setState({ tempFilter: t }); }
+  filterHot = () => { this.setState({ tempFilter: 'quente' }); this.addToast({ title: 'Filtrado por leads quentes.' }); };
+  toggleSourceMenu = () => this.setState((s) => ({ sourceMenuOpen: !s.sourceMenuOpen }));
+  toggleSource(key) { this.setState((s) => ({ activeSources: { ...s.activeSources, [key]: !s.activeSources[key] } })); }
+  resetSources = () => this.setState({ activeSources: SOURCES.reduce((a, s) => ({ ...a, [s.key]: true }), {}) });
+
+  openDetail(id) { this.setState({ detailId: id }); }
+  closeDetail = () => this.setState({ detailId: null });
+  setDetailNote = (e) => {
+    const note = e.target.value;
+    this.setState((s) => ({ leads: s.leads.map((l) => l.id === s.detailId ? { ...l, note } : l) }));
+  };
+  setStage(id, stage) {
+    this.setState((s) => ({ leads: s.leads.map((l) => l.id === id ? { ...l, stage } : l) }));
+    const lead = this.state.leads.find((l) => l.id === id);
+    const label = STAGES.find((st) => st.key === stage).label;
+    this.addToast({ title: `${lead.name} movido para "${label}".` });
+  }
+  advance(id) {
+    const lead = this.state.leads.find((l) => l.id === id);
+    const idx = STAGES.findIndex((s) => s.key === lead.stage);
+    if (idx >= STAGES.length - 1) return;
+    this.setStage(id, STAGES[idx + 1].key);
+  }
+  removeLead(id) {
+    const lead = this.state.leads.find((l) => l.id === id);
+    this.setState((s) => ({ leads: s.leads.filter((l) => l.id !== id), detailId: s.detailId === id ? null : s.detailId }));
+    this.addToast({ title: `${lead.name} descartado do funil.` });
+  }
+  whats(id) {
+    const lead = this.state.leads.find((l) => l.id === id);
+    this.addToast({ title: `Abriria o WhatsApp de ${lead.name}.` });
+  }
+
+  openNewLead = () => this.setState({ newLeadOpen: true, form: { name: '', phone: '', value: '', source: 'whatsapp', service: SERVICES[0], temp: 'morno' } });
+  closeNewLead = () => this.setState({ newLeadOpen: false });
+  setFormName = (e) => this.setState((s) => ({ form: { ...s.form, name: e.target.value } }));
+  setFormPhone = (e) => this.setState((s) => ({ form: { ...s.form, phone: e.target.value } }));
+  setFormValue = (e) => this.setState((s) => ({ form: { ...s.form, value: e.target.value } }));
+  setFormSource = (e) => this.setState((s) => ({ form: { ...s.form, source: e.target.value } }));
+  setFormService = (e) => this.setState((s) => ({ form: { ...s.form, service: e.target.value } }));
+  setFormTemp(t) { this.setState((s) => ({ form: { ...s.form, temp: t } })); }
+  submitNewLead = () => {
+    const f = this.state.form;
+    if (!f.name.trim() || !f.phone.trim()) { this.addToast({ title: 'Informe nome e WhatsApp do lead.' }); return; }
+    const value = Number(String(f.value).replace(',', '.')) || 0;
+    this.setState((s) => ({
+      leads: [{ id: 'l' + Date.now(), name: f.name, phone: f.phone, source: f.source, service: f.service, screens: 1, value, temp: f.temp, stage: 'novo', ageDays: 0, note: '' }, ...s.leads],
+      newLeadOpen: false,
+    }));
+    this.addToast({ title: 'Lead adicionado ao funil.' });
+  };
+
+  openConvert = () => this.setState({ convertOpen: true });
+  closeConvert = () => this.setState({ convertOpen: false });
+  confirmConvert = () => {
+    const lead = this.state.leads.find((l) => l.id === this.state.detailId);
+    this.setState((s) => ({ leads: s.leads.map((l) => l.id === s.detailId ? { ...l, stage: 'ganho' } : l), convertOpen: false, detailId: null }));
+    this.addToast({ title: `${lead.name} convertido em cliente.` });
+  };
+
+  initialsOf(name) { return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
+
+  toggleSelect(id, e) {
+    if (e) e.stopPropagation();
+    this.setState((s) => {
+      const next = { ...s.selectedIds };
+      if (next[id]) delete next[id]; else next[id] = true;
+      return { selectedIds: next };
+    });
+  }
+  selectAllFiltered(ids) {
+    const allSelected = ids.length > 0 && ids.every((id) => this.state.selectedIds[id]);
+    this.setState({ selectedIds: allSelected ? {} : ids.reduce((a, id) => ({ ...a, [id]: true }), {}) });
+  }
+  clearSelection = () => this.setState({ selectedIds: {} });
+  selectStage(stageKey, ids, e) {
+    if (e) e.stopPropagation();
+    this.setState((s) => {
+      const next = { ...s.selectedIds };
+      const allIn = ids.length > 0 && ids.every((id) => next[id]);
+      ids.forEach((id) => { if (allIn) delete next[id]; else next[id] = true; });
+      return { selectedIds: next };
+    });
+  }
+  setPage(p) { this.setState({ page: p }); }
+
+  openImport = () => this.setState({ importOpen: true, importStep: 1, importRaw: '', importMapping: {}, importSkipFirst: true });
+  closeImport = () => this.setState({ importOpen: false });
+  setImportRaw = (e) => this.setState({ importRaw: e.target.value });
+  loadSampleCsv = () => this.setState({ importRaw: SAMPLE_CSV });
+  analyzeCsv = () => {
+    const { headers } = parseCsv(this.state.importRaw);
+    if (!headers.length) { this.addToast({ title: 'Cole o conteúdo do CSV para continuar.' }); return; }
+    const taken = new Set();
+    const mapping = {};
+    headers.forEach((h, i) => {
+      const field = detectField(h, taken);
+      if (field !== 'ignore') taken.add(field);
+      mapping[i] = field;
+    });
+    this.setState({ importMapping: mapping, importStep: 2 });
+    const detected = Object.values(mapping).filter((f) => f !== 'ignore').length;
+    this.addToast({ title: `${detected} de ${headers.length} colunas identificadas automaticamente.` });
+  };
+  setColumnField(idx, e) {
+    const value = e.target.value;
+    this.setState((s) => ({ importMapping: { ...s.importMapping, [idx]: value } }));
+  }
+  toggleSkipFirst = () => this.setState((s) => ({ importSkipFirst: !s.importSkipFirst }));
+  backImportStep = () => this.setState({ importStep: 1 });
+  confirmImport = () => {
+    const { headers, rows } = parseCsv(this.state.importRaw);
+    const mapping = this.state.importMapping;
+    const fieldIdx = {};
+    Object.entries(mapping).forEach(([idx, field]) => { if (field !== 'ignore') fieldIdx[field] = Number(idx); });
+    if (fieldIdx.name === undefined || fieldIdx.phone === undefined) { this.addToast({ title: 'Mapeie ao menos Nome e WhatsApp.' }); return; }
+    const sourceKeyOf = (label) => {
+      const l = String(label || '').toLowerCase();
+      const hit = SOURCES.find((src) => l.includes(src.label.toLowerCase().split('/')[0]));
+      return hit ? hit.key : 'site';
+    };
+    const imported = rows.map((cells, i) => ({
+      id: 'imp' + Date.now() + i,
+      name: cells[fieldIdx.name] || 'Sem nome',
+      phone: cells[fieldIdx.phone] || '',
+      source: fieldIdx.source !== undefined ? sourceKeyOf(cells[fieldIdx.source]) : 'site',
+      service: fieldIdx.service !== undefined && cells[fieldIdx.service] ? cells[fieldIdx.service] : SERVICES[0],
+      screens: 1,
+      value: fieldIdx.value !== undefined ? (Number(String(cells[fieldIdx.value] || '').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0) : 0,
+      temp: 'frio', stage: 'novo', ageDays: 0,
+      note: fieldIdx.note !== undefined ? (cells[fieldIdx.note] || '') : '',
+    })).filter((l) => l.phone);
+    this.setState((s) => ({ leads: [...imported, ...s.leads], importOpen: false }));
+    this.addToast({ title: `${imported.length} leads importados para a etapa "Novo".` });
+  };
+
+  setDispatchFilter(f) { this.setState({ dispatchFilter: f }); }
+  retryDispatch(id) {
+    this.setState((s) => ({ dispatches: s.dispatches.map((d) => d.id === id ? { ...d, status: 'queued', error: '' } : d) }));
+    this.addToast({ title: 'Reenvio adicionado à fila.' });
+  }
+  retryAllFailed = () => {
+    const n = this.state.dispatches.filter((d) => d.status === 'failed').length;
+    if (!n) { this.addToast({ title: 'Nenhuma falha para reenviar.' }); return; }
+    this.setState((s) => ({ dispatches: s.dispatches.map((d) => d.status === 'failed' ? { ...d, status: 'queued', error: '' } : d) }));
+    this.addToast({ title: `${n} envios recolocados na fila.` });
+  };
+  cancelDispatch(id) {
+    this.setState((s) => ({ dispatches: s.dispatches.filter((d) => d.id !== id) }));
+    this.addToast({ title: 'Envio cancelado.' });
+  }
+  delayMinDown = () => this.setState((s) => ({ dispatchDelayMin: Math.max(5, s.dispatchDelayMin - 5) }));
+  delayMinUp = () => this.setState((s) => ({ dispatchDelayMin: Math.min(s.dispatchDelayMax - 5, s.dispatchDelayMin + 5) }));
+  delayMaxDown = () => this.setState((s) => ({ dispatchDelayMax: Math.max(s.dispatchDelayMin + 5, s.dispatchDelayMax - 5) }));
+  delayMaxUp = () => this.setState((s) => ({ dispatchDelayMax: Math.min(600, s.dispatchDelayMax + 5) }));
+  dailyCapDown = () => this.setState((s) => ({ dailyCap: Math.max(10, s.dailyCap - 10) }));
+  dailyCapUp = () => this.setState((s) => ({ dailyCap: Math.min(500, s.dailyCap + 10) }));
+  batchSizeDown = () => this.setState((s) => ({ batchSize: Math.max(5, s.batchSize - 5) }));
+  batchSizeUp = () => this.setState((s) => ({ batchSize: Math.min(100, s.batchSize + 5) }));
+  batchPauseDown = () => this.setState((s) => ({ batchPauseMin: Math.max(1, s.batchPauseMin - 5) }));
+  batchPauseUp = () => this.setState((s) => ({ batchPauseMin: Math.min(120, s.batchPauseMin + 5) }));
+  toggleAntiBan = () => this.setState((s) => ({ antiBanEnabled: !s.antiBanEnabled }));
+  toggleRandomOrder = () => this.setState((s) => ({ randomOrder: !s.randomOrder }));
+  toggleBusinessHours = () => this.setState((s) => ({ businessHoursOnly: !s.businessHoursOnly }));
+  saveAntiBan = () => this.addToast({ title: 'Configurações de envio salvas.' });
+
+  openBlast = () => {
+    const count = Object.keys(this.state.selectedIds).length;
+    if (!count) { this.addToast({ title: 'Selecione ao menos um lead para disparar.' }); return; }
+    this.setState({ blastOpen: true, blastSent: false });
+  };
+  closeBlast = () => this.setState({ blastOpen: false });
+  setBlastMessage = (e) => this.setState({ blastMessage: e.target.value });
+  setBlastTemplate(key, text) { this.setState({ blastTemplate: key, blastMessage: text }); }
+  setBlastSchedule(v) { this.setState({ blastSchedule: v }); }
+  setBlastTime = (e) => this.setState({ blastTime: e.target.value });
+  insertBlastVar(v) { this.setState((s) => ({ blastMessage: s.blastMessage + (s.blastMessage.endsWith(' ') || !s.blastMessage ? '' : ' ') + v, blastTemplate: 'custom' })); }
+  confirmBlast = () => {
+    const ids = Object.keys(this.state.selectedIds);
+    const scheduled = this.state.blastSchedule === 'later';
+    this.setState({ blastOpen: false, selectedIds: {} });
+    this.addToast({ title: scheduled ? `${ids.length} disparos agendados para ${this.state.blastTime}.` : `Disparo enviado para ${ids.length} leads.` });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const toggleTrack = (on) => `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${on ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0;border:none;cursor:pointer`;
+    const toggleThumb = (on) => `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${on ? '14px' : '0'});transition:transform .15s;display:block`;
+
+    const q = s.search.trim().toLowerCase();
+    const sourceLabelOf = (key) => (SOURCES.find((x) => x.key === key) || SOURCES[0]).label;
+    const filtered = s.leads.filter((l) => {
+      if (!s.activeSources[l.source]) return false;
+      if (s.tempFilter !== 'all' && l.temp !== s.tempFilter) return false;
+      if (!q) return true;
+      return l.name.toLowerCase().includes(q) || l.phone.includes(q) || sourceLabelOf(l.source).toLowerCase().includes(q);
+    });
+
+    const openLeads = s.leads.filter((l) => l.stage !== 'ganho');
+    const wonCount = s.leads.filter((l) => l.stage === 'ganho').length;
+    const hotCount = openLeads.filter((l) => l.temp === 'quente').length;
+    const pipelineTotal = openLeads.reduce((t, l) => t + l.value, 0);
+    const avgTicketValue = openLeads.length ? pipelineTotal / openLeads.length : 0;
+
+    const tempMetaOf = (key) => TEMPS.find((t) => t.key === key) || TEMPS[1];
+    const stageMetaOf = (key) => STAGE_META[key] || STAGE_META.novo;
+    const stageLabelOf = (key) => (STAGES.find((x) => x.key === key) || STAGES[0]).label;
+    const ageColorOf = (d) => (d >= 10 ? 'var(--danger)' : d >= 5 ? '#d9a418' : 'var(--muted-foreground)');
+    const ageLabelOf = (d) => (d === 0 ? 'hoje' : d === 1 ? '1 dia' : `${d} dias`);
+
+    const decorate = (l) => {
+      const tm = tempMetaOf(l.temp), sm = stageMetaOf(l.stage);
+      const stageIdx = STAGES.findIndex((x) => x.key === l.stage);
+      return {
+        id: l.id, name: l.name, phone: l.phone, initials: this.initialsOf(l.name),
+        avatarBg: tm.bg, avatarFg: tm.fg,
+        tempLabel: tm.label, tempStyle: `flex-shrink:0;display:inline-block;border-radius:5px;padding:2px 7px;font-size:9.5px;font-weight:700;background:${tm.bg};color:${tm.fg}`,
+        stageLabel: stageLabelOf(l.stage), stageStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${sm.bg};color:${sm.fg}`,
+        sourceLabel: sourceLabelOf(l.source), serviceLabel: l.service, valueLabel: fmt(l.value),
+        ageLabel: ageLabelOf(l.ageDays), ageColor: ageColorOf(l.ageDays),
+        canAdvance: stageIdx < STAGES.length - 1,
+        selected: !!s.selectedIds[l.id],
+        checkStyle: `width:17px;height:17px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid ${s.selectedIds[l.id] ? 'var(--interactive)' : 'var(--input)'};background:${s.selectedIds[l.id] ? 'var(--interactive)' : 'none'}`,
+        onSelect: (e) => this.toggleSelect(l.id, e),
+        onOpen: () => this.openDetail(l.id),
+        onAdvance: (e) => { if (e) e.stopPropagation(); this.advance(l.id); },
+        onWhats: (e) => { if (e) e.stopPropagation(); this.whats(l.id); },
+        onDelete: (e) => { if (e) e.stopPropagation(); this.removeLead(l.id); },
+      };
+    };
+
+    const columns = STAGES.map((st) => {
+      const stageLeads = filtered.filter((l) => l.stage === st.key);
+      const leads = stageLeads.map(decorate);
+      const ids = stageLeads.map((l) => l.id);
+      const allIn = ids.length > 0 && ids.every((id) => s.selectedIds[id]);
+      return {
+        key: st.key, label: st.label, color: st.color, count: leads.length, leads, isEmpty: leads.length === 0,
+        selectAllLabel: allIn ? 'Limpar' : 'Selecionar',
+        selectAllStyle: `border:none;background:none;font-size:10px;font-weight:600;color:${allIn ? 'var(--interactive-fg)' : 'var(--muted-foreground)'};cursor:pointer;padding:2px 4px;flex-shrink:0`,
+        onSelectAll: (e) => this.selectStage(st.key, ids, e),
+      };
+    });
+    const listRows = filtered.map(decorate);
+
+    const tempFilters = [{ key: 'all', label: 'Todos', dot: 'var(--muted-foreground)' }, ...TEMPS].map((t) => ({
+      key: t.key, label: t.label, dot: t.dot, onClick: () => this.setTempFilter(t.key),
+      style: `display:flex;align-items:center;gap:6px;min-height:28px;border-radius:6px;padding:0 10px;font-size:11.5px;font-weight:${s.tempFilter === t.key ? '600' : '500'};border:none;cursor:pointer;background:${s.tempFilter === t.key ? 'var(--card)' : 'transparent'};color:${s.tempFilter === t.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.tempFilter === t.key ? '0 1px 2px rgba(0,0,0,.05)' : 'none'}`,
+    }));
+
+    const sourceOptions = SOURCES.map((src) => {
+      const active = !!s.activeSources[src.key];
+      return {
+        key: src.key, label: src.label, active, count: s.leads.filter((l) => l.source === src.key).length,
+        checkStyle: `width:16px;height:16px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px solid ${active ? 'var(--foreground)' : 'var(--input)'};background:${active ? 'var(--foreground)' : 'none'}`,
+        onClick: () => this.toggleSource(src.key),
+      };
+    });
+    const sourceSelectedCount = SOURCES.filter((src) => s.activeSources[src.key]).length;
+
+    const funnelMax = Math.max(1, ...STAGES.map((st) => filtered.filter((l) => l.stage === st.key).length));
+    const funnelRows = STAGES.map((st) => {
+      const count = filtered.filter((l) => l.stage === st.key).length;
+      return { key: st.key, label: st.label, count, color: st.color, pct: Math.round((count / funnelMax) * 100) };
+    });
+    const sourceRows = SOURCES.map((src) => {
+      const count = filtered.filter((l) => l.source === src.key).length;
+      return { key: src.key, label: src.label, color: src.color, count, pct: filtered.length ? Math.round((count / filtered.length) * 100) : 0 };
+    }).sort((a, b) => b.count - a.count);
+
+    // detail
+    const detailLead = s.leads.find((l) => l.id === s.detailId);
+    let detail = null, detailStageOptions = [];
+    if (detailLead) {
+      const d = decorate(detailLead);
+      const tl = [
+        { label: 'Lead criado', color: 'var(--interactive)' },
+        { label: `Primeiro contato via ${sourceLabelOf(detailLead.source)}`, color: '#5b3fd4' },
+        { label: `Interesse em ${detailLead.service}`, color: '#d9a418' },
+      ];
+      if (detailLead.stage === 'ganho') tl.push({ label: 'Convertido em cliente', color: 'var(--money)' });
+      detail = {
+        ...d, screensLabel: `${detailLead.screens} tela${detailLead.screens > 1 ? 's' : ''}`, note: detailLead.note,
+        timeline: tl.map((ev, i) => ({ label: ev.label, color: ev.color, hasLine: i < tl.length - 1, timeLabel: `há ${detailLead.ageDays - i > 0 ? detailLead.ageDays - i : 0} dia(s)` })),
+      };
+      detailStageOptions = STAGES.map((st) => ({
+        key: st.key, label: st.label, onSelect: () => this.setStage(detailLead.id, st.key),
+        style: `min-height:34px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${detailLead.stage === st.key ? 'var(--interactive)' : 'var(--border)'};background:${detailLead.stage === st.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${detailLead.stage === st.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+      }));
+    }
+
+    // selection + blast
+    const filteredIds = filtered.map((l) => l.id);
+    const selectedLeads = s.leads.filter((l) => s.selectedIds[l.id]);
+    const selectedCount = selectedLeads.length;
+    const reachableCount = selectedLeads.filter((l) => !!l.phone).length;
+    const BLAST_TEMPLATES = [
+      { key: 'teste', label: 'Oferecer teste', text: 'Olá {{primeiro_nome}}! Vi que você se interessou pelo nosso serviço. Quer testar 24h grátis?' },
+      { key: 'preco', label: 'Enviar preços', text: 'Olá {{primeiro_nome}}! O plano {{servico}} sai por {{valor}} com ativação na hora. Posso liberar pra você?' },
+      { key: 'followup', label: 'Retomar contato', text: 'Oi {{primeiro_nome}}, tudo bem? Passando pra saber se ainda tem interesse — qualquer dúvida me chama por aqui.' },
+      { key: 'promo', label: 'Promoção', text: 'Boa notícia, {{primeiro_nome}}! Estamos com condição especial no {{servico}} só até o fim da semana.' },
+    ];
+    const blastTemplates = BLAST_TEMPLATES.map((t) => ({
+      key: t.key, label: t.label, onSelect: () => this.setBlastTemplate(t.key, t.text),
+      style: `min-height:34px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.blastTemplate === t.key ? 'var(--interactive)' : 'var(--border)'};background:${s.blastTemplate === t.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.blastTemplate === t.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+    }));
+    const BLAST_VARS = ['{{primeiro_nome}}', '{{servico}}', '{{valor}}', '{{origem}}'];
+    const blastVarChips = BLAST_VARS.map((v) => ({ label: v, onInsert: () => this.insertBlastVar(v) }));
+    const blastScheduleOptions = [{ key: 'now', label: 'Enviar agora' }, { key: 'later', label: 'Agendar' }].map((o) => ({
+      key: o.key, label: o.label, onSelect: () => this.setBlastSchedule(o.key),
+      style: `flex:1;min-height:34px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.blastSchedule === o.key ? 'var(--interactive)' : 'var(--border)'};background:${s.blastSchedule === o.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.blastSchedule === o.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+    }));
+    const previewLead = selectedLeads[0];
+    const previewText = previewLead
+      ? s.blastMessage
+          .split('{{primeiro_nome}}').join(previewLead.name.split(' ')[0])
+          .split('{{servico}}').join(previewLead.service)
+          .split('{{valor}}').join(fmt(previewLead.value))
+          .split('{{origem}}').join(sourceLabelOf(previewLead.source))
+      : s.blastMessage;
+
+    // ---- import wizard ----
+    const parsed = parseCsv(s.importRaw);
+    const importColumns = parsed.headers.map((h, i) => {
+      const field = s.importMapping[i] || 'ignore';
+      const auto = field !== 'ignore';
+      return {
+        idx: i, header: h, sample: (parsed.rows[0] || [])[i] || '—',
+        fieldOptions: CSV_FIELDS.map((f) => ({ value: f.key, label: f.label, selected: field === f.key })),
+        onChange: (e) => this.setColumnField(i, e),
+        badgeLabel: auto ? 'auto' : 'ignorada',
+        badgeStyle: `font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:2px 6px;background:${auto ? 'var(--success-bg)' : 'var(--secondary)'};color:${auto ? 'var(--success-fg)' : 'var(--secondary-foreground)'}`,
+      };
+    });
+    const mappedFields = Object.values(s.importMapping).filter((f) => f !== 'ignore');
+    const importReady = mappedFields.includes('name') && mappedFields.includes('phone');
+    const previewRows = parsed.rows.slice(0, 4).map((cells, ri) => ({
+      id: 'pr' + ri,
+      cells: parsed.headers.map((h, ci) => ({ key: ci, value: cells[ci] || '—', dim: (s.importMapping[ci] || 'ignore') === 'ignore' ? '.42' : '1' })),
+    }));
+
+    // ---- dispatch monitor ----
+    const dispStatusMeta = {
+      sent: { label: 'Concluído', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+      queued: { label: 'Na fila', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      failed: { label: 'Erro', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+    };
+    const sentTotal = s.dispatches.filter((d) => d.status === 'sent').length;
+    const queuedTotal = s.dispatches.filter((d) => d.status === 'queued').length;
+    const failedTotal = s.dispatches.filter((d) => d.status === 'failed').length;
+    const dispatchFilterDefs = [
+      { key: 'all', label: 'Todos', count: s.dispatches.length },
+      { key: 'sent', label: 'Concluídos', count: sentTotal },
+      { key: 'queued', label: 'Na fila', count: queuedTotal },
+      { key: 'failed', label: 'Erros', count: failedTotal },
+    ];
+    const dispatchFilters = dispatchFilterDefs.map((f) => ({
+      key: f.key, label: f.label, count: f.count, onClick: () => this.setDispatchFilter(f.key),
+      style: `min-height:32px;border-radius:6px;padding:0 12px;font-size:12px;font-weight:${s.dispatchFilter === f.key ? '600' : '500'};border:none;cursor:pointer;background:${s.dispatchFilter === f.key ? 'var(--card)' : 'transparent'};color:${s.dispatchFilter === f.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.dispatchFilter === f.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+    const dispatchRows = s.dispatches.filter((d) => s.dispatchFilter === 'all' || d.status === s.dispatchFilter).map((d) => {
+      const meta = dispStatusMeta[d.status];
+      return {
+        id: d.id, name: d.name, campaign: d.campaign, chip: d.chip,
+        initials: this.initialsOf(d.name),
+        timeLabel: d.time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        statusLabel: meta.label, statusStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        hasError: !!d.error, error: d.error,
+        canRetry: d.status === 'failed', canCancel: d.status === 'queued',
+        onRetry: () => this.retryDispatch(d.id), onCancel: () => this.cancelDispatch(d.id),
+      };
+    });
+    const deliveryRate = s.dispatches.length ? Math.round((sentTotal / s.dispatches.length) * 100) : 0;
+    const avgDelay = Math.round((s.dispatchDelayMin + s.dispatchDelayMax) / 2);
+    const capUsedPct = Math.min(100, Math.round((sentTotal / s.dailyCap) * 100));
+
+    const formSourceOptions = SOURCES.map((src) => ({ value: src.key, label: src.label, selected: s.form.source === src.key }));
+    const formServiceOptions = SERVICES.map((n) => ({ value: n, label: n, selected: s.form.service === n }));
+    const formTempOptions = TEMPS.map((t) => ({
+      key: t.key, label: t.label, onSelect: () => this.setFormTemp(t.key),
+      style: `min-height:36px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.form.temp === t.key ? t.fg : 'var(--border)'};background:${s.form.temp === t.key ? t.bg : 'var(--card)'};color:${s.form.temp === t.key ? t.fg : 'var(--foreground)'}`,
+    }));
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      pageTabs: [
+        { key: 'funnel', label: 'Funil de leads' },
+        { key: 'dispatch', label: 'Envios' },
+      ].map((t) => ({
+        key: t.key, label: t.label, onClick: () => this.setPage(t.key),
+        hasBadge: t.key === 'dispatch' && failedTotal > 0, badge: String(failedTotal),
+        style: `display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:${s.page === t.key ? 'var(--card)' : 'none'};color:${s.page === t.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.page === t.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+      })),
+      isFunnelPage: s.page === 'funnel', isDispatchPage: s.page === 'dispatch',
+
+      openImport: this.openImport, importOpen: s.importOpen, closeImport: this.closeImport,
+      importStep1: s.importStep === 1, importStep2: s.importStep === 2,
+      importRaw: s.importRaw, setImportRaw: this.setImportRaw, loadSampleCsv: this.loadSampleCsv,
+      analyzeCsv: this.analyzeCsv, backImportStep: this.backImportStep, confirmImport: this.confirmImport,
+      importColumns, importHeaders: parsed.headers.map((h, i) => ({ key: i, label: h, dim: (s.importMapping[i] || 'ignore') === 'ignore' ? '.42' : '1' })),
+      previewRows, importRowCount: parsed.rows.length,
+      importDetectedLabel: `${mappedFields.length} de ${parsed.headers.length} colunas mapeadas`,
+      importReady, importBlockedLabel: importReady ? '' : 'Nome e WhatsApp são obrigatórios',
+      importCtaLabel: `Importar ${parsed.rows.length} leads`,
+
+      dispatchFilters, dispatchRows, dispatchEmpty: dispatchRows.length === 0,
+      sentTotal, queuedTotal, failedTotal, deliveryRate, retryAllFailed: this.retryAllFailed,
+      hasFailedDispatch: failedTotal > 0,
+      dispatchDelayMin: s.dispatchDelayMin, dispatchDelayMax: s.dispatchDelayMax, avgDelay,
+      delayMinDown: this.delayMinDown, delayMinUp: this.delayMinUp, delayMaxDown: this.delayMaxDown, delayMaxUp: this.delayMaxUp,
+      dailyCap: s.dailyCap, dailyCapDown: this.dailyCapDown, dailyCapUp: this.dailyCapUp,
+      capUsedLabel: `${sentTotal} de ${s.dailyCap} usados hoje`, capUsedPct,
+      capBarColor: capUsedPct >= 90 ? 'var(--danger)' : capUsedPct >= 70 ? '#d9a418' : 'var(--money)',
+      batchSize: s.batchSize, batchSizeDown: this.batchSizeDown, batchSizeUp: this.batchSizeUp,
+      batchPauseMin: s.batchPauseMin, batchPauseDown: this.batchPauseDown, batchPauseUp: this.batchPauseUp,
+      antiBanTrackStyle: toggleTrack(s.antiBanEnabled), antiBanThumbStyle: toggleThumb(s.antiBanEnabled), toggleAntiBan: this.toggleAntiBan,
+      randomTrackStyle: toggleTrack(s.randomOrder), randomThumbStyle: toggleThumb(s.randomOrder), toggleRandomOrder: this.toggleRandomOrder,
+      hoursTrackStyle: toggleTrack(s.businessHoursOnly), hoursThumbStyle: toggleThumb(s.businessHoursOnly), toggleBusinessHours: this.toggleBusinessHours,
+      antiBanEnabled: s.antiBanEnabled, saveAntiBan: this.saveAntiBan,
+      antiBanRiskLabel: s.antiBanEnabled ? (avgDelay >= 40 ? 'Risco baixo' : avgDelay >= 20 ? 'Risco moderado' : 'Risco alto') : 'Proteção desativada',
+      antiBanRiskColor: !s.antiBanEnabled ? 'var(--danger)' : avgDelay >= 40 ? 'var(--money)' : avgDelay >= 20 ? '#d9a418' : 'var(--danger)',
+
+      isBoardView: s.view === 'board', isListView: s.view === 'list', setViewToggle: this.setViewToggle,
+      viewToggleLabel: s.view === 'board' ? 'Ver em lista' : 'Ver em quadro',
+      openNewLead: this.openNewLead,
+
+      openLeadCount: openLeads.length, newThisWeek: s.leads.filter((l) => l.ageDays <= 7).length,
+      hotCount, filterHot: this.filterHot,
+      wonCount, totalLeadCount: s.leads.length,
+      conversionRate: s.leads.length ? Math.round((wonCount / s.leads.length) * 100) : 0,
+      pipelineValue: fmt(pipelineTotal), avgTicket: fmt(avgTicketValue),
+
+      search: s.search, setSearch: this.setSearch, tempFilters,
+      sourceMenuOpen: s.sourceMenuOpen, toggleSourceMenu: this.toggleSourceMenu, sourceOptions,
+      sourceSelectedLabel: `${sourceSelectedCount}/${SOURCES.length}`, resetSources: this.resetSources,
+      resultCountLabel: filtered.length === 1 ? '1 lead' : `${filtered.length} leads`,
+
+      columns, listRows, listEmpty: listRows.length === 0, funnelRows, sourceRows,
+
+      selectedCount, hasSelection: selectedCount > 0,
+      selectionLabel: selectedCount === 1 ? '1 lead selecionado' : `${selectedCount} leads selecionados`,
+      selectionReachLabel: reachableCount === selectedCount ? 'todos com WhatsApp' : `${reachableCount} com WhatsApp`,
+      clearSelection: this.clearSelection, openBlast: this.openBlast,
+      allFilteredSelected: filteredIds.length > 0 && filteredIds.every((id) => s.selectedIds[id]),
+      selectAllStyle: `width:17px;height:17px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid ${filteredIds.length > 0 && filteredIds.every((id) => s.selectedIds[id]) ? 'var(--interactive)' : 'var(--input)'};background:${filteredIds.length > 0 && filteredIds.every((id) => s.selectedIds[id]) ? 'var(--interactive)' : 'none'}`,
+      onSelectAllFiltered: () => this.selectAllFiltered(filteredIds),
+
+      blastOpen: s.blastOpen, closeBlast: this.closeBlast, blastMessage: s.blastMessage, setBlastMessage: this.setBlastMessage,
+      blastTemplates, blastVarChips, blastScheduleOptions, blastTime: s.blastTime, setBlastTime: this.setBlastTime,
+      blastIsScheduled: s.blastSchedule === 'later', confirmBlast: this.confirmBlast,
+      blastPreview: previewText, blastPreviewName: previewLead ? previewLead.name : '—',
+      blastCtaLabel: s.blastSchedule === 'later' ? `Agendar ${reachableCount} disparos` : `Disparar para ${reachableCount}`,
+      blastCharCount: `${s.blastMessage.length} caracteres`,
+      blastSpacingLabel: `~${Math.max(1, Math.ceil((reachableCount * 40) / 60))} min de envio (intervalo 25–90s)`,
+      blastNoReach: reachableCount === 0,
+
+      detailOpen: !!detailLead, detail, detailStageOptions, closeDetail: this.closeDetail,
+      setDetailNote: this.setDetailNote, detailWhats: () => this.whats(s.detailId), openConvert: this.openConvert,
+
+      newLeadOpen: s.newLeadOpen, closeNewLead: this.closeNewLead, form: s.form,
+      setFormName: this.setFormName, setFormPhone: this.setFormPhone, setFormValue: this.setFormValue,
+      setFormSource: this.setFormSource, setFormService: this.setFormService,
+      formSourceOptions, formServiceOptions, formTempOptions, submitNewLead: this.submitNewLead,
+
+      convertOpen: s.convertOpen, closeConvert: this.closeConvert, confirmConvert: this.confirmConvert,
+      convertName: detailLead ? detailLead.name : '', convertService: detailLead ? detailLead.service : '',
+      convertValue: detailLead ? fmt(detailLead.value) : fmt(0),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

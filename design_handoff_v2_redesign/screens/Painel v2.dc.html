@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    @media (max-width:1024px){[data-hide-lg]{display:none!important}}
+    @media (max-width:640px){[data-hide-tight]{display:none!important}}
+    @keyframes dcfade { from { opacity:0; transform:translateY(6px);} to {opacity:1; transform:none;} }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;transition:width .18s ease-linear;width:{{ sidebarWidthPx }}px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <sc-if value="{{ sidebarExpanded }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+      </sc-if>
+    </div>
+
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <!-- Painel -->
+      <div style="margin-bottom:2px">
+        <a href="#" onclick="return false" style="{{ navItemStyle.painel }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd></sc-if>
+        </a>
+      </div>
+
+      <sc-if value="{{ sidebarExpanded }}"><p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p></sc-if>
+      <div style="margin-bottom:2px"><a href="#" onclick="return false" style="{{ navItemStyle.clientes }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd></sc-if>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="return false" style="{{ navItemStyle.financeiro }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd></sc-if>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <button type="button" onclick="{{ toggleCatalog }}" style="{{ navItemStyle.catalogo }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ catalogChevronStyle }}"><path d="m9 6 6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <sc-if value="{{ catalogOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ sidebarExpanded }}"><p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p></sc-if>
+      <div style="margin-bottom:2px">
+        <button type="button" onclick="{{ toggleAutomation }}" style="{{ navItemStyle.automacao }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ automationChevronStyle }}"><path d="m9 6 6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <sc-if value="{{ automationOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-accent-fg);background:var(--sidebar-accent);font-weight:600;text-decoration:none">Central de automação</a>
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin-bottom:2px"><a href="#" onclick="return false" style="{{ navItemStyle.leads }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+        <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span></sc-if>
+      </a></div>
+
+      <sc-if value="{{ sidebarExpanded }}"><p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p></sc-if>
+      <div style="margin-bottom:2px">
+        <button type="button" onclick="{{ toggleInsights }}" style="{{ navItemStyle.insights }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Insights</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ insightsChevronStyle }}"><path d="m9 6 6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <sc-if value="{{ insightsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Analytics</a>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin-bottom:2px">
+        <button type="button" onclick="{{ toggleIntegrations }}" style="{{ navItemStyle.integracoes }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ integrationsChevronStyle }}"><path d="m9 6 6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <sc-if value="{{ integrationsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+            <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Gateways e API</a>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin-bottom:2px">
+        <button type="button" onclick="{{ toggleMore }}" style="{{ navItemStyle.mais }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg>
+          <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mais</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ moreChevronStyle }}"><path d="m9 6 6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+            <a href="Afiliados.dc.html" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Afiliados</a>
+          </div>
+        </sc-if>
+      </div>
+    </nav>
+
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="margin-bottom:4px"><a href="#" onclick="return false" style="{{ navItemStyle.config }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+        <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Configurações</span></sc-if>
+      </a></div>
+      <div style="margin-bottom:8px"><a href="#" onclick="return false" style="{{ navItemStyle.suporte }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle><path d="m6 6 3.2 3.2M18 6l-3.2 3.2M18 18l-3.2-3.2M6 18l3.2-3.2"></path></svg>
+        <sc-if value="{{ sidebarExpanded }}"><span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Suporte</span></sc-if>
+      </a></div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:8px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <sc-if value="{{ sidebarExpanded }}">
+            <div style="min-width:0;flex:1">
+              <p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p>
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ sidebarExpanded }}">
+          <button type="button" onclick="{{ noop }}" title="Sair da conta" style="width:32px;height:32px;flex-shrink:0;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+          </button>
+        </sc-if>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);left:{{ sidebarWidthPx }}px;transition:left .18s ease-linear">
+    <button type="button" onclick="{{ toggleSidebar }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+
+    <button type="button" onclick="{{ toggleCmd }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+
+    <div style="flex:1"></div>
+
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <svg data-hide-lg="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+
+      <button type="button" onclick="{{ goAutomacao }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 8px;border:none;background:none;border-radius:6px;font-size:12px;font-weight:500;color:var(--money);cursor:pointer">
+        <span style="width:6px;height:6px;border-radius:9999px;background:var(--money);flex-shrink:0"></span>
+        <span data-hide-tight="true">WhatsApp conectado</span>
+      </button>
+
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+
+      <div style="position:relative">
+        <button type="button" onclick="{{ toggleQuick }}" style="display:flex;align-items:center;gap:6px;height:32px;border-radius:9999px;padding:0 14px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Criar
+        </button>
+        <sc-if value="{{ quickOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:38px;right:0;width:220px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;z-index:50;animation:dcpop .15s ease-out">
+            <button type="button" onclick="{{ quickNewClient }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px;border:none;background:none;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--foreground);cursor:pointer;text-align:left">
+              <span style="width:24px;height:24px;border-radius:6px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:var(--interactive)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M17 8v5M14.5 10.5h5"></path></svg></span>
+              Novo cliente
+            </button>
+            <button type="button" onclick="{{ quickPlaceholder }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px;border:none;background:none;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--foreground);cursor:pointer;text-align:left">
+              <span style="width:24px;height:24px;border-radius:6px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:var(--money)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 9.5 12 3 3.4 9.5"></path><path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8"></path></svg></span>
+              Nova promoção
+            </button>
+            <button type="button" onclick="{{ openPix }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px;border:none;background:none;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--foreground);cursor:pointer;text-align:left">
+              <span style="width:24px;height:24px;border-radius:6px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:var(--interactive)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+              Gerar PIX rápido
+            </button>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="position:relative">
+        <button type="button" onclick="{{ toggleNotif }}" style="position:relative;width:32px;height:32px;border:none;background:none;border-radius:9999px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M9.5 20a2.5 2.5 0 0 0 5 0"></path></svg>
+          <sc-if value="{{ hasNotifs }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;border-radius:9999px;background:#e0433d;border:2px solid var(--background);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ notifCount }}</span>
+          </sc-if>
+        </button>
+        <sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:38px;right:0;width:300px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);z-index:50;animation:dcpop .15s ease-out;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;font-size:13px;font-weight:600;color:var(--foreground)">
+              Notificações
+              <sc-if value="{{ hasNotifs }}"><button type="button" onclick="{{ clearNotifs }}" style="border:none;background:none;font-size:11px;color:var(--muted-foreground);cursor:pointer">Limpar todas</button></sc-if>
+            </div>
+            <div style="border-top:1px solid var(--border)"></div>
+            <sc-if value="{{ hasNotifs }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ notifAlerts }}" as="alert" hint-placeholder-count="2">
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border)">
+                  <span style="width:30px;height:30px;border-radius:9999px;background:{{ alert.bg }};color:{{ alert.fg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">{{ alert.glyph }}</span>
+                  <div>
+                    <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ alert.title }}</p>
+                    <p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ alert.desc }}</p>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+            <sc-if value="{{ hasNotifs }}" hint-placeholder-val="{{ true }}"></sc-if>
+            <div style="padding:16px;text-align:center;font-size:12px;color:var(--muted-foreground);display:{{ emptyNotifDisplay }}">Tudo tranquilo por aqui.</div>
+            <a href="Notificacoes.dc.html" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;border-top:1px solid var(--border);background:color-mix(in srgb, var(--muted) 50%, transparent);font-size:11.5px;font-weight:600;color:var(--interactive-fg);text-decoration:none">
+              Ver todas as notificações
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </sc-if>
+      </div>
+
+      <button type="button" onclick="{{ toggleTheme }}" style="width:32px;height:32px;border:none;background:none;border-radius:9999px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg></sc-if>
+        <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.4M12 19v2.5M4.2 4.2l1.7 1.7M18 18l1.7 1.7M2.5 12h2.4M19 12h2.5M4.2 19.8 5.9 18M18 5.9l1.7-1.7"></path></svg></sc-if>
+      </button>
+
+      <button type="button" onclick="{{ togglePrivacy }}" style="width:32px;height:32px;border:none;background:none;border-radius:9999px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <sc-if value="{{ privacyOn }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M10.6 5.2A10.4 10.4 0 0 1 12 5c6 0 9.5 6 9.9 7a13 13 0 0 1-3 3.9M6.6 6.6C3.9 8.3 2.4 11 2.1 12c.4 1 3.3 6 9.9 7a9.7 9.7 0 0 0 3.2-.5"></path><path d="M9.9 10a3 3 0 0 0 4.2 4.2"></path></svg></sc-if>
+        <sc-if value="{{ privacyOff }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.1 12S5.6 5 12 5s9.9 7 9.9 7-3.5 7-9.9 7-9.9-7-9.9-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+      </button>
+
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:8px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div data-hide-narrow="true">
+          <p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p>
+          <p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p>
+        </div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:{{ sidebarWidthPx }}px;padding-top:56px;transition:margin-left .18s ease-linear;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:24px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="border-radius:8px;background:var(--ink);color:var(--ink-fg);overflow:hidden">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:26px 28px;flex-wrap:wrap">
+          <div style="display:flex;align-items:flex-start;gap:14px;min-width:0">
+            <span style="width:40px;height:40px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--ink-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+            </span>
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ todayLabel }}</p>
+              <h1 style="margin:4px 0 0;font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--ink-fg)">Dashboard</h1>
+              <p style="margin:18px 0 0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5)">A receber · carteira monitorada</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:46px;font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--ink-fg)">{{ trackedAmount }}</p>
+              <div style="display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:16px">
+                <div style="padding-right:22px;border-right:1px solid rgba(255,255,255,.14)"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.45)">Vencidos</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:#f4a3a3">{{ overdueCount }} · {{ overdueAmount }}</p></div>
+                <div style="padding-right:22px;border-right:1px solid rgba(255,255,255,.14)"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.45)">Hoje</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:#e5c68a">{{ dueTodayCount }} · {{ dueTodayAmount }}</p></div>
+                <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.45)">Confirmado no mês</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:#7ddba9">{{ confirmedAmount }}</p></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:inline-flex;gap:4px;border-radius:8px;background:rgba(255,255,255,.08);padding:4px;margin-right:4px" title="Somente para pré-visualização deste protótipo">
+              <sc-for list="{{ planTabs }}" as="ptab" hint-placeholder-count="3">
+                <button type="button" onclick="{{ ptab.onClick }}" style="{{ ptab.style }}">{{ ptab.label }}</button>
+              </sc-for>
+            </div>
+            <button type="button" onclick="{{ openPix }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:transparent;color:var(--ink-fg);font-size:13px;font-weight:500;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg>
+              Gerar PIX
+            </button>
+            <button type="button" onclick="{{ openAddClient }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--ink-fg);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+              Novo cliente
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- OVERVIEW -->
+      <section style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Visão geral</p>
+            <h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Carteira e operação</h2>
+          </div>
+          <span style="border:1px solid var(--border);background:var(--card);border-radius:8px;padding:5px 10px;font-size:10px;font-weight:500;color:var(--muted-foreground)">{{ periodBadgeLabel }}</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--card)">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--muted-foreground);flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+            Filtros
+          </div>
+          <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+          <div style="display:inline-flex;gap:4px;border-radius:8px;background:var(--muted);padding:4px;flex-shrink:0">
+            <sc-for list="{{ periodFilterTabs }}" as="pf" hint-placeholder-count="5">
+              <button type="button" onclick="{{ pf.onClick }}" style="{{ pf.style }}">{{ pf.label }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ isCustomPeriod }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <input type="date" value="{{ filters.customFrom }}" oninput="{{ setCustomFrom }}" style="height:30px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:none;color:var(--foreground)"/>
+              <span style="font-size:11px;color:var(--muted-foreground)">até</span>
+              <input type="date" value="{{ filters.customTo }}" oninput="{{ setCustomTo }}" style="height:30px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:none;color:var(--foreground)"/>
+            </div>
+          </sc-if>
+          <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+          <div style="position:relative;flex-shrink:0">
+            <button type="button" onclick="{{ toggleTypesMenu }}" style="display:flex;align-items:center;gap:7px;min-height:30px;border-radius:6px;padding:0 10px;font-size:11px;font-weight:500;border:1px solid var(--input);background:var(--background);color:var(--foreground);cursor:pointer">
+              Tipos
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ typesSelectedLabel }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </button>
+            <sc-if value="{{ typesMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:36px;left:0;width:236px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;z-index:50">
+                <sc-for list="{{ typeFilterChips }}" as="tf" hint-placeholder-count="6">
+                  <button type="button" onclick="{{ tf.onClick }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:8px;border:none;background:none;border-radius:6px;font-size:12px;color:var(--foreground);cursor:pointer;text-align:left">
+                    <span style="{{ tf.checkStyle }}">
+                      <sc-if value="{{ tf.active }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if>
+                    </span>
+                    <span style="width:6px;height:6px;border-radius:9999px;background:{{ tf.dot }};flex-shrink:0"></span>
+                    <span style="flex:1">{{ tf.label }}</span>
+                  </button>
+                </sc-for>
+                <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+                  <button type="button" onclick="{{ resetTypeFilters }}" style="width:100%;text-align:center;border:none;background:none;padding:6px;font-size:11px;font-weight:600;color:var(--interactive);cursor:pointer">Selecionar todos</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--foreground);border-bottom:1px solid var(--border);background:none">
+          <article style="padding:18px 20px 18px 0;border-right:1px solid var(--border);opacity:{{ cardOpacity.clientes }};transition:opacity .2s">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Total de clientes</p>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ totalClients }}</p>
+              <svg width="{{ sparkWidth }}" height="{{ sparkHeight }}" viewBox="0 0 {{ sparkWidth }} {{ sparkHeight }}" style="flex:0 1 72px;min-width:28px;width:100%;opacity:.55">
+                <sc-for list="{{ sparkTotal }}" as="sb" hint-placeholder-count="9"><rect x="{{ sb.x }}" y="{{ sb.y }}" width="{{ sb.w }}" height="{{ sb.h }}" rx="1.5" fill="{{ sb.color }}"></rect></sc-for>
+              </svg>
+            </div>
+            <p style="margin:6px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ activeHint }}</p>
+          </article>
+
+          <article style="padding:18px 20px;border-right:1px solid var(--border);opacity:{{ cardOpacity.ativos }};transition:opacity .2s">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Clientes ativos</p>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <p style="margin:0;font-family:'Geist Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-.03em;color:var(--money)">{{ activeClients }}</p>
+                <span style="font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.04em;background:var(--success-bg);color:var(--success-fg);border-radius:4px;padding:2px 6px">ATIVO</span>
+              </div>
+              <svg width="{{ sparkWidth }}" height="{{ sparkHeight }}" viewBox="0 0 {{ sparkWidth }} {{ sparkHeight }}" style="flex:0 1 72px;min-width:28px;width:100%;opacity:.7">
+                <sc-for list="{{ sparkActive }}" as="sb" hint-placeholder-count="9"><rect x="{{ sb.x }}" y="{{ sb.y }}" width="{{ sb.w }}" height="{{ sb.h }}" rx="1.5" fill="{{ sb.color }}"></rect></sc-for>
+              </svg>
+            </div>
+            <p style="margin:6px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ activeShareHint }}</p>
+          </article>
+
+          <button type="button" onclick="{{ openOverdueQueue }}" style-hover="background:var(--muted)" style="text-align:left;cursor:pointer;border:none;background:none;padding:18px 20px;transition:background 150ms ease-out,opacity .2s ease-out;opacity:{{ cardOpacity.vencidos }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Clientes vencidos</p>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-foreground)"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <p style="margin:0;font-family:'Geist Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-.03em;color:var(--danger)">{{ overdueCount }}</p>
+                <span style="font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.04em;background:var(--danger-bg);color:var(--danger-fg);border-radius:4px;padding:2px 6px">VENCIDO</span>
+              </div>
+              <svg width="{{ sparkWidth }}" height="{{ sparkHeight }}" viewBox="0 0 {{ sparkWidth }} {{ sparkHeight }}" style="flex:0 1 72px;min-width:28px;width:100%;opacity:.6">
+                <sc-for list="{{ sparkOverdue }}" as="sb" hint-placeholder-count="9"><rect x="{{ sb.x }}" y="{{ sb.y }}" width="{{ sb.w }}" height="{{ sb.h }}" rx="1.5" fill="{{ sb.color }}"></rect></sc-for>
+              </svg>
+            </div>
+            <p style="margin:6px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ overdueHint }}</p>
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--border)">
+          <article style="min-height:224px;display:flex;flex-direction:column;overflow:hidden;background:none;border-right:1px solid var(--border);opacity:{{ cardOpacity.novos }};transition:opacity .2s">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px 14px 0">
+              <span style="width:34px;height:34px;border-radius:8px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 20c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"></path><path d="M17.5 8v5M15 10.5h5"></path></svg></span>
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Crescimento da carteira</h3><p style="margin:2px 0 0;font-size:10px;color:var(--muted-foreground)">Comparativo do período selecionado</p></div>
+            </div>
+            <div style="flex:1;padding:0 18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;border-bottom:1px solid color-mix(in srgb, var(--border) 70%, transparent)"><span style="font-size:12px;color:var(--muted-foreground)">Novos clientes</span><span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--money)">{{ newClients }}</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px"><span style="font-size:12px;color:var(--muted-foreground)">Período anterior</span><span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ previousNewClients }}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding:12px 18px 12px 0">
+              <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted-foreground)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success-fg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"></path></svg>Comparado ao anterior</div>
+              <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ growthPct }}</span>
+            </div>
+          </article>
+
+          <article style="min-height:224px;display:flex;flex-direction:column;overflow:hidden;background:none;border-right:1px solid var(--border);opacity:{{ cardOpacity.renovacoes }};transition:opacity .2s">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px 14px 0">
+              <span style="width:34px;height:34px;border-radius:8px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2.3"></rect><path d="M3.5 9.5h17M8 3v3M16 3v3"></path></svg></span>
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Renovações e vencimentos</h3><p style="margin:2px 0 0;font-size:10px;color:var(--muted-foreground)">Prioridades mais próximas</p></div>
+            </div>
+            <div style="flex:1;padding:0 18px">
+              <button type="button" onclick="{{ openTodayQueue }}" style="width:100%;cursor:pointer;border:none;background:none;display:flex;align-items:center;gap:8px;min-height:56px;border-bottom:1px solid color-mix(in srgb, var(--border) 70%, transparent);text-align:left">
+                <span style="flex:1;font-size:12px;color:var(--muted-foreground)">Vencem hoje</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ dueTodayAmount }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ dueTodayCount }}</span>
+              </button>
+              <button type="button" onclick="{{ openNext7Queue }}" style="width:100%;cursor:pointer;border:none;background:none;display:flex;align-items:center;gap:8px;min-height:56px;text-align:left">
+                <span style="flex:1;font-size:12px;color:var(--muted-foreground)">Próximos 7 dias</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ next7Amount }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ next7Count }}</span>
+              </button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding:12px 18px 12px 0">
+              <span style="font-size:10px;color:var(--muted-foreground)">Exigem atenção</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ overdueCount }} vencidos</span>
+            </div>
+          </article>
+
+          <article style="min-height:224px;display:flex;flex-direction:column;overflow:hidden;background:none;border-right:1px solid var(--border);opacity:{{ cardOpacity.receber }};transition:opacity .2s">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px 14px 0">
+              <span style="width:34px;height:34px;border-radius:8px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v1M12 16v1M9 9.5c0-1.4 1.3-2.3 3-2.3s3 .8 3 2.1c0 2.7-6 1.3-6 4.1 0 1.3 1.3 2.1 3 2.1s3-.9 3-2.3"></path></svg></span>
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Valores a receber</h3><p style="margin:2px 0 0;font-size:10px;color:var(--muted-foreground)">Movimentação do mês atual</p></div>
+            </div>
+            <div style="flex:1;padding:0 18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;border-bottom:1px solid color-mix(in srgb, var(--border) 70%, transparent)"><span style="font-size:12px;color:var(--muted-foreground)">Confirmado</span><span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--money)">{{ confirmedAmount }}</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px"><span style="font-size:12px;color:var(--muted-foreground)">Em acompanhamento</span><span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ trackedAmount }}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding:12px 18px 12px 0">
+              <span style="font-size:10px;color:var(--muted-foreground)">Carteira monitorada</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ trackedAmount }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ONBOARDING -->
+      <sc-if value="{{ onboardingVisible }}" hint-placeholder-val="{{ true }}">
+        <section style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:16px 20px">
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--card);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Configure sua conta</h2><span style="font-family:'Geist Mono',monospace;background:var(--card);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--interactive-fg)">3/4</span></div>
+              <p style="margin:4px 0 0;font-size:12px;line-height:1.6;color:var(--muted-foreground)">Complete os passos essenciais para começar a operar e faturar.</p>
+              <div style="position:relative;margin-top:10px;height:6px;border-radius:9999px;background:color-mix(in srgb, var(--card) 70%, transparent);overflow:hidden"><div style="position:absolute;inset:0;width:75%;border-radius:9999px;background:var(--interactive)"></div></div>
+            </div>
+            <button type="button" onclick="{{ dismissOnboarding }}" title="Fazer depois" style="width:36px;height:36px;flex-shrink:0;border:none;background:none;border-radius:6px;color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid color-mix(in srgb, var(--interactive) 15%, transparent)">
+            <div style="display:flex;align-items:flex-start;gap:10px;min-height:80px;padding:12px 16px;background:color-mix(in srgb, var(--success-bg) 40%, transparent);border-right:1px solid color-mix(in srgb, var(--interactive) 15%, transparent)">
+              <span style="width:30px;height:30px;border-radius:6px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+              <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--success-fg)">Criar um serviço</p><p style="margin:4px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Cadastre os serviços que você oferece</p></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;min-height:80px;padding:12px 16px;background:color-mix(in srgb, var(--success-bg) 40%, transparent);border-right:1px solid color-mix(in srgb, var(--interactive) 15%, transparent)">
+              <span style="width:30px;height:30px;border-radius:6px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+              <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--success-fg)">Adicionar um cliente</p><p style="margin:4px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Cadastre seu primeiro cliente</p></div>
+            </div>
+            <button type="button" onclick="{{ goAutomacao }}" style="cursor:pointer;text-align:left;border:none;display:flex;align-items:flex-start;gap:10px;min-height:80px;padding:12px 16px;background:color-mix(in srgb, var(--card) 45%, transparent);border-right:1px solid color-mix(in srgb, var(--interactive) 15%, transparent)">
+              <span style="width:30px;height:30px;border-radius:6px;background:var(--card);color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></span>
+              <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Conectar WhatsApp</p><p style="margin:4px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Defina como número principal</p></div>
+            </button>
+            <div style="display:flex;align-items:flex-start;gap:10px;min-height:80px;padding:12px 16px;background:color-mix(in srgb, var(--success-bg) 40%, transparent)">
+              <span style="width:30px;height:30px;border-radius:6px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+              <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--success-fg)">Criar regra de automação</p><p style="margin:4px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Alertas automáticos configurados</p></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid color-mix(in srgb, var(--interactive) 15%, transparent);padding:10px 20px;flex-wrap:wrap">
+            <p style="margin:0;font-size:12px;color:var(--muted-foreground)">Próximo passo: <strong style="color:var(--foreground)">Conectar WhatsApp</strong></p>
+            <button type="button" onclick="{{ goAutomacao }}" style="height:30px;padding:0 12px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">Continuar configuração</button>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- FILA DE AÇÃO -->
+      <div ref="{{ queueRef }}" tabindex="-1" style="outline:none">
+      <section style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--foreground)">Fila de ação</h2>
+            <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground)">Resolva primeiro o que afeta receita e relacionamento com o cliente.</p>
+          </div>
+          <button type="button" onclick="{{ openCobrarTodos }}" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+            {{ cobrarTodosLabel }}
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.65fr);gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;overflow:hidden;border-top:1px solid var(--foreground);background:none">
+            <div style="border-bottom:1px solid var(--border);padding:8px">
+              <div style="display:inline-flex;gap:4px;border-radius:8px;background:var(--muted);padding:4px">
+                <sc-for list="{{ segments }}" as="segment" hint-placeholder-count="3">
+                  <button type="button" onclick="{{ segment.onClick }}" style="{{ segment.style }}">{{ segment.label }} · <span style="font-family:'Geist Mono',monospace">{{ segment.count }}</span></button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div data-hide-narrow="true" style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--border);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground);min-width:0;overflow:hidden">
+              <span style="flex:1;min-width:120px">Cliente</span><span style="min-width:64px;text-align:right">Prazo</span><span style="min-width:64px;text-align:right">Valor</span><span style="min-width:132px;text-align:right">Ação</span>
+            </div>
+            <div style="max-height:460px;overflow-y:auto;overflow-x:hidden">
+              <sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:56px 16px;text-align:center">
+                  <span style="width:44px;height:44px;border-radius:16px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+                  <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">{{ queueEmptyLabel }}</p>
+                  <p style="margin:0;max-width:320px;font-size:11px;color:var(--muted-foreground)">Esta fila está em dia. Selecione outro período para continuar acompanhando.</p>
+                </div>
+              </sc-if>
+              <sc-for list="{{ queueRows }}" as="client" hint-placeholder-count="3">
+                <div style-hover="background:var(--muted)" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background 150ms ease-out">
+                  <div style="display:flex;align-items:center;gap:11px;flex:1;min-width:150px">
+                    <span style="width:7px;height:7px;border-radius:9999px;background:{{ client.dotColor }};flex-shrink:0"></span>
+                    <div style="flex:1;min-width:0">
+                      <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ client.name }}</p>
+                      <p style="margin:3px 0 0;font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ client.subtitle }}</p>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px 12px;min-width:0;margin-left:auto">
+                    <span style="min-width:64px;text-align:right;font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;color:{{ client.prazoColor }};white-space:nowrap">{{ client.prazoLabel }}</span>
+                    <span style="min-width:64px;text-align:right;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground);white-space:nowrap">{{ client.valueLabel }}</span>
+                    <div style="display:flex;gap:6px;flex-shrink:0;justify-content:flex-end">
+                      <button type="button" onclick="{{ client.onCobrar }}" disabled="{{ client.isCharging }}" style="height:32px;padding:0 12px;border-radius:6px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:11px;font-weight:600;cursor:pointer;opacity:{{ client.chargingOpacity }};white-space:nowrap">{{ client.cobrarLabel }}</button>
+                      <button type="button" onclick="{{ client.onRenovar }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">Renovar</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <aside style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+            <div style="border-bottom:1px solid var(--border);padding:18px;background:color-mix(in srgb, var(--muted) 45%, transparent)">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Fila selecionada</p><h3 style="margin:4px 0 0;font-size:13px;font-weight:600;color:var(--foreground)">{{ selectedSegmentLabel }}</h3></div>
+                <span style="width:34px;height:34px;border-radius:8px;background:{{ asideIconBg }};color:{{ asideIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></span>
+              </div>
+              <p style="margin:24px 0 0;font-family:'Geist Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-.05em;color:var(--foreground)">{{ queueCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">clientes nesta prioridade</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;border-top:1px solid color-mix(in srgb, var(--border) 70%, transparent);padding-top:12px">
+                <span style="font-size:10px;color:var(--muted-foreground)">Valor acompanhado</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ queueValueLabel }}</span>
+              </div>
+            </div>
+            <div style="padding:16px">
+              <p style="margin:0;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground)">Trocar prioridade</p>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+                <sc-for list="{{ segments }}" as="segment2" hint-placeholder-count="3">
+                  <button type="button" onclick="{{ segment2.onClick }}" style="{{ segment2.rowStyle }}">
+                    <span style="flex:1;min-width:0;font-size:12px;font-weight:500;text-align:left">{{ segment2.label }}</span>
+                    <span style="font-family:'Geist Mono',monospace;border-radius:8px;background:var(--card);padding:4px 8px;font-size:12px;font-weight:600;color:var(--foreground)">{{ segment2.count }}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div style="display:flex;align-items:center;gap:9px;min-width:0">
+                  <span style="width:30px;height:30px;border-radius:8px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg></span>
+                  <div style="min-width:0"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação de cobrança</p><p style="margin:1px 0 0;font-size:10px;color:var(--muted-foreground)">3 regras ativas</p></div>
+                </div>
+                <button type="button" onclick="{{ goAutomacao }}" style="border:none;background:none;border-radius:6px;padding:6px 8px;font-size:10px;font-weight:600;color:var(--interactive-fg);cursor:pointer">Gerenciar</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+      </div>
+
+      <sc-if value="{{ isBasico }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:12px 16px">
+          <p style="flex:1;min-width:220px;margin:0;font-size:12px;line-height:1.6;color:var(--muted-foreground)"><strong style="color:var(--interactive-fg)">Visão básica ativa.</strong> 26 pagamentos registrados neste mês. Previsões, comparativos, MRR e indicadores de saúde financeira estão disponíveis no Pro.</p>
+          <button type="button" onclick="{{ setPlanPro }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer">Conhecer o Pro</button>
+        </div>
+      </sc-if>
+
+      <!-- INDICADORES AVANÇADOS (Pro/Master) -->
+      <sc-if value="{{ isProOrMaster }}" hint-placeholder-val="{{ false }}">
+        <section style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div>
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Indicadores avançados</p>
+              <h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Saúde financeira da carteira</h2>
+            </div>
+            <span style="border:1px solid color-mix(in srgb, var(--interactive) 30%, transparent);background:var(--interactive-bg);color:var(--interactive-fg);border-radius:8px;padding:5px 10px;font-size:10px;font-weight:600">{{ planBadgeLabel }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+            <article style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:16px">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">MRR</p>
+              <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:var(--foreground)">{{ mrrLabel }}</p>
+              <p style="margin:4px 0 0;font-size:10.5px;color:var(--money)">{{ mrrGrowthLabel }} vs mês anterior</p>
+            </article>
+            <article style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:16px">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">Churn mensal</p>
+              <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:var(--foreground)">{{ churnLabel }}</p>
+              <p style="margin:4px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ churnCountLabel }}</p>
+            </article>
+            <article style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:16px">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">LTV médio</p>
+              <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:var(--foreground)">{{ ltvLabel }}</p>
+              <p style="margin:4px 0 0;font-size:10.5px;color:var(--muted-foreground)">por cliente ativo</p>
+            </article>
+            <article style="border-radius:8px;border:1px solid var(--success-border,var(--border));background:color-mix(in srgb, var(--success-bg) 35%, var(--card));padding:16px">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">Índice de saúde</p>
+              <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:var(--success-fg)">{{ healthScoreLabel }}</p>
+              <p style="margin:4px 0 0;font-size:10.5px;color:var(--muted-foreground)">carteira estável</p>
+            </article>
+          </div>
+          <sc-if value="{{ isMaster }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:12px;align-items:flex-start;border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:16px 18px">
+              <span style="width:32px;height:32px;border-radius:9px;background:var(--card);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg></span>
+              <div><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Previsão Master: receita tende a subir {{ masterForecastPct }} no próximo mês</p><p style="margin:4px 0 0;font-size:11px;line-height:1.6;color:var(--muted-foreground)">Baseado em sazonalidade da carteira e histórico de renovações dos últimos 6 meses.</p></div>
+            </div>
+          </sc-if>
+        </section>
+      </sc-if>
+
+      <!-- ANÁLISES / GRÁFICOS -->
+      <section style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Análises</p>
+          <h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Desempenho financeiro</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:16px;align-items:start">
+          <article style="overflow:hidden;border-top:1px solid var(--foreground);background:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:36px;height:36px;border-radius:8px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="4" height="10" rx="1"></rect><rect x="10" y="5" width="4" height="15" rx="1"></rect><rect x="17" y="13" width="4" height="7" rx="1"></rect></svg></span>
+                <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Pagamentos por período</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Receita confirmada e prevista ao longo do tempo</p></div>
+              </div>
+              <div style="display:inline-flex;gap:4px;border-radius:8px;background:var(--muted);padding:4px">
+                <sc-for list="{{ periodTabs }}" as="tab" hint-placeholder-count="4">
+                  <button type="button" onclick="{{ tab.onClick }}" style="{{ tab.style }}">{{ tab.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div ref="{{ chartRef }}" style="position:relative;padding:18px 20px 8px">
+              <svg viewBox="0 0 {{ chartWidth }} {{ chartHeight }}" width="100%" height="220" preserveAspectRatio="xMinYMin meet" style="display:block;overflow:visible">
+                <sc-for list="{{ gridLines }}" as="grid" hint-placeholder-count="4">
+                  <line x1="44" y1="{{ grid.y }}" x2="{{ chartWidth }}" y2="{{ grid.y }}" stroke="var(--border)" stroke-dasharray="3 4"></line>
+                </sc-for>
+                <sc-for list="{{ chartBars }}" as="bar" hint-placeholder-count="4">
+                  <rect x="{{ bar.trackX }}" y="{{ trackTop }}" width="{{ bar.trackWidth }}" height="{{ trackHeight }}" rx="6" fill="var(--muted)" fill-opacity="0.85"></rect>
+                  <rect x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}" rx="3" fill="var(--money)" fill-opacity="{{ bar.fillOpacity }}"></rect>
+                  <rect x="{{ bar.rx }}" y="{{ bar.ry }}" width="{{ bar.width }}" height="{{ bar.rHeight }}" rx="3" fill="var(--secondary-foreground)" fill-opacity="{{ bar.fillOpacity }}"></rect>
+                  <rect x="{{ bar.hitX }}" y="0" width="{{ bar.hitWidth }}" height="{{ chartHeight }}" fill="transparent" style="cursor:pointer" onmouseenter="{{ bar.onEnter }}" onmouseleave="{{ bar.onLeave }}"></rect>
+                </sc-for>
+                <polyline points="{{ linePoints }}" fill="none" stroke="var(--warning)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                <sc-for list="{{ chartDots }}" as="dot" hint-placeholder-count="4">
+                  <circle cx="{{ dot.cx }}" cy="{{ dot.cy }}" r="{{ dot.r }}" fill="var(--card)" stroke="var(--warning)" stroke-width="2.5" style="pointer-events:none"></circle>
+                </sc-for>
+              </svg>
+              <div style="position:absolute;left:20px;right:20px;top:18px;height:220px;pointer-events:none">
+                <sc-for list="{{ gridLines }}" as="g2" hint-placeholder-count="4">
+                  <span style="position:absolute;left:0;width:38px;text-align:right;top:{{ g2.topPct }}%;transform:translateY(-50%);font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">{{ g2.label }}</span>
+                </sc-for>
+                <sc-for list="{{ chartBars }}" as="b2" hint-placeholder-count="4">
+                  <span style="position:absolute;left:{{ b2.leftPct }}%;bottom:2px;transform:translateX(-50%);font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ b2.label }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ hasHoverBar }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:6px;left:{{ hoverBarData.leftPct }}%;transform:translateX(-50%);pointer-events:none;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:8px 10px;white-space:nowrap;z-index:5">
+                  <p style="margin:0;font-size:10px;font-weight:600;color:var(--foreground)">{{ hoverBarData.label }}</p>
+                  <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--money)">Confirmado {{ hoverBarData.confirmedLabel }}</p>
+                  <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--secondary-foreground)">Renovações {{ hoverBarData.renewalsLabel }}</p>
+                  <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--warning-fg)">Previsto {{ hoverBarData.forecastLabel }}</p>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:20px;border-top:1px solid var(--border);padding:12px;font-size:10px;color:var(--muted-foreground)">
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:var(--money)"></span>Confirmado</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:var(--secondary-foreground)"></span>Renovações</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:var(--warning)"></span>Previsto</span>
+            </div>
+          </article>
+
+          <article style="overflow:hidden;border-top:1px solid var(--foreground);background:none;display:flex;flex-direction:column">
+            <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+              <h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Top serviços</h3>
+              <p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Participação na receita do mês</p>
+            </div>
+            <div style="position:relative;display:flex;justify-content:center;padding:20px 20px 6px">
+              <div style="position:absolute;inset:20px 20px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;pointer-events:none">
+                <span style="font-family:'Geist Mono',monospace;font-size:8.5px;letter-spacing:.04em;color:var(--muted-foreground)">{{ donutCenterLabel }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ donutCenterValue }}</span>
+              </div>
+              <svg width="160" height="160" viewBox="0 0 160 160">
+                <sc-for list="{{ rankingRows }}" as="seg" hint-placeholder-count="5">
+                  <circle cx="80" cy="80" r="62" fill="none" stroke="{{ seg.color }}" stroke-width="{{ seg.strokeWidth }}" stroke-opacity="{{ seg.opacity }}" stroke-dasharray="{{ seg.dasharray }}" stroke-dashoffset="{{ seg.dashoffset }}" transform="rotate(-90 80 80)" style="cursor:pointer;transition:stroke-width .15s" onmouseenter="{{ seg.onEnter }}" onmouseleave="{{ seg.onLeave }}"></circle>
+                </sc-for>
+              </svg>
+            </div>
+            <div style="flex:1;padding:6px 18px 18px;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ rankingRows }}" as="row" hint-placeholder-count="5">
+                <div onmouseenter="{{ row.onEnter }}" onmouseleave="{{ row.onLeave }}" style="cursor:pointer;border-radius:8px;padding:4px 6px;margin:-4px -6px;background:{{ row.rowBg }}">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="width:8px;height:8px;border-radius:9999px;background:{{ row.color }};flex-shrink:0"></span>
+                    <span style="flex:1;min-width:0;font-size:11.5px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.label }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ row.value }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);width:34px;text-align:right">{{ row.share }}%</span>
+                  </div>
+                  <div style="margin-top:5px;height:4px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ row.color }};width:{{ row.barWidth }}%"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- DUE DATE MAP -->
+      <section style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:20px 24px;flex-wrap:wrap">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2.3"></rect><path d="M3.5 9.5h17M8 3v3M16 3v3"></path></svg></span>
+            <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Distribuição da carteira</p><h2 style="margin:4px 0 0;font-size:16px;font-weight:600;color:var(--foreground)">Mapa de vencimentos</h2><p style="margin:4px 0 0;font-size:12px;color:var(--muted-foreground)">Concentração dos clientes por dia do mês.</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:color-mix(in srgb, var(--muted) 40%, transparent);border-radius:8px;padding:8px 12px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-foreground)"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 3v3M8 13h3M8 17h3"></path></svg>
+            <div><p style="margin:0;font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground)">Carteira mapeada</p><p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ totalClients }} clientes</p></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;background:color-mix(in srgb, var(--muted) 25%, transparent);padding:20px">
+          <aside style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:18px">
+            <div style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--money)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 21 4-3 4 3-1-4.5L18 13l-4.5-.5L12 8l-1.5 4.5L6 13l3 3.5Z"></path></svg><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Dias mais movimentados</h3></div>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--muted-foreground)">Top 5 dias com mais vencimentos.</p>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+              <sc-for list="{{ topDays }}" as="day" hint-placeholder-count="5">
+                <div style="border-radius:8px;border:1px solid var(--border);background:color-mix(in srgb, var(--muted) 30%, transparent);padding:10px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:26px;height:26px;border-radius:8px;background:{{ day.rankBg }};color:{{ day.rankFg }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ day.rank }}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Dia {{ day.dayLabel }}</p><span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--money)">{{ day.count }}</span></div>
+                      <div style="margin-top:6px;height:5px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:var(--money);width:{{ day.barWidth }}%"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+              <p style="margin:0;font-size:10px;color:var(--muted-foreground)">Valor mensal distribuído</p>
+              <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:var(--foreground)">{{ totalAmountLabel }}</p>
+            </div>
+          </aside>
+
+          <div style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:18px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Clientes por dia</h3><p style="margin:4px 0 0;font-size:10px;color:var(--muted-foreground)">Quanto mais forte a cor, maior a concentração.</p></div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted-foreground)">
+                <span>Menos</span><span style="width:12px;height:12px;border-radius:3px;background:color-mix(in srgb, var(--money) 10%, transparent)"></span><span style="width:12px;height:12px;border-radius:3px;background:color-mix(in srgb, var(--money) 26%, transparent)"></span><span style="width:12px;height:12px;border-radius:3px;background:color-mix(in srgb, var(--money) 55%, transparent)"></span><span style="width:12px;height:12px;border-radius:3px;background:var(--money)"></span><span>Mais</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,minmax(34px,1fr));gap:8px;margin-top:16px">
+              <sc-for list="{{ heatCells }}" as="cell" hint-placeholder-count="31">
+                <button type="button" onclick="{{ cell.onClick }}" style-hover="box-shadow:0 0 0 2px var(--foreground) inset" style="display:flex;flex-direction:column;justify-content:space-between;min-height:76px;border-radius:8px;border:1px solid {{ cell.border }};background:{{ cell.bg }};color:{{ cell.fg }};padding:8px;cursor:pointer;text-align:left">
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;opacity:.8">{{ cell.dayLabel }}</span>
+                  <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600">{{ cell.count }}</p></div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid {{ toast.border }};background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:{{ toast.dot }};flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p>
+          <sc-if value="{{ toast.hasDesc }}"><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ toast.description }}</p></sc-if>
+        </div>
+        <sc-if value="{{ toast.hasAction }}">
+          <button type="button" onclick="{{ toast.onAction }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--interactive-fg);cursor:pointer;white-space:nowrap">{{ toast.actionLabel }}</button>
+        </sc-if>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- COMMAND PALETTE -->
+  <sc-if value="{{ cmdOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:80px 24px;z-index:90" onclick="{{ toggleCmd }}">
+      <div style="width:100%;max-width:520px;background:var(--popover);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input value="{{ cmdQuery }}" oninput="{{ setCmdQuery }}" placeholder="Buscar cliente ou ir para…" style="flex:1;border:none;outline:none;background:none;font-size:13px;color:var(--foreground)"/>
+        </div>
+        <div style="max-height:320px;overflow-y:auto;padding:6px">
+          <p style="margin:6px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground)">Ir para</p>
+          <sc-for list="{{ cmdResults }}" as="dest" hint-placeholder-count="6">
+            <button type="button" onclick="{{ dest.onSelect }}" style="width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;border-radius:8px;padding:9px 10px;font-size:13px;color:var(--foreground);cursor:pointer;text-align:left">
+              <span style="flex:1">{{ dest.title }}</span>
+              <sc-if value="{{ dest.hasShortcut }}"><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ dest.shortcut }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CONFIRM (cobrar todos) -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden">
+        <div style="padding:20px 22px"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ confirmTitle }}</h3><p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted-foreground)">Cada um recebe a mensagem da regra de automação correspondente no WhatsApp.</p></div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeConfirm }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmCobrarTodos }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- PIX MODAL -->
+  <sc-if value="{{ pixOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:40px 24px;z-index:90;overflow:auto">
+      <div style="width:100%;max-width:400px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Gerar PIX rápido</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Cobrança avulsa, fora do plano do cliente</p></div>
+          <button type="button" onclick="{{ closePix }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+          <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Valor
+            <input value="{{ pixValue }}" oninput="{{ setPixValue }}" placeholder="0,00" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:13px;background:none;color:var(--foreground);outline:none"/>
+          </label>
+          <sc-if value="{{ pixGenerated }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:16px;background:color-mix(in srgb, var(--muted) 40%, transparent)">
+              <div style="width:120px;height:120px;border-radius:8px;background:repeating-linear-gradient(45deg, var(--border), var(--border) 6px, var(--card) 6px, var(--card) 12px);display:flex;align-items:center;justify-content:center">
+                <span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground);background:var(--card);padding:3px 6px;border-radius:4px">QR PIX</span>
+              </div>
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);text-align:center;word-break:break-all">00020126360014BR.GOV.BCB.PIX...5204000053039865802BR</p>
+              <button type="button" onclick="{{ copyPix }}" style="width:100%;height:34px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer">{{ copyPixLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closePix }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Fechar</button>
+          <button type="button" onclick="{{ generatePix }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Gerar código</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ADD CLIENT MODAL -->
+  <sc-if value="{{ addClientOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto">
+      <div style="width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12)">
+        <div style="flex-shrink:0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:11px;padding:17px 22px 14px">
+            <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M17 8v5M14.5 10.5h5"></path></svg></span>
+            <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Novo cliente</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ addClientStepSubtitle }}</p></div>
+            <button type="button" onclick="{{ closeAddClient }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+          </div>
+          <div style="display:flex;gap:6px;padding:0 22px 14px">
+            <sc-for list="{{ addClientSteps }}" as="cstep" hint-placeholder-count="2">
+              <button type="button" onclick="{{ cstep.onClick }}" style="{{ cstep.style }}">
+                <span style="{{ cstep.badgeStyle }}">{{ cstep.badgeContent }}</span>
+                {{ cstep.label }}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ isDadosStep }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Dados pessoais</p>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <input value="{{ form.name }}" oninput="{{ setFormName }}" placeholder="Nome completo *" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <input value="{{ form.phone }}" oninput="{{ setFormPhone }}" placeholder="WhatsApp" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                    <input value="{{ form.telegram }}" oninput="{{ setFormTelegram }}" placeholder="Telegram (opcional)" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  </div>
+                  <input value="{{ form.email }}" type="email" oninput="{{ setFormEmail }}" placeholder="E-mail (opcional)" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                </div>
+              </div>
+
+              <button type="button" onclick="{{ toggleNotifyEnabled }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;background:none;text-align:left">
+                <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Avisos automáticos</p><p style="margin:2px 0 0;font-size:10.5px;line-height:1.5;color:var(--muted-foreground)">Cobranças e lembretes só saem quando estiver ativo.</p></div>
+                <span style="{{ notifyTrackStyle }}"><span style="{{ notifyThumbStyle }}"></span></span>
+              </button>
+
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Consentimento</p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ consentRows }}" as="cr" hint-placeholder-count="3">
+                    <button type="button" onclick="{{ cr.onToggle }}" style="{{ cr.rowStyle }}">
+                      <span style="{{ cr.checkStyle }}"><sc-if value="{{ cr.checked }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                      <div style="min-width:0"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">{{ cr.title }}</p><p style="margin:2px 0 0;font-size:10.5px;line-height:1.5;color:var(--muted-foreground)">{{ cr.hint }}</p></div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Observação</p>
+                <div contenteditable="true" style="min-height:56px;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;color:var(--foreground)" data-placeholder="Observação interna (opcional)"></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isPlanoStep }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                  <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Plano contratado</p>
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;color:var(--muted-foreground)">{{ selectedServicesCountLabel }}</span>
+                </div>
+
+                <sc-if value="{{ hasSelectedServices }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+                    <sc-for list="{{ selectedServiceChips }}" as="chip" hint-placeholder-count="2">
+                      <button type="button" onclick="{{ chip.onRemove }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--interactive);background:var(--interactive-bg);color:var(--interactive-fg);border-radius:9999px;padding:4px 6px 4px 10px;font-size:11px;font-weight:600;cursor:pointer">
+                        {{ chip.name }}
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div style="position:relative;margin-top:10px">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                  <input value="{{ form.serviceSearch }}" oninput="{{ setFormServiceSearch }}" placeholder="Buscar entre {{ totalServicesCount }} serviços do catálogo…" style="width:100%;border:1px solid var(--input);border-radius:7px;padding:8px 11px 8px 30px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                </div>
+
+                <div style="margin-top:8px;max-height:216px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px">
+                  <sc-if value="{{ serviceListEmpty }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:8px 0;font-size:11.5px;color:var(--muted-foreground);text-align:center">Nenhum serviço encontrado.</p>
+                  </sc-if>
+                  <sc-for list="{{ serviceOptions }}" as="svc" hint-placeholder-count="6">
+                    <button type="button" onclick="{{ svc.onToggle }}" style="{{ svc.rowStyle }}">
+                      <span style="{{ svc.checkStyle }}"><sc-if value="{{ svc.active }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                      <span style="font-size:12.5px;font-weight:500;color:var(--foreground)">{{ svc.name }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Cobrança</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                  <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Valor pago *
+                    <input value="{{ form.planValue }}" oninput="{{ setFormPlanValue }}" placeholder="0,00" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Telas
+                    <input value="{{ form.screens }}" oninput="{{ setFormScreens }}" placeholder="1" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                  <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Vencimento *
+                    <input value="{{ form.dueDate }}" type="date" oninput="{{ setFormDueDate }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Forma de pagamento</p>
+                <div style="display:flex;gap:8px">
+                  <sc-for list="{{ addClientPaymentOptions }}" as="pm" hint-placeholder-count="3">
+                    <button type="button" onclick="{{ pm.onSelect }}" style="{{ pm.style }}">{{ pm.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:8px;background:var(--muted);padding:12px 14px">
+                <div><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Valor pago</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">{{ addClientValueLabel }}</p></div>
+                <div style="text-align:right"><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Vencimento</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ addClientDueLabel }}</p></div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:9px;border-top:1px solid var(--border);padding:14px 22px">
+          <sc-if value="{{ isPlanoStep }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;font-size:10px;color:var(--muted-foreground)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:9999px;background:var(--money)"></span>Ativo</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:9999px;background:var(--warning)"></span>Pendente</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:9999px;background:var(--danger)"></span>Vencido</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isDadosStep }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+          <div style="display:flex;gap:9px">
+            <button type="button" onclick="{{ closeAddClient }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+            <sc-if value="{{ isDadosStep }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onclick="{{ goToPlanoStep }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Avançar para o plano</button>
+            </sc-if>
+            <sc-if value="{{ isPlanoStep }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onclick="{{ goToDadosStep }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Voltar</button>
+              <button type="button" onclick="{{ submitAddClient }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Criar cliente</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- DAY MODAL -->
+  <sc-if value="{{ dayModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto">
+      <div style="width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12)">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2.3"></rect><path d="M3.5 9.5h17M8 3v3M16 3v3"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ dayModalTitle }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ dayModalSubtitle }}</p></div>
+          <button type="button" onclick="{{ closeDayModal }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <sc-if value="{{ dayModalEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 16px;text-align:center">
+              <span style="width:40px;height:40px;border-radius:8px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+              <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhum cliente vence neste dia</p>
+            </div>
+          </sc-if>
+          <sc-for list="{{ dayModalRows }}" as="client" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid var(--border)">
+              <span style="width:32px;height:32px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ client.initials }}</span>
+              <div style="flex:1;min-width:0">
+                <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ client.name }}</p>
+                <p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ client.service }}</p>
+              </div>
+              <span style="flex-shrink:0;font-family:'Geist Mono',monospace;font-size:12px;font-weight:500;color:var(--foreground);white-space:nowrap">{{ client.valueLabel }}</span>
+              <span style="flex-shrink:0;width:8px;height:8px;border-radius:9999px;background:{{ client.phoneDot }}" title="{{ client.phoneTitle }}"></span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:14px 22px">
+          <p style="margin:0;font-size:11px;color:var(--muted-foreground)">{{ dayModalTotal }} no dia · {{ dayModalPhoneCount }} com WhatsApp</p>
+          <div style="display:flex;gap:9px">
+            <button type="button" onclick="{{ closeDayModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Fechar</button>
+            <sc-if value="{{ dayModalHasClients }}">
+              <button type="button" onclick="{{ bulkSendDay }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+                Enviar em massa
+              </button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- RENEW MODAL -->
+  <sc-if value="{{ renewOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto">
+      <div style="width:100%;max-width:460px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-2.7-6.2M21 3v5.3h-5.3"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Renovar plano</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ renewClientName }}</p></div>
+          <button type="button" onclick="{{ closeRenew }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviço</p>
+            <select onchange="{{ setRenewServiceSelect }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+              <sc-for list="{{ renewServiceOptions }}" as="rs" hint-placeholder-count="2">
+                <option value="{{ rs.key }}" selected="{{ rs.isSelected }}">{{ rs.label }}</option>
+              </sc-for>
+            </select>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Período</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <sc-for list="{{ periodOptions }}" as="period" hint-placeholder-count="4">
+                <button type="button" onclick="{{ period.onSelect }}" style="{{ period.style }}">{{ period.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:8px;background:color-mix(in srgb, var(--muted) 40%, transparent);padding:12px 14px">
+            <div><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Novo vencimento</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ renewNewDue }}</p></div>
+            <div style="text-align:right">
+              <p style="margin:0;font-size:10px;color:var(--muted-foreground)">Total</p>
+              <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:3px">
+                <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">R$</span>
+                <input value="{{ renewTotalDraft }}" oninput="{{ setRenewTotalOverride }}" style="width:78px;text-align:right;border:none;border-bottom:1px dashed var(--money);background:none;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money);outline:none;padding:0"/>
+              </div>
+              <sc-if value="{{ renewTotalIsCustom }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:3px 0 0;font-size:9.5px;color:var(--warning-fg);white-space:nowrap">valor difere do padrão ({{ renewDefaultTotalLabel }})</p>
+              </sc-if>
+            </div>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Forma de pagamento</p>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ paymentOptions }}" as="pm" hint-placeholder-count="3">
+                <button type="button" onclick="{{ pm.onSelect }}" style="{{ pm.style }}">{{ pm.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <button type="button" onclick="{{ toggleRenewNotify }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;padding:0;text-align:left">
+            <span style="{{ renewNotifyTrackStyle }}"><span style="{{ renewNotifyThumbStyle }}"></span></span>
+            <span style="font-size:12px;color:var(--foreground)">Avisar o cliente no WhatsApp</span>
+          </button>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeRenew }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitRenew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Confirmar renovação</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+  '--ink': '#191a1e', '--ink-fg': '#f5f4f0',
+  '--chart-1': '#2e7d54', '--chart-2': '#4055c8', '--chart-3': '#c98a1e', '--chart-4': '#a0522d', '--chart-5': '#6b6f8a',
+};
+const DARK_VARS = {
+  '--background': '#1c1d21', '--foreground': '#ececed', '--card': '#24252a', '--card-foreground': '#ececed',
+  '--popover': '#24252a', '--popover-foreground': '#ececed', '--primary': '#e8e9ef', '--primary-foreground': '#14161d',
+  '--secondary': '#0f1012', '--secondary-foreground': '#a6a8b0', '--muted': '#17181b', '--muted-foreground': '#8a8c93',
+  '--accent': '#2b2d3a', '--accent-foreground': '#c3ccff', '--border': '#363840', '--input': '#6c707c', '--ring': '#8b9cf9',
+  '--interactive': '#8b9cf9', '--money': '#3ecf8e', '--warning': '#dfb35c', '--danger': '#e57373',
+  '--success-bg': '#1e3328', '--success-fg': '#7dd3a8', '--warning-bg': '#332b1c', '--warning-border': '#4a3f28', '--warning-fg': '#dfb35c',
+  '--danger-bg': '#3a2224', '--danger-fg': '#e57373', '--danger-border': '#4a2c2e',
+  '--interactive-bg': '#262a3d', '--interactive-fg': '#aab6ff',
+  '--sidebar': '#18191c', '--sidebar-border': '#2a2b2f', '--sidebar-accent': '#2b2d3a', '--sidebar-accent-fg': '#c3ccff', '--sidebar-foreground': '#a3a4a8',
+  '--ink': '#101114', '--ink-fg': '#ececed',
+  '--chart-1': '#3ecf8e', '--chart-2': '#8b9cf9', '--chart-3': '#dfb35c', '--chart-4': '#e08a5e', '--chart-5': '#9a9fc0',
+};
+
+const CLIENTS = [
+  { id: 'c1', name: 'Ana Beatriz Souza', phone: true, service: 'Netflix Premium', screens: 2, planValue: 45.9, diffDays: -5 },
+  { id: 'c2', name: 'Carlos Eduardo Lima', phone: true, service: 'IPTV Ultra', screens: 1, planValue: 39.9, diffDays: -2 },
+  { id: 'c3', name: 'Fernanda Torres', phone: false, service: 'Combo IPTV + VPN', screens: 3, planValue: 69.9, diffDays: -1 },
+  { id: 'c4', name: 'Juliana Prado', phone: true, service: 'Disney+ Premium', screens: 1, planValue: 33.9, diffDays: 0 },
+  { id: 'c5', name: 'Marcos Vinícius', phone: true, service: 'IPTV Gold', screens: 2, planValue: 54.9, diffDays: 0 },
+  { id: 'c6', name: 'Patrícia Gomes', phone: true, service: 'Spotify Family', screens: 1, planValue: 24.9, diffDays: 1 },
+  { id: 'c7', name: 'Rafael Nunes', phone: true, service: 'IPTV Ultra', screens: 4, planValue: 79.9, diffDays: 3 },
+  { id: 'c8', name: 'Bruna Castro', phone: false, service: 'VPN Premium', screens: 1, planValue: 19.9, diffDays: 5 },
+  { id: 'c9', name: 'Diego Martins', phone: true, service: 'Combo Streaming', screens: 2, planValue: 59.9, diffDays: 7 },
+];
+const DUE_BUCKET_COUNTS = [3,1,0,2,8,1,0,4,2,1,0,3,1,9,2,0,1,4,2,1,0,6,3,1,0,2,7,1,0,3,2];
+const TIER_BASE_PRICE = { 'Básico': 19.9, 'Gold': 29.9, 'Ultra': 39.9 };
+function priceForService(name) {
+  const tier = name.split(' ').pop();
+  const base = TIER_BASE_PRICE[tier] || 24.9;
+  let hash = 0; for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return Math.round((base + (hash % 15)) * 100) / 100;
+}
+const SERVICE_BASE = ['IPTV','Netflix','Disney+','HBO Max','Prime Video','Paramount+','Apple TV+','Globoplay','Star+','YouTube Premium','Spotify','Deezer','Crunchyroll','ESPN','Telecine','ExpressVPN','NordVPN','Cloud Backup','Antivírus','Office 365'];
+const SERVICE_TIERS = ['Básico','Gold','Ultra'];
+const SERVICES = SERVICE_BASE.flatMap((b) => SERVICE_TIERS.map((t) => `${b} ${t}`));
+const NAME_POOL = ['Lucas Andrade','Mariana Alves','Pedro Henrique','Camila Duarte','Rodrigo Farias','Beatriz Lima','Thiago Moreira','Larissa Pinto','Gustavo Rocha','Isabela Cardoso','Felipe Barros','Vanessa Teixeira','Eduardo Ramos','Priscila Nogueira','André Salles','Renata Correia','Vinícius Batista','Aline Ferreira','Leonardo Vieira','Débora Santana'];
+const FILTER_PERIOD_SCALE = { today: 0.06, '7d': 0.22, '30d': 0.75, month: 1 };
+const PERIOD_LABELS = [{ key: 'month', label: 'Mês atual' }, { key: '30d', label: '30 dias' }, { key: '90d', label: '90 dias' }, { key: '12m', label: '12 meses' }];
+const RANKING = [
+  { label: 'IPTV Ultra', value: 2688 }, { label: 'IPTV Gold', value: 2016 }, { label: 'Combo Streaming', value: 1512 },
+  { label: 'Netflix Premium', value: 1176 }, { label: 'Outros', value: 1008 },
+];
+function seeded(n) { const x = Math.sin(n) * 10000; return x - Math.floor(x); }
+function buildSeries(period) {
+  const specs = { month: { n: 4, prefix: 'S' }, '30d': { n: 6, prefix: 'D' }, '90d': { n: 6, prefix: 'Q' }, '12m': { n: 12, prefix: 'M' } };
+  const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const spec = specs[period];
+  return Array.from({ length: spec.n }, (_, i) => {
+    const seed = (period.charCodeAt(0) + i * 13.7);
+    const base = 620 + seeded(seed) * 520;
+    const confirmed = Math.round(base);
+    const forecast = Math.round(base * (1.08 + seeded(seed + 3) * 0.22));
+    const renewals = Math.round(base * (0.3 + seeded(seed + 7) * 0.16));
+    const label = period === '12m' ? monthNames[i % 12] : `${spec.prefix}${i + 1}`;
+    return { label, confirmed, forecast, renewals };
+  });
+}
+function compactCurrency(v) {
+  if (Math.abs(v) >= 1000) return `R$ ${(v / 1000).toFixed(1)}k`;
+  return `R$ ${Math.round(v)}`;
+}
+const NAV_DESTINATIONS = [
+  { title: 'Painel', url: '/painel', shortcut: '⌘1' }, { title: 'Clientes', url: '/clientes', shortcut: '⌘2' },
+  { title: 'Financeiro', url: '/financeiro', shortcut: '⌘3' }, { title: 'Serviços', url: '/servicos', shortcut: '⌘4' },
+  { title: 'Promoções', url: '/promocoes' }, { title: 'Afiliados', url: '/afiliados' }, { title: 'Automação', url: '/automacao' },
+  { title: 'Aquecimento', url: '/aquecimento' }, { title: 'Leads', url: '/leads' }, { title: 'Integrações', url: '/conexoes/gateways' },
+  { title: 'Configurações', url: '/configuracoes' }, { title: 'Minha conta', url: '/minha-conta' }, { title: 'Suporte', url: '/suporte' },
+];
+
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+class Component extends DCLogic {
+  state = {
+    theme: 'light', privacyOn: false, sidebarCollapsed: false,
+    navOpen: { catalog: false, automation: true, insights: false, integrations: false, more: false },
+    queueFilter: 'vencidos', chargingIds: {}, onboardingDismissed: false, toasts: [],
+    notifOpen: false, quickOpen: false, cmdOpen: false, cmdQuery: '',
+    notifAlerts: [
+      { id: 'n1', title: '2 Clientes Vencendo', desc: 'Existem cobranças próximas.', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)', glyph: '!' },
+      { id: 'n2', title: '1 Recarga Pendente', desc: 'Revendedor solicitou créditos.', bg: 'var(--success-bg)', fg: 'var(--success-fg)', glyph: '$' },
+    ],
+    addClientOpen: false, addClientStep: 'dados',
+    form: { name: '', phone: '', telegram: '', email: '', dueDate: '', planValue: '', screens: '1', paymentMethod: 'pix', notifyEnabled: true, serviceSearch: '', consent: { authorized: false, welcome: false, reminder: false } },
+    selectedServices: {},
+    renewOpen: false, renewClientId: null, renewPeriod: 3, renewPayment: 'pix', renewNotify: true, renewService: 'keep', renewTotalOverride: null,
+    confirmOpen: false, pixOpen: false, pixValue: '', pixGenerated: false, pixCopied: false,
+    clock: '', dayModalOpen: false, dayModalDay: null, chartPeriod: 'month',
+    hoverBar: null, hoverSeg: null, plan: 'basico', chartW: 600,
+    filters: { period: 'month', customFrom: '', customTo: '', typesOpen: false, types: { clientes: true, ativos: true, vencidos: true, novos: true, renovacoes: true, receber: true } },
+  };
+
+  setPlan(plan) { this.setState({ plan }); }
+
+  setChartPeriod(key) { this.setState({ chartPeriod: key }); }
+  setFilterPeriod(key) { this.setState((s) => ({ filters: { ...s.filters, period: key } })); }
+  setCustomFrom = (e) => this.setState((s) => ({ filters: { ...s.filters, customFrom: e.target.value } }));
+  setCustomTo = (e) => this.setState((s) => ({ filters: { ...s.filters, customTo: e.target.value } }));
+  toggleFilterType(key) { this.setState((s) => ({ filters: { ...s.filters, types: { ...s.filters.types, [key]: !s.filters.types[key] } } })); }
+  toggleTypesMenu = () => this.setState((s) => ({ filters: { ...s.filters, typesOpen: !s.filters.typesOpen } }));
+  resetTypeFilters = () => this.setState((s) => ({ filters: { ...s.filters, types: { clientes: true, ativos: true, vencidos: true, novos: true, renovacoes: true, receber: true } } }));
+  setHoverBar(i) { this.setState({ hoverBar: i }); }
+  clearHoverBar = () => this.setState({ hoverBar: null });
+  setHoverSeg(i) { this.setState({ hoverSeg: i }); }
+  clearHoverSeg = () => this.setState({ hoverSeg: null });
+
+  buildDayClients(day, count) {
+    const clients = [];
+    for (let i = 0; i < count; i++) {
+      const name = NAME_POOL[(day * 3 + i) % NAME_POOL.length];
+      const service = SERVICES[(day + i) % SERVICES.length];
+      const value = Math.round((29.9 + ((day * 7 + i * 13) % 6) * 10) * 100) / 100;
+      const phone = (day + i) % 4 !== 0;
+      clients.push({ id: `d${day}-${i}`, name, service, value, phone });
+    }
+    return clients;
+  }
+
+  pendingTimers = {};
+  toastSeq = 0;
+  queueRef = React.createRef();
+  chartRef = React.createRef();
+
+  componentDidMount() {
+    this.tick();
+    this.clockInterval = setInterval(() => this.tick(), 1000);
+    const el = this.chartRef.current;
+    if (el && window.ResizeObserver) {
+      this.chartRO = new ResizeObserver((entries) => {
+        const w = Math.round(entries[0].contentRect.width);
+        if (w > 0 && w !== this.state.chartW) this.setState({ chartW: w });
+      });
+      this.chartRO.observe(el);
+    }
+  }
+  componentWillUnmount() {
+    this.chartRO && this.chartRO.disconnect();
+    clearInterval(this.clockInterval);
+    Object.values(this.pendingTimers).forEach((t) => clearTimeout(t));
+  }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    const full = { id, tone: 'default', duration: 4000, ...toast };
+    this.setState((s) => ({ toasts: [...s.toasts, full] }));
+    const t = setTimeout(() => this.removeToast(id), full.duration);
+    this.pendingTimers['toast-' + id] = t;
+    return id;
+  }
+  removeToast(id) {
+    clearTimeout(this.pendingTimers['toast-' + id]);
+    delete this.pendingTimers['toast-' + id];
+    this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  }
+
+  toggleSidebar = () => this.setState((s) => ({ sidebarCollapsed: !s.sidebarCollapsed }));
+  toggleTheme = () => this.setState((s) => ({ theme: s.theme === 'light' ? 'dark' : 'light' }));
+  togglePrivacy = () => this.setState((s) => ({ privacyOn: !s.privacyOn }));
+  toggleNotif = () => this.setState((s) => ({ notifOpen: !s.notifOpen, quickOpen: false }));
+  toggleQuick = () => this.setState((s) => ({ quickOpen: !s.quickOpen, notifOpen: false }));
+  toggleCmd = () => this.setState((s) => ({ cmdOpen: !s.cmdOpen, cmdQuery: '' }));
+  setCmdQuery = (e) => this.setState({ cmdQuery: e.target.value });
+  clearNotifs = () => this.setState({ notifAlerts: [] });
+  stop = (e) => e.stopPropagation();
+  noop = () => {};
+
+  toggleNavGroup = (key) => this.setState((s) => ({ navOpen: { ...s.navOpen, [key]: !s.navOpen[key] } }));
+  toggleCatalog = () => this.toggleNavGroup('catalog');
+  toggleAutomation = () => this.toggleNavGroup('automation');
+  toggleInsights = () => this.toggleNavGroup('insights');
+  toggleIntegrations = () => this.toggleNavGroup('integrations');
+  toggleMore = () => this.toggleNavGroup('more');
+
+  scrollToQueue() {
+    window.requestAnimationFrame(() => {
+      this.queueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  setFilter(filter) {
+    this.setState({ queueFilter: filter });
+    this.scrollToQueue();
+  }
+  openOverdueQueue = () => this.setFilter('vencidos');
+  openTodayQueue = () => this.setFilter('hoje');
+  openNext7Queue = () => this.setFilter('7dias');
+
+  goAutomacao = () => { this.setState({ notifOpen: false, quickOpen: false }); this.addToast({ title: 'Navegaria para Automação', description: 'Rota /automacao neste protótipo.', duration: 3000 }); };
+  goPlanos = () => this.addToast({ title: 'Navegaria para Planos', description: 'Rota /planos neste protótipo.', duration: 3000 });
+  quickPlaceholder = () => { this.setState({ quickOpen: false }); this.addToast({ title: 'Ação de exemplo neste protótipo.', duration: 3000 }); };
+  quickNewClient = () => { this.setState({ quickOpen: false }); this.openAddClient(); };
+
+  dismissOnboarding = () => this.setState({ onboardingDismissed: true });
+
+  handleCobrar(client) {
+    if (!client.phone) { this.addToast({ title: `${client.name} não possui WhatsApp cadastrado.`, duration: 4000 }); return; }
+    if (this.state.chargingIds[client.id]) return;
+    this.setState((s) => ({ chargingIds: { ...s.chargingIds, [client.id]: true } }));
+    const timeout = setTimeout(() => {
+      delete this.pendingTimers['charge-' + client.id];
+      this.setState((s) => { const c = { ...s.chargingIds }; delete c[client.id]; return { chargingIds: c }; });
+      this.addToast({ title: `Cobrança enviada para ${client.name}.`, duration: 4000 });
+    }, 6000);
+    this.pendingTimers['charge-' + client.id] = timeout;
+    this.addToast({
+      title: `Cobrança para ${client.name}`, description: 'A mensagem será enviada pelo WhatsApp.', duration: 6000,
+      actionLabel: 'Desfazer',
+      onAction: () => {
+        clearTimeout(this.pendingTimers['charge-' + client.id]);
+        delete this.pendingTimers['charge-' + client.id];
+        this.setState((s) => { const c = { ...s.chargingIds }; delete c[client.id]; return { chargingIds: c }; });
+      },
+    });
+  }
+  openCobrarTodos = () => this.setState({ confirmOpen: true });
+  closeConfirm = () => this.setState({ confirmOpen: false });
+  confirmCobrarTodos = () => {
+    const queue = CLIENTS.filter((c) => this.bucketOf(c.diffDays) === this.state.queueFilter && c.phone);
+    this.setState({ confirmOpen: false });
+    this.addToast({ title: `${queue.length} cobranças enviadas.`, duration: 4000 });
+  };
+
+  bucketOf(diff) { return diff < 0 ? 'vencidos' : diff === 0 ? 'hoje' : diff <= 7 ? '7dias' : null; }
+
+  openAddClient = () => this.setState({ addClientOpen: true, addClientStep: 'dados' });
+  closeAddClient = () => this.setState({ addClientOpen: false, addClientStep: 'dados', form: { name: '', phone: '', telegram: '', email: '', dueDate: '', planValue: '', screens: '1', paymentMethod: 'pix', notifyEnabled: true, serviceSearch: '', consent: { authorized: false, welcome: false, reminder: false } }, selectedServices: {} });
+  setFormServiceSearch = (e) => this.setState((s) => ({ form: { ...s.form, serviceSearch: e.target.value } }));
+  setAddClientStep(key) {
+    if (key === 'plano' && !this.state.form.name.trim()) { this.addToast({ title: 'Informe o nome do cliente antes de continuar.', duration: 3000 }); return; }
+    this.setState({ addClientStep: key });
+  }
+  setFormName = (e) => this.setState((s) => ({ form: { ...s.form, name: e.target.value } }));
+  setFormPhone = (e) => this.setState((s) => ({ form: { ...s.form, phone: e.target.value } }));
+  setFormTelegram = (e) => this.setState((s) => ({ form: { ...s.form, telegram: e.target.value } }));
+  setFormEmail = (e) => this.setState((s) => ({ form: { ...s.form, email: e.target.value } }));
+  setFormDueDate = (e) => this.setState((s) => ({ form: { ...s.form, dueDate: e.target.value } }));
+  setFormPlanValue = (e) => this.setState((s) => ({ form: { ...s.form, planValue: e.target.value } }));
+  setFormScreens = (e) => this.setState((s) => ({ form: { ...s.form, screens: e.target.value } }));
+  setFormPaymentMethod(key) { this.setState((s) => ({ form: { ...s.form, paymentMethod: key } })); }
+  toggleNotifyEnabled = () => this.setState((s) => ({ form: { ...s.form, notifyEnabled: !s.form.notifyEnabled } }));
+  toggleConsent(key) { this.setState((s) => ({ form: { ...s.form, consent: { ...s.form.consent, [key]: !s.form.consent[key] } } })); }
+  toggleService(name) { this.setState((s) => ({ selectedServices: { ...s.selectedServices, [name]: !s.selectedServices[name] } })); }
+  submitAddClient = () => {
+    if (!this.state.form.name.trim()) { this.addToast({ title: 'Informe o nome do cliente.', duration: 3000 }); return; }
+    this.closeAddClient();
+    this.addToast({ title: 'Cliente adicionado com sucesso.', duration: 4000 });
+  };
+
+  openRenew(clientId) { this.setState({ renewOpen: true, renewClientId: clientId, renewPeriod: 3, renewPayment: 'pix', renewService: 'keep', renewTotalOverride: null }); }
+  setRenewService(key) { this.setState({ renewService: key, renewTotalOverride: null }); }
+  setRenewServiceSelect = (e) => this.setRenewService(e.target.value);
+  closeRenew = () => this.setState({ renewOpen: false, renewClientId: null });
+  setRenewPeriod(n) { this.setState({ renewPeriod: n, renewTotalOverride: null }); }
+  setRenewTotalOverride = (e) => this.setState({ renewTotalOverride: e.target.value });
+  setRenewPayment(p) { this.setState({ renewPayment: p }); }
+  toggleRenewNotify = () => this.setState((s) => ({ renewNotify: !s.renewNotify }));
+  submitRenew = () => { this.closeRenew(); this.addToast({ title: 'Renovação confirmada.', duration: 4000 }); };
+
+  openDayModal = (day) => this.setState({ dayModalOpen: true, dayModalDay: day });
+  closeDayModal = () => this.setState({ dayModalOpen: false, dayModalDay: null });
+  bulkSendDay = () => {
+    const count = DUE_BUCKET_COUNTS[this.state.dayModalDay - 1] || 0;
+    const clients = this.buildDayClients(this.state.dayModalDay, count).filter((c) => c.phone);
+    this.closeDayModal();
+    this.addToast({ title: `${clients.length} cobranças enviadas para o dia ${String(this.state.dayModalDay).padStart(2, '0')}.`, duration: 4000 });
+  };
+
+  openPix = () => { this.setState({ pixOpen: true, quickOpen: false }); };
+  closePix = () => this.setState({ pixOpen: false, pixGenerated: false, pixValue: '', pixCopied: false });
+  setPixValue = (e) => this.setState({ pixValue: e.target.value });
+  generatePix = () => this.setState({ pixGenerated: true });
+  copyPix = () => { this.setState({ pixCopied: true }); this.addToast({ title: 'Código copiado.', duration: 2500 }); setTimeout(() => this.setState({ pixCopied: false }), 2000); };
+
+  mask(label) { return this.state.privacyOn ? label.replace(/[0-9]/g, '•') : label; }
+
+  navBtnStyle(active, expanded) {
+    const base = `width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:${expanded ? '0 10px' : '0'};justify-content:${expanded ? 'flex-start' : 'center'};border-radius:8px;border:none;background:${active ? 'var(--sidebar-accent)' : 'none'};color:${active ? 'var(--sidebar-accent-fg)' : 'var(--sidebar-foreground)'};font-weight:${active ? '600' : '500'};cursor:pointer;text-decoration:none;box-sizing:border-box`;
+    return base;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const isDark = s.theme === 'dark';
+    const vars = isDark ? DARK_VARS : LIGHT_VARS;
+    const rootStyle = { ...vars, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const sidebarExpanded = !s.sidebarCollapsed;
+    const sidebarWidthPx = sidebarExpanded ? 256 : 68;
+
+    const chevron = (open) => `flex-shrink:0;transition:transform .15s;transform:rotate(${open ? 90 : 0}deg);color:var(--muted-foreground)`;
+
+    const navItemStyle = {
+      painel: this.navBtnStyle(true, sidebarExpanded),
+      clientes: this.navBtnStyle(false, sidebarExpanded),
+      financeiro: this.navBtnStyle(false, sidebarExpanded),
+      catalogo: this.navBtnStyle(false, sidebarExpanded),
+      automacao: this.navBtnStyle(false, sidebarExpanded),
+      leads: this.navBtnStyle(false, sidebarExpanded),
+      insights: this.navBtnStyle(false, sidebarExpanded),
+      integracoes: this.navBtnStyle(false, sidebarExpanded),
+      mais: this.navBtnStyle(false, sidebarExpanded),
+      config: this.navBtnStyle(false, sidebarExpanded),
+      suporte: this.navBtnStyle(false, sidebarExpanded),
+    };
+
+    // Clients & buckets
+    const withMeta = CLIENTS.map((c) => ({ ...c, bucket: this.bucketOf(c.diffDays) }));
+    const vencidos = withMeta.filter((c) => c.bucket === 'vencidos');
+    const hoje = withMeta.filter((c) => c.bucket === 'hoje');
+    const sete = withMeta.filter((c) => c.bucket === '7dias');
+    const sum = (arr) => arr.reduce((t, c) => t + c.planValue, 0);
+    const overdueTotal = sum(vencidos), dueTodayTotal = sum(hoje), next7Total = sum(sete);
+
+    const totalClients = 128, activeClients = 112;
+    const overdueCount = vencidos.length;
+    let periodScale = 1;
+    if (s.filters.period === 'custom') {
+      if (s.filters.customFrom && s.filters.customTo) {
+        const days = Math.max(1, Math.round((new Date(s.filters.customTo) - new Date(s.filters.customFrom)) / 86400000));
+        periodScale = Math.min(2.4, Math.max(0.05, days / 30));
+      }
+    } else {
+      periodScale = FILTER_PERIOD_SCALE[s.filters.period] ?? 1;
+    }
+    const periodDefLabel = { today: 'Hoje', '7d': '7 dias', '30d': '30 dias', month: 'Este mês', custom: 'Personalizado' }[s.filters.period];
+    const periodBadgeLabel = s.filters.period === 'month' ? 'Atualizado agora' : `Período: ${periodDefLabel}`;
+
+    const newClients = Math.max(0, Math.round(14 * periodScale)), previousNewClients = Math.max(0, Math.round(9 * periodScale));
+    const growthChange = previousNewClients ? ((newClients - previousNewClients) / previousNewClients) * 100 : 0;
+    const basicPaymentsTotal = 3180.5 * periodScale;
+    const trackedAmount = (overdueTotal + dueTodayTotal + next7Total) * periodScale;
+
+    const queueMap = { vencidos, hoje: hoje, '7dias': sete };
+    const currentQueue = queueMap[s.queueFilter];
+
+    const initials = (name) => name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+    const prazoLabel = (d) => (d === -1 ? 'ontem' : d < 0 ? `há ${Math.abs(d)} dias` : d === 0 ? 'vence hoje' : d === 1 ? 'amanhã' : `em ${d} dias`);
+    const prazoColor = (d) => (d < 0 ? 'var(--danger)' : d === 0 ? 'var(--warning-fg)' : 'var(--muted-foreground)');
+    const dotColor = (d) => (d < 0 ? 'var(--danger)' : d === 0 ? 'var(--warning)' : 'var(--muted-foreground)');
+    const avatarBg = (d) => (d < 0 ? 'var(--danger-bg)' : d === 0 ? 'var(--warning-bg)' : 'var(--interactive-bg)');
+    const avatarFg = (d) => (d < 0 ? 'var(--danger-fg)' : d === 0 ? 'var(--warning-fg)' : 'var(--interactive-fg)');
+
+    const queueRows = currentQueue.map((c) => {
+      const charging = !!s.chargingIds[c.id];
+      return {
+        id: c.id, name: c.name,
+        subtitle: `${c.service} · ${c.screens} tela${c.screens > 1 ? 's' : ''}`,
+        initials: initials(c.name), avatarBg: avatarBg(c.diffDays), avatarFg: avatarFg(c.diffDays),
+        dotColor: dotColor(c.diffDays), prazoColor: prazoColor(c.diffDays), prazoLabel: prazoLabel(c.diffDays),
+        valueLabel: this.mask(fmt(c.planValue)), isCharging: charging, chargingOpacity: charging ? '0.6' : '1',
+        cobrarLabel: charging ? 'Enviando…' : 'Cobrar',
+        onCobrar: () => this.handleCobrar(c), onRenovar: () => this.openRenew(c.id),
+      };
+    });
+
+    const segBase = (active) => `min-height:36px;border-radius:8px;padding:6px 12px;font-size:12px;border:none;cursor:pointer;transition:all .2s;background:${active ? 'var(--card)' : 'transparent'};color:${active ? 'var(--foreground)' : 'var(--muted-foreground)'};font-weight:${active ? '600' : '500'};box-shadow:${active ? '0 1px 2px rgba(0,0,0,.06)' : 'none'}`;
+    const rowBase = (active) => `display:flex;align-items:center;gap:10px;width:100%;min-height:44px;border-radius:8px;padding:0 12px;cursor:pointer;border:1px solid ${active ? 'color-mix(in srgb, var(--interactive) 30%, transparent)' : 'var(--border)'};background:${active ? 'var(--interactive-bg)' : 'var(--card)'};color:${active ? 'var(--interactive-fg)' : 'var(--muted-foreground)'}`;
+
+    const segments = [
+      { key: 'vencidos', label: 'Vencidos', count: vencidos.length },
+      { key: 'hoje', label: 'Hoje', count: hoje.length },
+      { key: '7dias', label: '7 dias', count: sete.length },
+    ].map((seg) => ({
+      ...seg, style: segBase(s.queueFilter === seg.key), rowStyle: rowBase(s.queueFilter === seg.key),
+      onClick: () => this.setFilter(seg.key),
+    }));
+
+    const selectedSegment = segments.find((seg) => seg.key === s.queueFilter);
+    const tint = s.queueFilter === 'vencidos' ? 'color-mix(in srgb, var(--danger-bg) 45%, transparent)' : s.queueFilter === 'hoje' ? 'color-mix(in srgb, var(--warning-bg) 45%, transparent)' : 'color-mix(in srgb, var(--interactive-bg) 45%, transparent)';
+    const asideIconBg = currentQueue.length === 0 ? 'var(--success-bg)' : s.queueFilter === 'vencidos' ? 'var(--danger-bg)' : s.queueFilter === 'hoje' ? 'var(--warning-bg)' : 'var(--interactive-bg)';
+    const asideIconFg = currentQueue.length === 0 ? 'var(--success-fg)' : s.queueFilter === 'vencidos' ? 'var(--danger-fg)' : s.queueFilter === 'hoje' ? 'var(--warning-fg)' : 'var(--interactive-fg)';
+
+    const emptyLabels = { vencidos: 'Nenhuma cobrança vencida', hoje: 'Nenhum vencimento hoje', '7dias': 'Nenhum vencimento nos próximos 7 dias' };
+
+    // Due date heatmap
+    const maxCount = Math.max(...DUE_BUCKET_COUNTS);
+    const heatCells = DUE_BUCKET_COUNTS.map((count, idx) => {
+      const day = idx + 1;
+      const ratio = count / maxCount;
+      let bg, fg, border;
+      if (count === 0) { bg = 'color-mix(in srgb, var(--muted) 30%, transparent)'; fg = 'var(--muted-foreground)'; border = 'var(--border)'; }
+      else if (ratio >= 0.76) { bg = 'var(--money)'; fg = '#ffffff'; border = 'var(--money)'; }
+      else if (ratio >= 0.51) { bg = 'color-mix(in srgb, var(--money) 55%, transparent)'; fg = 'var(--foreground)'; border = 'color-mix(in srgb, var(--money) 45%, transparent)'; }
+      else if (ratio >= 0.26) { bg = 'color-mix(in srgb, var(--money) 26%, transparent)'; fg = 'var(--foreground)'; border = 'color-mix(in srgb, var(--money) 20%, transparent)'; }
+      else { bg = 'color-mix(in srgb, var(--money) 10%, transparent)'; fg = 'var(--secondary-foreground)'; border = 'var(--border)'; }
+      return { day, dayLabel: String(day).padStart(2, '0'), count, bg, fg, border, onClick: () => this.openDayModal(day) };
+    });
+    const topDays = DUE_BUCKET_COUNTS
+      .map((count, idx) => ({ day: idx + 1, count }))
+      .filter((b) => b.count > 0)
+      .sort((a, b) => b.count - a.count || a.day - b.day)
+      .slice(0, 5)
+      .map((b, i) => ({
+        rank: i + 1, dayLabel: String(b.day).padStart(2, '0'), count: b.count,
+        barWidth: Math.max(8, Math.round((b.count / maxCount) * 100)),
+        rankBg: i === 0 ? 'var(--success-bg)' : 'var(--secondary)', rankFg: i === 0 ? 'var(--success-fg)' : 'var(--secondary-foreground)',
+      }));
+    const totalMappedAmount = DUE_BUCKET_COUNTS.reduce((t, c) => t + c * 42.5, 0);
+
+    // Command palette
+    const q = s.cmdQuery.trim().toLowerCase();
+    const cmdResults = (q ? NAV_DESTINATIONS.filter((d) => d.title.toLowerCase().includes(q)) : NAV_DESTINATIONS).map((d) => ({
+      title: d.title, hasShortcut: !!d.shortcut, shortcut: d.shortcut || '',
+      onSelect: () => { this.setState({ cmdOpen: false }); this.addToast({ title: `Navegaria para ${d.title}`, duration: 2500 }); },
+    }));
+
+    // Add-client dialog: plan services (searchable list, scales to a large catalog), consent, steps
+    const serviceQuery = s.form.serviceSearch.trim().toLowerCase();
+    const serviceOptions = SERVICES.filter((name) => !serviceQuery || name.toLowerCase().includes(serviceQuery)).map((name) => {
+      const active = !!s.selectedServices[name];
+      return {
+        name, active, onToggle: () => this.toggleService(name),
+        rowStyle: `display:flex;align-items:center;gap:10px;width:100%;flex-shrink:0;text-align:left;border:1px solid ${active ? 'var(--interactive)' : 'var(--border)'};background:${active ? 'var(--interactive-bg)' : 'none'};border-radius:8px;padding:9px 12px;cursor:pointer`,
+        checkStyle: `width:16px;height:16px;flex-shrink:0;border-radius:4px;border:1.5px solid ${active ? 'var(--interactive)' : 'var(--input)'};background:${active ? 'var(--interactive)' : 'none'};display:flex;align-items:center;justify-content:center`,
+      };
+    });
+    const serviceListEmpty = serviceOptions.length === 0;
+    const selectedServiceNames = SERVICES.filter((n) => s.selectedServices[n]);
+    const selectedServiceChips = selectedServiceNames.map((name) => ({ name, onRemove: () => this.toggleService(name) }));
+    const hasSelectedServices = selectedServiceNames.length > 0;
+    const selectedServicesCountLabel = `${selectedServiceNames.length} selecionado${selectedServiceNames.length === 1 ? '' : 's'}`;
+    const consentRows = [
+      { key: 'authorized', title: 'Cliente autorizou mensagens pelo WhatsApp', hint: 'Marque somente com autorização registrada do cliente.' },
+      { key: 'welcome', title: 'Enviar boas-vindas agora', hint: 'Só será enviado se houver consentimento operacional e uma automação ativa.' },
+      { key: 'reminder', title: 'Lembrete interno antes do vencimento', hint: 'Envia o aviso para o seu WhatsApp de suporte, sem falar com o cliente.' },
+    ].map((c) => {
+      const checked = s.form.consent[c.key];
+      return {
+        key: c.key, title: c.title, hint: c.hint, onToggle: () => this.toggleConsent(c.key),
+        rowStyle: `display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;background:${checked ? 'var(--muted)' : 'none'}`,
+        checkStyle: `width:16px;height:16px;flex-shrink:0;margin-top:1px;border-radius:4px;border:1.5px solid ${checked ? 'var(--foreground)' : 'var(--input)'};background:${checked ? 'var(--foreground)' : 'none'};display:flex;align-items:center;justify-content:center`,
+        checked,
+      };
+    });
+    const addClientSteps = [{ key: 'dados', label: 'Dados' }, { key: 'plano', label: 'Plano' }].map((st, i) => {
+      const active = s.addClientStep === st.key;
+      return {
+        key: st.key, label: st.label, onClick: () => this.setAddClientStep(st.key),
+        style: `flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:${active ? '600' : '500'};background:${active ? 'var(--muted)' : 'none'};color:${active ? 'var(--foreground)' : 'var(--muted-foreground)'}`,
+        badgeStyle: `width:18px;height:18px;border-radius:9999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:${active ? 'var(--foreground)' : 'var(--border)'};color:${active ? 'var(--background)' : 'var(--muted-foreground)'}`,
+        badgeContent: String(i + 1),
+      };
+    });
+    const isDadosStep = s.addClientStep === 'dados', isPlanoStep = s.addClientStep === 'plano';
+    const addClientStepSubtitle = isDadosStep ? 'Dados do assinante e canais de contato' : 'Plano contratado, vencimento e forma de pagamento';
+    const addClientPaymentOptions = [{ key: 'pix', label: 'PIX' }, { key: 'dinheiro', label: 'Dinheiro' }, { key: 'cartao', label: 'Cartão' }].map((p) => ({
+      key: p.key, label: p.label,
+      style: `flex:1;min-height:38px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${s.form.paymentMethod === p.key ? 'var(--foreground)' : 'var(--border)'};background:${s.form.paymentMethod === p.key ? 'var(--muted)' : 'var(--card)'};color:var(--foreground)`,
+      onSelect: () => this.setFormPaymentMethod(p.key),
+    }));
+    const addClientValueLabel = s.form.planValue ? `R$ ${s.form.planValue}` : 'R$ 0,00';
+    const addClientDueLabel = s.form.dueDate ? new Date(s.form.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não definido';
+    const notifyTrackStyle = `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${s.form.notifyEnabled ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0`;
+    const notifyThumbStyle = `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${s.form.notifyEnabled ? '14px' : '0'});transition:transform .15s;display:block`;
+
+    // Renew dialog data
+    const renewClient = withMeta.find((c) => c.id === s.renewClientId);
+    const periodOptions = [1, 3, 6, 12].map((n) => ({
+      months: n, label: `${n} ${n === 1 ? 'mês' : 'meses'}`,
+      style: `min-height:44px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid ${s.renewPeriod === n ? 'var(--interactive)' : 'var(--border)'};background:${s.renewPeriod === n ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.renewPeriod === n ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+      onSelect: () => this.setRenewPeriod(n),
+    }));
+    const paymentOptions = [{ key: 'pix', label: 'PIX' }, { key: 'dinheiro', label: 'Dinheiro' }, { key: 'cartao', label: 'Cartão' }].map((p) => ({
+      key: p.key, label: p.label,
+      style: `flex:1;min-height:38px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${s.renewPayment === p.key ? 'var(--interactive)' : 'var(--border)'};background:${s.renewPayment === p.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.renewPayment === p.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+      onSelect: () => this.setRenewPayment(p.key),
+    }));
+    const renewUnitPrice = renewClient ? (s.renewService === 'keep' ? renewClient.planValue : priceForService(s.renewService)) : 0;
+    const renewDefaultTotal = renewUnitPrice * s.renewPeriod;
+    const renewTotalNum = s.renewTotalOverride !== null && s.renewTotalOverride !== '' ? (Number(s.renewTotalOverride.replace(',', '.')) || 0) : renewDefaultTotal;
+    const renewTotal = this.mask(fmt(renewTotalNum));
+    const renewTotalIsCustom = s.renewTotalOverride !== null && s.renewTotalOverride !== '' && Math.abs(renewTotalNum - renewDefaultTotal) > 0.009;
+    const renewServiceOptions = renewClient ? [
+      { key: 'keep', label: `Manter atual · ${renewClient.service} (${fmt(renewClient.planValue)})` },
+      ...SERVICES.filter((n) => n !== renewClient.service).map((n) => ({ key: n, label: `${n} (${fmt(priceForService(n))})` })),
+    ].map((o) => ({ ...o, isSelected: s.renewService === o.key })) : [];
+
+    // Financial chart
+    const CW = Math.max(240, s.chartW), CH = 220, padL = 46, padR = 8, padT = 16, padB = 30;
+    const series = buildSeries(s.chartPeriod);
+    const maxVal = Math.max(...series.flatMap((p) => [p.confirmed, p.forecast, p.renewals])) * 1.18;
+    const plotH = CH - padT - padB;
+    const slotW = (CW - padL - padR) / series.length;
+    const pairW = Math.max(14, Math.min(34, slotW * 0.5));
+    const barW = pairW / 2 - 1.5;
+    const valY = (v) => CH - padB - (v / maxVal) * plotH;
+    const chartBars = series.map((p, i) => {
+      const cx = padL + slotW * i + slotW / 2;
+      const h = (p.confirmed / maxVal) * plotH;
+      const hr = (p.renewals / maxVal) * plotH;
+      const hovered = s.hoverBar === i;
+      return {
+        trackX: cx - pairW / 2 - 3, trackWidth: pairW + 6,
+        x: cx - pairW / 2, y: CH - padB - h, width: barW, height: Math.max(2, h), label: p.label, labelX: cx,
+        rx: cx - pairW / 2 + barW + 3, ry: CH - padB - hr, rHeight: Math.max(2, hr),
+        valueLabel: compactCurrency(p.confirmed), valueY: Math.max(padT + 8, CH - padB - h - 6),
+        fillOpacity: hovered ? 1 : 0.82, hitX: cx - slotW / 2 + 1, hitWidth: slotW - 2,
+        onEnter: () => this.setHoverBar(i), onLeave: this.clearHoverBar,
+        dotR: hovered ? 5 : 3.5, leftPct: (cx / CW) * 100,
+        valueTopPct: (Math.max(padT + 8, CH - padB - h - 6) / CH) * 100,
+        confirmedLabel: this.mask(fmt(p.confirmed)), forecastLabel: this.mask(fmt(p.forecast)), renewalsLabel: this.mask(fmt(p.renewals)),
+      };
+    });
+    const linePoints = series.map((p, i) => `${padL + slotW * i + slotW / 2},${valY(p.forecast)}`).join(' ');
+    const chartDots = series.map((p, i) => ({ cx: padL + slotW * i + slotW / 2, cy: valY(p.forecast), r: s.hoverBar === i ? 5 : 3.5 }));
+    const gridLines = [0.25, 0.5, 0.75, 1].map((f) => {
+      const y = CH - padB - f * plotH;
+      return { y, label: compactCurrency(maxVal * f), topPct: (y / CH) * 100 };
+    });
+    const axisBottomPct = (padB / CH) * 100;
+    const hoverBarData = s.hoverBar !== null ? chartBars[s.hoverBar] : null;
+    const periodTabs = PERIOD_LABELS.map((p) => ({
+      key: p.key, label: p.label, style: segBase(s.chartPeriod === p.key), onClick: () => this.setChartPeriod(p.key),
+    }));
+
+    // Ranking donut
+    const rTotal = RANKING.reduce((t, r) => t + r.value, 0);
+    const r = 62, sw = 22, circumference = 2 * Math.PI * r;
+    let cum = 0;
+    const chartColors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+    const rankingRows = RANKING.map((row, i) => {
+      const frac = row.value / rTotal;
+      const dash = frac * circumference;
+      const hovered = s.hoverSeg === i;
+      const seg = {
+        color: chartColors[i % chartColors.length], dasharray: `${dash} ${circumference - dash}`, dashoffset: -cum * circumference,
+        label: row.label, value: this.mask(fmt(row.value)), share: (frac * 100).toFixed(1), barWidth: Math.max(4, frac * 100),
+        strokeWidth: hovered ? 26 : sw, opacity: s.hoverSeg === null || hovered ? 1 : 0.4,
+        rowBg: hovered ? 'color-mix(in srgb, var(--muted) 60%, transparent)' : 'transparent',
+        onEnter: () => this.setHoverSeg(i), onLeave: this.clearHoverSeg,
+      };
+      cum += frac;
+      return seg;
+    });
+    const hoveredRanking = s.hoverSeg !== null ? rankingRows[s.hoverSeg] : null;
+    const donutCenterLabel = hoveredRanking ? hoveredRanking.label.toUpperCase() : 'RECEITA TOTAL';
+    const donutCenterValue = hoveredRanking ? `${hoveredRanking.value} · ${hoveredRanking.share}%` : this.mask(fmt(rTotal));
+
+    const spark = (seed, color) => {
+      const n = 9, w = 5, gap = 3, H = 26;
+      return Array.from({ length: n }, (_, i) => {
+        const v = 0.32 + seeded(seed + i * 2.3) * 0.68;
+        const h = Math.max(3, v * H);
+        return { x: i * (w + gap), y: H - h, w, h, color };
+      });
+    };
+    const sparkTotal = spark(3.1, 'var(--secondary-foreground)');
+    const sparkActive = spark(7.4, 'var(--money)');
+    const sparkOverdue = spark(11.9, 'var(--danger)');
+
+    const planTabs = [{ key: 'basico', label: 'Básico' }, { key: 'pro', label: 'Pro' }, { key: 'master', label: 'Master' }].map((p) => ({
+      key: p.key, label: p.label, style: segBase(s.plan === p.key), onClick: () => this.setPlan(p.key),
+    }));
+    const isBasico = s.plan === 'basico', isPro = s.plan === 'pro', isMaster = s.plan === 'master';
+    const isProOrMaster = isPro || isMaster;
+    const planBadgeLabel = isMaster ? 'Plano Master' : 'Plano Pro';
+    const mrr = activeClients * 47.3;
+
+    const periodFilterTabs = [
+      { key: 'today', label: 'Hoje' }, { key: '7d', label: '7 dias' }, { key: '30d', label: '30 dias' },
+      { key: 'month', label: 'Este mês' }, { key: 'custom', label: 'Personalizado' },
+    ].map((p) => ({
+      key: p.key, label: p.label,
+      style: `min-height:30px;border-radius:6px;padding:0 10px;font-size:11px;border:none;cursor:pointer;background:${s.filters.period === p.key ? 'var(--card)' : 'transparent'};color:${s.filters.period === p.key ? 'var(--foreground)' : 'var(--muted-foreground)'};font-weight:${s.filters.period === p.key ? '600' : '500'};box-shadow:${s.filters.period === p.key ? '0 1px 2px rgba(0,0,0,.06)' : 'none'}`,
+      onClick: () => this.setFilterPeriod(p.key),
+    }));
+    const isCustomPeriod = s.filters.period === 'custom';
+    const typeFilterChips = [
+      { key: 'clientes', label: 'Total de clientes', dot: 'var(--secondary-foreground)' },
+      { key: 'ativos', label: 'Ativos', dot: 'var(--money)' },
+      { key: 'vencidos', label: 'Vencidos', dot: 'var(--danger)' },
+      { key: 'novos', label: 'Novos clientes', dot: 'var(--interactive)' },
+      { key: 'renovacoes', label: 'Renovações', dot: 'var(--warning)' },
+      { key: 'receber', label: 'Valores a receber', dot: 'var(--money)' },
+    ].map((t) => {
+      const active = s.filters.types[t.key];
+      return {
+        key: t.key, label: t.label, dot: t.dot, active,
+        checkStyle: `width:16px;height:16px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px solid ${active ? 'var(--foreground)' : 'var(--input)'};background:${active ? 'var(--foreground)' : 'none'}`,
+        onClick: () => this.toggleFilterType(t.key),
+      };
+    });
+    const hasInactiveTypes = Object.values(s.filters.types).some((v) => !v);
+    const typesSelectedCount = Object.values(s.filters.types).filter(Boolean).length;
+    const dim = (key) => (s.filters.types[key] ? '1' : '.32');
+    const cardOpacity = { clientes: dim('clientes'), ativos: dim('ativos'), vencidos: dim('vencidos'), novos: dim('novos'), renovacoes: dim('renovacoes'), receber: dim('receber') };
+
+    const dayCount = s.dayModalDay ? (DUE_BUCKET_COUNTS[s.dayModalDay - 1] || 0) : 0;
+    const dayClientsRaw = s.dayModalDay ? this.buildDayClients(s.dayModalDay, dayCount) : [];
+    const dayModalRows = dayClientsRaw.map((c) => ({
+      id: c.id, name: c.name, service: c.service, initials: initials(c.name),
+      valueLabel: this.mask(fmt(c.value)), phoneDot: c.phone ? 'var(--money)' : 'var(--border)',
+      phoneTitle: c.phone ? 'Possui WhatsApp' : 'Sem WhatsApp',
+    }));
+    const dayModalPhoneCount = dayClientsRaw.filter((c) => c.phone).length;
+    const dayModalTotal = this.mask(fmt(dayClientsRaw.reduce((t, c) => t + c.value, 0)));
+
+    const toasts = s.toasts.map((t) => ({
+      id: t.id, title: t.title, description: t.description || '', hasDesc: !!t.description,
+      hasAction: !!t.actionLabel, actionLabel: t.actionLabel || '',
+      onAction: () => { t.onAction && t.onAction(); this.removeToast(t.id); },
+      onClose: () => this.removeToast(t.id), dot: 'var(--interactive)', border: 'var(--border)',
+    }));
+
+    return {
+      rootStyle, sidebarExpanded, sidebarWidthPx, navItemStyle,
+      catalogOpen: s.navOpen.catalog, automationOpen: s.navOpen.automation, insightsOpen: s.navOpen.insights,
+      integrationsOpen: s.navOpen.integrations, moreOpen: s.navOpen.more,
+      toggleCatalog: this.toggleCatalog, toggleAutomation: this.toggleAutomation, toggleInsights: this.toggleInsights,
+      toggleIntegrations: this.toggleIntegrations, toggleMore: this.toggleMore,
+      catalogChevronStyle: chevron(s.navOpen.catalog), automationChevronStyle: chevron(s.navOpen.automation),
+      insightsChevronStyle: chevron(s.navOpen.insights), integrationsChevronStyle: chevron(s.navOpen.integrations), moreChevronStyle: chevron(s.navOpen.more),
+      toggleSidebar: this.toggleSidebar, noop: this.noop,
+      clockTime: s.clock || '--:--:--', goAutomacao: this.goAutomacao, goPlanos: this.goPlanos,
+      toggleQuick: this.toggleQuick, quickOpen: s.quickOpen, quickNewClient: this.quickNewClient, quickPlaceholder: this.quickPlaceholder, openPix: this.openPix,
+      toggleNotif: this.toggleNotif, notifOpen: s.notifOpen, hasNotifs: s.notifAlerts.length > 0, notifCount: s.notifAlerts.length,
+      notifAlerts: s.notifAlerts, clearNotifs: this.clearNotifs, emptyNotifDisplay: s.notifAlerts.length > 0 ? 'none' : 'block',
+      toggleTheme: this.toggleTheme, isDark, isLight: !isDark,
+      togglePrivacy: this.togglePrivacy, privacyOn: s.privacyOn, privacyOff: !s.privacyOn,
+      toggleCmd: this.toggleCmd, cmdOpen: s.cmdOpen, cmdQuery: s.cmdQuery, setCmdQuery: this.setCmdQuery, cmdResults, stop: this.stop,
+
+      todayLabel: new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      openAddClient: this.openAddClient,
+
+      totalClients, activeClients, overdueCount,
+      activeHint: `${activeClients} clientes ativos`,
+      activeShareHint: `${Math.round((activeClients / totalClients) * 100)}% da carteira em andamento`,
+      overdueHint: `${this.mask(fmt(overdueTotal))} em mensalidades`,
+      overdueAmount: this.mask(fmt(overdueTotal)),
+      openOverdueQueue: this.openOverdueQueue, openTodayQueue: this.openTodayQueue, openNext7Queue: this.openNext7Queue,
+      newClients, previousNewClients, growthPct: `${growthChange >= 0 ? '+' : ''}${growthChange.toFixed(1)}%`,
+      dueTodayCount: hoje.length, next7Count: sete.length,
+      dueTodayAmount: this.mask(fmt(dueTodayTotal)), next7Amount: this.mask(fmt(next7Total)),
+      confirmedAmount: this.mask(fmt(basicPaymentsTotal)), trackedAmount: this.mask(fmt(trackedAmount)),
+
+      onboardingVisible: !s.onboardingDismissed, dismissOnboarding: this.dismissOnboarding,
+
+      periodFilterTabs, isCustomPeriod, filters: s.filters, setCustomFrom: this.setCustomFrom, setCustomTo: this.setCustomTo,
+      typeFilterChips, hasInactiveTypes, resetTypeFilters: this.resetTypeFilters, cardOpacity, periodBadgeLabel,
+      typesMenuOpen: s.filters.typesOpen, toggleTypesMenu: this.toggleTypesMenu, typesSelectedLabel: `${typesSelectedCount}/6`,
+
+      planTabs, isBasico, isProOrMaster, isMaster, planBadgeLabel, setPlanPro: () => this.setPlan('pro'),
+      mrrLabel: this.mask(fmt(mrr)), mrrGrowthLabel: '+8.4%',
+      churnLabel: '3.2%', churnCountLabel: `${Math.round(activeClients * 0.032)} clientes no período`,
+      ltvLabel: this.mask(fmt(mrr / activeClients * 11.5)),
+      healthScoreLabel: '87/100', masterForecastPct: '+12%',
+
+      queueRef: this.queueRef, segments, queueRows, queueEmpty: currentQueue.length === 0,
+      queueEmptyLabel: emptyLabels[s.queueFilter], queueCount: currentQueue.length,
+      queueValueLabel: this.mask(fmt(sum(currentQueue))), asideTint: tint, asideIconBg, asideIconFg,
+      selectedSegmentLabel: selectedSegment.label,
+      cobrarTodosLabel: `Cobrar todos (${currentQueue.filter((c) => c.phone).length})`,
+      openCobrarTodos: this.openCobrarTodos,
+
+      sparkTotal, sparkActive, sparkOverdue, sparkHeight: 26, sparkWidth: 9 * 8,
+      chartRef: this.chartRef, trackTop: padT, trackHeight: CH - padB - padT, axisBottomPct,
+      chartWidth: CW, chartHeight: CH, chartBars, linePoints, chartDots, gridLines, periodTabs,
+      hoverBarData, hasHoverBar: !!hoverBarData,
+      rankingRows, rankingTotalLabel: this.mask(fmt(rTotal)), donutCenterLabel, donutCenterValue,
+
+      topDays, heatCells, totalAmountLabel: this.mask(fmt(totalMappedAmount)),
+      dayModalOpen: s.dayModalOpen, closeDayModal: this.closeDayModal, bulkSendDay: this.bulkSendDay,
+      dayModalTitle: s.dayModalDay ? `Dia ${String(s.dayModalDay).padStart(2, '0')}` : '',
+      dayModalSubtitle: `${dayCount} cliente${dayCount === 1 ? '' : 's'} vencendo neste dia`,
+      dayModalRows, dayModalEmpty: dayCount === 0, dayModalHasClients: dayCount > 0,
+      dayModalTotal, dayModalPhoneCount,
+
+      toasts,
+
+      confirmOpen: s.confirmOpen, confirmTitle: `Cobrar ${currentQueue.filter((c) => c.phone).length} clientes?`,
+      closeConfirm: this.closeConfirm, confirmCobrarTodos: this.confirmCobrarTodos,
+
+      pixOpen: s.pixOpen, closePix: this.closePix, pixValue: s.pixValue, setPixValue: this.setPixValue,
+      pixGenerated: s.pixGenerated, generatePix: this.generatePix, copyPix: this.copyPix, copyPixLabel: s.pixCopied ? 'Copiado!' : 'Copiar código',
+
+      addClientOpen: s.addClientOpen, closeAddClient: this.closeAddClient, form: s.form,
+      setFormName: this.setFormName, setFormPhone: this.setFormPhone, setFormDueDate: this.setFormDueDate,
+      setFormPlanValue: this.setFormPlanValue, setFormScreens: this.setFormScreens, serviceOptions, submitAddClient: this.submitAddClient,
+      setFormTelegram: this.setFormTelegram, setFormEmail: this.setFormEmail,
+      addClientSteps, isDadosStep, isPlanoStep, addClientStepSubtitle,
+      goToPlanoStep: () => this.setAddClientStep('plano'), goToDadosStep: () => this.setAddClientStep('dados'),
+      consentRows, notifyTrackStyle, notifyThumbStyle, toggleNotifyEnabled: this.toggleNotifyEnabled,
+      addClientPaymentOptions, addClientValueLabel, addClientDueLabel,
+      setFormServiceSearch: this.setFormServiceSearch, serviceListEmpty, selectedServiceChips, hasSelectedServices, selectedServicesCountLabel,
+      totalServicesCount: SERVICES.length,
+
+      renewOpen: s.renewOpen, renewClientName: renewClient ? renewClient.name : '', closeRenew: this.closeRenew,
+      periodOptions, paymentOptions, renewNewDue: `+${s.renewPeriod} ${s.renewPeriod === 1 ? 'mês' : 'meses'}`, renewTotal, renewServiceOptions, setRenewServiceSelect: this.setRenewServiceSelect,
+      renewTotalDraft: s.renewTotalOverride !== null ? s.renewTotalOverride : renewDefaultTotal.toFixed(2).replace('.', ','),
+      setRenewTotalOverride: this.setRenewTotalOverride, renewTotalIsCustom,
+      renewDefaultTotalLabel: fmt(renewDefaultTotal),
+      renewNotifyTrackStyle: `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${s.renewNotify ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0`,
+      renewNotifyThumbStyle: `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${s.renewNotify ? '14px' : '0'});transition:transform .15s;display:block`,
+      toggleRenewNotify: this.toggleRenewNotify, submitRenew: this.submitRenew,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

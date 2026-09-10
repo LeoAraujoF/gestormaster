@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-two-col]{grid-template-columns:repeat(2,minmax(0,1fr));}
+    @media (max-width:1024px){[data-two-col]{grid-template-columns:minmax(0,1fr);}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <div style="padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-accent-fg);background:var(--sidebar-accent);font-weight:600">Gateways e API</div>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- PAGE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Integrações</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:{{ activeBadgeBg }};color:{{ activeBadgeFg }};border-radius:6px;padding:2px 7px">{{ activeBadgeLabel }}</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Gateways e API</h1>
+          <p style="margin:8px 0 0;max-width:620px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Acompanhe conexões, identifique configurações pendentes e gerencie credenciais com segurança.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <button type="button" onclick="{{ testAll }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-2.7-6.2M21 3v5.3h-5.3"></path></svg>
+            Testar conexões
+          </button>
+          <button type="button" onclick="{{ openDocs }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 3.5h5v17H6a2 2 0 0 1-2-2Z"></path><path d="M11 3.5h7a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-7"></path></svg>
+            Documentação
+          </button>
+        </div>
+      </section>
+
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:16px;border:1px solid {{ connectedCardBorder }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Conectadas</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ activeCount }}<span style="font-size:13px;font-weight:500;color:var(--muted-foreground)">/{{ totalCount }}</span></p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ connectedHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ connectedIconBg }};color:{{ connectedIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Webhooks 24h</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ webhookTotal }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ webhookOkLabel }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Falhas de entrega</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:{{ failedColor }}">{{ webhookFailed }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ failedHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ failedIconBg }};color:{{ failedIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Chaves de API</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ keyCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ keyHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.5"></circle><path d="m10.5 12.5 8-8M16 5.5l2.5 2.5M19 3l2 2"></path></svg></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- PENDING WARNING -->
+      <sc-if value="{{ showPendingWarning }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--warning-border);background:var(--warning-bg);padding:14px 18px">
+          <div style="min-width:0"><p style="margin:0;font-size:13px;font-weight:600;color:var(--warning-fg)">{{ pendingTitle }}</p><p style="margin:3px 0 0;font-size:11.5px;color:var(--warning-fg);opacity:.85">Sem o gateway de pagamento conectado, a baixa automática de PIX não acontece — as confirmações precisam ser manuais.</p></div>
+          <button type="button" onclick="{{ openFirstPending }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:var(--warning-fg);color:#fff;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Configurar agora</button>
+        </div>
+      </sc-if>
+
+      <section data-two-col style="display:grid;gap:20px;align-items:start">
+
+        <!-- PAGAMENTOS & GATILHOS -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <h2 style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Pagamentos &amp; Gatilhos</h2>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ activeCount }} de {{ totalCount }} ativas</span>
+          </div>
+
+          <sc-for list="{{ providers }}" as="prov" hint-placeholder-count="3">
+            <div style="{{ prov.cardStyle }}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                <div style="display:flex;align-items:center;gap:11px;min-width:0">
+                  <span style="width:40px;height:40px;border-radius:10px;background:{{ prov.iconBg }};color:{{ prov.iconFg }};display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0">{{ prov.initials }}</span>
+                  <div style="min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><h3 style="margin:0;font-size:14.5px;font-weight:600;color:var(--foreground)">{{ prov.name }}</h3><sc-if value="{{ prov.isPayment }}"><span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;background:var(--secondary);color:var(--secondary-foreground);border-radius:4px;padding:2px 5px">GATEWAY</span></sc-if></div>
+                    <p style="margin:3px 0 0;font-size:12px;color:var(--muted-foreground)">{{ prov.description }}</p>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:{{ prov.statusColor }}">
+                    <span style="width:6px;height:6px;border-radius:9999px;background:{{ prov.statusColor }};animation:{{ prov.statusAnim }}"></span>
+                    {{ prov.statusLabel }}
+                  </div>
+                  <button type="button" onclick="{{ prov.onConfigure }}" style="border:none;background:none;font-size:10.5px;font-weight:600;color:{{ prov.ctaColor }};cursor:pointer;padding:0">{{ prov.ctaLabel }}</button>
+                </div>
+              </div>
+
+              <sc-if value="{{ prov.active }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:13px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">Último evento</span><span style="font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:600;color:var(--foreground)">{{ prov.lastEvent }}</span></div>
+                  <div style="display:flex;align-items:center;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">Eventos 24h</span><span style="font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:600;color:var(--foreground)">{{ prov.events24h }}</span></div>
+                  <div style="flex:1"></div>
+                  <button type="button" onclick="{{ prov.onTest }}" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:10.5px;font-weight:500;cursor:pointer">Testar</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- API DESENVOLVEDOR -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <h2 style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">API · Desenvolvedor</h2>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">N8N · Typebot · Make</span>
+          </div>
+
+          <!-- API KEYS -->
+          <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:15px 18px">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="width:34px;height:34px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.5"></circle><path d="m10.5 12.5 8-8M16 5.5l2.5 2.5M19 3l2 2"></path></svg></span>
+                <div style="min-width:0"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Chaves de API</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Autenticação de automações externas</p></div>
+              </div>
+              <button type="button" onclick="{{ openNewKey }}" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Gerar</button>
+            </div>
+            <sc-if value="{{ keysEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:32px 18px;text-align:center">
+                <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Nenhuma chave ativa</p>
+                <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Gere uma chave para conectar N8N, Make ou seus próprios scripts.</p>
+              </div>
+            </sc-if>
+            <sc-for list="{{ apiKeys }}" as="key" hint-placeholder-count="2">
+              <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <div style="flex:1;min-width:180px">
+                    <div style="display:flex;align-items:center;gap:7px"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ key.name }}</p><span style="{{ key.scopeStyle }}">{{ key.scope }}</span></div>
+                    <code style="display:block;margin-top:5px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ key.masked }}</code>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                    <button type="button" onclick="{{ key.onCopy }}" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:10.5px;font-weight:500;cursor:pointer">{{ key.copyLabel }}</button>
+                    <button type="button" onclick="{{ key.onRevoke }}" style="height:28px;padding:0 10px;border-radius:6px;border:none;background:none;color:var(--danger);font-size:10.5px;font-weight:600;cursor:pointer">revogar</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;margin-top:9px;flex-wrap:wrap">
+                  <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">criada {{ key.createdLabel }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">último uso {{ key.lastUsedLabel }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">{{ key.requestsLabel }} req/24h</span>
+                </div>
+              </div>
+            </sc-for>
+          </article>
+
+          <!-- WEBHOOK URL -->
+          <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:15px 18px">
+              <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7a4 4 0 0 1 0-8h1"></path><path d="M15 7h2a4 4 0 0 1 0 8h-1"></path><path d="M8 13h8"></path></svg></span>
+              <div style="min-width:0"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Endpoints de webhook</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Cole no painel do provedor</p></div>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ webhookEndpoints }}" as="wh" hint-placeholder-count="2">
+                <div>
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:var(--foreground)">{{ wh.label }}</p>
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <code style="flex:1;min-width:0;border:1px solid var(--border);border-radius:7px;background:var(--muted);padding:8px 10px;font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ wh.url }}</code>
+                    <button type="button" onclick="{{ wh.onCopy }}" title="Copiar" style="width:32px;height:32px;border:1px solid var(--input);background:var(--background);border-radius:7px;color:{{ wh.copyColor }};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ wh.copied }}"><path d="M4 12l5 5L20 6"></path></sc-if><sc-if value="{{ wh.notCopied }}"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h8"></path></sc-if></svg>
+                    </button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </article>
+
+          <!-- EVENT LOG -->
+          <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:15px 18px">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="width:34px;height:34px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h10"></path></svg></span>
+                <div style="min-width:0"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Últimos eventos</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Recebidos nas suas integrações</p></div>
+              </div>
+              <div style="display:inline-flex;gap:3px;border-radius:7px;background:var(--muted);padding:3px;flex-shrink:0">
+                <sc-for list="{{ logFilters }}" as="lf" hint-placeholder-count="3">
+                  <button type="button" onclick="{{ lf.onClick }}" style="{{ lf.style }}">{{ lf.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ logsEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:32px 18px;text-align:center"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Nenhum evento nesta faixa</p><p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Os eventos aparecem aqui conforme os provedores enviam.</p></div>
+            </sc-if>
+            <div style="max-height:280px;overflow-y:auto">
+              <sc-for list="{{ eventLogs }}" as="ev" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--border)">
+                  <span style="width:7px;height:7px;border-radius:9999px;background:{{ ev.dotColor }};flex-shrink:0"></span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground);flex-shrink:0">{{ ev.timeLabel }}</span>
+                  <div style="flex:1;min-width:0">
+                    <p style="margin:0;font-size:12px;font-weight:500;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ev.label }}</p>
+                    <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ev.providerLabel }} · {{ ev.detail }}</p>
+                  </div>
+                  <span style="{{ ev.statusStyle }}">{{ ev.statusLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- PROVIDER CONFIG MODAL -->
+  <sc-if value="{{ configOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:flex-start;justify-content:center;padding:32px 24px;z-index:95;overflow:auto" onclick="{{ closeConfig }}">
+      <div style="width:100%;max-width:440px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:{{ configIconBg }};color:{{ configIconFg }};display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0">{{ configInitials }}</span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Configurar {{ configName }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ configDescription }}</p></div>
+          <button type="button" onclick="{{ closeConfig }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+
+        <div style="max-height:62vh;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ configFields }}" as="fld" hint-placeholder-count="3">
+            <label style="display:block">
+              <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">{{ fld.label }}</span>
+              <div style="position:relative;margin-top:6px">
+                <input value="{{ fld.value }}" type="{{ fld.inputType }}" oninput="{{ fld.onInput }}" placeholder="{{ fld.placeholder }}" style="width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;padding-right:{{ fld.paddingRight }};font-size:12.5px;font-family:{{ fld.fontFamily }};background:none;color:var(--foreground);outline:none"/>
+                <sc-if value="{{ fld.isSecret }}">
+                  <button type="button" onclick="{{ fld.onToggleReveal }}" style="position:absolute;top:50%;right:6px;transform:translateY(-50%);width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ fld.revealed }}"><path d="M3 3l18 18"></path><path d="M10.6 5.2A10.4 10.4 0 0 1 12 5c6 0 9.5 6 9.9 7a13 13 0 0 1-3 3.9M6.6 6.6C3.9 8.3 2.4 11 2.1 12c.4 1 3.3 6 9.9 7a9.7 9.7 0 0 0 3.2-.5"></path></sc-if><sc-if value="{{ fld.hidden }}"><path d="M2.1 12S5.6 5 12 5s9.9 7 9.9 7-3.5 7-9.9 7-9.9-7-9.9-7Z"></path><circle cx="12" cy="12" r="3"></circle></sc-if></svg>
+                  </button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ fld.hasHint }}"><p style="margin:5px 0 0;font-size:10px;color:var(--muted-foreground)">{{ fld.hint }}</p></sc-if>
+            </label>
+          </sc-for>
+
+          <sc-if value="{{ configHasWebhook }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:12px 13px">
+              <p style="margin:0;font-size:11px;font-weight:600;color:var(--foreground)">Configuração no {{ configName }}</p>
+              <p style="margin:4px 0 0;font-size:10px;line-height:1.5;color:var(--muted-foreground)">Copie a URL abaixo e cole no campo "Notificações Webhook" do provedor.</p>
+              <div style="display:flex;align-items:center;gap:7px;margin-top:9px">
+                <code style="flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;background:var(--card);padding:7px 9px;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ configWebhookUrl }}</code>
+                <button type="button" onclick="{{ copyConfigWebhook }}" style="width:30px;height:30px;border:1px solid var(--input);background:var(--card);border-radius:6px;color:{{ configWebhookCopyColor }};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ configWebhookCopied }}"><path d="M4 12l5 5L20 6"></path></sc-if><sc-if value="{{ configWebhookNotCopied }}"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h8"></path></sc-if></svg>
+                </button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px;border-top:1px solid var(--border);padding:14px 22px">
+          <sc-if value="{{ configIsActive }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onclick="{{ askDisconnect }}" style="height:36px;padding:0 12px;border:none;background:none;color:var(--danger);font-size:12.5px;font-weight:600;cursor:pointer">Desconectar</button>
+          </sc-if>
+          <div style="flex:1"></div>
+          <button type="button" onclick="{{ closeConfig }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ saveConfig }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ configSaveLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- NEW KEY MODAL -->
+  <sc-if value="{{ newKeyOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:95;overflow:auto" onclick="{{ closeNewKey }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.5"></circle><path d="m10.5 12.5 8-8M16 5.5l2.5 2.5M19 3l2 2"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Nova chave de API</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">A chave completa aparece uma única vez</p></div>
+          <button type="button" onclick="{{ closeNewKey }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <sc-if value="{{ newKeyCreated }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid var(--warning-border);background:var(--warning-bg);padding:12px 13px">
+              <p style="margin:0;font-size:11px;font-weight:600;color:var(--warning-fg)">Copie agora — não será exibida novamente</p>
+              <code style="display:block;margin-top:8px;border-radius:6px;background:var(--card);padding:9px 10px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--foreground);word-break:break-all">{{ newKeyValue }}</code>
+              <button type="button" onclick="{{ copyNewKey }}" style="margin-top:9px;width:100%;height:32px;border-radius:7px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">{{ newKeyCopyLabel }}</button>
+            </div>
+          </sc-if>
+          <div style="display:{{ newKeyFormDisplay }};flex-direction:column;gap:14px">
+            <label style="display:block">
+              <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Nome da chave</span>
+              <input value="{{ newKeyName }}" oninput="{{ setNewKeyName }}" placeholder="Ex: Automação N8N" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+            </label>
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Permissão</p>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ scopeOptions }}" as="sc" hint-placeholder-count="2"><button type="button" onclick="{{ sc.onSelect }}" style="{{ sc.style }}">{{ sc.label }}</button></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeNewKey }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">{{ newKeyCloseLabel }}</button>
+          <sc-if value="{{ newKeyPending }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onclick="{{ generateKey }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Gerar chave</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CONFIRM MODAL -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.46);display:flex;align-items:center;justify-content:center;padding:24px;z-index:98" onclick="{{ closeConfirm }}">
+      <div style="width:100%;max-width:400px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="padding:20px 22px;display:flex;gap:12px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19Z"></path><path d="M12 10v4M12 17h.01"></path></svg></span>
+          <div style="min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ confirmTitle }}</h3><p style="margin:7px 0 0;font-size:12px;line-height:1.55;color:var(--muted-foreground)">{{ confirmBody }}</p></div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeConfirm }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmAction }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:13px;font-weight:600;cursor:pointer">{{ confirmCta }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const ORG_ID = 'a41f8c2d-77b5-4e19-9d31-6c0ab2f4e8d7';
+const BASE_URL = 'https://app.lembrado.com.br';
+
+const PROVIDERS = [
+  {
+    id: 'mercadopago', name: 'Mercado Pago', description: 'PIX automático + baixa de pagamento', initials: 'MP',
+    fg: '#009EE3', bg: 'rgba(0,158,227,.1)', isPayment: true, hasWebhook: true,
+    fields: [{ key: 'access_token', label: 'Access Token (Mercado Pago)', type: 'password', placeholder: 'APP_USR-...', hint: 'Encontre em Suas integrações → Credenciais de produção.' }],
+  },
+  {
+    id: 'typebot', name: 'Typebot', description: 'Fluxos visuais e atendimento automatizado', initials: 'TB',
+    fg: '#3b82f6', bg: 'rgba(59,130,246,.1)', isPayment: false, hasWebhook: false,
+    fields: [
+      { key: 'viewer_url', label: 'URL do Viewer (Typebot)', type: 'url', placeholder: 'https://viewer.typebot.io' },
+      { key: 'typebot_name', label: 'Nome Público do Typebot', type: 'text', placeholder: 'meu-fluxo-v1' },
+    ],
+  },
+  {
+    id: 'ai_assistant', name: 'Assistente de I.A.', description: 'Robô super inteligente (OpenAI, Groq)', initials: 'IA',
+    fg: '#10b981', bg: 'rgba(16,185,129,.1)', isPayment: false, hasWebhook: false,
+    fields: [
+      { key: 'api_key', label: 'API Key (Chave do Provedor)', type: 'password', placeholder: 'sk-...' },
+      { key: 'model', label: 'Modelo (Ex: gpt-4o, llama3-70b)', type: 'text', placeholder: 'gpt-4o-mini' },
+      { key: 'prompt', label: 'Prompt Base do Robô', type: 'text', placeholder: 'Você é um atendente simpático...' },
+    ],
+  },
+];
+
+function randKey() {
+  const chars = 'abcdef0123456789';
+  let out = '';
+  for (let i = 0; i < 40; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return 'lmb_live_' + out;
+}
+function buildLogs() {
+  const now = new Date();
+  const defs = [
+    { provider: 'mercadopago', label: 'payment.approved', detail: 'Ana Beatriz Souza · R$ 45,90', status: 'ok' },
+    { provider: 'mercadopago', label: 'payment.approved', detail: 'Rafael Nunes · R$ 79,90', status: 'ok' },
+    { provider: 'typebot', label: 'flow.completed', detail: 'Fluxo boas-vindas · lead qualificado', status: 'ok' },
+    { provider: 'mercadopago', label: 'payment.pending', detail: 'Marcos Vinícius · aguardando PIX', status: 'ok' },
+    { provider: 'ai_assistant', label: 'assistant.reply', detail: '412 tokens · gpt-4o-mini', status: 'ok' },
+    { provider: 'mercadopago', label: 'webhook.retry', detail: 'timeout de 8s no endpoint', status: 'failed' },
+    { provider: 'typebot', label: 'flow.abandoned', detail: 'Saiu na etapa 3 de 5', status: 'ok' },
+    { provider: 'ai_assistant', label: 'assistant.error', detail: 'rate limit do provedor', status: 'failed' },
+    { provider: 'mercadopago', label: 'payment.approved', detail: 'Patrícia Gomes · R$ 24,90', status: 'ok' },
+    { provider: 'typebot', label: 'flow.completed', detail: 'Fluxo cobrança · pagamento gerado', status: 'ok' },
+  ];
+  return defs.map((d, i) => ({ id: 'ev' + i, ...d, time: new Date(now.getTime() - i * 17 * 60000) }));
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [],
+    integrations: {
+      mercadopago: { active: false, credentials: {}, events24h: 0, lastEvent: '—' },
+      typebot: { active: true, credentials: { viewer_url: 'https://viewer.typebot.io', typebot_name: 'cobranca-v2' }, events24h: 38, lastEvent: '12 min' },
+      ai_assistant: { active: true, credentials: { api_key: 'sk-proj-9d3f8a1c4b7e', model: 'gpt-4o-mini', prompt: 'Você é um atendente simpático da Lembrado.' }, events24h: 96, lastEvent: '3 min' },
+    },
+    apiKeys: [
+      { id: 'k1', name: 'Automação N8N', key: 'lmb_live_8f2c91ad4e77b03c6519de84af2b7c0d55e13a96', scope: 'read_write', createdAt: '12/07/26', lastUsed: 'há 8 min', requests: 214 },
+    ],
+    configProviderId: null, configForm: {}, revealed: {}, configWebhookCopied: false,
+    newKeyOpen: false, newKeyName: '', newKeyScope: 'read_write', newKeyValue: null, newKeyCopied: false,
+    copiedEndpoint: null, copiedKeyId: null,
+    logs: buildLogs(), logFilter: 'all',
+    confirm: null,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3000);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  openDocs = () => this.addToast({ title: 'Abriria a documentação da API.' });
+  testAll = () => {
+    const active = Object.entries(this.state.integrations).filter(([, v]) => v.active).length;
+    this.addToast({ title: active ? `${active} conexões testadas com sucesso.` : 'Nenhuma integração conectada para testar.' });
+  };
+
+  openConfig(providerId) {
+    const existing = this.state.integrations[providerId];
+    this.setState({ configProviderId: providerId, configForm: { ...(existing ? existing.credentials : {}) }, revealed: {}, configWebhookCopied: false });
+  }
+  closeConfig = () => this.setState({ configProviderId: null });
+  setConfigField(key, e) { const v = e.target.value; this.setState((s) => ({ configForm: { ...s.configForm, [key]: v } })); }
+  toggleReveal(key) { this.setState((s) => ({ revealed: { ...s.revealed, [key]: !s.revealed[key] } })); }
+  copyConfigWebhook = () => {
+    this.setState({ configWebhookCopied: true });
+    this.addToast({ title: 'URL de webhook copiada.' });
+    setTimeout(() => this.setState({ configWebhookCopied: false }), 2000);
+  };
+  saveConfig = () => {
+    const id = this.state.configProviderId;
+    const def = PROVIDERS.find((p) => p.id === id);
+    const missing = def.fields.filter((f) => !String(this.state.configForm[f.key] || '').trim());
+    if (missing.length) { this.addToast({ title: `Preencha ${missing[0].label}.` }); return; }
+    this.setState((s) => ({
+      integrations: { ...s.integrations, [id]: { active: true, credentials: { ...s.configForm }, events24h: s.integrations[id].events24h, lastEvent: s.integrations[id].active ? s.integrations[id].lastEvent : 'agora' } },
+      configProviderId: null,
+    }));
+    this.addToast({ title: 'Integração conectada com sucesso!' });
+  };
+  askDisconnect = () => {
+    const id = this.state.configProviderId;
+    const def = PROVIDERS.find((p) => p.id === id);
+    this.setState({
+      configProviderId: null,
+      confirm: {
+        title: `Desconectar ${def.name}?`,
+        body: 'As credenciais serão removidas e os eventos deste provedor deixam de ser processados.',
+        cta: 'Desconectar',
+        action: () => {
+          this.setState((s) => ({ integrations: { ...s.integrations, [id]: { ...s.integrations[id], active: false, credentials: {}, lastEvent: '—', events24h: 0 } }, confirm: null }));
+          this.addToast({ title: 'Integração removida.' });
+        },
+      },
+    });
+  };
+  testProvider(id) {
+    const def = PROVIDERS.find((p) => p.id === id);
+    this.addToast({ title: `${def.name} respondeu em 240ms.` });
+  }
+
+  openNewKey = () => this.setState({ newKeyOpen: true, newKeyName: '', newKeyScope: 'read_write', newKeyValue: null, newKeyCopied: false });
+  closeNewKey = () => this.setState({ newKeyOpen: false });
+  setNewKeyName = (e) => this.setState({ newKeyName: e.target.value });
+  setNewKeyScope(v) { this.setState({ newKeyScope: v }); }
+  generateKey = () => {
+    if (!this.state.newKeyName.trim()) { this.addToast({ title: 'Dê um nome para a chave.' }); return; }
+    const key = randKey();
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState((s) => ({
+      newKeyValue: key,
+      apiKeys: [{ id: 'k' + Date.now(), name: s.newKeyName.trim(), key, scope: s.newKeyScope, createdAt: `${p(now.getDate())}/${p(now.getMonth() + 1)}/${String(now.getFullYear()).slice(2)}`, lastUsed: 'nunca', requests: 0 }, ...s.apiKeys],
+    }));
+    this.addToast({ title: 'Chave gerada com sucesso!' });
+  };
+  copyNewKey = () => { this.setState({ newKeyCopied: true }); this.addToast({ title: 'Chave copiada.' }); setTimeout(() => this.setState({ newKeyCopied: false }), 2000); };
+  copyKey(id) { this.setState({ copiedKeyId: id }); this.addToast({ title: 'Chave copiada.' }); setTimeout(() => this.setState({ copiedKeyId: null }), 2000); }
+  askRevokeKey(id) {
+    const k = this.state.apiKeys.find((x) => x.id === id);
+    this.setState({
+      confirm: {
+        title: 'Revogar chave?', body: `"${k.name}" deixará de funcionar imediatamente e as automações que a usam vão quebrar.`, cta: 'Revogar',
+        action: () => { this.setState((s) => ({ apiKeys: s.apiKeys.filter((x) => x.id !== id), confirm: null })); this.addToast({ title: 'Chave revogada.' }); },
+      },
+    });
+  }
+  copyEndpoint(key) { this.setState({ copiedEndpoint: key }); this.addToast({ title: 'Endpoint copiado.' }); setTimeout(() => this.setState({ copiedEndpoint: null }), 2000); }
+  setLogFilter(f) { this.setState({ logFilter: f }); }
+  closeConfirm = () => this.setState({ confirm: null });
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const activeCount = Object.values(s.integrations).filter((i) => i.active).length;
+    const totalCount = PROVIDERS.length;
+    const mpActive = s.integrations.mercadopago.active;
+
+    const providers = PROVIDERS.map((def) => {
+      const state = s.integrations[def.id];
+      const active = state.active;
+      return {
+        id: def.id, name: def.name, description: def.description, initials: def.initials,
+        iconBg: def.bg, iconFg: def.fg, isPayment: def.isPayment, active,
+        cardStyle: `border-radius:16px;border:1px ${active ? 'solid' : 'dashed'} ${active ? 'var(--border)' : 'var(--input)'};background:${active ? 'var(--card)' : 'color-mix(in srgb, var(--card) 55%, transparent)'};box-shadow:${active ? '0 1px 2px rgba(0,0,0,.04)' : 'none'};padding:16px`,
+        statusColor: active ? 'var(--money)' : 'var(--muted-foreground)',
+        statusAnim: active ? 'pulseDot 2s ease-in-out infinite' : 'none',
+        statusLabel: active ? 'Ativo' : 'Não conectado',
+        ctaLabel: active ? 'Configurar' : `+ Conectar ${def.name}`,
+        ctaColor: active ? 'var(--muted-foreground)' : 'var(--interactive-fg)',
+        lastEvent: state.lastEvent, events24h: state.events24h,
+        onConfigure: () => this.openConfig(def.id), onTest: () => this.testProvider(def.id),
+      };
+    });
+
+    const webhookTotal = s.logs.length * 14;
+    const webhookFailed = s.logs.filter((l) => l.status === 'failed').length * 2;
+    const webhookOk = webhookTotal - webhookFailed;
+
+    const apiKeys = s.apiKeys.map((k) => ({
+      id: k.id, name: k.name,
+      masked: `${k.key.slice(0, 14)}${'•'.repeat(12)}${k.key.slice(-4)}`,
+      scope: k.scope === 'read_only' ? 'somente leitura' : 'leitura e escrita',
+      scopeStyle: `font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;background:${k.scope === 'read_only' ? 'var(--secondary)' : 'var(--interactive-bg)'};color:${k.scope === 'read_only' ? 'var(--secondary-foreground)' : 'var(--interactive-fg)'}`,
+      createdLabel: k.createdAt, lastUsedLabel: k.lastUsed, requestsLabel: k.requests,
+      copyLabel: s.copiedKeyId === k.id ? 'copiado' : 'copiar',
+      onCopy: () => this.copyKey(k.id), onRevoke: () => this.askRevokeKey(k.id),
+    }));
+
+    const endpointDefs = [
+      { key: 'mp', label: 'Mercado Pago · notificações', url: `${BASE_URL}/api/webhooks/mercadopago?orgId=${ORG_ID}` },
+      { key: 'generic', label: 'Eventos genéricos (N8N, Make)', url: `${BASE_URL}/api/webhooks/generic?orgId=${ORG_ID}` },
+    ];
+    const webhookEndpoints = endpointDefs.map((e) => ({
+      key: e.key, label: e.label, url: e.url,
+      copied: s.copiedEndpoint === e.key, notCopied: s.copiedEndpoint !== e.key,
+      copyColor: s.copiedEndpoint === e.key ? 'var(--money)' : 'var(--muted-foreground)',
+      onCopy: () => this.copyEndpoint(e.key),
+    }));
+
+    const providerNameOf = (id) => (PROVIDERS.find((p) => p.id === id) || { name: id }).name;
+    const logStatusMeta = {
+      ok: { label: 'ok', bg: 'var(--success-bg)', fg: 'var(--success-fg)', dot: 'var(--money)' },
+      failed: { label: 'erro', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)', dot: 'var(--danger)' },
+    };
+    const filteredLogs = s.logs.filter((l) => {
+      if (s.logFilter === 'all') return true;
+      if (s.logFilter === 'failed') return l.status === 'failed';
+      return l.provider === 'mercadopago';
+    });
+    const eventLogs = filteredLogs.map((l) => {
+      const meta = logStatusMeta[l.status];
+      return {
+        id: l.id, label: l.label, detail: l.detail, providerLabel: providerNameOf(l.provider),
+        timeLabel: l.time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        dotColor: meta.dot, statusLabel: meta.label,
+        statusStyle: `flex-shrink:0;display:inline-block;border-radius:5px;padding:2px 7px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:700;background:${meta.bg};color:${meta.fg}`,
+      };
+    });
+    const logFilters = [
+      { key: 'all', label: 'Todos' }, { key: 'payments', label: 'Pagamentos' }, { key: 'failed', label: 'Erros' },
+    ].map((f) => ({
+      key: f.key, label: f.label, onClick: () => this.setLogFilter(f.key),
+      style: `min-height:26px;border-radius:5px;padding:0 9px;font-size:10.5px;font-weight:${s.logFilter === f.key ? '600' : '500'};border:none;cursor:pointer;background:${s.logFilter === f.key ? 'var(--card)' : 'transparent'};color:${s.logFilter === f.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.logFilter === f.key ? '0 1px 2px rgba(0,0,0,.05)' : 'none'}`,
+    }));
+
+    // config modal
+    const cfgDef = s.configProviderId ? PROVIDERS.find((p) => p.id === s.configProviderId) : null;
+    const cfgState = s.configProviderId ? s.integrations[s.configProviderId] : null;
+    const configFields = cfgDef ? cfgDef.fields.map((f) => {
+      const isSecret = f.type === 'password';
+      const revealed = !!s.revealed[f.key];
+      return {
+        key: f.key, label: f.label, placeholder: f.placeholder,
+        value: s.configForm[f.key] || '',
+        inputType: isSecret && !revealed ? 'password' : 'text',
+        isSecret, revealed, hidden: !revealed,
+        paddingRight: isSecret ? '38px' : '12px',
+        fontFamily: isSecret ? "'Geist Mono',monospace" : 'inherit',
+        hasHint: !!f.hint, hint: f.hint || '',
+        onInput: (e) => this.setConfigField(f.key, e),
+        onToggleReveal: () => this.toggleReveal(f.key),
+      };
+    }) : [];
+
+    const scopeOptions = [
+      { key: 'read_write', label: 'Leitura e escrita' }, { key: 'read_only', label: 'Somente leitura' },
+    ].map((o) => ({
+      key: o.key, label: o.label, onSelect: () => this.setNewKeyScope(o.key),
+      style: `flex:1;min-height:36px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.newKeyScope === o.key ? 'var(--interactive)' : 'var(--border)'};background:${s.newKeyScope === o.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.newKeyScope === o.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+    }));
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+      testAll: this.testAll, openDocs: this.openDocs,
+
+      activeCount, totalCount,
+      activeBadgeLabel: activeCount === 1 ? '1 ativa' : `${activeCount} ativas`,
+      activeBadgeBg: activeCount > 0 ? 'var(--success-bg)' : 'var(--warning-bg)',
+      activeBadgeFg: activeCount > 0 ? 'var(--success-fg)' : 'var(--warning-fg)',
+      connectedCardBorder: activeCount > 0 ? 'color-mix(in srgb, var(--money) 30%, var(--border))' : 'var(--warning-border)',
+      connectedIconBg: activeCount > 0 ? 'var(--success-bg)' : 'var(--warning-bg)',
+      connectedIconFg: activeCount > 0 ? 'var(--success-fg)' : 'var(--warning-fg)',
+      connectedHint: mpActive ? 'Gateway de pagamento ativo' : 'Gateway de pagamento pendente',
+      webhookTotal, webhookOkLabel: `${webhookOk} entregues com sucesso`,
+      webhookFailed, failedColor: webhookFailed > 0 ? 'var(--danger)' : 'var(--foreground)',
+      failedIconBg: webhookFailed > 0 ? 'var(--danger-bg)' : 'var(--success-bg)',
+      failedIconFg: webhookFailed > 0 ? 'var(--danger-fg)' : 'var(--success-fg)',
+      failedHint: webhookFailed > 0 ? 'Reenviadas automaticamente' : 'Nenhuma falha nas últimas 24h',
+      keyCount: s.apiKeys.length,
+      keyHint: s.apiKeys.length ? `${s.apiKeys.reduce((t, k) => t + k.requests, 0)} requisições em 24h` : 'Nenhuma chave gerada',
+
+      showPendingWarning: !mpActive,
+      pendingTitle: 'Mercado Pago não está conectado',
+      openFirstPending: () => this.openConfig('mercadopago'),
+
+      providers, apiKeys, keysEmpty: apiKeys.length === 0, openNewKey: this.openNewKey,
+      webhookEndpoints, eventLogs, logsEmpty: eventLogs.length === 0, logFilters,
+
+      configOpen: !!s.configProviderId, closeConfig: this.closeConfig,
+      configName: cfgDef ? cfgDef.name : '', configDescription: cfgDef ? cfgDef.description : '',
+      configInitials: cfgDef ? cfgDef.initials : '', configIconBg: cfgDef ? cfgDef.bg : 'var(--muted)', configIconFg: cfgDef ? cfgDef.fg : 'var(--foreground)',
+      configFields, configHasWebhook: !!(cfgDef && cfgDef.hasWebhook),
+      configWebhookUrl: `${BASE_URL}/api/webhooks/${s.configProviderId || ''}?orgId=${ORG_ID}`,
+      configWebhookCopied: s.configWebhookCopied, configWebhookNotCopied: !s.configWebhookCopied,
+      configWebhookCopyColor: s.configWebhookCopied ? 'var(--money)' : 'var(--muted-foreground)',
+      copyConfigWebhook: this.copyConfigWebhook,
+      configIsActive: !!(cfgState && cfgState.active), askDisconnect: this.askDisconnect,
+      saveConfig: this.saveConfig, configSaveLabel: cfgState && cfgState.active ? 'Salvar' : 'Conectar',
+
+      newKeyOpen: s.newKeyOpen, closeNewKey: this.closeNewKey,
+      newKeyName: s.newKeyName, setNewKeyName: this.setNewKeyName, scopeOptions,
+      newKeyCreated: !!s.newKeyValue, newKeyPending: !s.newKeyValue,
+      newKeyFormDisplay: s.newKeyValue ? 'none' : 'flex',
+      newKeyValue: s.newKeyValue || '', generateKey: this.generateKey,
+      copyNewKey: this.copyNewKey, newKeyCopyLabel: s.newKeyCopied ? 'Copiado!' : 'Copiar chave',
+      newKeyCloseLabel: s.newKeyValue ? 'Concluir' : 'Cancelar',
+
+      confirmOpen: !!s.confirm, closeConfirm: this.closeConfirm,
+      confirmTitle: s.confirm ? s.confirm.title : '', confirmBody: s.confirm ? s.confirm.body : '',
+      confirmCta: s.confirm ? s.confirm.cta : '', confirmAction: s.confirm ? s.confirm.action : this.closeConfirm,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

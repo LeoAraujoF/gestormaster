@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @media (max-width:1024px){[data-hide-lg]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-mobile-only]{display:none}
+    @media (max-width:768px){[data-mobile-only]{display:block!important}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="return false" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-accent-fg);background:var(--sidebar-accent);font-weight:600;text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Automação') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+      </a></div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <svg data-hide-lg="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Catálogo</p>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--interactive-bg);color:var(--interactive-fg);border-radius:6px;padding:2px 7px">{{ servicesCountLabel }}</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Serviços</h1>
+          <p style="margin:8px 0 0;max-width:560px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Organize sua oferta, acompanhe a adesão da carteira e entenda o custo operacional de cada serviço.</p>
+        </div>
+        <button type="button" onclick="{{ openCreateService }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Novo serviço
+        </button>
+      </section>
+
+      <!-- CATALOG TABS -->
+      <nav style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:280px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:38px;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;background:var(--card);color:var(--foreground);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+            Serviços
+          </span>
+          <button type="button" onclick="{{ toastNav('Promoções') }}" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:38px;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;border:none;background:none;color:var(--muted-foreground);cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg>
+            Promoções
+          </button>
+        </div>
+      </nav>
+
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
+            <div style="min-width:0;flex:1">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Portfólio</p>
+              <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:20px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ portfolioCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">{{ withoutClientsHint }}</p>
+            </div>
+          </div>
+        </div>
+        <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg></span>
+            <div style="min-width:0;flex:1">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Vínculos</p>
+              <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:20px;font-weight:600;letter-spacing:-.03em;color:var(--interactive-fg)">{{ totalAssignments }}</p>
+              <p style="margin:4px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">Soma dos clientes em todos os serviços</p>
+            </div>
+          </div>
+        </div>
+        <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="14" rx="2.4"></rect><path d="M2.5 10h19"></path></svg></span>
+            <div style="min-width:0;flex:1">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Custo operacional</p>
+              <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ totalOperationalCostLabel }}</p>
+              <p style="margin:4px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">Custo unitário × clientes vinculados</p>
+            </div>
+          </div>
+        </div>
+        <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path></svg></span>
+            <div style="min-width:0;flex:1">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Maior base</p>
+              <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ leadingServiceName }}</p>
+              <p style="margin:4px 0 0;font-size:11px;line-height:1.5;color:var(--muted-foreground)">{{ leadingServiceHint }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PORTFOLIO TABLE -->
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--foreground)">Portfólio de serviços</h2>
+          <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted-foreground)">{{ portfolioSubtitle }}</p>
+        </div>
+
+        <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+          <div data-hide-md="true" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 90px 110px 110px 90px;gap:10px;align-items:center;padding:10px 20px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">
+            <span>Serviço</span><span>Painel e planos</span><span style="text-align:right">Clientes</span><span style="text-align:right">Custo unitário</span><span style="text-align:right">Custo total</span><span style="text-align:right">Ações</span>
+          </div>
+          <div data-hide-md="true">
+            <sc-for list="{{ services }}" as="svc" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 90px 110px 110px 90px;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <span style="width:34px;height:34px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0" data-icon="{{ svc.iconKey }}">{{ svc.iconGlyph }}</span>
+                  <div style="min-width:0"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ svc.name }}</p><p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">Oferta ativa no catálogo</p></div>
+                </div>
+                <div style="min-width:0"><p style="margin:0;font-size:12px;color:var(--foreground)">{{ svc.panelType }}</p><p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ svc.plansLabel }}</p></div>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ svc.clientCount }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:12px;color:var(--muted-foreground);white-space:nowrap">{{ svc.unitCostLabel }}</span>
+                <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--danger);white-space:nowrap">{{ svc.totalCostLabel }}</span>
+                <div style="display:flex;justify-content:flex-end;gap:4px">
+                  <button type="button" onclick="{{ svc.onEdit }}" title="Editar" style="width:32px;height:32px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+                  <button type="button" onclick="{{ svc.onDelete }}" title="Excluir" style="width:32px;height:32px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"></path></svg></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div data-mobile-only="true">
+            <sc-for list="{{ services }}" as="svm" hint-placeholder-count="4">
+              <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <span style="width:38px;height:38px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ svm.iconGlyph }}</span>
+                  <div style="min-width:0;flex:1"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ svm.name }}</h3><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ svm.panelType }} · {{ svm.plansLabel }}</p></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div style="border-radius:10px;background:var(--muted);padding:10px"><p style="margin:0;font-size:8.5px;color:var(--muted-foreground)">Clientes</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ svm.clientCount }}</p></div>
+                  <div style="border-radius:10px;background:var(--muted);padding:10px"><p style="margin:0;font-size:8.5px;color:var(--muted-foreground)">Custo un.</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ svm.unitCostLabel }}</p></div>
+                  <div style="border-radius:10px;background:var(--muted);padding:10px"><p style="margin:0;font-size:8.5px;color:var(--muted-foreground)">Custo total</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--danger)">{{ svm.totalCostLabel }}</p></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <button type="button" onclick="{{ svm.onEdit }}" style="min-height:38px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>Editar</button>
+                  <button type="button" onclick="{{ svm.onDelete }}" style="min-height:38px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--danger);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"></path></svg>Excluir</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- CREATE/EDIT SERVICE MODAL -->
+  <sc-if value="{{ serviceModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto" onclick="{{ closeServiceModal }}">
+      <div style="width:100%;max-width:460px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ serviceModalTitle }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Nome, painel e custo unitário do serviço</p></div>
+          <button type="button" onclick="{{ closeServiceModal }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+          <input value="{{ serviceForm.name }}" oninput="{{ setServiceFormName }}" placeholder="Nome do serviço *" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input value="{{ serviceForm.panelType }}" oninput="{{ setServiceFormPanel }}" placeholder="Painel (ex: Sigma, Koffice)" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+            <input value="{{ serviceForm.cost }}" oninput="{{ setServiceFormCost }}" placeholder="Custo unitário *" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Planos</p>
+            <sc-if value="{{ hasPlans }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+                <sc-for list="{{ planRows }}" as="pl" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:7px;padding:7px 10px">
+                    <span style="flex:1;font-size:12px;color:var(--foreground)">{{ pl.name }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ pl.priceLabel }}</span>
+                    <button type="button" onclick="{{ pl.onRemove }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;gap:8px">
+              <input value="{{ planDraftName }}" oninput="{{ setPlanDraftName }}" placeholder="Nome do plano (ex: 2 telas)" style="flex:1;border:1px solid var(--input);border-radius:7px;padding:8px 10px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+              <input value="{{ planDraftPrice }}" oninput="{{ setPlanDraftPrice }}" placeholder="Valor" style="width:100px;border:1px solid var(--input);border-radius:7px;padding:8px 10px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+              <button type="button" onclick="{{ addPlanDraft }}" style="width:38px;flex-shrink:0;border:none;border-radius:7px;background:var(--secondary);color:var(--secondary-foreground);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeServiceModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitServiceModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ serviceModalSubmitLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- DELETE CONFIRM -->
+  <sc-if value="{{ deleteConfirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90">
+      <div style="width:100%;max-width:400px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden">
+        <div style="padding:20px 22px"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Excluir serviço</h3><p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted-foreground)">Todos os dados de <strong style="color:var(--foreground)">{{ deletingServiceName }}</strong> serão apagados definitivamente.</p></div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeDeleteConfirm }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ confirmDelete }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Excluir</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+const PANELS = ['Sigma', 'Koffice', 'FastPlay', 'UniPlay', 'Painel próprio'];
+function iconFor(name) {
+  const n = name.toLowerCase();
+  if (n.includes('tv') || n.includes('iptv') || n.includes('p2p')) return { key: 'tv', glyph: '📺'.length ? '▶' : '' };
+  if (n.includes('vps') || n.includes('host') || n.includes('servidor')) return { key: 'server', glyph: '▮' };
+  return { key: 'briefcase', glyph: '◆' };
+}
+function buildServices() {
+  const raw = [
+    { name: 'IPTV Ultra', panel: 'Sigma', plans: [{ name: '1 tela', price: 24.9 }, { name: '2 telas', price: 39.9 }, { name: '4 telas', price: 59.9 }], cost: 14.9, clients: 34 },
+    { name: 'IPTV Gold', panel: 'Sigma', plans: [{ name: '1 tela', price: 19.9 }, { name: '2 telas', price: 32.9 }], cost: 11.5, clients: 22 },
+    { name: 'Netflix Premium', panel: 'Painel próprio', plans: [{ name: 'Tela padrão', price: 33.9 }], cost: 18.0, clients: 41 },
+    { name: 'Disney+ Premium', panel: 'Painel próprio', plans: [{ name: 'Padrão', price: 27.9 }], cost: 16.0, clients: 19 },
+    { name: 'Combo Streaming', panel: 'FastPlay', plans: [{ name: 'Duo', price: 49.9 }, { name: 'Família', price: 69.9 }], cost: 22.0, clients: 12 },
+    { name: 'Spotify Family', panel: 'Koffice', plans: [{ name: 'Família', price: 24.9 }], cost: 9.9, clients: 8 },
+    { name: 'VPN Premium', panel: 'UniPlay', plans: [{ name: 'Mensal', price: 14.9 }], cost: 5.5, clients: 0 },
+    { name: 'Servidor VPS', panel: 'Painel próprio', plans: [{ name: 'Padrão', price: 79.9 }], cost: 45.0, clients: 0 },
+  ];
+  return raw.map((r, i) => ({ id: 's' + i, ...r, icon: iconFor(r.name) }));
+}
+const SERVICES_ALL = buildServices();
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [],
+    services: SERVICES_ALL.map((s) => ({ ...s })),
+    serviceModalOpen: false, editingServiceId: null,
+    serviceForm: { name: '', panelType: '', cost: '', plans: [] }, planDraftName: '', planDraftPrice: '',
+    deleteConfirmOpen: false, deletingServiceId: null,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() {
+    this.tick();
+    this.clockInterval = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.clockInterval);
+    Object.values(this.pendingTimers).forEach((t) => clearTimeout(t));
+  }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    const full = { id, duration: 3000, ...toast };
+    this.setState((s) => ({ toasts: [...s.toasts, full] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), full.duration);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  openCreateService = () => this.setState({ serviceModalOpen: true, editingServiceId: null, serviceForm: { name: '', panelType: '', cost: '', plans: [] }, planDraftName: '', planDraftPrice: '' });
+  openEditService(svc) { this.setState({ serviceModalOpen: true, editingServiceId: svc.id, serviceForm: { name: svc.name, panelType: svc.panel, cost: String(svc.cost).replace('.', ','), plans: svc.plans.map((p) => ({ ...p })) }, planDraftName: '', planDraftPrice: '' }); }
+  closeServiceModal = () => this.setState({ serviceModalOpen: false });
+  setServiceFormName = (e) => this.setState((s) => ({ serviceForm: { ...s.serviceForm, name: e.target.value } }));
+  setServiceFormPanel = (e) => this.setState((s) => ({ serviceForm: { ...s.serviceForm, panelType: e.target.value } }));
+  setServiceFormCost = (e) => this.setState((s) => ({ serviceForm: { ...s.serviceForm, cost: e.target.value } }));
+  setPlanDraftName = (e) => this.setState({ planDraftName: e.target.value });
+  setPlanDraftPrice = (e) => this.setState({ planDraftPrice: e.target.value });
+  addPlanDraft = () => {
+    const { planDraftName, planDraftPrice } = this.state;
+    if (!planDraftName.trim() || !planDraftPrice) { this.addToast({ title: 'Informe nome e valor do plano.' }); return; }
+    const price = Number(planDraftPrice.replace(',', '.')) || 0;
+    this.setState((s) => ({ serviceForm: { ...s.serviceForm, plans: [...s.serviceForm.plans, { name: planDraftName, price }] }, planDraftName: '', planDraftPrice: '' }));
+  };
+  removePlan(idx) { this.setState((s) => ({ serviceForm: { ...s.serviceForm, plans: s.serviceForm.plans.filter((_, i) => i !== idx) } })); }
+  submitServiceModal = () => {
+    const { name, cost, plans } = this.state.serviceForm;
+    if (!name.trim() || !cost) { this.addToast({ title: 'Informe nome e custo unitário.' }); return; }
+    const costNum = Number(cost.replace(',', '.')) || 0;
+    this.setState((s) => {
+      if (s.editingServiceId) {
+        return { services: s.services.map((sv) => sv.id === s.editingServiceId ? { ...sv, name: s.serviceForm.name, panel: s.serviceForm.panelType, cost: costNum, plans } : sv), serviceModalOpen: false };
+      }
+      const newSvc = { id: 's' + Date.now(), name: s.serviceForm.name, panel: s.serviceForm.panelType || 'Não informado', plans, cost: costNum, clients: 0, icon: iconFor(s.serviceForm.name) };
+      return { services: [...s.services, newSvc], serviceModalOpen: false };
+    });
+    this.addToast({ title: this.state.editingServiceId ? 'Serviço atualizado.' : 'Serviço cadastrado com sucesso.' });
+  };
+
+  openDeleteService(svc) {
+    if (svc.clients > 0) { this.addToast({ title: `Não é possível excluir. Existem ${svc.clients} clientes usando este serviço.` }); return; }
+    this.setState({ deleteConfirmOpen: true, deletingServiceId: svc.id });
+  }
+  closeDeleteConfirm = () => this.setState({ deleteConfirmOpen: false, deletingServiceId: null });
+  confirmDelete = () => {
+    this.setState((s) => ({ services: s.services.filter((sv) => sv.id !== s.deletingServiceId), deleteConfirmOpen: false }));
+    this.addToast({ title: 'Serviço excluído.' });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const totalAssignments = s.services.reduce((t, sv) => t + sv.clients, 0);
+    const totalOperationalCost = s.services.reduce((t, sv) => t + sv.cost * sv.clients, 0);
+    const withoutClients = s.services.filter((sv) => sv.clients === 0).length;
+    const leading = [...s.services].sort((a, b) => b.clients - a.clients)[0];
+
+    const deletingService = s.services.find((sv) => sv.id === s.deletingServiceId);
+
+    const services = s.services.map((sv) => ({
+      id: sv.id, name: sv.name, panelType: sv.panel, plansLabel: `${sv.plans.length} plano${sv.plans.length === 1 ? '' : 's'}`,
+      clientCount: sv.clients, unitCostLabel: fmt(sv.cost), totalCostLabel: fmt(sv.cost * sv.clients),
+      iconGlyph: sv.icon.glyph, iconKey: sv.icon.key,
+      onEdit: () => this.openEditService(sv), onDelete: () => this.openDeleteService(sv),
+    }));
+
+    const planRows = s.serviceForm.plans.map((p, i) => ({ idx: i, name: p.name, priceLabel: fmt(p.price), onRemove: () => this.removePlan(i) }));
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav,
+      servicesCountLabel: `${s.services.length} cadastrado${s.services.length === 1 ? '' : 's'}`,
+      openCreateService: this.openCreateService,
+      portfolioCount: s.services.length, withoutClientsHint: `${withoutClients} sem clientes vinculados`,
+      totalAssignments, totalOperationalCostLabel: fmt(totalOperationalCost),
+      leadingServiceName: leading ? leading.name : '—', leadingServiceHint: leading ? `${leading.clients} clientes vinculados` : 'Cadastre o primeiro serviço',
+      portfolioSubtitle: withoutClients > 0 ? `${withoutClients} serviço${withoutClients === 1 ? ' ainda não possui' : 's ainda não possuem'} clientes vinculados.` : 'Todos os serviços cadastrados já possuem clientes vinculados.',
+      services,
+
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })), stop: this.stop,
+
+      serviceModalOpen: s.serviceModalOpen, closeServiceModal: this.closeServiceModal, serviceForm: s.serviceForm,
+      serviceModalTitle: s.editingServiceId ? 'Editar serviço' : 'Novo serviço', serviceModalSubmitLabel: s.editingServiceId ? 'Salvar alterações' : 'Cadastrar serviço',
+      setServiceFormName: this.setServiceFormName, setServiceFormPanel: this.setServiceFormPanel, setServiceFormCost: this.setServiceFormCost,
+      submitServiceModal: this.submitServiceModal,
+      planRows, hasPlans: planRows.length > 0, planDraftName: s.planDraftName, planDraftPrice: s.planDraftPrice,
+      setPlanDraftName: this.setPlanDraftName, setPlanDraftPrice: this.setPlanDraftPrice, addPlanDraft: this.addPlanDraft,
+
+      deleteConfirmOpen: s.deleteConfirmOpen, closeDeleteConfirm: this.closeDeleteConfirm, confirmDelete: this.confirmDelete,
+      deletingServiceName: deletingService ? deletingService.name : '',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

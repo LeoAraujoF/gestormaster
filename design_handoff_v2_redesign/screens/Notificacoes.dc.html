@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-notif-shell]{grid-template-columns:236px minmax(0,1fr);}
+    @media (max-width:940px){[data-notif-shell]{grid-template-columns:minmax(0,1fr);}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:1fr;}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Central de automação') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Central de automação</a>
+          <a href="#" onclick="{{ toastNav('Aquecimento') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Leads') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Insights</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Analytics') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Analytics</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Gateways e API') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Gateways e API</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mais</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="Afiliados.dc.html" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Afiliados</a>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="margin-bottom:4px"><a href="#" onclick="{{ toastNav('Configurações') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Configurações</span>
+      </a></div>
+      <div style="margin-bottom:8px"><a href="#" onclick="{{ toastNav('Suporte') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle><path d="m6 6 3.2 3.2M18 6l-3.2 3.2M18 18l-3.2-3.2M6 18l3.2-3.2"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Suporte</span>
+      </a></div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <div style="position:relative;width:32px;height:32px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M9.5 20a2.5 2.5 0 0 0 5 0"></path></svg>
+        <sc-if value="{{ hasUnread }}" hint-placeholder-val="{{ true }}">
+          <span style="position:absolute;top:-2px;right:-2px;min-width:15px;height:15px;padding:0 3px;border-radius:9999px;background:#e0433d;border:2px solid var(--background);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ unreadCount }}</span>
+        </sc-if>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- PAGE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Central de avisos</p>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Notificações</h1>
+          <p style="margin:8px 0 0;max-width:620px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Tudo que exige sua atenção — vencimentos, pagamentos, falhas de automação e novos leads, em ordem de prioridade.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <button type="button" onclick="{{ toastNav('Configurações › Notificações') }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M3 12h2M19 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4"></path></svg>
+            Preferências
+          </button>
+          <button type="button" onclick="{{ markAllRead }}" disabled="{{ noUnread }}" style="{{ markAllStyle }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 12 5 5 6-7"></path><path d="m11 15 3 3 8-9"></path></svg>
+            Marcar tudo como lido
+          </button>
+        </div>
+      </section>
+
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:16px;border:1px solid {{ unreadCardBorder }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Não lidas</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:{{ unreadValueColor }}">{{ unreadCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ unreadHint }}</p>
+            </div>
+            <span style="position:relative;width:34px;height:34px;border-radius:10px;background:{{ unreadIconBg }};color:{{ unreadIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M9.5 20a2.5 2.5 0 0 0 5 0"></path></svg>
+              <sc-if value="{{ hasUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-radius:9999px;background:#e0433d;border:2px solid var(--card);animation:pulseDot 2s ease-in-out infinite"></span></sc-if>
+            </span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid {{ criticalCardBorder }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Exigem ação</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:{{ criticalValueColor }}">{{ criticalCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ criticalHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ criticalIconBg }};color:{{ criticalIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19Z"></path><path d="M12 10v4M12 17h.01"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Valor envolvido</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ pendingAmountLabel }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">em cobranças pendentes</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v1M12 16v1M9 9.5c0-1.4 1.3-2.3 3-2.3s3 .8 3 2.1c0 2.7-6 1.3-6 4.1 0 1.3 1.3 2.1 3 2.1s3-.9 3-2.3"></path></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Resolvidas hoje</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--money)">{{ resolvedToday }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">de {{ totalToday }} recebidas hoje</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+          </div>
+        </div>
+      </section>
+
+      <section data-notif-shell style="display:grid;gap:20px;align-items:start">
+
+        <!-- FILTER RAIL -->
+        <nav style="position:sticky;top:76px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <p style="margin:0 6px 6px;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Caixa</p>
+            <sc-for list="{{ statusFilters }}" as="sf" hint-placeholder-count="3">
+              <button type="button" onclick="{{ sf.onClick }}" style="{{ sf.style }}">
+                <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sf.label }}</span>
+                <span style="{{ sf.countStyle }}">{{ sf.count }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <p style="margin:0 6px 6px;font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Tipo</p>
+            <sc-for list="{{ typeFilters }}" as="tf" hint-placeholder-count="6">
+              <button type="button" onclick="{{ tf.onClick }}" style="{{ tf.style }}">
+                <span style="width:7px;height:7px;border-radius:9999px;background:{{ tf.dot }};flex-shrink:0"></span>
+                <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tf.label }}</span>
+                <span style="{{ tf.countStyle }}">{{ tf.count }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </nav>
+
+        <!-- LIST -->
+        <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+
+          <!-- LIST TOOLBAR -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:10px 14px">
+            <button type="button" onclick="{{ toggleSelectAll }}" style="display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;cursor:pointer;flex-shrink:0">
+              <span style="{{ selectAllStyle }}"><sc-if value="{{ allVisibleSelected }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+              <span style="font-size:11.5px;font-weight:500;color:var(--muted-foreground);white-space:nowrap">Selecionar</span>
+            </button>
+            <div style="width:1px;height:18px;background:var(--border);flex-shrink:0"></div>
+            <div style="position:relative;flex:1;min-width:180px;max-width:300px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ search }}" oninput="{{ setSearch }}" placeholder="Buscar aviso ou cliente…" style="width:100%;height:32px;border:1px solid var(--input);border-radius:7px;padding:0 10px 0 30px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+            </div>
+            <div style="flex:1"></div>
+            <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;animation:dcpop .16s ease-out">
+                <span style="font-size:11.5px;font-weight:600;color:var(--interactive-fg);white-space:nowrap">{{ selectionLabel }}</span>
+                <button type="button" onclick="{{ markSelectionRead }}" style="height:30px;padding:0 11px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">Marcar lida</button>
+                <button type="button" onclick="{{ archiveSelection }}" style="height:30px;padding:0 11px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">Arquivar</button>
+                <button type="button" onclick="{{ clearSelection }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;padding:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}"></sc-if>
+            <span style="display:{{ resultCountDisplay }};font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground);flex-shrink:0">{{ resultCountLabel }}</span>
+          </div>
+
+          <!-- GROUPS -->
+          <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:64px 20px;text-align:center">
+              <span style="display:inline-flex;width:46px;height:46px;border-radius:14px;background:var(--success-bg);color:var(--success-fg);align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+              <p style="margin:12px 0 0;font-size:13.5px;font-weight:600;color:var(--foreground)">{{ emptyTitle }}</p>
+              <p style="margin:5px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ emptySubtitle }}</p>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ groups }}" as="group" hint-placeholder-count="2">
+            <section style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:9px;padding:0 2px">
+                <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">{{ group.label }}</p>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--muted);color:var(--secondary-foreground);border-radius:5px;padding:1px 6px">{{ group.count }}</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+                <sc-for list="{{ group.items }}" as="item" hint-placeholder-count="4">
+                  <div style="{{ item.rowStyle }}">
+                    <button type="button" onclick="{{ item.onSelect }}" style="border:none;background:none;padding:0;cursor:pointer;flex-shrink:0;margin-top:2px"><span style="{{ item.checkStyle }}"><sc-if value="{{ item.selected }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span></button>
+
+                    <span style="position:relative;width:36px;height:36px;border-radius:11px;background:{{ item.iconBg }};color:{{ item.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <sc-if value="{{ item.isOverdue }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></sc-if>
+                        <sc-if value="{{ item.isDue }}"><rect x="3.5" y="4.5" width="17" height="16" rx="2.3"></rect><path d="M3.5 9.5h17M8 3v3M16 3v3"></path></sc-if>
+                        <sc-if value="{{ item.isPayment }}"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></sc-if>
+                        <sc-if value="{{ item.isFailure }}"><path d="M12 4 2.5 20h19Z"></path><path d="M12 10v4M12 17h.01"></path></sc-if>
+                        <sc-if value="{{ item.isLead }}"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></sc-if>
+                        <sc-if value="{{ item.isSystem }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></sc-if>
+                      </svg>
+                      <sc-if value="{{ item.unread }}"><span style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:9999px;background:#e0433d;border:2px solid var(--card)"></span></sc-if>
+                    </span>
+
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                        <p style="margin:0;font-size:13px;font-weight:{{ item.titleWeight }};color:var(--foreground)">{{ item.title }}</p>
+                        <span style="{{ item.severityStyle }}">{{ item.severityLabel }}</span>
+                      </div>
+                      <p style="margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--muted-foreground)">{{ item.body }}</p>
+                      <div style="display:flex;align-items:center;gap:9px;margin-top:7px;flex-wrap:wrap">
+                        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ item.timeLabel }}</span>
+                        <sc-if value="{{ item.hasAmount }}"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:600;color:var(--foreground)">{{ item.amountLabel }}</span></sc-if>
+                        <sc-if value="{{ item.hasClient }}"><span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-foreground)"><span style="width:16px;height:16px;border-radius:9999px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700">{{ item.clientInitials }}</span>{{ item.clientName }}</span></sc-if>
+                      </div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                      <sc-if value="{{ item.hasPrimary }}"><button type="button" onclick="{{ item.onPrimary }}" style="{{ item.primaryStyle }}">{{ item.primaryLabel }}</button></sc-if>
+                      <button type="button" onclick="{{ item.onToggleRead }}" title="{{ item.readTitle }}" style="width:29px;height:29px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><sc-if value="{{ item.unread }}"><path d="M4 12l5 5L20 6"></path></sc-if><sc-if value="{{ item.read }}"><path d="M3 8.5 12 14l9-5.5"></path><rect x="3" y="5.5" width="18" height="13" rx="2"></rect></sc-if></svg>
+                      </button>
+                      <button type="button" onclick="{{ item.onArchive }}" title="Arquivar" style="width:29px;height:29px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4.5" rx="1.4"></rect><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5M10 13h4"></path></svg>
+                      </button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <sc-if value="{{ toast.hasAction }}"><button type="button" onclick="{{ toast.onAction }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--interactive-fg);cursor:pointer;white-space:nowrap;flex-shrink:0">{{ toast.actionLabel }}</button></sc-if>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const TYPES = {
+  overdue: { label: 'Vencidos', dot: 'var(--danger)', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+  due: { label: 'Vencimentos', dot: '#d9a418', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+  payment: { label: 'Pagamentos', dot: 'var(--money)', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+  failure: { label: 'Falhas', dot: 'var(--danger)', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+  lead: { label: 'Leads', dot: 'var(--interactive)', bg: 'var(--interactive-bg)', fg: 'var(--interactive-fg)' },
+  system: { label: 'Sistema', dot: 'var(--muted-foreground)', bg: 'var(--secondary)', fg: 'var(--secondary-foreground)' },
+};
+const SEVERITY = {
+  critical: { label: 'crítico', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+  attention: { label: 'atenção', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+  info: { label: 'info', bg: 'var(--secondary)', fg: 'var(--secondary-foreground)' },
+  good: { label: 'ok', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+};
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function mins(n) { return new Date(Date.now() - n * 60000); }
+
+function buildItems() {
+  return [
+    { id: 'n1', type: 'overdue', severity: 'critical', title: '3 clientes vencidos sem cobrança enviada', body: 'Fernanda Torres, Carlos Eduardo e Ana Beatriz passaram da tolerância de 3 dias e ainda não receberam a régua de cobrança.', amount: 155.7, client: null, time: mins(8), unread: true, archived: false, primary: 'Cobrar agora' },
+    { id: 'n2', type: 'failure', severity: 'critical', title: 'Chip Vendas 03 desconectou', body: 'A instância caiu durante o disparo e 6 mensagens ficaram na fila. Reconecte para retomar os envios.', amount: 0, client: null, time: mins(23), unread: true, archived: false, primary: 'Reconectar' },
+    { id: 'n3', type: 'due', severity: 'attention', title: '5 vencimentos hoje', body: 'A régua financeira envia o aviso do dia às 09:00. Dois clientes não têm WhatsApp cadastrado.', amount: 243.6, client: null, time: mins(52), unread: true, archived: false, primary: 'Ver fila' },
+    { id: 'n4', type: 'payment', severity: 'good', title: 'Pagamento confirmado', body: 'PIX recebido e baixa automática aplicada. Vencimento renovado para 24/09.', amount: 54.9, client: 'Marcos Vinícius', time: mins(96), unread: true, archived: false, primary: null },
+    { id: 'n5', type: 'lead', severity: 'info', title: 'Novo lead pelo formulário', body: 'Interesse em Combo Streaming, 2 telas. Origem: Instagram.', amount: 0, client: 'Renata Aguiar', time: mins(140), unread: true, archived: false, primary: 'Abrir lead' },
+    { id: 'n6', type: 'payment', severity: 'good', title: 'Pagamento confirmado', body: 'Cartão aprovado pelo gateway com renovação de 3 meses.', amount: 119.7, client: 'Patrícia Gomes', time: mins(320), unread: false, archived: false, primary: null },
+    { id: 'n7', type: 'failure', severity: 'attention', title: '2 mensagens não entregues', body: 'Número inválido ou sem WhatsApp ativo. Revise o cadastro dos clientes afetados.', amount: 0, client: null, time: mins(410), unread: false, archived: false, primary: 'Ver logs' },
+    { id: 'n8', type: 'system', severity: 'info', title: 'Backup concluído', body: 'Cópia diária gerada às 03:00 e guardada por 30 dias.', amount: 0, client: null, time: mins(1180), unread: false, archived: false, primary: null },
+    { id: 'n9', type: 'lead', severity: 'info', title: 'Lead retomou contato', body: 'Respondeu a campanha de teste 24h e pediu o valor do plano anual.', amount: 0, client: 'Diego Martins', time: mins(1520), unread: false, archived: false, primary: 'Abrir lead' },
+    { id: 'n10', type: 'overdue', severity: 'attention', title: 'Cliente vencido há 7 dias', body: 'Todas as etapas da régua foram enviadas sem resposta. Considere suspender o acesso.', amount: 39.9, client: 'Bruna Castro', time: mins(2600), unread: false, archived: false, primary: 'Abrir cliente' },
+    { id: 'n11', type: 'due', severity: 'info', title: '9 vencimentos nos próximos 7 dias', body: 'Concentração no dia 14 — 4 clientes vencem no mesmo dia.', amount: 421.3, client: null, time: mins(3100), unread: false, archived: false, primary: 'Ver mapa' },
+    { id: 'n12', type: 'system', severity: 'info', title: 'Novo dispositivo acessou sua conta', body: 'App Android em São Paulo, BR. Se não foi você, encerre a sessão.', amount: 0, client: null, time: mins(4400), unread: false, archived: false, primary: 'Ver sessões' },
+  ];
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], items: buildItems(),
+    statusFilter: 'all', typeFilter: 'all', search: '', selectedIds: {}, resolvedToday: 4,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), toast.duration || 3200);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+
+  setStatusFilter(v) { this.setState({ statusFilter: v, selectedIds: {} }); }
+  setTypeFilter(v) { this.setState({ typeFilter: v, selectedIds: {} }); }
+  setSearch = (e) => this.setState({ search: e.target.value });
+
+  toggleSelect(id) {
+    this.setState((s) => {
+      const next = { ...s.selectedIds };
+      if (next[id]) delete next[id]; else next[id] = true;
+      return { selectedIds: next };
+    });
+  }
+  toggleSelectAllVisible(ids) {
+    const all = ids.length > 0 && ids.every((id) => this.state.selectedIds[id]);
+    this.setState({ selectedIds: all ? {} : ids.reduce((a, id) => ({ ...a, [id]: true }), {}) });
+  }
+  clearSelection = () => this.setState({ selectedIds: {} });
+
+  toggleRead(id) {
+    this.setState((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, unread: !i.unread } : i) }));
+  }
+  markAllRead = () => {
+    const count = this.state.items.filter((i) => i.unread && !i.archived).length;
+    if (!count) return;
+    this.setState((s) => ({ items: s.items.map((i) => ({ ...i, unread: false })) }));
+    this.addToast({ title: `${count} ${count === 1 ? 'aviso marcado' : 'avisos marcados'} como lido.` });
+  };
+  markSelectionRead = () => {
+    const ids = Object.keys(this.state.selectedIds);
+    this.setState((s) => ({ items: s.items.map((i) => s.selectedIds[i.id] ? { ...i, unread: false } : i), selectedIds: {} }));
+    this.addToast({ title: `${ids.length} ${ids.length === 1 ? 'aviso marcado' : 'avisos marcados'} como lido.` });
+  };
+  archiveOne(id) {
+    const item = this.state.items.find((i) => i.id === id);
+    this.setState((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, archived: true, unread: false } : i) }));
+    this.addToast({
+      title: 'Aviso arquivado.', actionLabel: 'Desfazer',
+      onAction: () => this.setState((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, archived: false, unread: item.unread } : i) })),
+    });
+  }
+  archiveSelection = () => {
+    const ids = Object.keys(this.state.selectedIds);
+    const snapshot = this.state.items;
+    this.setState((s) => ({ items: s.items.map((i) => s.selectedIds[i.id] ? { ...i, archived: true, unread: false } : i), selectedIds: {} }));
+    this.addToast({
+      title: `${ids.length} ${ids.length === 1 ? 'aviso arquivado' : 'avisos arquivados'}.`, actionLabel: 'Desfazer',
+      onAction: () => this.setState({ items: snapshot }),
+    });
+  };
+  runPrimary(item) {
+    this.setState((s) => ({ items: s.items.map((i) => i.id === item.id ? { ...i, unread: false } : i) }));
+    this.addToast({ title: `${item.primary} — ação executada neste protótipo.` });
+  }
+
+  initialsOf(name) { return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
+  relTime(d) {
+    const diff = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return 'agora';
+    if (diff < 60) return `há ${diff} min`;
+    const h = Math.round(diff / 60);
+    if (h < 24) return `há ${h} h`;
+    const days = Math.round(h / 24);
+    return days === 1 ? 'ontem' : `há ${days} dias`;
+  }
+  groupOf(d) {
+    const diffH = (Date.now() - d.getTime()) / 3600000;
+    if (diffH < 24) return 'Hoje';
+    if (diffH < 48) return 'Ontem';
+    if (diffH < 168) return 'Esta semana';
+    return 'Mais antigas';
+  }
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const active = s.items.filter((i) => !i.archived);
+    const unreadCount = active.filter((i) => i.unread).length;
+    const criticalCount = active.filter((i) => i.severity === 'critical').length;
+    const pendingAmount = active.filter((i) => i.type === 'overdue' || i.type === 'due').reduce((t, i) => t + i.amount, 0);
+    const totalToday = active.filter((i) => this.groupOf(i.time) === 'Hoje').length + s.resolvedToday;
+
+    // filters
+    const statusDefs = [
+      { key: 'all', label: 'Todas', count: active.length },
+      { key: 'unread', label: 'Não lidas', count: unreadCount },
+      { key: 'archived', label: 'Arquivadas', count: s.items.filter((i) => i.archived).length },
+    ];
+    const railStyle = (isActive) => `width:100%;display:flex;align-items:center;gap:9px;min-height:34px;padding:0 10px;border-radius:8px;border:none;cursor:pointer;background:${isActive ? 'var(--card)' : 'none'};color:${isActive ? 'var(--foreground)' : 'var(--muted-foreground)'};font-size:12.5px;font-weight:${isActive ? '600' : '500'};box-shadow:${isActive ? '0 1px 2px rgba(0,0,0,.05)' : 'none'};box-sizing:border-box`;
+    const countStyle = (isActive) => `font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:600;flex-shrink:0;color:${isActive ? 'var(--interactive-fg)' : 'var(--muted-foreground)'}`;
+    const statusFilters = statusDefs.map((d) => ({
+      key: d.key, label: d.label, count: d.count, onClick: () => this.setStatusFilter(d.key),
+      style: railStyle(s.statusFilter === d.key), countStyle: countStyle(s.statusFilter === d.key),
+    }));
+
+    const pool = s.statusFilter === 'archived' ? s.items.filter((i) => i.archived) : active;
+    const typeDefs = [{ key: 'all', label: 'Todos os tipos', dot: 'var(--muted-foreground)', count: pool.length }].concat(
+      Object.keys(TYPES).map((k) => ({ key: k, label: TYPES[k].label, dot: TYPES[k].dot, count: pool.filter((i) => i.type === k).length }))
+    );
+    const typeFilters = typeDefs.map((d) => ({
+      key: d.key, label: d.label, dot: d.dot, count: d.count, onClick: () => this.setTypeFilter(d.key),
+      style: railStyle(s.typeFilter === d.key), countStyle: countStyle(s.typeFilter === d.key),
+    }));
+
+    const q = s.search.trim().toLowerCase();
+    const filtered = pool
+      .filter((i) => s.statusFilter !== 'unread' || i.unread)
+      .filter((i) => s.typeFilter === 'all' || i.type === s.typeFilter)
+      .filter((i) => !q || i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q) || (i.client || '').toLowerCase().includes(q))
+      .sort((a, b) => b.time - a.time);
+
+    const visibleIds = filtered.map((i) => i.id);
+    const selectedCount = visibleIds.filter((id) => s.selectedIds[id]).length;
+    const allVisibleSelected = visibleIds.length > 0 && selectedCount === visibleIds.length;
+
+    const decorate = (i) => {
+      const t = TYPES[i.type], sev = SEVERITY[i.severity];
+      const selected = !!s.selectedIds[i.id];
+      return {
+        id: i.id, title: i.title, body: i.body, unread: i.unread, read: !i.unread,
+        titleWeight: i.unread ? '600' : '500',
+        rowStyle: `display:flex;align-items:flex-start;gap:12px;padding:15px 18px;border-bottom:1px solid var(--border);background:${selected ? 'var(--interactive-bg)' : i.unread ? 'color-mix(in srgb, var(--muted) 45%, transparent)' : 'transparent'};transition:background .15s`,
+        iconBg: t.bg, iconFg: t.fg,
+        isOverdue: i.type === 'overdue', isDue: i.type === 'due', isPayment: i.type === 'payment',
+        isFailure: i.type === 'failure', isLead: i.type === 'lead', isSystem: i.type === 'system',
+        severityLabel: sev.label,
+        severityStyle: `font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:4px;padding:2px 5px;background:${sev.bg};color:${sev.fg};flex-shrink:0`,
+        timeLabel: this.relTime(i.time),
+        hasAmount: i.amount > 0, amountLabel: fmt(i.amount),
+        hasClient: !!i.client, clientName: i.client || '', clientInitials: i.client ? this.initialsOf(i.client) : '',
+        selected, checkStyle: `width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;border:1.5px solid ${selected ? 'var(--interactive)' : 'var(--input)'};background:${selected ? 'var(--interactive)' : 'none'}`,
+        onSelect: () => this.toggleSelect(i.id),
+        hasPrimary: !!i.primary, primaryLabel: i.primary || '',
+        primaryStyle: `height:30px;padding:0 12px;border-radius:7px;border:none;background:${i.severity === 'critical' ? 'var(--primary)' : 'var(--secondary)'};color:${i.severity === 'critical' ? 'var(--primary-foreground)' : 'var(--foreground)'};font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap`,
+        onPrimary: () => this.runPrimary(i),
+        onToggleRead: () => this.toggleRead(i.id), readTitle: i.unread ? 'Marcar como lida' : 'Marcar como não lida',
+        onArchive: () => this.archiveOne(i.id),
+      };
+    };
+
+    const GROUP_ORDER = ['Hoje', 'Ontem', 'Esta semana', 'Mais antigas'];
+    const groups = GROUP_ORDER.map((label) => {
+      const items = filtered.filter((i) => this.groupOf(i.time) === label);
+      return { key: label, label, count: items.length, items: items.map(decorate) };
+    }).filter((g) => g.count > 0);
+
+    const emptyByFilter = {
+      unread: { title: 'Nenhum aviso não lido', subtitle: 'Você está em dia com tudo que exigia atenção.' },
+      archived: { title: 'Nada arquivado', subtitle: 'Avisos arquivados aparecem aqui para consulta.' },
+      all: { title: 'Caixa de avisos vazia', subtitle: 'Novos vencimentos, pagamentos e falhas aparecem aqui automaticamente.' },
+    };
+    const emptyMeta = q ? { title: 'Nenhum resultado', subtitle: `Nada encontrado para “${s.search.trim()}”.` } : (emptyByFilter[s.statusFilter] || emptyByFilter.all);
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav,
+      toasts: s.toasts.map((t) => ({
+        id: t.id, title: t.title, hasAction: !!t.actionLabel, actionLabel: t.actionLabel || '',
+        onAction: () => { t.onAction && t.onAction(); this.removeToast(t.id); },
+        onClose: () => this.removeToast(t.id),
+      })),
+
+      unreadCount, hasUnread: unreadCount > 0, noUnread: unreadCount === 0,
+      unreadHint: unreadCount === 0 ? 'tudo lido' : unreadCount === 1 ? '1 aviso aguardando' : `${unreadCount} avisos aguardando`,
+      unreadCardBorder: unreadCount > 0 ? 'color-mix(in srgb, var(--interactive) 28%, var(--border))' : 'var(--border)',
+      unreadValueColor: unreadCount > 0 ? 'var(--interactive-fg)' : 'var(--foreground)',
+      unreadIconBg: unreadCount > 0 ? 'var(--interactive-bg)' : 'var(--secondary)',
+      unreadIconFg: unreadCount > 0 ? 'var(--interactive-fg)' : 'var(--secondary-foreground)',
+      markAllRead: this.markAllRead,
+      markAllStyle: `display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:8px;border:none;background:${unreadCount ? 'var(--primary)' : 'var(--secondary)'};color:${unreadCount ? 'var(--primary-foreground)' : 'var(--muted-foreground)'};font-size:13px;font-weight:600;cursor:${unreadCount ? 'pointer' : 'default'}`,
+
+      criticalCount, criticalHint: criticalCount === 0 ? 'nada crítico agora' : 'resolva antes de tudo',
+      criticalCardBorder: criticalCount > 0 ? 'var(--danger-border)' : 'var(--border)',
+      criticalValueColor: criticalCount > 0 ? 'var(--danger-fg)' : 'var(--foreground)',
+      criticalIconBg: criticalCount > 0 ? 'var(--danger-bg)' : 'var(--success-bg)',
+      criticalIconFg: criticalCount > 0 ? 'var(--danger-fg)' : 'var(--success-fg)',
+
+      pendingAmountLabel: fmt(pendingAmount), resolvedToday: s.resolvedToday, totalToday,
+
+      statusFilters, typeFilters,
+      search: s.search, setSearch: this.setSearch,
+
+      allVisibleSelected,
+      selectAllStyle: `width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;border:1.5px solid ${allVisibleSelected ? 'var(--interactive)' : 'var(--input)'};background:${allVisibleSelected ? 'var(--interactive)' : 'none'}`,
+      toggleSelectAll: () => this.toggleSelectAllVisible(visibleIds),
+      hasSelection: selectedCount > 0,
+      selectionLabel: selectedCount === 1 ? '1 selecionada' : `${selectedCount} selecionadas`,
+      markSelectionRead: this.markSelectionRead, archiveSelection: this.archiveSelection, clearSelection: this.clearSelection,
+      resultCountDisplay: selectedCount > 0 ? 'none' : 'inline',
+      resultCountLabel: filtered.length === 1 ? '1 aviso' : `${filtered.length} avisos`,
+
+      groups, listEmpty: filtered.length === 0,
+      emptyTitle: emptyMeta.title, emptySubtitle: emptyMeta.subtitle,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

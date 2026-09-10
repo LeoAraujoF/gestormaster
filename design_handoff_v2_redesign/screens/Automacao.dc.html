@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @keyframes qrShimmer { 0% { background-position:-300px 0; } 100% { background-position:300px 0; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:1024px){[data-hide-lg]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-metric-grid]{grid-template-columns:repeat(4,minmax(0,1fr));}
+    @media (max-width:1180px){[data-metric-grid]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:520px){[data-metric-grid]{grid-template-columns:minmax(0,1fr);}}
+    [data-overview-grid]{grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);}
+    @media (max-width:1024px){[data-overview-grid]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:{{ statusHeadColor }}">
+              <span style="width:7px;height:7px;border-radius:9999px;background:{{ statusHeadColor }};animation:{{ statusDotAnim }}"></span>
+              Central de automação
+            </span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:{{ statusBadgeBg }};color:{{ statusBadgeFg }};border-radius:6px;padding:2px 7px">{{ statusBadgeLabel }}</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Automação</h1>
+          <p style="margin:8px 0 0;max-width:600px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Acompanhe a operação, mantenha seus canais saudáveis e aja rapidamente sobre filas e falhas.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button type="button" onclick="{{ openTestSend }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+            Testar envio
+          </button>
+          <button type="button" onclick="{{ openConnect }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>
+            Conectar número
+          </button>
+        </div>
+      </section>
+
+      <!-- METRICS -->
+      <section data-metric-grid style="display:grid;gap:12px">
+        <div style="border-radius:16px;border:1px solid {{ onlineCardBorder }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Conexões online</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ onlineCount }}<span style="font-size:13px;font-weight:500;color:var(--muted-foreground)">/{{ instanceCount }}</span></p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ onlineHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ onlineIconBg }};color:{{ onlineIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5s4.5-5 10-5 10 5 10 5M5 12s3.2-3.5 7-3.5 7 3.5 7 3.5M8.5 15.5s1.7-2 3.5-2 3.5 2 3.5 2"></path><circle cx="12" cy="19" r="1.3" fill="currentColor" stroke="none"></circle></svg></span>
+          </div>
+        </div>
+        <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Automações ativas</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ activeAutomationCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">de {{ totalAutomationCount }} configurações</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
+          </div>
+        </div>
+        <button type="button" onclick="{{ goLogsPending }}" style="text-align:left;cursor:pointer;border-radius:16px;border:1px solid var(--warning-border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Na fila</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--foreground)">{{ pendingCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Clique para acompanhar</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--warning-bg);color:var(--warning-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>
+          </div>
+        </button>
+        <button type="button" onclick="{{ goLogsFailed }}" style="text-align:left;cursor:pointer;border-radius:16px;border:1px solid {{ failedCardBorder }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Falhas recentes</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.03em;color:{{ failedValueColor }}">{{ failedCount }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">{{ failedHint }}</p>
+            </div>
+            <span style="width:34px;height:34px;border-radius:10px;background:{{ failedIconBg }};color:{{ failedIconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <sc-if value="{{ hasFailed }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m9.5 9.5 5 5m0-5-5 5"></path></svg></sc-if>
+              <sc-if value="{{ hasFailed }}" hint-placeholder-val="{{ false }}"></sc-if>
+              <span style="display:{{ noFailedIconDisplay }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+            </span>
+          </div>
+        </button>
+      </section>
+
+      <!-- OFFLINE WARNING -->
+      <sc-if value="{{ showOfflineWarning }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-radius:12px;border:1px solid var(--danger-border);background:var(--danger-bg);padding:14px 18px">
+          <div><p style="margin:0;font-size:13px;font-weight:600;color:var(--danger-fg)">Os disparos estão pausados</p><p style="margin:3px 0 0;font-size:11.5px;color:var(--danger-fg);opacity:.85">Nenhuma instância está online. Suas configurações continuam preservadas.</p></div>
+          <button type="button" onclick="{{ openConnect }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Conectar agora</button>
+        </div>
+      </sc-if>
+
+      <!-- TABS -->
+      <nav style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;min-width:420px;overflow-x:auto">
+          <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="3">
+            <button type="button" onclick="{{ tab.onClick }}" style="{{ tab.style }}">
+              {{ tab.label }}
+              <sc-if value="{{ tab.hasBadge }}"><span style="font-family:'Geist Mono',monospace;background:var(--warning-bg);color:var(--warning-fg);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">{{ tab.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </nav>
+
+      <!-- ===== TAB: VISÃO GERAL ===== -->
+      <sc-if value="{{ isOverviewTab }}" hint-placeholder-val="{{ true }}">
+        <section style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- INSTANCE CARDS -->
+          <div style="display:flex;flex-wrap:wrap;gap:12px">
+            <sc-for list="{{ instances }}" as="inst" hint-placeholder-count="2">
+              <div style="min-width:270px;flex:1;border-radius:14px;border:1px solid {{ inst.borderColor }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                    <span style="width:38px;height:38px;border-radius:11px;background:{{ inst.iconBg }};color:{{ inst.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"></rect><path d="M11 18h2"></path></svg>
+                      <sc-if value="{{ inst.online }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:9999px;background:var(--money);border:2px solid var(--card);animation:pulseDot 2s ease-in-out infinite"></span></sc-if>
+                    </span>
+                    <div style="min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px"><p style="margin:0;font-size:13.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">{{ inst.name }}</p><sc-if value="{{ inst.isPrimary }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--warning)" stroke="var(--warning)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" title="Primário"><path d="m12 2 3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"></path></svg></sc-if></div>
+                      <p style="margin:2px 0 0;font-size:11px;color:{{ inst.statusColor }}">{{ inst.statusLabel }}</p>
+                    </div>
+                  </div>
+                  <div style="position:relative;flex-shrink:0">
+                    <button type="button" onclick="{{ inst.onToggleMenu }}" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg></button>
+                    <sc-if value="{{ inst.menuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:32px;right:0;width:180px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px;z-index:40">
+                        <button type="button" onclick="{{ inst.onSetPrimary }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--foreground);cursor:pointer;border-radius:6px">Definir como primário</button>
+                        <button type="button" onclick="{{ inst.onDisconnect }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--foreground);cursor:pointer;border-radius:6px">Desconectar</button>
+                        <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+                        <button type="button" onclick="{{ inst.onDelete }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--danger);cursor:pointer;border-radius:6px">Remover chip</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div data-overview-grid style="display:grid;gap:16px;align-items:start">
+            <!-- RÉGUA FINANCEIRA -->
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:36px;height:36px;border-radius:10px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 15h10M4 11h16M4 7h7"></path></svg></span>
+                    <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Régua financeira</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Sequência automática antes, no dia e após o vencimento</p></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <button type="button" onclick="{{ toggleRegua }}" style="{{ reguaTrackStyle }}"><span style="{{ reguaThumbStyle }}"></span></button>
+                    <button type="button" onclick="{{ openNewStep }}" style="display:flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Etapa</button>
+                  </div>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:2px">
+                  <sc-for list="{{ stepRules }}" as="step" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:700;color:{{ step.dotColor }};background:{{ step.dayBg }};border-radius:7px;padding:5px 9px;flex-shrink:0;min-width:40px;text-align:center">{{ step.dayLabel }}</span>
+                      <div style="flex:1;min-width:0">
+                        <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ step.typeLabel }}</p>
+                        <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ step.timeLabel }} · {{ step.estimateLabel }}</p>
+                      </div>
+                      <button type="button" onclick="{{ step.onToggle }}" style="{{ step.trackStyle }}"><span style="{{ step.thumbStyle }}"></span></button>
+                      <button type="button" onclick="{{ step.onEdit }}" style="width:30px;height:30px;border:none;background:none;border-radius:7px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ stepRulesEmpty }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:8px 0;text-align:center;font-size:12px;color:var(--muted-foreground)">Nenhuma etapa configurada. Adicione a primeira etapa da régua.</p>
+                  </sc-if>
+                </div>
+              </article>
+
+              <!-- MENSAGENS AUTOMÁTICAS -->
+              <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:16px 20px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:36px;height:36px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></span>
+                    <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Mensagens automáticas</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Boas-vindas, renovação, promoção e mensagens rápidas</p></div>
+                  </div>
+                  <button type="button" onclick="{{ openNewAuto }}" style="display:flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Nova</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:16px 20px">
+                  <sc-for list="{{ autoRules }}" as="auto" hint-placeholder-count="3">
+                    <div style="border-radius:12px;border:1px solid var(--border);background:var(--muted);padding:14px;display:flex;flex-direction:column;gap:10px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                        <span style="width:8px;height:8px;border-radius:9999px;background:{{ auto.dotColor }};margin-top:5px;flex-shrink:0"></span>
+                        <button type="button" onclick="{{ auto.onToggle }}" style="{{ auto.trackStyle }}"><span style="{{ auto.thumbStyle }}"></span></button>
+                      </div>
+                      <div><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ auto.typeLabel }}</p><p style="margin:3px 0 0;font-size:10.5px;line-height:1.5;color:var(--muted-foreground);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ auto.preview }}</p></div>
+                      <button type="button" onclick="{{ auto.onEdit }}" style="align-self:flex-start;height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer">Editar</button>
+                    </div>
+                  </sc-for>
+                </div>
+              </article>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                  <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.8A8 8 0 0 0 4 10.2C4 17.5 12 22 12 22Z"></path></svg></span>
+                  <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Proteção antibloqueio</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Intervalo entre disparos</p></div>
+                </div>
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                    <span style="font-size:12px;color:var(--foreground)">Mínimo</span>
+                    <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                      <button type="button" onclick="{{ antiBanMinDown }}" style="width:28px;height:28px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                      <span style="width:40px;text-align:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600">{{ antiBanMin }}s</span>
+                      <button type="button" onclick="{{ antiBanMinUp }}" style="width:28px;height:28px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                    <span style="font-size:12px;color:var(--foreground)">Máximo</span>
+                    <div style="display:flex;align-items:center;overflow:hidden;border-radius:7px;border:1px solid var(--input)">
+                      <button type="button" onclick="{{ antiBanMaxDown }}" style="width:28px;height:28px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                      <span style="width:40px;text-align:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600">{{ antiBanMax }}s</span>
+                      <button type="button" onclick="{{ antiBanMaxUp }}" style="width:28px;height:28px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+                    </div>
+                  </div>
+                  <button type="button" onclick="{{ saveAntiBan }}" style="height:34px;border-radius:7px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">Salvar configuração</button>
+                </div>
+              </article>
+
+              <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 12 13l9.5-6.5"></path><path d="m10.5 15-8-4v9a1.5 1.5 0 0 0 1.5 1.5h16A1.5 1.5 0 0 0 21.5 20v-9l-8 4a2.2 2.2 0 0 1-3 0Z"></path></svg></span>
+                    <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Bloquear chamadas</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Recusa automática de voz/vídeo</p></div>
+                  </div>
+                  <button type="button" onclick="{{ toggleRejectCalls }}" style="{{ rejectCallsTrackStyle }}"><span style="{{ rejectCallsThumbStyle }}"></span></button>
+                </div>
+                <div style="padding:16px 18px">
+                  <textarea value="{{ rejectCallsMessage }}" oninput="{{ setRejectCallsMessage }}" rows="3" style="width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:11.5px;line-height:1.5;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+                </div>
+              </article>
+
+              <article style="overflow:hidden;border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                  <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h10"></path></svg></span>
+                  <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Templates livres</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ templatesCount }} templates cadastrados</p></div>
+                </div>
+                <div style="padding:12px 18px;display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ templates }}" as="tpl" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:10px;border-radius:9px;border:1px solid var(--border);padding:9px 11px">
+                      <span style="{{ tpl.badgeStyle }}">{{ tpl.badge }}</span>
+                      <span style="flex:1;min-width:0;font-size:12px;font-weight:500;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tpl.title }}</span>
+                      <button type="button" onclick="{{ tpl.onEdit }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+                    </div>
+                  </sc-for>
+                  <button type="button" onclick="{{ openNewTemplate }}" style="height:32px;border-radius:8px;border:1px dashed var(--input);background:none;color:var(--muted-foreground);font-size:11.5px;font-weight:500;cursor:pointer;margin-top:2px">+ Novo template</button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ===== TAB: DISPARO EM MASSA ===== -->
+      <sc-if value="{{ isMassTab }}" hint-placeholder-val="{{ false }}">
+        <section style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,1fr);gap:16px;align-items:start">
+          <article style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:20px;display:flex;flex-direction:column;gap:16px">
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Público-alvo</p>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+                <sc-for list="{{ audienceOptions }}" as="aud" hint-placeholder-count="4">
+                  <button type="button" onclick="{{ aud.onClick }}" style="{{ aud.style }}">{{ aud.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ audienceIsService }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviço</p>
+                <select onchange="{{ setMassService }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+                  <sc-for list="{{ massServiceOptions }}" as="mso" hint-placeholder-count="5"><option value="{{ mso.value }}" selected="{{ mso.selected }}">{{ mso.label }}</option></sc-for>
+                </select>
+              </div>
+            </sc-if>
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Mensagem</p>
+              <textarea value="{{ massMessage }}" oninput="{{ setMassMessage }}" rows="5" style="width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+                <sc-for list="{{ variableChips }}" as="v" hint-placeholder-count="6">
+                  <button type="button" onclick="{{ v.onInsert }}" style="height:26px;padding:0 9px;border-radius:6px;border:1px solid var(--border);background:var(--muted);color:var(--secondary-foreground);font-family:'Geist Mono',monospace;font-size:10.5px;cursor:pointer">{{ v.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Imagem (opcional)</p>
+              <div style="border:1px dashed var(--input);border-radius:9px;padding:16px;text-align:center;font-size:11.5px;color:var(--muted-foreground)">Arraste uma imagem ou clique para enviar um banner promocional</div>
+            </div>
+            <button type="button" onclick="{{ sendMass }}" style="height:42px;border-radius:9px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+              Disparar para {{ estimatedAudience }} clientes
+            </button>
+          </article>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <article style="border-radius:16px;border:1px solid var(--interactive);background:var(--interactive-bg);padding:18px">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--interactive-fg)">Público estimado</p>
+              <p style="margin:8px 0 0;font-family:'Geist Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.03em;color:var(--interactive-fg)">{{ estimatedAudience }}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--interactive-fg);opacity:.85">clientes elegíveis para este disparo</p>
+            </article>
+            <article style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:18px">
+              <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Boas práticas</p>
+              <ul style="margin:10px 0 0;padding:0 0 0 16px;display:flex;flex-direction:column;gap:8px;font-size:11.5px;line-height:1.6;color:var(--muted-foreground)">
+                <li>Evite enviar para toda a base repetidamente — segmente por status.</li>
+                <li>Use uma imagem leve para não atrasar o disparo.</li>
+                <li>Mensagens muito longas aumentam o risco de bloqueio.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ===== TAB: LOGS ===== -->
+      <sc-if value="{{ isLogsTab }}" hint-placeholder-val="{{ false }}">
+        <section style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="display:inline-flex;gap:4px;border-radius:9px;background:var(--muted);padding:4px">
+              <sc-for list="{{ logFilters }}" as="lf" hint-placeholder-count="4">
+                <button type="button" onclick="{{ lf.onClick }}" style="{{ lf.style }}">{{ lf.label }} <span style="font-family:'Geist Mono',monospace;opacity:.7">{{ lf.count }}</span></button>
+              </sc-for>
+            </div>
+            <button type="button" onclick="{{ bulkAction }}" style="{{ bulkActionStyle }}">{{ bulkActionLabel }}</button>
+          </div>
+
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+            <sc-if value="{{ logsEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:56px 16px;text-align:center"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhum registro nesta fila</p><p style="margin:4px 0 0;font-size:11.5px;color:var(--muted-foreground)">Os envios aparecerão aqui conforme forem processados.</p></div>
+            </sc-if>
+            <sc-if value="{{ logsHasRows }}" hint-placeholder-val="{{ true }}">
+              <div data-hide-md="true" style="display:grid;grid-template-columns:96px minmax(0,1fr) 110px 90px 90px;gap:10px;align-items:center;padding:10px 18px;background:var(--muted);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">
+                <span>Horário</span><span>Cliente</span><span>Tipo</span><span>Status</span><span style="text-align:right">Ações</span>
+              </div>
+              <sc-for list="{{ pagedLogs }}" as="log" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 110px 90px 90px;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)">
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ log.timeLabel }}</span>
+                  <span style="min-width:0;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ log.clientName }}</span>
+                  <span data-hide-narrow="true" style="font-size:11.5px;color:var(--muted-foreground)">{{ log.typeLabel }}</span>
+                  <span><span style="{{ log.statusStyle }}">{{ log.statusLabel }}</span></span>
+                  <div style="display:flex;gap:4px;justify-content:flex-end">
+                    <sc-if value="{{ log.canResend }}"><button type="button" onclick="{{ log.onResend }}" title="Reenviar" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--money);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-2.7-6.2M21 3v5.3h-5.3"></path></svg></button></sc-if>
+                    <sc-if value="{{ log.canCancel }}"><button type="button" onclick="{{ log.onCancel }}" title="Cancelar" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--warning-fg);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6"></path></svg></button></sc-if>
+                    <button type="button" onclick="{{ log.onDelete }}" title="Excluir" style="width:28px;height:28px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"></path></svg></button>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </section>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- CONNECT MODAL -->
+  <sc-if value="{{ connectOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:40px 24px;z-index:90;overflow:auto" onclick="{{ closeConnect }}">
+      <div style="width:100%;max-width:420px;background:var(--card);border-radius:14px;box-shadow:0 24px 56px rgba(0,0,0,.24);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Conectar WhatsApp</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Pareie um número para começar a operar</p></div>
+          <button type="button" onclick="{{ closeConnect }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:inline-flex;gap:4px;border-radius:9px;background:var(--muted);padding:4px;align-self:flex-start">
+            <button type="button" onclick="{{ setMethodPairing }}" style="{{ pairingTabStyle }}">Código</button>
+            <button type="button" onclick="{{ setMethodQr }}" style="{{ qrTabStyle }}">QR Code</button>
+          </div>
+
+          <sc-if value="{{ isPairingMethod }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ pairingCode }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:20px;background:var(--muted)">
+                <p style="margin:0;font-size:11px;color:var(--muted-foreground)">Digite este código no seu WhatsApp</p>
+                <p style="margin:0;font-family:'Geist Mono',monospace;font-size:28px;font-weight:700;letter-spacing:.1em;color:var(--foreground)">{{ pairingCode }}</p>
+                <button type="button" onclick="{{ copyPairingCode }}" style="height:32px;padding:0 14px;border-radius:7px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer">{{ copyPairingLabel }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pairingCode }}" hint-placeholder-val="{{ false }}"></sc-if>
+            <div style="display:{{ pairingFormDisplay }};flex-direction:column;gap:10px">
+              <input value="{{ pairingPhone }}" oninput="{{ setPairingPhone }}" placeholder="+55 11 99999-9999" style="border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:13px;background:none;color:var(--foreground);outline:none"/>
+              <button type="button" onclick="{{ generatePairing }}" style="height:40px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ pairingButtonLabel }}</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isQrMethod }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+              <div style="width:200px;height:200px;border-radius:10px;background:repeating-linear-gradient(45deg, var(--border), var(--border) 8px, var(--muted) 8px, var(--muted) 16px);background-size:280px 100%;animation:qrShimmer 2.4s linear infinite;display:flex;align-items:center;justify-content:center">
+                <span style="background:var(--card);padding:5px 9px;border-radius:6px;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">QR Code</span>
+              </div>
+              <p style="margin:0;font-size:11.5px;color:var(--muted-foreground);text-align:center">Abra o WhatsApp → Dispositivos conectados → Conectar dispositivo</p>
+              <button type="button" onclick="{{ generatePairing }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12.5px;font-weight:500;cursor:pointer">Gerar novo QR Code</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TEST SEND MODAL -->
+  <sc-if value="{{ testSendOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90" onclick="{{ closeTestSend }}">
+      <div style="width:100%;max-width:380px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.24);overflow:hidden" onclick="{{ stop }}">
+        <div style="padding:20px 22px"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Testar envio</h3><p style="margin:8px 0 0;font-size:12px;color:var(--muted-foreground)">Envie uma mensagem de teste para verificar se sua conexão está funcionando.</p>
+          <input value="{{ testPhone }}" oninput="{{ setTestPhone }}" placeholder="+55 11 99999-9999" style="margin-top:14px;width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:13px;background:none;color:var(--foreground);outline:none"/>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeTestSend }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ sendTest }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Enviar teste</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- RULE MODAL (etapa / mensagem automática) -->
+  <sc-if value="{{ ruleModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto" onclick="{{ closeRuleModal }}">
+      <div style="width:100%;max-width:520px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.24);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 15h10M4 11h16M4 7h7"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ ruleModalTitle }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Tipo, tempo e conteúdo da mensagem</p></div>
+          <button type="button" onclick="{{ closeRuleModal }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="max-height:70vh;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Tipo</p>
+            <select onchange="{{ setRuleType }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+              <sc-for list="{{ ruleTypeOptions }}" as="rto" hint-placeholder-count="3"><option value="{{ rto.value }}" selected="{{ rto.selected }}">{{ rto.label }}</option></sc-for>
+            </select>
+          </div>
+          <sc-if value="{{ ruleIsStep }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Dias do vencimento</p>
+              <div style="display:flex;align-items:center;overflow:hidden;border-radius:8px;border:1px solid var(--input);width:140px">
+                <button type="button" onclick="{{ ruleDaysDown }}" style="flex:1;height:36px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">−</button>
+                <span style="width:56px;text-align:center;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600">{{ ruleForm.days }}</span>
+                <button type="button" onclick="{{ ruleDaysUp }}" style="flex:1;height:36px;border:none;background:var(--muted);color:var(--secondary-foreground);cursor:pointer">+</button>
+              </div>
+            </div>
+          </sc-if>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Horário de envio</p>
+            <input value="{{ ruleForm.sendTime }}" type="time" oninput="{{ setRuleTime }}" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Mensagem</p>
+            <textarea value="{{ ruleForm.message }}" oninput="{{ setRuleMessage }}" rows="6" style="width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+              <sc-for list="{{ ruleVariableChips }}" as="rv" hint-placeholder-count="6">
+                <button type="button" onclick="{{ rv.onInsert }}" style="height:26px;padding:0 9px;border-radius:6px;border:1px solid var(--border);background:var(--muted);color:var(--secondary-foreground);font-family:'Geist Mono',monospace;font-size:10.5px;cursor:pointer">{{ rv.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <button type="button" onclick="{{ toggleRuleActiveForm }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;padding:0;text-align:left">
+            <span style="{{ ruleActiveTrackStyle }}"><span style="{{ ruleActiveThumbStyle }}"></span></span>
+            <span style="font-size:12px;color:var(--foreground)">Regra ativa</span>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;border-top:1px solid var(--border);padding:14px 22px">
+          <sc-if value="{{ isEditingRule }}" hint-placeholder-val="{{ false }}"><button type="button" onclick="{{ deleteRuleModal }}" style="height:36px;padding:0 12px;border:none;background:none;color:var(--danger);font-size:12.5px;font-weight:600;cursor:pointer">Excluir</button></sc-if>
+          <sc-if value="{{ isEditingRule }}" hint-placeholder-val="{{ false }}"></sc-if>
+          <div style="display:flex;gap:9px;margin-left:auto">
+            <button type="button" onclick="{{ closeRuleModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+            <button type="button" onclick="{{ submitRuleModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TEMPLATE MODAL -->
+  <sc-if value="{{ templateModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto" onclick="{{ closeTemplateModal }}">
+      <div style="width:100%;max-width:460px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.24);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h10"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ templateModalTitle }}</h3></div>
+          <button type="button" onclick="{{ closeTemplateModal }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+          <input value="{{ templateForm.title }}" oninput="{{ setTemplateTitle }}" placeholder="Nome do template *" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Etiqueta</p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ badgeOptions }}" as="bo" hint-placeholder-count="5"><button type="button" onclick="{{ bo.onClick }}" style="{{ bo.style }}">{{ bo.label }}</button></sc-for>
+            </div>
+          </div>
+          <textarea value="{{ templateForm.message }}" oninput="{{ setTemplateMessage }}" rows="4" placeholder="Mensagem do template" style="border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeTemplateModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitTemplateModal }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const STEP_TYPE_LABELS = { before_due: 'Antes do vencimento', on_due: 'No dia do vencimento', after_due: 'Após o vencimento' };
+const AUTO_TYPE_LABELS = { renewal: 'Renovação', activation: 'Boas-vindas', quick_message: 'Mensagem rápida', promotion: 'Promoção' };
+const TYPE_DOT = { before_due: 'var(--interactive)', on_due: 'var(--warning)', after_due: 'var(--danger)', renewal: 'var(--money)', activation: 'var(--money)', quick_message: 'var(--money)', promotion: '#7a5af8' };
+const VARS = ['{{primeiro_nome}}', '{{plan_value}}', '{{due_date}}', '{{pix}}', '{{empresa}}', '{{link_canal}}'];
+const BADGES = ['PIX', 'LOGIN', 'CAMPANHA', 'PROMO', 'AVISO'];
+const BADGE_STYLE = {
+  PIX: { bg: 'var(--secondary)', fg: 'var(--secondary-foreground)' }, LOGIN: { bg: 'var(--secondary)', fg: 'var(--secondary-foreground)' },
+  CAMPANHA: { bg: 'var(--accent)', fg: 'var(--accent-foreground)' }, PROMO: { bg: '#efe9ff', fg: '#5b3fd4' }, AVISO: { bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+};
+function getDefaultMessage(type) {
+  const map = {
+    before_due: 'Olá {{primeiro_nome}}! Seu plano vence em breve. Deseja renovar?',
+    on_due: 'Olá {{primeiro_nome}}! Lembrando que o vencimento do seu plano é hoje. Deseja renovar?',
+    after_due: 'Olá {{primeiro_nome}}, identificamos que seu plano venceu e está pendente. Deseja reativá-lo?',
+    renewal: 'Muito obrigado por renovar seu plano, {{primeiro_nome}}! Sua confiança é essencial para nós.',
+    promotion: 'Olá {{primeiro_nome}}! Temos uma oferta imperdível para você.',
+    quick_message: 'Olá {{primeiro_nome}}, passando para lembrar do seu plano no valor de R$ {{plan_value}}.',
+    activation: 'Olá {{primeiro_nome}}! Seja muito bem-vindo(a). Seu plano foi ativado com sucesso.',
+  };
+  return map[type] || map.before_due;
+}
+function buildStepRules() {
+  return [
+    { id: 'r1', alert_type: 'before_due', days: 3, send_time: '09:00', message: getDefaultMessage('before_due'), is_active: true, estimate: 4 },
+    { id: 'r2', alert_type: 'on_due', days: 0, send_time: '09:00', message: getDefaultMessage('on_due'), is_active: true, estimate: 2 },
+    { id: 'r3', alert_type: 'after_due', days: 1, send_time: '10:00', message: getDefaultMessage('after_due'), is_active: true, estimate: 6 },
+  ];
+}
+function buildAutoRules() {
+  return [
+    { id: 'a1', alert_type: 'activation', send_time: '09:00', message: getDefaultMessage('activation'), is_active: true },
+    { id: 'a2', alert_type: 'renewal', send_time: '09:00', message: getDefaultMessage('renewal'), is_active: true },
+    { id: 'a3', alert_type: 'quick_message', send_time: '09:00', message: getDefaultMessage('quick_message'), is_active: false },
+  ];
+}
+function buildTemplates() {
+  return [
+    { id: 't1', title: 'Cobrança PIX padrão', badge: 'PIX', message: 'Segue o PIX para pagamento: {{pix}}', is_active: true },
+    { id: 't2', title: 'Reenvio de acesso', badge: 'LOGIN', message: 'Aqui estão seus dados de acesso atualizados.', is_active: true },
+    { id: 't3', title: 'Black Friday IPTV', badge: 'CAMPANHA', message: 'Promoção especial só até domingo!', is_active: true },
+  ];
+}
+function buildLogs() {
+  const statuses = ['pending', 'sent', 'sent', 'failed', 'sent', 'pending'];
+  const types = ['before_due', 'on_due', 'renewal', 'after_due', 'quick_message', 'activation'];
+  const names = ['Ana Beatriz Souza', 'Carlos Eduardo Lima', 'Fernanda Torres', 'Juliana Prado', 'Marcos Vinícius', 'Patrícia Gomes', 'Rafael Nunes', 'Bruna Castro'];
+  const now = new Date();
+  return Array.from({ length: 24 }, (_, i) => {
+    const d = new Date(now.getTime() - i * 37 * 60000);
+    return { id: 'log' + i, clientName: names[i % names.length], type: types[i % types.length], status: statuses[i % statuses.length], time: d };
+  });
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], activeTab: 'overview',
+    instances: [{ id: 'i1', name: 'Suporte Principal', online: true, isPrimary: true, menuOpen: false }],
+    reguaActive: true, stepRules: buildStepRules(), autoRules: buildAutoRules(), templates: buildTemplates(),
+    antiBanMin: 10, antiBanMax: 25, rejectCalls: false,
+    rejectCallsMessage: 'As chamadas de voz e vídeo estão desativadas para este número. Por favor, envie uma mensagem de texto.',
+    logs: buildLogs(), logFilter: 'pending', logsPage: 1,
+    massAudience: 'all', massServiceId: '', massMessage: 'Olá {{primeiro_nome}}, temos uma oferta especial para você!',
+    connectOpen: false, connectMethod: 'pairing', pairingPhone: '', pairingCode: null, pairingCopied: false,
+    testSendOpen: false, testPhone: '',
+    ruleModalOpen: false, ruleModalKind: 'step', editingRuleId: null,
+    ruleForm: { alert_type: 'before_due', days: 3, sendTime: '09:00', message: getDefaultMessage('before_due'), isActive: true },
+    templateModalOpen: false, editingTemplateId: null, templateForm: { title: '', badge: 'PIX', message: '', isActive: true },
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() {
+    this.tick();
+    this.clockInterval = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.clockInterval);
+    Object.values(this.pendingTimers).forEach((t) => clearTimeout(t));
+  }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    const full = { id, duration: 3000, ...toast };
+    this.setState((s) => ({ toasts: [...s.toasts, full] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), full.duration);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  setTab(tab) { this.setState({ activeTab: tab }); }
+  goLogsPending = () => this.setState({ activeTab: 'logs', logFilter: 'pending' });
+  goLogsFailed = () => this.setState({ activeTab: 'logs', logFilter: 'failed' });
+
+  toggleInstanceMenu(id) { this.setState((s) => ({ instances: s.instances.map((i) => i.id === id ? { ...i, menuOpen: !i.menuOpen } : { ...i, menuOpen: false }) })); }
+  setPrimaryInstance(id) { this.setState((s) => ({ instances: s.instances.map((i) => ({ ...i, isPrimary: i.id === id, menuOpen: false })) })); this.addToast({ title: 'Instância definida como primária.' }); }
+  disconnectInstance(id) { this.setState((s) => ({ instances: s.instances.map((i) => i.id === id ? { ...i, online: false, menuOpen: false } : i) })); this.addToast({ title: 'WhatsApp desconectado.' }); }
+  deleteInstance(id) { this.setState((s) => ({ instances: s.instances.filter((i) => i.id !== id) })); this.addToast({ title: 'Chip removido.' }); }
+
+  toggleRegua = () => { this.setState((s) => ({ reguaActive: !s.reguaActive, stepRules: s.stepRules.map((r) => ({ ...r, is_active: !s.reguaActive })) })); this.addToast({ title: this.state.reguaActive ? 'Régua pausada.' : 'Régua ativada.' }); };
+  toggleStepRule(id) { this.setState((s) => ({ stepRules: s.stepRules.map((r) => r.id === id ? { ...r, is_active: !r.is_active } : r) })); }
+  toggleAutoRule(id) { this.setState((s) => ({ autoRules: s.autoRules.map((r) => r.id === id ? { ...r, is_active: !r.is_active } : r) })); }
+
+  openNewStep = () => this.setState({ ruleModalOpen: true, ruleModalKind: 'step', editingRuleId: null, ruleForm: { alert_type: 'before_due', days: 3, sendTime: '09:00', message: getDefaultMessage('before_due'), isActive: true } });
+  openNewAuto = () => this.setState({ ruleModalOpen: true, ruleModalKind: 'auto', editingRuleId: null, ruleForm: { alert_type: 'quick_message', days: 1, sendTime: '09:00', message: getDefaultMessage('quick_message'), isActive: true } });
+  openEditStep(rule) { this.setState({ ruleModalOpen: true, ruleModalKind: 'step', editingRuleId: rule.id, ruleForm: { alert_type: rule.alert_type, days: rule.days, sendTime: rule.send_time, message: rule.message, isActive: rule.is_active } }); }
+  openEditAuto(rule) { this.setState({ ruleModalOpen: true, ruleModalKind: 'auto', editingRuleId: rule.id, ruleForm: { alert_type: rule.alert_type, days: 1, sendTime: rule.send_time, message: rule.message, isActive: rule.is_active } }); }
+  closeRuleModal = () => this.setState({ ruleModalOpen: false });
+  setRuleType = (e) => this.setState((s) => ({ ruleForm: { ...s.ruleForm, alert_type: e.target.value, message: getDefaultMessage(e.target.value) } }));
+  setRuleTime = (e) => this.setState((s) => ({ ruleForm: { ...s.ruleForm, sendTime: e.target.value } }));
+  setRuleMessage = (e) => this.setState((s) => ({ ruleForm: { ...s.ruleForm, message: e.target.value } }));
+  ruleDaysDown = () => this.setState((s) => ({ ruleForm: { ...s.ruleForm, days: Math.max(1, s.ruleForm.days - 1) } }));
+  ruleDaysUp = () => this.setState((s) => ({ ruleForm: { ...s.ruleForm, days: Math.min(30, s.ruleForm.days + 1) } }));
+  toggleRuleActiveForm = () => this.setState((s) => ({ ruleForm: { ...s.ruleForm, isActive: !s.ruleForm.isActive } }));
+  insertRuleVar(v) { this.setState((s) => ({ ruleForm: { ...s.ruleForm, message: s.ruleForm.message + (s.ruleForm.message.endsWith(' ') || !s.ruleForm.message ? '' : ' ') + v } })); }
+  submitRuleModal = () => {
+    const { ruleModalKind, editingRuleId, ruleForm } = this.state;
+    const key = ruleModalKind === 'step' ? 'stepRules' : 'autoRules';
+    this.setState((s) => {
+      if (editingRuleId) {
+        return { [key]: s[key].map((r) => r.id === editingRuleId ? { ...r, alert_type: ruleForm.alert_type, days: ruleForm.days, send_time: ruleForm.sendTime, message: ruleForm.message, is_active: ruleForm.isActive } : r), ruleModalOpen: false };
+      }
+      const newRule = { id: 'r' + Date.now(), alert_type: ruleForm.alert_type, days: ruleForm.days, send_time: ruleForm.sendTime, message: ruleForm.message, is_active: ruleForm.isActive, estimate: 0 };
+      return { [key]: [...s[key], newRule], ruleModalOpen: false };
+    });
+    this.addToast({ title: editingRuleId ? 'Regra atualizada.' : 'Regra criada com sucesso.' });
+  };
+  deleteRuleModal = () => {
+    const { ruleModalKind, editingRuleId } = this.state;
+    const key = ruleModalKind === 'step' ? 'stepRules' : 'autoRules';
+    this.setState((s) => ({ [key]: s[key].filter((r) => r.id !== editingRuleId), ruleModalOpen: false }));
+    this.addToast({ title: 'Regra removida.' });
+  };
+
+  openNewTemplate = () => this.setState({ templateModalOpen: true, editingTemplateId: null, templateForm: { title: '', badge: 'PIX', message: 'Olá {{primeiro_nome}}, ', isActive: true } });
+  openEditTemplate(tpl) { this.setState({ templateModalOpen: true, editingTemplateId: tpl.id, templateForm: { title: tpl.title, badge: tpl.badge, message: tpl.message, isActive: tpl.is_active } }); }
+  closeTemplateModal = () => this.setState({ templateModalOpen: false });
+  setTemplateTitle = (e) => this.setState((s) => ({ templateForm: { ...s.templateForm, title: e.target.value } }));
+  setTemplateMessage = (e) => this.setState((s) => ({ templateForm: { ...s.templateForm, message: e.target.value } }));
+  setTemplateBadge(b) { this.setState((s) => ({ templateForm: { ...s.templateForm, badge: b } })); }
+  submitTemplateModal = () => {
+    const { editingTemplateId, templateForm } = this.state;
+    if (!templateForm.title.trim() || !templateForm.message.trim()) { this.addToast({ title: 'Informe nome e mensagem do template.' }); return; }
+    this.setState((s) => {
+      if (editingTemplateId) return { templates: s.templates.map((t) => t.id === editingTemplateId ? { ...t, title: templateForm.title, badge: templateForm.badge, message: templateForm.message, is_active: templateForm.isActive } : t), templateModalOpen: false };
+      return { templates: [...s.templates, { id: 't' + Date.now(), title: templateForm.title, badge: templateForm.badge, message: templateForm.message, is_active: templateForm.isActive }], templateModalOpen: false };
+    });
+    this.addToast({ title: editingTemplateId ? 'Template atualizado.' : 'Template criado.' });
+  };
+
+  antiBanMinDown = () => this.setState((s) => ({ antiBanMin: Math.max(1, s.antiBanMin - 1) }));
+  antiBanMinUp = () => this.setState((s) => ({ antiBanMin: Math.min(s.antiBanMax - 1, s.antiBanMin + 1) }));
+  antiBanMaxDown = () => this.setState((s) => ({ antiBanMax: Math.max(s.antiBanMin + 1, s.antiBanMax - 1) }));
+  antiBanMaxUp = () => this.setState((s) => ({ antiBanMax: Math.min(120, s.antiBanMax + 1) }));
+  saveAntiBan = () => this.addToast({ title: 'Configurações antibloqueio salvas.' });
+  toggleRejectCalls = () => this.setState((s) => ({ rejectCalls: !s.rejectCalls }));
+  setRejectCallsMessage = (e) => this.setState({ rejectCallsMessage: e.target.value });
+
+  setLogFilter(f) { this.setState({ logFilter: f }); }
+  resendLog(id) { this.setState((s) => ({ logs: s.logs.map((l) => l.id === id ? { ...l, status: 'pending' } : l) })); this.addToast({ title: 'Reenviado para a fila.' }); }
+  cancelLog(id) { this.setState((s) => ({ logs: s.logs.map((l) => l.id === id ? { ...l, status: 'failed' } : l) })); this.addToast({ title: 'Cancelado.' }); }
+  deleteLog(id) { this.setState((s) => ({ logs: s.logs.filter((l) => l.id !== id) })); this.addToast({ title: 'Registro removido.' }); }
+  runBulkAction = () => {
+    const f = this.state.logFilter;
+    if (f === 'failed') { this.setState((s) => ({ logs: s.logs.map((l) => l.status === 'failed' ? { ...l, status: 'pending' } : l) })); this.addToast({ title: 'Falhas reenviadas para a fila.' }); }
+    else if (f === 'pending') { this.setState((s) => ({ logs: s.logs.map((l) => l.status === 'pending' ? { ...l, status: 'failed' } : l) })); this.addToast({ title: 'Pendentes cancelados.' }); }
+    else { this.setState({ logs: [] }); this.addToast({ title: 'Histórico limpo.' }); }
+  };
+
+  setMassAudience(key) { this.setState({ massAudience: key }); }
+  setMassService = (e) => this.setState({ massServiceId: e.target.value });
+  setMassMessage = (e) => this.setState({ massMessage: e.target.value });
+  insertMassVar(v) { this.setState((s) => ({ massMessage: s.massMessage + (s.massMessage.endsWith(' ') || !s.massMessage ? '' : ' ') + v })); }
+  sendMass = () => this.addToast({ title: 'Disparo em massa agendado com sucesso.', description: 'Acompanhe o progresso na aba Logs.' });
+
+  openConnect = () => this.setState({ connectOpen: true, pairingCode: null });
+  closeConnect = () => this.setState({ connectOpen: false });
+  setMethodPairing = () => this.setState({ connectMethod: 'pairing' });
+  setMethodQr = () => this.setState({ connectMethod: 'qr' });
+  setPairingPhone = (e) => this.setState({ pairingPhone: e.target.value });
+  generatePairing = () => {
+    if (this.state.connectMethod === 'pairing' && !this.state.pairingPhone.trim()) { this.addToast({ title: 'Informe um WhatsApp válido.' }); return; }
+    const code = Array.from({ length: 8 }, () => '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[Math.floor(Math.random() * 32)]).join('').replace(/(.{4})/, '$1-');
+    this.setState({ pairingCode: code });
+    this.addToast({ title: 'Código de pareamento gerado.' });
+  };
+  copyPairingCode = () => { this.setState({ pairingCopied: true }); this.addToast({ title: 'Código copiado.' }); setTimeout(() => this.setState({ pairingCopied: false }), 2000); };
+
+  openTestSend = () => this.setState({ testSendOpen: true });
+  closeTestSend = () => this.setState({ testSendOpen: false });
+  setTestPhone = (e) => this.setState({ testPhone: e.target.value });
+  sendTest = () => {
+    if (!this.state.testPhone.trim()) { this.addToast({ title: 'Digite um telefone para teste.' }); return; }
+    this.setState({ testSendOpen: false });
+    this.addToast({ title: 'Mensagem de teste enviada!' });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const onlineCount = s.instances.filter((i) => i.online).length;
+    const anyOnline = onlineCount > 0;
+    const totalAutomationCount = s.stepRules.length + s.autoRules.length;
+    const activeAutomationCount = s.stepRules.filter((r) => r.is_active).length + s.autoRules.filter((r) => r.is_active).length;
+    const pendingCount = s.logs.filter((l) => l.status === 'pending').length;
+    const failedCount = s.logs.filter((l) => l.status === 'failed').length;
+    const sentCount = s.logs.filter((l) => l.status === 'sent').length;
+
+    const toggleTrackStyle = (on) => `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${on ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0;border:none;cursor:pointer`;
+    const toggleThumbStyle = (on) => `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${on ? '14px' : '0'});transition:transform .15s;display:block`;
+
+    const tabDefs = [
+      { key: 'overview', label: 'Visão geral' }, { key: 'mass', label: 'Disparo em massa' },
+      { key: 'logs', label: 'Logs', badge: pendingCount > 0 ? String(pendingCount) : '' },
+    ];
+    const tabs = tabDefs.map((t) => ({
+      key: t.key, label: t.label, hasBadge: !!t.badge, badge: t.badge || '',
+      onClick: () => this.setTab(t.key),
+      style: `display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:${s.activeTab === t.key ? 'var(--card)' : 'none'};color:${s.activeTab === t.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.activeTab === t.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+
+    const instances = s.instances.map((inst) => ({
+      id: inst.id, name: inst.name, online: inst.online, isPrimary: inst.isPrimary,
+      borderColor: inst.online ? 'color-mix(in srgb, var(--money) 30%, var(--border))' : 'var(--border)',
+      iconBg: inst.online ? 'var(--success-bg)' : 'var(--secondary)', iconFg: inst.online ? 'var(--success-fg)' : 'var(--secondary-foreground)',
+      statusColor: inst.online ? 'var(--success-fg)' : 'var(--muted-foreground)', statusLabel: inst.online ? 'Conectado' : 'Desconectado',
+      menuOpen: inst.menuOpen, onToggleMenu: () => this.toggleInstanceMenu(inst.id),
+      onSetPrimary: () => this.setPrimaryInstance(inst.id), onDisconnect: () => this.disconnectInstance(inst.id), onDelete: () => this.deleteInstance(inst.id),
+    }));
+
+    const dayLabel = (r) => r.alert_type === 'before_due' ? `D-${r.days}` : r.alert_type === 'after_due' ? `D+${r.days}` : 'D-0';
+    const stepRules = s.stepRules.slice().sort((a, b) => {
+      const off = (r) => r.alert_type === 'before_due' ? -r.days : r.alert_type === 'after_due' ? r.days : 0;
+      return off(a) - off(b);
+    }).map((r) => ({
+      id: r.id, dayLabel: dayLabel(r), dotColor: TYPE_DOT[r.alert_type], dayBg: 'var(--muted)',
+      typeLabel: STEP_TYPE_LABELS[r.alert_type], timeLabel: r.send_time,
+      estimateLabel: r.is_active ? `~${r.estimate} clientes hoje` : 'pausada',
+      trackStyle: toggleTrackStyle(r.is_active), thumbStyle: toggleThumbStyle(r.is_active),
+      onToggle: () => this.toggleStepRule(r.id), onEdit: () => this.openEditStep(r),
+    }));
+
+    const autoRules = s.autoRules.map((r) => ({
+      id: r.id, typeLabel: AUTO_TYPE_LABELS[r.alert_type], dotColor: TYPE_DOT[r.alert_type],
+      preview: r.message, trackStyle: toggleTrackStyle(r.is_active), thumbStyle: toggleThumbStyle(r.is_active),
+      onToggle: () => this.toggleAutoRule(r.id), onEdit: () => this.openEditAuto(r),
+    }));
+
+    const templates = s.templates.map((t) => {
+      const bs = BADGE_STYLE[t.badge] || BADGE_STYLE.PIX;
+      return { id: t.id, title: t.title, badge: t.badge, badgeStyle: `display:inline-flex;align-items:center;min-height:22px;border-radius:6px;padding:0 7px;font-size:9.5px;font-weight:700;background:${bs.bg};color:${bs.fg};flex-shrink:0`, onEdit: () => this.openEditTemplate(t) };
+    });
+
+    // Rule modal derived
+    const ruleIsStep = s.ruleModalKind === 'step';
+    const ruleTypeOptionsList = ruleIsStep ? ['before_due', 'on_due', 'after_due'] : ['activation', 'renewal', 'quick_message', 'promotion'];
+    const ruleTypeLabelMap = { ...STEP_TYPE_LABELS, ...AUTO_TYPE_LABELS };
+    const ruleTypeOptions = ruleTypeOptionsList.map((v) => ({ value: v, label: ruleTypeLabelMap[v], selected: s.ruleForm.alert_type === v }));
+    const ruleVariableChips = VARS.map((v) => ({ label: v, onInsert: () => this.insertRuleVar(v) }));
+
+    // Logs
+    const logStatusMeta = {
+      pending: { label: 'Pendente', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      sent: { label: 'Enviado', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+      failed: { label: 'Falhou', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+    };
+    const logTypeLabelMap = { ...STEP_TYPE_LABELS, ...AUTO_TYPE_LABELS };
+    const filteredLogs = s.logs.filter((l) => s.logFilter === 'all' || l.status === s.logFilter);
+    const pagedLogs = filteredLogs.slice(0, 20).map((l) => {
+      const meta = logStatusMeta[l.status];
+      return {
+        id: l.id, clientName: l.clientName, typeLabel: logTypeLabelMap[l.type] || l.type,
+        timeLabel: l.time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        statusLabel: meta.label, statusStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        canResend: l.status === 'failed', canCancel: l.status === 'pending',
+        onResend: () => this.resendLog(l.id), onCancel: () => this.cancelLog(l.id), onDelete: () => this.deleteLog(l.id),
+      };
+    });
+    const logFilterDefs = [
+      { key: 'pending', label: 'Pendentes', count: s.logs.filter((l) => l.status === 'pending').length },
+      { key: 'sent', label: 'Enviados', count: s.logs.filter((l) => l.status === 'sent').length },
+      { key: 'failed', label: 'Falhas', count: s.logs.filter((l) => l.status === 'failed').length },
+      { key: 'all', label: 'Todos', count: s.logs.length },
+    ];
+    const logFilters = logFilterDefs.map((f) => ({
+      key: f.key, label: f.label, count: f.count, onClick: () => this.setLogFilter(f.key),
+      style: `min-height:32px;border-radius:6px;padding:0 12px;font-size:12px;font-weight:${s.logFilter === f.key ? '600' : '500'};border:none;cursor:pointer;background:${s.logFilter === f.key ? 'var(--card)' : 'transparent'};color:${s.logFilter === f.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.logFilter === f.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+    const bulkDefs = { failed: { label: 'Reenviar todos', bg: 'var(--success-bg)', fg: 'var(--success-fg)', border: 'var(--success-border,var(--border))' }, pending: { label: 'Cancelar todos', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)', border: 'var(--warning-border)' }, sent: { label: 'Limpar histórico', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)', border: 'var(--danger-border)' }, all: { label: 'Limpar histórico', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)', border: 'var(--danger-border)' } };
+    const bulkDef = bulkDefs[s.logFilter] || bulkDefs.all;
+
+    // Mass tab
+    const audienceDefs = [{ key: 'all', label: 'Todos os clientes' }, { key: 'active', label: 'Clientes ativos' }, { key: 'expired', label: 'Vencidos' }, { key: 'service', label: 'Por serviço' }];
+    const audienceOptions = audienceDefs.map((a) => ({
+      key: a.key, label: a.label, onClick: () => this.setMassAudience(a.key),
+      style: `min-height:38px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid ${s.massAudience === a.key ? 'var(--interactive)' : 'var(--border)'};background:${s.massAudience === a.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.massAudience === a.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+    }));
+    const massServiceOptionsList = ['IPTV Ultra', 'IPTV Gold', 'Netflix Premium', 'Disney+ Premium', 'Combo Streaming'];
+    const massServiceOptions = massServiceOptionsList.map((n) => ({ value: n, label: n, selected: s.massServiceId === n }));
+    const audienceCounts = { all: 128, active: 112, expired: 14, service: s.massServiceId ? 22 : 0 };
+    const estimatedAudience = audienceCounts[s.massAudience] ?? 0;
+    const variableChips = VARS.map((v) => ({ label: v, onInsert: () => this.insertMassVar(v) }));
+
+    const badgeOptions = BADGES.map((b) => {
+      const bs = BADGE_STYLE[b];
+      const active = s.templateForm.badge === b;
+      return { key: b, label: b, onClick: () => this.setTemplateBadge(b), style: `height:28px;padding:0 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid ${active ? 'var(--foreground)' : 'transparent'};background:${bs.bg};color:${bs.fg}` };
+    });
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      statusHeadColor: anyOnline ? 'var(--money)' : 'var(--danger)', statusDotAnim: anyOnline ? 'pulseDot 2s ease-in-out infinite' : 'none',
+      statusBadgeBg: anyOnline ? 'var(--success-bg)' : 'var(--danger-bg)', statusBadgeFg: anyOnline ? 'var(--success-fg)' : 'var(--danger-fg)',
+      statusBadgeLabel: anyOnline ? `${onlineCount} online` : 'Operação pausada',
+      openTestSend: this.openTestSend, openConnect: this.openConnect,
+
+      onlineCount, instanceCount: s.instances.length, onlineHint: anyOnline ? 'Canal disponível para envios' : 'Conecte um número para operar',
+      onlineCardBorder: anyOnline ? 'color-mix(in srgb, var(--money) 30%, var(--border))' : 'var(--danger-border)',
+      onlineIconBg: anyOnline ? 'var(--success-bg)' : 'var(--danger-bg)', onlineIconFg: anyOnline ? 'var(--success-fg)' : 'var(--danger-fg)',
+      activeAutomationCount, totalAutomationCount, pendingCount, goLogsPending: this.goLogsPending, goLogsFailed: this.goLogsFailed,
+      failedCount, hasFailed: failedCount > 0, noFailedIconDisplay: failedCount > 0 ? 'none' : 'flex',
+      failedCardBorder: failedCount > 0 ? 'var(--danger-border)' : 'var(--border)', failedValueColor: failedCount > 0 ? 'var(--danger-fg)' : 'var(--foreground)',
+      failedIconBg: failedCount > 0 ? 'var(--danger-bg)' : 'var(--success-bg)', failedIconFg: failedCount > 0 ? 'var(--danger-fg)' : 'var(--success-fg)',
+      failedHint: failedCount > 0 ? 'Exige revisão' : `${sentCount} envios concluídos`,
+      showOfflineWarning: !anyOnline,
+
+      tabs, isOverviewTab: s.activeTab === 'overview', isMassTab: s.activeTab === 'mass', isLogsTab: s.activeTab === 'logs',
+
+      instances,
+      reguaTrackStyle: toggleTrackStyle(s.reguaActive), reguaThumbStyle: toggleThumbStyle(s.reguaActive), toggleRegua: this.toggleRegua,
+      openNewStep: this.openNewStep, openNewAuto: this.openNewAuto,
+      stepRules, stepRulesEmpty: stepRules.length === 0,
+      autoRules, templates, templatesCount: s.templates.length, openNewTemplate: this.openNewTemplate,
+
+      antiBanMin: s.antiBanMin, antiBanMax: s.antiBanMax, antiBanMinDown: this.antiBanMinDown, antiBanMinUp: this.antiBanMinUp,
+      antiBanMaxDown: this.antiBanMaxDown, antiBanMaxUp: this.antiBanMaxUp, saveAntiBan: this.saveAntiBan,
+      rejectCallsTrackStyle: toggleTrackStyle(s.rejectCalls), rejectCallsThumbStyle: toggleThumbStyle(s.rejectCalls), toggleRejectCalls: this.toggleRejectCalls,
+      rejectCallsMessage: s.rejectCallsMessage, setRejectCallsMessage: this.setRejectCallsMessage,
+
+      audienceOptions, audienceIsService: s.massAudience === 'service', massServiceOptions, setMassService: this.setMassService,
+      massMessage: s.massMessage, setMassMessage: this.setMassMessage, variableChips, sendMass: this.sendMass, estimatedAudience,
+
+      logFilters, bulkAction: this.runBulkAction, bulkActionLabel: bulkDef.label,
+      bulkActionStyle: `height:34px;padding:0 14px;border-radius:8px;border:1px solid ${bulkDef.border};background:${bulkDef.bg};color:${bulkDef.fg};font-size:12px;font-weight:600;cursor:pointer`,
+      logsEmpty: pagedLogs.length === 0, logsHasRows: pagedLogs.length > 0, pagedLogs,
+
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      connectOpen: s.connectOpen, closeConnect: this.closeConnect,
+      isPairingMethod: s.connectMethod === 'pairing', isQrMethod: s.connectMethod === 'qr',
+      pairingTabStyle: `min-height:32px;border-radius:7px;padding:0 14px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:${s.connectMethod === 'pairing' ? 'var(--card)' : 'none'};color:${s.connectMethod === 'pairing' ? 'var(--foreground)' : 'var(--muted-foreground)'}`,
+      qrTabStyle: `min-height:32px;border-radius:7px;padding:0 14px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:${s.connectMethod === 'qr' ? 'var(--card)' : 'none'};color:${s.connectMethod === 'qr' ? 'var(--foreground)' : 'var(--muted-foreground)'}`,
+      setMethodPairing: this.setMethodPairing, setMethodQr: this.setMethodQr,
+      pairingPhone: s.pairingPhone, setPairingPhone: this.setPairingPhone, pairingCode: s.pairingCode,
+      pairingFormDisplay: s.pairingCode ? 'none' : 'flex', generatePairing: this.generatePairing,
+      pairingButtonLabel: 'Gerar código', copyPairingCode: this.copyPairingCode, copyPairingLabel: s.pairingCopied ? 'Copiado!' : 'Copiar código',
+
+      testSendOpen: s.testSendOpen, closeTestSend: this.closeTestSend, testPhone: s.testPhone, setTestPhone: this.setTestPhone, sendTest: this.sendTest,
+
+      ruleModalOpen: s.ruleModalOpen, closeRuleModal: this.closeRuleModal, isEditingRule: !!s.editingRuleId,
+      ruleModalTitle: ruleIsStep ? (s.editingRuleId ? 'Editar etapa' : 'Nova etapa da régua') : (s.editingRuleId ? 'Editar mensagem' : 'Nova mensagem automática'),
+      ruleIsStep, ruleTypeOptions, setRuleType: this.setRuleType, ruleForm: s.ruleForm,
+      ruleDaysDown: this.ruleDaysDown, ruleDaysUp: this.ruleDaysUp, setRuleTime: this.setRuleTime, setRuleMessage: this.setRuleMessage,
+      ruleVariableChips, toggleRuleActiveForm: this.toggleRuleActiveForm,
+      ruleActiveTrackStyle: toggleTrackStyle(s.ruleForm.isActive), ruleActiveThumbStyle: toggleThumbStyle(s.ruleForm.isActive),
+      submitRuleModal: this.submitRuleModal, deleteRuleModal: this.deleteRuleModal,
+
+      templateModalOpen: s.templateModalOpen, closeTemplateModal: this.closeTemplateModal,
+      templateModalTitle: s.editingTemplateId ? 'Editar template' : 'Novo template', templateForm: s.templateForm,
+      setTemplateTitle: this.setTemplateTitle, setTemplateMessage: this.setTemplateMessage, badgeOptions, submitTemplateModal: this.submitTemplateModal,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

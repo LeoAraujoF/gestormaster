@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes dcslide { from { transform:translateX(24px); opacity:.4 } to { transform:translateX(0); opacity:1 } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:1024px){[data-hide-lg]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    @media (max-width:640px){[data-hide-tight]{display:none!important}}
+    [data-mobile-only]{display:none}
+    @media (max-width:768px){[data-mobile-only]{display:block!important}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ goPainel }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="return false" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--sidebar-accent-fg)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Automação') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+      </a></div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <svg data-hide-lg="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div data-hide-narrow="true"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:24px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="border-radius:8px;border:1px solid var(--border);background:var(--card)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:22px 24px;flex-wrap:wrap">
+          <div style="display:flex;align-items:flex-start;gap:14px;min-width:0">
+            <span style="width:40px;height:40px;border-radius:8px;border:1px solid rgba(0,0,0,.04);background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+            </span>
+            <div style="min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Carteira operacional</p>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--interactive-bg);color:var(--interactive-fg);border-radius:6px;padding:2px 7px">{{ totalCount }}</span>
+              </div>
+              <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Clientes</h1>
+              <p style="margin:8px 0 0;max-width:560px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Consulte cadastros, acompanhe a situação da base e gere relatórios sem complicação.</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="position:relative">
+              <button type="button" onclick="{{ toggleReports }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path></svg>
+                Relatórios
+              </button>
+              <sc-if value="{{ reportsOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:42px;right:0;width:250px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;z-index:50">
+                  <button type="button" onclick="{{ downloadDay }}" style="width:100%;text-align:left;display:flex;flex-direction:column;gap:1px;padding:8px 10px;border:none;background:none;border-radius:6px;cursor:pointer"><span style="font-size:12.5px;font-weight:600;color:var(--foreground)">Relatório do dia</span><span style="font-size:10.5px;color:var(--muted-foreground)">Clientes cadastrados hoje</span></button>
+                  <button type="button" onclick="{{ downloadMonth }}" style="width:100%;text-align:left;display:flex;flex-direction:column;gap:1px;padding:8px 10px;border:none;background:none;border-radius:6px;cursor:pointer"><span style="font-size:12.5px;font-weight:600;color:var(--foreground)">Relatório do mês</span><span style="font-size:10.5px;color:var(--muted-foreground)">Cadastros do mês atual</span></button>
+                  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+                  <button type="button" onclick="{{ downloadAll }}" style="width:100%;text-align:left;display:flex;flex-direction:column;gap:1px;padding:8px 10px;border:none;background:none;border-radius:6px;cursor:pointer"><span style="font-size:12.5px;font-weight:600;color:var(--foreground)">Relatório completo</span><span style="font-size:10.5px;color:var(--muted-foreground)">Todos os clientes da base</span></button>
+                </div>
+              </sc-if>
+            </div>
+            <button type="button" onclick="{{ openCreateClient }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+              Novo cliente
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEARCH + FILTERS -->
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <div style="position:relative;flex:1;min-width:220px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ searchTerm }}" oninput="{{ setSearchTerm }}" placeholder="Buscar por nome, telefone ou serviço" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 12px 0 32px;font-size:13px;background:none;color:var(--foreground);outline:none"/>
+            </div>
+            <div style="position:relative">
+              <button type="button" onclick="{{ toggleAdvanced }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12.5px;font-weight:500;cursor:pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+                Filtros
+                <sc-if value="{{ hasActiveAdvanced }}"><span style="font-family:'Geist Mono',monospace;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:var(--interactive);color:var(--interactive-fg);font-size:10px;font-weight:700">{{ activeFilterCount }}</span></sc-if>
+              </button>
+              <sc-if value="{{ advancedOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:44px;right:0;width:300px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:16px;z-index:50;display:flex;flex-direction:column;gap:14px">
+                  <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Filtros avançados</h3><p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Combine status, serviço e intervalo de vencimento.</p></div>
+                  <div>
+                    <p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Status</p>
+                    <select onchange="{{ setFilterStatus }}" style="width:100%;height:34px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:12px;background:var(--background);color:var(--foreground)">
+                      <sc-for list="{{ statusOptions }}" as="so" hint-placeholder-count="5"><option value="{{ so.value }}" selected="{{ so.selected }}">{{ so.label }}</option></sc-for>
+                    </select>
+                  </div>
+                  <div>
+                    <p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Serviço vinculado</p>
+                    <select onchange="{{ setFilterService }}" style="width:100%;height:34px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:12px;background:var(--background);color:var(--foreground)">
+                      <sc-for list="{{ serviceOptions2 }}" as="sv" hint-placeholder-count="6"><option value="{{ sv.value }}" selected="{{ sv.selected }}">{{ sv.label }}</option></sc-for>
+                    </select>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div><p style="margin:0 0 6px;font-size:10.5px;color:var(--secondary-foreground)">Vence a partir de</p><input type="date" value="{{ filterDateFrom }}" oninput="{{ setFilterDateFrom }}" style="width:100%;height:32px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:none;color:var(--foreground)"/></div>
+                    <div><p style="margin:0 0 6px;font-size:10.5px;color:var(--secondary-foreground)">Vence até</p><input type="date" value="{{ filterDateTo }}" oninput="{{ setFilterDateTo }}" style="width:100%;height:32px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:none;color:var(--foreground)"/></div>
+                  </div>
+                  <sc-if value="{{ hasActiveAdvanced }}"><button type="button" onclick="{{ clearAdvanced }}" style="height:32px;border:none;background:none;color:var(--danger);font-size:11.5px;font-weight:600;cursor:pointer">Limpar filtros avançados</button></sc-if>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ hasAnyFilter }}"><button type="button" onclick="{{ clearAllFilters }}" style="height:38px;padding:0 10px;border:none;background:none;color:var(--muted-foreground);font-size:12px;font-weight:500;cursor:pointer">Limpar tudo</button></sc-if>
+          </div>
+
+          <!-- registration period -->
+          <div style="border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--interactive)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2.3"></rect><path d="M3.5 9.5h17M8 3v3M16 3v3"></path></svg><p style="margin:0;font-size:11.5px;font-weight:600;color:var(--foreground)">Filtrar pela data de cadastro</p></div>
+              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                <sc-for list="{{ registrationPeriods }}" as="rp" hint-placeholder-count="4">
+                  <button type="button" onclick="{{ rp.onClick }}" style="{{ rp.style }}">{{ rp.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:220px">
+              <div><p style="margin:0 0 5px;font-size:10px;color:var(--muted-foreground)">Cadastrado de</p><input type="date" value="{{ registeredFrom }}" oninput="{{ setRegisteredFrom }}" style="width:100%;height:32px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:var(--card);color:var(--foreground)"/></div>
+              <div><p style="margin:0 0 5px;font-size:10px;color:var(--muted-foreground)">Até</p><input type="date" value="{{ registeredTo }}" oninput="{{ setRegisteredTo }}" style="width:100%;height:32px;border:1px solid var(--input);border-radius:6px;padding:0 8px;font-size:11px;background:var(--card);color:var(--foreground)"/></div>
+            </div>
+          </div>
+
+          <!-- 7-day registration history -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <p style="margin:0;font-size:11px;font-weight:600;color:var(--foreground)">Histórico recente de cadastros</p>
+              <span style="font-size:10px;color:var(--muted-foreground)">Selecione um dia para filtrar</span>
+            </div>
+            <div style="margin-top:8px;display:grid;grid-template-columns:repeat(7,minmax(64px,1fr));gap:6px">
+              <sc-for list="{{ registrationHistory }}" as="rh" hint-placeholder-count="7">
+                <button type="button" onclick="{{ rh.onClick }}" style="{{ rh.style }}">
+                  <span style="font-family:'Geist Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted-foreground)">{{ rh.label }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--foreground)">{{ rh.count }}</span>
+                  <span style="font-size:9px;color:var(--muted-foreground)">{{ rh.date }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- status quick segments -->
+          <div>
+            <p style="margin:0 0 6px;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Situação dos clientes</p>
+            <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">
+              <sc-for list="{{ quickSegments }}" as="qs" hint-placeholder-count="8">
+                <button type="button" onclick="{{ qs.onClick }}" style="{{ qs.style }}">{{ qs.label }} <span style="font-family:'Geist Mono',monospace;font-size:10px;opacity:.72">{{ qs.count }}</span></button>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin:0;font-size:11px;color:var(--muted-foreground)">Exibindo <strong style="color:var(--foreground);font-weight:600">{{ visibleCount }}</strong> de {{ totalCount }} clientes.</p>
+        </div>
+
+        <!-- bulk bar -->
+        <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-radius:8px;border:1px solid var(--interactive);background:var(--interactive-bg);padding:10px 14px">
+            <span style="font-size:12px;font-weight:600;color:var(--interactive-fg);margin-right:4px">{{ selectionCountLabel }}</span>
+            <button type="button" onclick="{{ bulkWhatsapp }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:none;background:none;color:var(--interactive-fg);font-size:11.5px;font-weight:600;cursor:pointer;border-radius:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>WhatsApp</button>
+            <button type="button" onclick="{{ bulkPix }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:none;background:none;color:var(--interactive-fg);font-size:11.5px;font-weight:600;cursor:pointer;border-radius:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"></path></svg>Gerar PIX</button>
+            <button type="button" onclick="{{ bulkExport }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:none;background:none;color:var(--interactive-fg);font-size:11.5px;font-weight:600;cursor:pointer;border-radius:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Exportar</button>
+            <button type="button" onclick="{{ openBulkDelete }}" style="margin-left:auto;height:32px;padding:0 10px;border:none;background:none;color:var(--danger);font-size:11.5px;font-weight:600;cursor:pointer;border-radius:6px">Excluir</button>
+            <button type="button" onclick="{{ clearSelection }}" style="height:32px;padding:0 10px;border:none;background:none;color:var(--muted-foreground);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:6px">Limpar seleção</button>
+          </div>
+        </sc-if>
+
+        <!-- TABLE -->
+        <div ref="{{ tableRef }}" style="border-radius:8px;border:1px solid var(--border);background:var(--card);overflow:hidden">
+          <sc-if value="{{ isEmptyResults }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:56px 16px;text-align:center">
+              <span style="width:44px;height:44px;border-radius:14px;background:var(--muted);color:var(--muted-foreground);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+              <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhum cliente encontrado</p>
+              <p style="margin:0;max-width:320px;font-size:11.5px;color:var(--muted-foreground)">Revise a busca ou remova os filtros para visualizar novamente a carteira.</p>
+              <button type="button" onclick="{{ clearAllFilters }}" style="margin-top:6px;height:34px;padding:0 14px;border:1px solid var(--input);background:var(--background);color:var(--foreground);border-radius:7px;font-size:12px;font-weight:500;cursor:pointer">Limpar busca e filtros</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+            <div data-hide-md="true" style="{{ tableHeaderStyle }}">
+              <span></span>
+              <span>Cliente</span>
+              <sc-if value="{{ showServiceCol }}"><span>Serviço</span></sc-if>
+              <span>Status</span>
+              <span style="text-align:right">Vencimento</span>
+              <sc-if value="{{ showCreatedCol }}"><span style="text-align:right">Cadastro</span></sc-if>
+              <span style="text-align:right">Ações</span>
+            </div>
+            <div data-hide-md="true">
+              <sc-for list="{{ pagedClients }}" as="c" hint-placeholder-count="8">
+                <div style-hover="background:var(--muted)" data-hide-md="true" style="{{ c.gridStyle }}">
+                  <button type="button" onclick="{{ c.onToggleSelect }}" style="{{ c.checkStyle }}" aria-label="Selecionar">
+                    <sc-if value="{{ c.selected }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if>
+                  </button>
+                  <button type="button" onclick="{{ c.onOpenProfile }}" style="display:flex;align-items:center;gap:10px;min-width:0;text-align:left;border:none;background:none;cursor:pointer;padding:0">
+                    <span style="width:30px;height:30px;border-radius:9999px;background:{{ c.avatarBg }};color:{{ c.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ c.initials }}</span>
+                    <span style="min-width:0"><span style="display:block;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="display:block;font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.phoneLabel }}</span></span>
+                  </button>
+                  <sc-if value="{{ showServiceCol }}"><span style="min-width:0;font-size:12px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.service }}</span></sc-if>
+                  <span><span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span></span>
+                  <span style="text-align:right"><span style="display:block;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ c.dueLabel }}</span><span style="display:block;font-size:10px;color:{{ c.prazoColor }}">{{ c.prazoLabel }}</span></span>
+                  <sc-if value="{{ showCreatedCol }}"><span style="text-align:right;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ c.createdLabel }}</span></sc-if>
+                  <div style="display:flex;gap:6px;justify-content:flex-end">
+                    <button type="button" onclick="{{ c.onWhatsapp }}" title="WhatsApp" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--money);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></button>
+                    <button type="button" onclick="{{ c.onCobrar }}" disabled="{{ c.isCharging }}" style="height:30px;padding:0 10px;border-radius:6px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:11px;font-weight:600;cursor:pointer;opacity:{{ c.chargingOpacity }};flex-shrink:0">{{ c.cobrarLabel }}</button>
+                    <button type="button" onclick="{{ c.onRenovar }}" style="height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer;flex-shrink:0">Renovar</button>
+                    <div style="position:relative">
+                      <button type="button" onclick="{{ c.onToggleMenu }}" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg></button>
+                      <sc-if value="{{ c.menuOpen }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;top:34px;right:0;width:190px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px;z-index:40">
+                          <button type="button" onclick="{{ c.onEdit }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--foreground);cursor:pointer;border-radius:6px">Editar / Trocar serviço</button>
+                          <button type="button" onclick="{{ c.onOpenProfile }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--foreground);cursor:pointer;border-radius:6px">Ficha do cliente</button>
+                          <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+                          <button type="button" onclick="{{ c.onDelete }}" style="width:100%;text-align:left;padding:8px 10px;border:none;background:none;font-size:12px;color:var(--danger);cursor:pointer;border-radius:6px">Excluir cliente</button>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div data-mobile-only="true">
+              <sc-for list="{{ pagedClients }}" as="cm" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:{{ cm.rowBg }}">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <button type="button" onclick="{{ cm.onToggleSelect }}" style="{{ cm.checkStyle }}" aria-label="Selecionar"><sc-if value="{{ cm.selected }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></button>
+                    <button type="button" onclick="{{ cm.onOpenProfile }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;border:none;background:none;cursor:pointer;padding:0">
+                      <span style="width:32px;height:32px;border-radius:9999px;background:{{ cm.avatarBg }};color:{{ cm.avatarFg }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ cm.initials }}</span>
+                      <span style="min-width:0"><span style="display:block;font-size:13px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cm.name }}</span><span style="display:block;font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cm.service }}</span></span>
+                    </button>
+                    <span style="{{ cm.statusStyle }}">{{ cm.statusLabel }}</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:8px 10px">
+                    <div><p style="margin:0;font-size:9px;color:var(--muted-foreground)">Vencimento</p><p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ cm.dueLabel }}</p><p style="margin:1px 0 0;font-size:9.5px;color:{{ cm.prazoColor }}">{{ cm.prazoLabel }}</p></div>
+                    <div><p style="margin:0;font-size:9px;color:var(--muted-foreground)">Cadastro</p><p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:12px;color:var(--foreground)">{{ cm.createdLabel }}</p></div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <button type="button" onclick="{{ cm.onWhatsapp }}" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--money);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg></button>
+                      <button type="button" onclick="{{ cm.onCobrar }}" disabled="{{ cm.isCharging }}" style="height:30px;padding:0 10px;border-radius:6px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:11px;font-weight:600;cursor:pointer;opacity:{{ cm.chargingOpacity }};flex-shrink:0">{{ cm.cobrarLabel }}</button>
+                      <button type="button" onclick="{{ cm.onRenovar }}" style="height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer;flex-shrink:0">Renovar</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;flex-wrap:wrap">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">{{ visibleCount }} clientes · página {{ currentPage }} de {{ totalPages }}</p>
+              <div style="display:flex;gap:6px">
+                <button type="button" onclick="{{ prevPage }}" disabled="{{ isFirstPage }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ prevOpacity }}">← Anterior</button>
+                <button type="button" onclick="{{ nextPage }}" disabled="{{ isLastPage }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ nextOpacity }}">Próxima →</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+
+      <!-- CHARTS -->
+      <section style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Acompanhamento da base</p>
+          <h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Cadastros e situação da carteira</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:16px;align-items:start">
+          <article style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+            <div style="border-bottom:1px solid var(--border);padding:16px 20px">
+              <h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Cadastros nos últimos 6 meses</h3>
+              <p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Compare quantos clientes entraram em cada mês e o acumulado do período.</p>
+            </div>
+            <div ref="{{ growthChartRef }}" style="position:relative;padding:16px 20px 8px">
+              <svg viewBox="0 0 {{ growthChartWidth }} 220" width="100%" height="220" preserveAspectRatio="xMinYMin meet" style="display:block;overflow:visible">
+                <sc-for list="{{ growthGrid }}" as="gg" hint-placeholder-count="4"><line x1="44" y1="{{ gg.y }}" x2="{{ growthChartWidth }}" y2="{{ gg.y }}" stroke="var(--border)" stroke-dasharray="3 4"></line></sc-for>
+                <sc-for list="{{ growthBars }}" as="gb" hint-placeholder-count="6">
+                  <rect x="{{ gb.trackX }}" y="16" width="{{ gb.trackWidth }}" height="178" rx="6" fill="var(--muted)" fill-opacity="0.7"></rect>
+                  <rect x="{{ gb.x }}" y="{{ gb.y }}" width="{{ gb.width }}" height="{{ gb.height }}" rx="3" fill="var(--chart-2)" fill-opacity="{{ gb.opacity }}"></rect>
+                  <rect x="{{ gb.hitX }}" y="0" width="{{ gb.hitWidth }}" height="220" fill="transparent" style="cursor:pointer" onmouseenter="{{ gb.onEnter }}" onmouseleave="{{ gb.onLeave }}"></rect>
+                </sc-for>
+                <polyline points="{{ growthLinePoints }}" fill="none" stroke="var(--chart-1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                <sc-for list="{{ growthDots }}" as="gd" hint-placeholder-count="6"><circle cx="{{ gd.cx }}" cy="{{ gd.cy }}" r="{{ gd.r }}" fill="var(--card)" stroke="var(--chart-1)" stroke-width="2.5" style="pointer-events:none"></circle></sc-for>
+              </svg>
+              <div style="position:absolute;left:20px;right:20px;top:16px;height:220px;pointer-events:none">
+                <sc-for list="{{ growthGrid }}" as="gg2" hint-placeholder-count="4"><span style="position:absolute;left:0;width:36px;text-align:right;top:{{ gg2.topPct }}%;transform:translateY(-50%);font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">{{ gg2.label }}</span></sc-for>
+                <sc-for list="{{ growthBars }}" as="gb2" hint-placeholder-count="6"><span style="position:absolute;left:{{ gb2.leftPct }}%;bottom:2px;transform:translateX(-50%);font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ gb2.label }}</span></sc-for>
+              </div>
+              <sc-if value="{{ hasGrowthHover }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:6px;left:{{ growthHoverData.leftPct }}%;transform:translateX(-50%);pointer-events:none;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.14);padding:8px 10px;white-space:nowrap;z-index:5">
+                  <p style="margin:0;font-size:10px;font-weight:600;color:var(--foreground)">{{ growthHoverData.label }}</p>
+                  <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--chart-2)">Novos {{ growthHoverData.newLabel }}</p>
+                  <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--chart-1)">Acumulado {{ growthHoverData.cumLabel }}</p>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border)">
+              <div style="padding:12px 16px;border-right:1px solid var(--border)"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Este mês</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:var(--interactive-fg)">{{ currentMonthNew }}</p></div>
+              <div style="padding:12px 16px;border-right:1px solid var(--border)"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Mês anterior</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:var(--foreground)">{{ previousMonthNew }}</p></div>
+              <div style="padding:12px 16px"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Variação</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:{{ growthDiffColor }}">{{ growthDiffLabel }}</p></div>
+            </div>
+          </article>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <article style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+              <div style="border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Status da carteira</h3><p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">Distribuição atual da base.</p></div>
+              </div>
+              <div style="position:relative;display:flex;justify-content:center;padding:18px 18px 4px">
+                <div style="position:absolute;inset:18px 18px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
+                  <span style="font-family:'Geist Mono',monospace;font-size:8px;letter-spacing:.04em;color:var(--muted-foreground)">{{ statusDonutLabel }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:15px;font-weight:600;color:var(--foreground)">{{ statusDonutValue }}</span>
+                </div>
+                <svg width="150" height="150" viewBox="0 0 150 150">
+                  <sc-for list="{{ statusRows }}" as="sr" hint-placeholder-count="5">
+                    <circle cx="75" cy="75" r="58" fill="none" stroke="{{ sr.color }}" stroke-width="{{ sr.strokeWidth }}" stroke-opacity="{{ sr.opacity }}" stroke-dasharray="{{ sr.dasharray }}" stroke-dashoffset="{{ sr.dashoffset }}" transform="rotate(-90 75 75)" style="cursor:pointer;transition:stroke-width .15s" onmouseenter="{{ sr.onEnter }}" onmouseleave="{{ sr.onLeave }}"></circle>
+                  </sc-for>
+                </svg>
+              </div>
+              <div style="padding:6px 18px 16px;display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ statusRows }}" as="sr2" hint-placeholder-count="5">
+                  <div onmouseenter="{{ sr2.onEnter }}" onmouseleave="{{ sr2.onLeave }}" style="cursor:pointer;border-radius:6px;padding:3px 5px;margin:-3px -5px;display:flex;align-items:center;gap:8px;background:{{ sr2.rowBg }}">
+                    <span style="width:7px;height:7px;border-radius:9999px;background:{{ sr2.color }};flex-shrink:0"></span>
+                    <span style="flex:1;min-width:0;font-size:11px;color:var(--foreground)">{{ sr2.label }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ sr2.count }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground);width:32px;text-align:right">{{ sr2.share }}%</span>
+                  </div>
+                </sc-for>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p><sc-if value="{{ toast.hasDesc }}"><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ toast.description }}</p></sc-if></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- FICHA 360 -->
+  <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);z-index:90" onclick="{{ closeProfile }}">
+      <div style="animation:dcslide .18s ease-out;position:absolute;top:0;right:0;bottom:0;width:100%;max-width:460px;background:var(--card);box-shadow:-12px 0 32px rgba(0,0,0,.12);overflow-y:auto;display:flex;flex-direction:column" onclick="{{ stop }}">
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:18px 22px">
+          <div><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Ficha 360 do cliente</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Situação atual, serviço, acessos e histórico.</p></div>
+          <button type="button" onclick="{{ closeProfile }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <sc-if value="{{ hasProfile }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+            <div style="border-radius:8px;border:1px solid {{ profile.borderColor }};background:{{ profile.bandBg }};padding:16px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:44px;height:44px;border-radius:9999px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0">{{ profile.initials }}</span>
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font-size:16px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">{{ profile.name }}</h3><span style="{{ profile.statusStyle }}">{{ profile.statusLabel }}</span></div>
+                  <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ profile.phoneLabel }}</p>
+                  <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ profile.daysAsClient }} dias na base</p>
+                </div>
+              </div>
+              <sc-if value="{{ profile.isOverdue }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:10px 0 0;font-size:11.5px;color:var(--danger-fg)"><strong>Ação recomendada:</strong> revisar o vencimento e entrar em contato com o cliente.</p>
+              </sc-if>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Vencimento</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ profile.dueLabel }}</p><p style="margin:2px 0 0;font-size:10px;color:{{ profile.prazoColor }}">{{ profile.prazoLabel }}</p></div>
+              <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Renovações</p><p style="margin:5px 0 0;font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--foreground)">{{ profile.renewalCount }}</p></div>
+            </div>
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviços contratados</p>
+              <div style="border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span style="font-size:12.5px;font-weight:600;color:var(--foreground)">{{ profile.service }}</span>
+                <span style="font-size:11px;color:var(--muted-foreground)">{{ profile.screens }} {{ profile.screensLabel }}</span>
+              </div>
+            </div>
+            <div>
+              <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Valor do plano</p>
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:20px;font-weight:600;color:var(--money)">{{ profile.valueLabel }}</p>
+            </div>
+          </div>
+        </sc-if>
+        <div style="flex-shrink:0;position:sticky;bottom:0;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border);background:var(--card);padding:14px 22px">
+          <button type="button" onclick="{{ profileWhatsapp }}" style="height:38px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>WhatsApp</button>
+          <button type="button" onclick="{{ profileCobrar }}" style="height:38px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;cursor:pointer">Cobrar agora</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- RENEW MODAL -->
+  <sc-if value="{{ renewOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto" onclick="{{ closeRenew }}">
+      <div style="width:100%;max-width:460px;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-2.7-6.2M21 3v5.3h-5.3"></path></svg></span>
+          <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Renovar plano</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ renewClientName }}</p></div>
+          <button type="button" onclick="{{ closeRenew }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviço</p>
+            <select onchange="{{ setRenewService }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+              <sc-for list="{{ renewServiceOptions }}" as="rs" hint-placeholder-count="2"><option value="{{ rs.key }}" selected="{{ rs.isSelected }}">{{ rs.label }}</option></sc-for>
+            </select>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Período</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <sc-for list="{{ renewPeriodOptions }}" as="rp" hint-placeholder-count="4"><button type="button" onclick="{{ rp.onSelect }}" style="{{ rp.style }}">{{ rp.label }}</button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:10px;background:var(--muted);padding:12px 14px">
+            <div><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Novo vencimento</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ renewNewDueLabel }}</p></div>
+            <div style="text-align:right"><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Total</p><p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">{{ renewTotalLabel }}</p></div>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Forma de pagamento</p>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ renewPaymentOptions }}" as="pm" hint-placeholder-count="3"><button type="button" onclick="{{ pm.onSelect }}" style="{{ pm.style }}">{{ pm.label }}</button></sc-for>
+            </div>
+          </div>
+          <button type="button" onclick="{{ toggleRenewNotify }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;padding:0;text-align:left">
+            <span style="{{ renewNotifyTrackStyle }}"><span style="{{ renewNotifyThumbStyle }}"></span></span>
+            <span style="font-size:12px;color:var(--foreground)">Avisar o cliente no WhatsApp</span>
+          </button>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeRenew }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitRenew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Confirmar renovação</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- NEW/EDIT CLIENT MODAL (Dados / Plano) -->
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.4);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:90;overflow:auto">
+      <div style="width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12)">
+        <div style="flex-shrink:0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:11px;padding:17px 22px 14px">
+            <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M17 8v5M14.5 10.5h5"></path></svg></span>
+            <div style="flex:1"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">{{ formTitle }}</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">{{ formStepSubtitle }}</p></div>
+            <button type="button" onclick="{{ closeForm }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+          </div>
+          <div style="display:flex;gap:6px;padding:0 22px 14px">
+            <sc-for list="{{ formSteps }}" as="fs" hint-placeholder-count="2">
+              <button type="button" onclick="{{ fs.onClick }}" style="{{ fs.style }}"><span style="{{ fs.badgeStyle }}">{{ fs.badgeContent }}</span>{{ fs.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ isFormDados }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <input value="{{ form.name }}" oninput="{{ setFormName }}" placeholder="Nome completo *" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <input value="{{ form.phone }}" oninput="{{ setFormPhone }}" placeholder="WhatsApp" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+                <input value="{{ form.email }}" type="email" oninput="{{ setFormEmail }}" placeholder="E-mail (opcional)" style="border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/>
+              </div>
+              <div>
+                <p style="margin:8px 0 6px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Observação</p>
+                <div contenteditable="true" style="min-height:56px;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;color:var(--foreground)" data-placeholder="Observação interna (opcional)"></div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isFormPlano }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Serviço</p>
+                <select onchange="{{ setFormService }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12.5px;background:none;color:var(--foreground)">
+                  <sc-for list="{{ formServiceOptions }}" as="fso" hint-placeholder-count="5"><option value="{{ fso.value }}" selected="{{ fso.selected }}">{{ fso.label }}</option></sc-for>
+                </select>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Valor pago *<input value="{{ form.planValue }}" oninput="{{ setFormPlanValue }}" placeholder="0,00" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/></label>
+                <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Telas<input value="{{ form.screens }}" oninput="{{ setFormScreens }}" placeholder="1" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/></label>
+                <label style="font-size:11px;font-weight:500;color:var(--secondary-foreground)">Vencimento *<input value="{{ form.dueDate }}" type="date" oninput="{{ setFormDueDate }}" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:9px 11px;font-size:12px;background:none;color:var(--foreground);outline:none"/></label>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:9px;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeForm }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <sc-if value="{{ isFormDados }}" hint-placeholder-val="{{ true }}"><button type="button" onclick="{{ goFormPlano }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Avançar para o plano</button></sc-if>
+          <sc-if value="{{ isFormPlano }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onclick="{{ goFormDados }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Voltar</button>
+            <button type="button" onclick="{{ submitForm }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">{{ submitLabel }}</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+  '--chart-1': '#2e7d54', '--chart-2': '#4055c8', '--chart-3': '#c98a1e', '--chart-4': '#a0522d', '--chart-5': '#6b6f8a',
+};
+
+const SERVICE_BASE = ['IPTV','Netflix','Disney+','HBO Max','Prime Video','Paramount+','Apple TV+','Globoplay','Star+','YouTube Premium','Spotify','Deezer','Crunchyroll','ESPN','Telecine','ExpressVPN','NordVPN','Cloud Backup','Antivírus','Office 365'];
+const SERVICE_TIERS = ['Básico','Gold','Ultra'];
+const SERVICES = SERVICE_BASE.flatMap((b) => SERVICE_TIERS.map((t) => `${b} ${t}`));
+const NAME_POOL = ['Ana Beatriz Souza','Carlos Eduardo Lima','Fernanda Torres','Juliana Prado','Marcos Vinícius','Patrícia Gomes','Rafael Nunes','Bruna Castro','Diego Martins','Lucas Andrade','Mariana Alves','Pedro Henrique','Camila Duarte','Rodrigo Farias','Beatriz Lima','Thiago Moreira','Larissa Pinto','Gustavo Rocha','Isabela Cardoso','Felipe Barros','Vanessa Teixeira','Eduardo Ramos','Priscila Nogueira','André Salles'];
+
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function seeded(n) { const x = Math.sin(n) * 10000; return x - Math.floor(x); }
+function compactCurrency(v) { return Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toFixed(1)}k` : `R$ ${Math.round(v)}`; }
+
+function buildClients() {
+  const statuses = ['active','active','active','active','vencido','vencido','pending','suspended','canceled'];
+  return NAME_POOL.map((name, i) => {
+    const diffDays = ((i * 7 + 3) % 23) - 8;
+    let status = statuses[i % statuses.length];
+    if (diffDays < 0 && status !== 'suspended' && status !== 'canceled') status = 'vencido';
+    if (diffDays >= 0 && status === 'vencido') status = 'active';
+    const phone = i % 5 !== 0;
+    const createdDaysAgo = (i * 11 + 2) % 190;
+    return {
+      id: 'c' + i, name, phone,
+      service: SERVICES[i % SERVICES.length], screens: 1 + (i % 3),
+      planValue: Math.round((24.9 + (i % 6) * 9.5) * 100) / 100,
+      diffDays, status, createdDaysAgo, renewalCount: (i * 3) % 9,
+    };
+  });
+}
+const CLIENTS_ALL = buildClients();
+
+class Component extends DCLogic {
+  state = {
+    searchTerm: '', advancedOpen: false, reportsOpen: false,
+    filterStatus: 'all', filterService: 'all', filterDateFrom: '', filterDateTo: '',
+    registrationPeriod: 'all', registeredFrom: '', registeredTo: '', quickFilter: 'all',
+    currentPage: 1, selectedIds: {}, openMenuId: null,
+    profileOpen: false, profileClientId: null,
+    renewOpen: false, renewClientId: null, renewService: 'keep', renewPeriod: 3, renewPayment: 'pix', renewNotify: true,
+    formOpen: false, formStep: 'dados', formMode: 'create',
+    form: { name: '', phone: '', email: '', service: SERVICES[0], planValue: '', screens: '1', dueDate: '' },
+    chargingIds: {}, toasts: [], clock: '',
+    growthHoverIdx: null, statusHoverIdx: null, growthChartW: 600, tableW: 900,
+  };
+
+  pendingTimers = {};
+  toastSeq = 0;
+  growthChartRef = React.createRef();
+  tableRef = React.createRef();
+
+  componentDidMount() {
+    this.tick();
+    this.clockInterval = setInterval(() => this.tick(), 1000);
+    this.measure();
+    window.addEventListener('resize', this.measure);
+    this.measureInterval = setInterval(this.measure, 700);
+  }
+  componentWillUnmount() {
+    clearInterval(this.clockInterval);
+    clearInterval(this.measureInterval);
+    window.removeEventListener('resize', this.measure);
+    Object.values(this.pendingTimers).forEach((t) => clearTimeout(t));
+  }
+  measure = () => {
+    const gEl = this.growthChartRef.current;
+    if (gEl) { const w = Math.round(gEl.getBoundingClientRect().width); if (w > 0 && w !== this.state.growthChartW) this.setState({ growthChartW: w }); }
+    const tEl = this.tableRef.current;
+    if (tEl) { const w = Math.round(tEl.getBoundingClientRect().width); if (w > 0 && w !== this.state.tableW) this.setState({ tableW: w }); }
+  };
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    const full = { id, duration: 3500, ...toast };
+    this.setState((s) => ({ toasts: [...s.toasts, full] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), full.duration);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  stop = (e) => e.stopPropagation();
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}`, description: 'Rota fora do escopo deste protótipo.' });
+  goPainel = () => this.addToast({ title: 'Abra o arquivo Painel v2.dc.html para o Dashboard.' });
+
+  setSearchTerm = (e) => this.setState({ searchTerm: e.target.value, currentPage: 1 });
+  toggleAdvanced = () => this.setState((s) => ({ advancedOpen: !s.advancedOpen, reportsOpen: false }));
+  toggleReports = () => this.setState((s) => ({ reportsOpen: !s.reportsOpen, advancedOpen: false }));
+  setFilterStatus = (e) => this.setState({ filterStatus: e.target.value, currentPage: 1 });
+  setFilterService = (e) => this.setState({ filterService: e.target.value, currentPage: 1 });
+  setFilterDateFrom = (e) => this.setState({ filterDateFrom: e.target.value, currentPage: 1 });
+  setFilterDateTo = (e) => this.setState({ filterDateTo: e.target.value, currentPage: 1 });
+  clearAdvanced = () => this.setState({ filterStatus: 'all', filterService: 'all', filterDateFrom: '', filterDateTo: '' });
+  setRegisteredFrom = (e) => this.setState({ registeredFrom: e.target.value, registrationPeriod: 'custom', currentPage: 1 });
+  setRegisteredTo = (e) => this.setState({ registeredTo: e.target.value, registrationPeriod: 'custom', currentPage: 1 });
+  setQuickFilter(key) { this.setState({ quickFilter: key, currentPage: 1 }); }
+  clearAllFilters = () => this.setState({ searchTerm: '', quickFilter: 'all', filterStatus: 'all', filterService: 'all', filterDateFrom: '', filterDateTo: '', registrationPeriod: 'all', registeredFrom: '', registeredTo: '', currentPage: 1 });
+
+  applyRegistrationPeriod(period, daysAgoMax) {
+    this.setState({ registrationPeriod: period, quickFilter: 'all', currentPage: 1, registeredFrom: '', registeredTo: '', _regMax: daysAgoMax });
+  }
+  applyRegistrationDay(daysAgo) { this.setState({ registrationPeriod: 'custom', quickFilter: 'all', currentPage: 1, _regExactDay: daysAgo }); }
+
+  toggleSelect(id) { this.setState((s) => { const sel = { ...s.selectedIds }; if (sel[id]) delete sel[id]; else sel[id] = true; return { selectedIds: sel }; }); }
+  clearSelection = () => this.setState({ selectedIds: {} });
+  toggleMenu(id) { this.setState((s) => ({ openMenuId: s.openMenuId === id ? null : id })); }
+
+  openProfile(id) { this.setState({ profileOpen: true, profileClientId: id, openMenuId: null }); }
+  closeProfile = () => this.setState({ profileOpen: false, profileClientId: null });
+
+  openRenew(client) { this.setState({ renewOpen: true, renewClientId: client.id, renewService: 'keep', renewPeriod: 3, renewPayment: 'pix', renewNotify: true, openMenuId: null }); }
+  closeRenew = () => this.setState({ renewOpen: false, renewClientId: null });
+  setRenewService = (e) => this.setState({ renewService: e.target.value });
+  setRenewPeriod(n) { this.setState({ renewPeriod: n }); }
+  setRenewPayment(key) { this.setState({ renewPayment: key }); }
+  toggleRenewNotify = () => this.setState((s) => ({ renewNotify: !s.renewNotify }));
+  submitRenew = () => {
+    const client = CLIENTS_ALL.find((c) => c.id === this.state.renewClientId);
+    this.closeRenew();
+    this.addToast({ title: `Renovação confirmada${client ? ' para ' + client.name : ''}.` });
+  };
+
+  openCreateClient = () => this.setState({ formOpen: true, formMode: 'create', formStep: 'dados', form: { name: '', phone: '', email: '', service: SERVICES[0], planValue: '', screens: '1', dueDate: '' } });
+  openEditClient(client) {
+    this.setState({
+      formOpen: true, formMode: 'edit', formStep: 'dados', openMenuId: null,
+      form: { name: client.name, phone: client.phone ? '(11) 9****-0000' : '', email: '', service: client.service, planValue: String(client.planValue).replace('.', ','), screens: String(client.screens), dueDate: '' },
+    });
+  }
+  closeForm = () => this.setState({ formOpen: false });
+  goFormPlano = () => { if (!this.state.form.name.trim()) { this.addToast({ title: 'Informe o nome do cliente antes de continuar.' }); return; } this.setState({ formStep: 'plano' }); };
+  goFormDados = () => this.setState({ formStep: 'dados' });
+  setFormStep(key) { if (key === 'plano' && !this.state.form.name.trim()) { this.addToast({ title: 'Informe o nome do cliente antes de continuar.' }); return; } this.setState({ formStep: key }); }
+  setFormName = (e) => this.setState((s) => ({ form: { ...s.form, name: e.target.value } }));
+  setFormPhone = (e) => this.setState((s) => ({ form: { ...s.form, phone: e.target.value } }));
+  setFormEmail = (e) => this.setState((s) => ({ form: { ...s.form, email: e.target.value } }));
+  setFormService = (e) => this.setState((s) => ({ form: { ...s.form, service: e.target.value } }));
+  setFormPlanValue = (e) => this.setState((s) => ({ form: { ...s.form, planValue: e.target.value } }));
+  setFormScreens = (e) => this.setState((s) => ({ form: { ...s.form, screens: e.target.value } }));
+  setFormDueDate = (e) => this.setState((s) => ({ form: { ...s.form, dueDate: e.target.value } }));
+  submitForm = () => {
+    if (!this.state.form.planValue || !this.state.form.dueDate) { this.addToast({ title: 'Informe valor pago e vencimento.' }); return; }
+    this.closeForm();
+    this.addToast({ title: this.state.formMode === 'edit' ? 'Cliente atualizado.' : 'Cliente cadastrado com sucesso.' });
+  };
+
+  handleCobrar(client) {
+    if (!client.phone) { this.addToast({ title: `${client.name} não possui WhatsApp cadastrado.` }); return; }
+    if (this.state.chargingIds[client.id]) return;
+    this.setState((s) => ({ chargingIds: { ...s.chargingIds, [client.id]: true } }));
+    this.pendingTimers['c' + client.id] = setTimeout(() => {
+      this.setState((s) => { const c = { ...s.chargingIds }; delete c[client.id]; return { chargingIds: c }; });
+      this.addToast({ title: `Cobrança enviada para ${client.name}.` });
+    }, 2200);
+  }
+  handleWhatsapp(client) {
+    if (!client.phone) { this.addToast({ title: `${client.name} não possui um WhatsApp válido.` }); return; }
+    this.addToast({ title: `Abriria o WhatsApp de ${client.name}.` });
+  }
+  bulkAction(label) { this.addToast({ title: `${label} para ${Object.keys(this.state.selectedIds).length} cliente(s).` }); this.setState({ selectedIds: {} }); }
+  openBulkDelete = () => this.addToast({ title: 'Confirmação de exclusão em massa (fora do escopo deste protótipo).' });
+  downloadReport(period) { this.addToast({ title: `Relatório ${period} gerado.`, description: 'CSV simulado neste protótipo.' }); this.setState({ reportsOpen: false }); }
+
+  bucketOf(c) {
+    if (c.status === 'vencido') return 2;
+    if (c.diffDays === 0) return 0;
+    if (c.diffDays > 0 && c.diffDays <= 7) return 1;
+    return 3;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const vars = LIGHT_VARS;
+    const rootStyle = { ...vars, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const q = s.searchTerm.trim().toLowerCase();
+
+    let filtered = CLIENTS_ALL.filter((c) => {
+      if (q && !(c.name.toLowerCase().includes(q) || c.service.toLowerCase().includes(q))) return false;
+      if (s.filterStatus !== 'all' && c.status !== s.filterStatus) return false;
+      if (s.filterService !== 'all' && c.service !== s.filterService) return false;
+      if (s.filterDateFrom || s.filterDateTo) {
+        const due = new Date(today); due.setDate(due.getDate() + c.diffDays);
+        const key = due.toISOString().slice(0, 10);
+        if (s.filterDateFrom && key < s.filterDateFrom) return false;
+        if (s.filterDateTo && key > s.filterDateTo) return false;
+      }
+      if (s.registrationPeriod === 'today' && c.createdDaysAgo !== 0) return false;
+      if (s.registrationPeriod === 'last7' && c.createdDaysAgo > 6) return false;
+      if (s.registrationPeriod === 'month' && c.createdDaysAgo > today.getDate() - 1) return false;
+      if (s.registrationPeriod === 'custom') {
+        if (s._regExactDay !== undefined && s._regExactDay !== null && c.createdDaysAgo !== s._regExactDay) return false;
+        if (s.registeredFrom || s.registeredTo) {
+          const createdDate = new Date(today); createdDate.setDate(createdDate.getDate() - c.createdDaysAgo);
+          const key = createdDate.toISOString().slice(0, 10);
+          if (s.registeredFrom && key < s.registeredFrom) return false;
+          if (s.registeredTo && key > s.registeredTo) return false;
+        }
+      }
+      if (s.quickFilter === 'overdue' && c.status !== 'vencido') return false;
+      if (s.quickFilter === 'today' && c.diffDays !== 0) return false;
+      if (s.quickFilter === '7days' && !(c.diffDays > 0 && c.diffDays <= 7)) return false;
+      if (s.quickFilter === 'suspended' && c.status !== 'suspended') return false;
+      if (s.quickFilter === 'canceled' && c.status !== 'canceled') return false;
+      if (s.quickFilter === 'no_whatsapp' && c.phone) return false;
+      return true;
+    });
+    filtered = filtered.slice().sort((a, b) => {
+      const ba = this.bucketOf(a), bb = this.bucketOf(b);
+      if (ba !== bb) return ba - bb;
+      if (ba === 2) return b.diffDays - a.diffDays;
+      if (ba !== 3) return a.diffDays - b.diffDays;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+
+    const ITEMS_PER_PAGE = 8;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const currentPage = Math.min(s.currentPage, totalPages);
+    const paged = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    const initials = (name) => name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+    const prazoLabel = (d) => d === -1 ? 'ontem' : d < 0 ? `há ${Math.abs(d)}d` : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d}d`;
+    const prazoColor = (d) => d < 0 ? 'var(--danger)' : d === 0 ? 'var(--warning-fg)' : 'var(--muted-foreground)';
+    const STATUS_META = {
+      active: { label: 'Ativo', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+      vencido: { label: 'Vencido', bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' },
+      pending: { label: 'Pendente', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      suspended: { label: 'Suspenso', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      canceled: { label: 'Cancelado', bg: 'var(--secondary)', fg: 'var(--muted-foreground)' },
+    };
+    const statusBadgeStyle = (status) => { const m = STATUS_META[status] || STATUS_META.active; return `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap;background:${m.bg};color:${m.fg}`; };
+
+    // Column tracks driven by measured card width, so hidden columns actually drop their grid track (not just their content)
+    const showServiceCol = s.tableW >= 760, showCreatedCol = s.tableW >= 620;
+    const gridTracks = ['16px', 'minmax(0,1.3fr)'];
+    if (showServiceCol) gridTracks.push('minmax(0,.8fr)');
+    gridTracks.push('64px', '72px');
+    if (showCreatedCol) gridTracks.push('60px');
+    gridTracks.push('minmax(148px,auto)');
+    const tableGridStyleBase = `grid-template-columns:${gridTracks.join(' ')};align-items:center;gap:10px;padding:10px 16px`;
+    const tableHeaderStyle = `display:grid;${tableGridStyleBase};border-bottom:1px solid var(--border);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)`;
+    const rowGridStyleBase = (bg) => `display:grid;grid-template-columns:${gridTracks.join(' ')};align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background 150ms ease-out;background:${bg}`;
+
+    const pagedClients = paged.map((c) => {
+      const selected = !!s.selectedIds[c.id];
+      const charging = !!s.chargingIds[c.id];
+      const due = new Date(today); due.setDate(due.getDate() + c.diffDays);
+      const created = new Date(today); created.setDate(created.getDate() - c.createdDaysAgo);
+      return {
+        id: c.id, name: c.name, service: c.service,
+        phoneLabel: c.phone ? 'WhatsApp cadastrado' : 'Sem WhatsApp', initials: initials(c.name),
+        avatarBg: c.status === 'vencido' ? 'var(--danger-bg)' : c.diffDays === 0 ? 'var(--warning-bg)' : 'var(--interactive-bg)',
+        avatarFg: c.status === 'vencido' ? 'var(--danger-fg)' : c.diffDays === 0 ? 'var(--warning-fg)' : 'var(--interactive-fg)',
+        statusStyle: statusBadgeStyle(c.status), statusLabel: (STATUS_META[c.status] || STATUS_META.active).label,
+        dueLabel: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), prazoLabel: prazoLabel(c.diffDays), prazoColor: prazoColor(c.diffDays),
+        createdLabel: created.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        selected, checkStyle: `width:18px;height:18px;flex-shrink:0;border-radius:4px;border:1.5px solid ${selected ? 'var(--foreground)' : 'var(--input)'};background:${selected ? 'var(--foreground)' : 'none'};display:flex;align-items:center;justify-content:center;cursor:pointer`,
+        onToggleSelect: () => this.toggleSelect(c.id), onOpenProfile: () => this.openProfile(c.id),
+        isCharging: charging, chargingOpacity: charging ? '0.6' : '1', cobrarLabel: charging ? '…' : 'Cobrar',
+        onCobrar: () => this.handleCobrar(c), onWhatsapp: () => this.handleWhatsapp(c),
+        menuOpen: s.openMenuId === c.id, onToggleMenu: () => this.toggleMenu(c.id),
+        onEdit: () => this.openEditClient(c), onRenovar: () => this.openRenew(c), onDelete: () => this.addToast({ title: `Excluir ${c.name}? (fora do escopo)` }),
+        rowBg: selected ? 'var(--interactive-bg)' : c.status === 'vencido' ? 'color-mix(in srgb, var(--danger-bg) 40%, transparent)' : c.diffDays === 0 ? 'color-mix(in srgb, var(--warning-bg) 40%, transparent)' : 'none',
+      };
+    }).map((row) => ({ ...row, gridStyle: rowGridStyleBase(row.rowBg) }));
+
+    const registrationPeriods = [
+      { key: 'all', label: 'Todos' }, { key: 'today', label: 'Hoje' }, { key: 'last7', label: 'Últimos 7 dias' }, { key: 'month', label: 'Este mês' },
+    ].map((p) => ({
+      key: p.key, label: p.label,
+      style: `min-height:32px;border-radius:6px;padding:0 12px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid ${s.registrationPeriod === p.key ? 'var(--foreground)' : 'var(--border)'};background:${s.registrationPeriod === p.key ? 'var(--foreground)' : 'var(--card)'};color:${s.registrationPeriod === p.key ? 'var(--background)' : 'var(--foreground)'}`,
+      onClick: () => this.applyRegistrationPeriod(p.key),
+    }));
+
+    const registrationHistory = Array.from({ length: 7 }, (_, idx) => {
+      const daysAgo = idx;
+      const d = new Date(today); d.setDate(d.getDate() - daysAgo);
+      const count = CLIENTS_ALL.filter((c) => c.createdDaysAgo === daysAgo).length;
+      const isSelected = s.registrationPeriod === 'custom' && s._regExactDay === daysAgo;
+      return {
+        label: idx === 0 ? 'Hoje' : d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+        count, date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        style: `display:flex;flex-direction:column;gap:4px;border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;border:1px solid ${isSelected ? 'var(--interactive)' : 'var(--border)'};background:${isSelected ? 'var(--interactive-bg)' : 'var(--card)'}`,
+        onClick: () => this.applyRegistrationDay(daysAgo),
+      };
+    });
+
+    const segBase = (active) => `min-height:32px;border-radius:6px;padding:0 12px;font-size:11.5px;white-space:nowrap;flex-shrink:0;border:1px solid ${active ? 'var(--foreground)' : 'transparent'};background:${active ? 'var(--foreground)' : 'var(--secondary)'};color:${active ? 'var(--background)' : 'var(--secondary-foreground)'};font-weight:${active ? '600' : '500'};cursor:pointer`;
+    const quickSegments = [
+      { key: 'all', label: 'Todos', count: CLIENTS_ALL.length },
+      { key: 'overdue', label: 'Vencidos', count: CLIENTS_ALL.filter((c) => c.status === 'vencido').length },
+      { key: 'today', label: 'Vence hoje', count: CLIENTS_ALL.filter((c) => c.diffDays === 0).length },
+      { key: '7days', label: 'Próximos 7 dias', count: CLIENTS_ALL.filter((c) => c.diffDays > 0 && c.diffDays <= 7).length },
+      { key: 'suspended', label: 'Suspensos', count: CLIENTS_ALL.filter((c) => c.status === 'suspended').length },
+      { key: 'canceled', label: 'Cancelados', count: CLIENTS_ALL.filter((c) => c.status === 'canceled').length },
+      { key: 'no_whatsapp', label: 'Sem WhatsApp', count: CLIENTS_ALL.filter((c) => !c.phone).length },
+    ].map((seg) => ({ ...seg, style: segBase(s.quickFilter === seg.key), onClick: () => this.setQuickFilter(seg.key) }));
+
+    const statusOptions = [{ value: 'all', label: 'Todos os status' }, { value: 'active', label: 'Ativo' }, { value: 'vencido', label: 'Vencido' }, { value: 'suspended', label: 'Suspenso' }, { value: 'canceled', label: 'Cancelado' }]
+      .map((o) => ({ ...o, selected: s.filterStatus === o.value }));
+    const serviceOptions2 = [{ value: 'all', label: 'Todos os serviços' }, ...SERVICES.map((n) => ({ value: n, label: n }))].map((o) => ({ ...o, selected: s.filterService === o.value }));
+    const formServiceOptions = SERVICES.map((n) => ({ value: n, label: n, selected: s.form.service === n }));
+
+    const hasActiveAdvanced = s.filterStatus !== 'all' || s.filterService !== 'all' || !!s.filterDateFrom || !!s.filterDateTo;
+    const activeFilterCount = [s.filterStatus !== 'all', s.filterService !== 'all', !!(s.filterDateFrom || s.filterDateTo)].filter(Boolean).length;
+    const hasAnyFilter = s.quickFilter !== 'all' || hasActiveAdvanced || s.registrationPeriod !== 'all' || q.length > 0;
+
+    // Growth chart (6 months)
+    const CW = Math.max(240, s.growthChartW), padL = 46, padT = 16, padB = 30, plotH = 220 - padT - padB;
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const base = 4 + Math.round(seeded(i * 3.3) * 10);
+      return { label: new Date(today.getFullYear(), today.getMonth() - (5 - i), 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''), value: base };
+    });
+    let cum = 0;
+    const cumSeries = months.map((m) => { cum += m.value; return cum; });
+    const maxVal = Math.max(...months.map((m) => m.value), ...cumSeries) * 1.15;
+    const slotW = (CW - padL - 8) / months.length;
+    const barW = Math.max(14, Math.min(34, slotW * 0.42));
+    const valY = (v) => 220 - padB - (v / maxVal) * plotH;
+    const growthBars = months.map((m, i) => {
+      const cx = padL + slotW * i + slotW / 2;
+      const h = (m.value / maxVal) * plotH;
+      const hovered = s.growthHoverIdx === i;
+      return {
+        trackX: cx - barW / 2 - 4, trackWidth: barW + 8, x: cx - barW / 2, y: 220 - padB - h, width: barW, height: Math.max(2, h),
+        label: m.label, leftPct: (cx / CW) * 100, opacity: hovered ? 1 : 0.85,
+        hitX: cx - slotW / 2 + 1, hitWidth: slotW - 2, onEnter: () => this.setState({ growthHoverIdx: i }), onLeave: () => this.setState({ growthHoverIdx: null }),
+        newLabel: String(m.value), cumLabel: String(cumSeries[i]),
+      };
+    });
+    const growthLinePoints = months.map((m, i) => `${padL + slotW * i + slotW / 2},${valY(cumSeries[i])}`).join(' ');
+    const growthDots = months.map((m, i) => ({ cx: padL + slotW * i + slotW / 2, cy: valY(cumSeries[i]), r: s.growthHoverIdx === i ? 5 : 3.5 }));
+    const growthGrid = [0.25, 0.5, 0.75, 1].map((f) => { const y = 220 - padB - f * plotH; return { y, label: compactCurrency(0).replace('R$ ', '') === '0' ? String(Math.round(maxVal * f)) : String(Math.round(maxVal * f)), topPct: (y / 220) * 100 }; });
+    const hasGrowthHover = s.growthHoverIdx !== null;
+    const growthHoverData = hasGrowthHover ? growthBars[s.growthHoverIdx] : null;
+    const currentMonthNew = months.at(-1).value, previousMonthNew = months.at(-2).value;
+    const growthDiff = currentMonthNew - previousMonthNew;
+    const growthDiffPct = previousMonthNew ? Math.round((growthDiff / previousMonthNew) * 100) : 0;
+
+    // status donut
+    const statusCounts = {};
+    CLIENTS_ALL.forEach((c) => { statusCounts[c.status] = (statusCounts[c.status] || 0) + 1; });
+    const statusColorMap = { active: 'var(--chart-1)', vencido: 'var(--chart-4)', suspended: 'var(--chart-3)', canceled: 'var(--chart-5)', pending: 'var(--chart-2)' };
+    const statusEntries = Object.entries(statusCounts);
+    const statusTotal = statusEntries.reduce((t, [, v]) => t + v, 0);
+    const r = 58, sw = 20, circumference = 2 * Math.PI * r;
+    let scum = 0;
+    const statusRows = statusEntries.map(([key, count], i) => {
+      const frac = count / statusTotal;
+      const dash = frac * circumference;
+      const hovered = s.statusHoverIdx === i;
+      const row = {
+        color: statusColorMap[key] || 'var(--chart-2)', dasharray: `${dash} ${circumference - dash}`, dashoffset: -scum * circumference,
+        label: (STATUS_META[key] || {}).label || key, count, share: (frac * 100).toFixed(0),
+        strokeWidth: hovered ? 24 : sw, opacity: s.statusHoverIdx === null || hovered ? 1 : 0.4,
+        rowBg: hovered ? 'var(--muted)' : 'transparent', onEnter: () => this.setState({ statusHoverIdx: i }), onLeave: () => this.setState({ statusHoverIdx: null }),
+      };
+      scum += frac;
+      return row;
+    });
+    const hoveredStatus = s.statusHoverIdx !== null ? statusRows[s.statusHoverIdx] : null;
+
+    const selectedCount = Object.keys(s.selectedIds).length;
+
+    // profile
+    const profileClient = s.profileClientId ? CLIENTS_ALL.find((c) => c.id === s.profileClientId) : null;
+    let profile = null;
+    if (profileClient) {
+      const due = new Date(today); due.setDate(due.getDate() + profileClient.diffDays);
+      profile = {
+        name: profileClient.name, initials: initials(profileClient.name), statusStyle: statusBadgeStyle(profileClient.status), statusLabel: (STATUS_META[profileClient.status] || {}).label,
+        phoneLabel: profileClient.phone ? 'WhatsApp cadastrado' : 'Sem telefone cadastrado', daysAsClient: profileClient.createdDaysAgo,
+        isOverdue: profileClient.status === 'vencido', borderColor: profileClient.status === 'vencido' ? 'var(--danger-border)' : 'var(--border)',
+        bandBg: profileClient.status === 'vencido' ? 'color-mix(in srgb, var(--danger-bg) 45%, var(--card))' : 'var(--card)',
+        dueLabel: due.toLocaleDateString('pt-BR'), prazoLabel: prazoLabel(profileClient.diffDays), prazoColor: prazoColor(profileClient.diffDays),
+        renewalCount: profileClient.renewalCount, service: profileClient.service, screens: profileClient.screens, screensLabel: profileClient.screens === 1 ? 'tela' : 'telas',
+        valueLabel: fmt(profileClient.planValue),
+      };
+    }
+
+    // Renew dialog
+    const renewClient = s.renewClientId ? CLIENTS_ALL.find((c) => c.id === s.renewClientId) : null;
+    const renewServiceOptions = renewClient ? [
+      { key: 'keep', label: `Manter atual · ${renewClient.service}` },
+      ...SERVICES.filter((n) => n !== renewClient.service).map((n) => ({ key: n, label: n })),
+    ].map((o) => ({ ...o, isSelected: s.renewService === o.key })) : [];
+    const renewPeriodOptions = [1, 3, 6, 12].map((n) => ({
+      months: n, label: `${n} ${n === 1 ? 'mês' : 'meses'}`,
+      style: `min-height:44px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid ${s.renewPeriod === n ? 'var(--interactive)' : 'var(--border)'};background:${s.renewPeriod === n ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.renewPeriod === n ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+      onSelect: () => this.setRenewPeriod(n),
+    }));
+    const renewPaymentOptions = [{ key: 'pix', label: 'PIX' }, { key: 'dinheiro', label: 'Dinheiro' }, { key: 'cartao', label: 'Cartão' }].map((p) => ({
+      key: p.key, label: p.label,
+      style: `flex:1;min-height:38px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${s.renewPayment === p.key ? 'var(--interactive)' : 'var(--border)'};background:${s.renewPayment === p.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.renewPayment === p.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+      onSelect: () => this.setRenewPayment(p.key),
+    }));
+    const renewValue = renewClient ? renewClient.planValue : 0;
+    const renewTotal = fmt(renewValue * s.renewPeriod);
+    const renewDueBase = new Date(today); if (renewClient) renewDueBase.setDate(renewDueBase.getDate() + renewClient.diffDays);
+    const renewNewDueDate = new Date(renewDueBase); renewNewDueDate.setMonth(renewNewDueDate.getMonth() + s.renewPeriod);
+    const renewNotifyTrackStyle = `display:inline-flex;align-items:center;width:32px;height:18px;border-radius:9999px;background:${s.renewNotify ? 'var(--money)' : '#dcdbd5'};padding:2px;transition:background .15s;flex-shrink:0`;
+    const renewNotifyThumbStyle = `width:14px;height:14px;border-radius:9999px;background:#fff;transform:translateX(${s.renewNotify ? '14px' : '0'});transition:transform .15s;display:block`;
+
+    const isFormDados = s.formStep === 'dados', isFormPlano = s.formStep === 'plano';
+    const formSteps = [{ key: 'dados', label: 'Dados' }, { key: 'plano', label: 'Plano' }].map((st, i) => {
+      const active = s.formStep === st.key;
+      return {
+        key: st.key, label: st.label, onClick: () => this.setFormStep(st.key),
+        style: `flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:${active ? '600' : '500'};background:${active ? 'var(--muted)' : 'none'};color:${active ? 'var(--foreground)' : 'var(--muted-foreground)'}`,
+        badgeStyle: `width:18px;height:18px;border-radius:9999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:${active ? 'var(--foreground)' : 'var(--border)'};color:${active ? 'var(--background)' : 'var(--muted-foreground)'}`,
+        badgeContent: String(i + 1),
+      };
+    });
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, goPainel: this.goPainel,
+      totalCount: CLIENTS_ALL.length, visibleCount: filtered.length,
+      reportsOpen: s.reportsOpen, toggleReports: this.toggleReports,
+      downloadDay: () => this.downloadReport('do dia'), downloadMonth: () => this.downloadReport('do mês'), downloadAll: () => this.downloadReport('completo'),
+      openCreateClient: this.openCreateClient,
+
+      searchTerm: s.searchTerm, setSearchTerm: this.setSearchTerm,
+      advancedOpen: s.advancedOpen, toggleAdvanced: this.toggleAdvanced,
+      statusOptions, serviceOptions2, filterDateFrom: s.filterDateFrom, filterDateTo: s.filterDateTo,
+      setFilterStatus: this.setFilterStatus, setFilterService: this.setFilterService, setFilterDateFrom: this.setFilterDateFrom, setFilterDateTo: this.setFilterDateTo,
+      hasActiveAdvanced, activeFilterCount, clearAdvanced: this.clearAdvanced, hasAnyFilter, clearAllFilters: this.clearAllFilters,
+
+      registrationPeriods, registeredFrom: s.registeredFrom, registeredTo: s.registeredTo, setRegisteredFrom: this.setRegisteredFrom, setRegisteredTo: this.setRegisteredTo,
+      registrationHistory, quickSegments,
+
+      hasSelection: selectedCount > 0, selectionCountLabel: `${selectedCount} selecionado${selectedCount === 1 ? '' : 's'}`,
+      bulkWhatsapp: () => this.bulkAction('Mensagem enviada'), bulkPix: () => this.bulkAction('PIX gerado'), bulkExport: () => this.bulkAction('Exportado'),
+      openBulkDelete: this.openBulkDelete, clearSelection: this.clearSelection,
+
+      isEmptyResults: filtered.length === 0, hasResults: filtered.length > 0, pagedClients,
+      tableRef: this.tableRef, tableHeaderStyle, showServiceCol, showCreatedCol,
+      currentPage, totalPages, isFirstPage: currentPage <= 1, isLastPage: currentPage >= totalPages,
+      prevOpacity: currentPage <= 1 ? '.5' : '1', nextOpacity: currentPage >= totalPages ? '.5' : '1',
+      prevPage: () => this.setState((st) => ({ currentPage: Math.max(1, st.currentPage - 1) })),
+      nextPage: () => this.setState((st) => ({ currentPage: Math.min(totalPages, st.currentPage + 1) })),
+
+      growthChartRef: this.growthChartRef, growthChartWidth: CW, growthGrid, growthBars, growthLinePoints, growthDots,
+      hasGrowthHover, growthHoverData,
+      currentMonthNew, previousMonthNew, growthDiffColor: growthDiff < 0 ? 'var(--danger)' : 'var(--success-fg)',
+      growthDiffLabel: `${growthDiff >= 0 ? '+' : ''}${growthDiffPct}%`,
+
+      statusRows, statusDonutLabel: hoveredStatus ? hoveredStatus.label.toUpperCase() : 'TOTAL', statusDonutValue: hoveredStatus ? `${hoveredStatus.count} · ${hoveredStatus.share}%` : String(statusTotal),
+
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, description: t.description || '', hasDesc: !!t.description, onClose: () => this.removeToast(t.id) })),
+      stop: this.stop,
+
+      profileOpen: s.profileOpen, closeProfile: this.closeProfile, hasProfile: !!profile, profile,
+      profileWhatsapp: () => profileClient && this.handleWhatsapp(profileClient), profileCobrar: () => profileClient && this.handleCobrar(profileClient),
+
+      renewOpen: s.renewOpen, closeRenew: this.closeRenew, renewClientName: renewClient ? renewClient.name : '',
+      renewServiceOptions, setRenewService: this.setRenewService,
+      renewPeriodOptions, renewPaymentOptions, renewTotalLabel: renewTotal,
+      renewNewDueLabel: renewClient ? renewNewDueDate.toLocaleDateString('pt-BR') : '',
+      renewNotifyTrackStyle, renewNotifyThumbStyle, toggleRenewNotify: this.toggleRenewNotify, submitRenew: this.submitRenew,
+
+      formOpen: s.formOpen, closeForm: this.closeForm, form: s.form,
+      formTitle: s.formMode === 'edit' ? 'Editar cliente' : 'Novo cliente',
+      formStepSubtitle: isFormDados ? 'Dados do assinante e canais de contato' : 'Serviço contratado, vencimento e valor',
+      formSteps, isFormDados, isFormPlano, goFormPlano: this.goFormPlano, goFormDados: this.goFormDados,
+      setFormName: this.setFormName, setFormPhone: this.setFormPhone, setFormEmail: this.setFormEmail,
+      setFormService: this.setFormService, setFormPlanValue: this.setFormPlanValue, setFormScreens: this.setFormScreens, setFormDueDate: this.setFormDueDate,
+      formServiceOptions, submitForm: this.submitForm, submitLabel: s.formMode === 'edit' ? 'Salvar alterações' : 'Criar cliente',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

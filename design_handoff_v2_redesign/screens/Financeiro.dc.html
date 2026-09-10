@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes goalShine { 0% { background-position:200% 0; } 100% { background-position:-40% 0; } }
+    @keyframes goalPulse { 0%,100% { transform:translate(40%,-50%) scale(1); } 50% { transform:translate(40%,-50%) scale(1.12); } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:1024px){[data-hide-lg]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-mobile-only]{display:none}
+    @media (max-width:768px){[data-mobile-only]{display:block!important}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="return false" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--sidebar-accent-fg)">3</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Automação') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+      </a></div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <svg data-hide-lg="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <button type="button" onclick="{{ togglePrivacy }}" style="width:32px;height:32px;border:none;background:none;border-radius:9999px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <sc-if value="{{ privacyOn }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M10.6 5.2A10.4 10.4 0 0 1 12 5c6 0 9.5 6 9.9 7a13 13 0 0 1-3 3.9M6.6 6.6C3.9 8.3 2.4 11 2.1 12c.4 1 3.3 6 9.9 7a9.7 9.7 0 0 0 3.2-.5"></path><path d="M9.9 10a3 3 0 0 0 4.2 4.2"></path></svg></sc-if>
+        <sc-if value="{{ privacyOff }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.1 12S5.6 5 12 5s9.9 7 9.9 7-3.5 7-9.9 7-9.9-7-9.9-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+      </button>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div data-hide-narrow="true"><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:24px">
+
+      <!-- WORKSPACE HEADER -->
+      <section style="border-radius:8px;border:1px solid var(--border);background:var(--card)">
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:22px 24px">
+          <span style="width:40px;height:40px;border-radius:8px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="14" rx="2.4"></rect><path d="M2.5 10h19"></path><circle cx="17" cy="15" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+          </span>
+          <div style="min-width:0">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Visão financeira</p>
+            <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Financeiro</h1>
+            <p style="margin:8px 0 0;max-width:560px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Planeje a receita, acompanhe riscos e confira cada entrada sem perder o contexto.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANNING OVERVIEW -->
+      <section style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+        <div style="border-bottom:1px solid var(--border);background:var(--muted);padding:16px 20px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle></svg></span>
+            <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Planejamento financeiro</p><h2 style="margin:2px 0 0;font-size:14px;font-weight:600;color:var(--foreground)">Meta e próximas entradas</h2></div>
+          </div>
+          <p style="margin:10px 0 0;max-width:640px;font-size:12px;line-height:1.6;color:var(--muted-foreground)">Acompanhe o realizado de {{ monthLabelLower }} e o potencial da carteira ativa para {{ nextMonthLabelLower }}.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.8fr)">
+          <div style="padding:20px;border-right:1px solid var(--border)">
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between">
+              <div>
+                <p style="margin:0;font-size:12px;font-weight:500;color:var(--muted-foreground)">Recebido em {{ monthLabel }}</p>
+                <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.045em;color:var(--money)">{{ receivedLabel }}</p>
+              </div>
+              <div style="text-align:right">
+                <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                  <p style="margin:0;font-size:12px;font-weight:500;color:var(--muted-foreground)">Meta mensal</p>
+                  <button type="button" onclick="{{ toggleGoalEdit }}" title="Editar meta" style="width:22px;height:22px;border:none;background:none;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+                </div>
+                <sc-if value="{{ goalEditing }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">
+                    <input value="{{ goalDraft }}" oninput="{{ setGoalDraft }}" placeholder="0,00" style="width:120px;height:34px;border:1px solid var(--input);border-radius:7px;padding:0 8px;font-size:12px;background:none;color:var(--foreground);text-align:right"/>
+                    <button type="button" onclick="{{ saveGoal }}" style="width:34px;height:34px;border:none;border-radius:7px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ goalEditing }}" hint-placeholder-val="{{ false }}"></sc-if>
+                <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:20px;font-weight:600;color:var(--foreground);display:{{ goalDisplayShow }}">{{ goalLabel }}</p>
+              </div>
+            </div>
+            <div style="margin-top:20px;position:relative;padding-right:{{ goalOverflowPad }}px">
+              <div style="height:10px;border-radius:9999px;background:linear-gradient(90deg, color-mix(in srgb, #c0453f 18%, var(--muted)), color-mix(in srgb, #d9a418 18%, var(--muted)), color-mix(in srgb, var(--money) 22%, var(--muted)));overflow:hidden">
+                <div style="position:relative;height:100%;border-radius:9999px;background:linear-gradient(90deg, #c0453f, #d9a418, var(--money));width:{{ goalProgressPct }}%;transition:width .6s ease-out;overflow:hidden">
+                  <div style="position:absolute;inset:0;background:linear-gradient(110deg, transparent 0%, rgba(255,255,255,.55) 45%, transparent 65%);background-size:200% 100%;animation:goalShine 2.2s ease-in-out infinite"></div>
+                </div>
+              </div>
+              <sc-if value="{{ goalExceeded }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:50%;right:0;transform:translate(40%,-50%);display:inline-flex;align-items:center;gap:4px;background:var(--money);color:#fff;border-radius:9999px;padding:3px 8px 3px 7px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px color-mix(in srgb, var(--money) 45%, transparent);animation:goalPulse 1.6s ease-in-out infinite">↑ {{ goalOverflowPct }}%</span>
+              </sc-if>
+            </div>
+              <div style="display:flex;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <span style="font-size:12px;color:var(--muted-foreground)">{{ goalProgressLabel }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ goalRemainingLabel }}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;background:var(--muted);padding:16px">
+            <sc-for list="{{ planningSignals }}" as="sig" hint-placeholder-count="3">
+              <div style="display:flex;gap:10px;border-radius:8px;border:1px solid {{ sig.border }};background:{{ sig.bg }};padding:14px">
+                <span style="width:34px;height:34px;border-radius:8px;background:var(--card);color:{{ sig.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0" data-icon="{{ sig.icon }}">{{ sig.iconGlyph }}</span>
+                <div style="min-width:0">
+                  <p style="margin:0;font-size:11.5px;font-weight:500;color:var(--muted-foreground)">{{ sig.label }}</p>
+                  <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:16px;font-weight:600;color:{{ sig.valueColor }}">{{ sig.value }}</p>
+                  <p style="margin:3px 0 0;font-size:10.5px;line-height:1.5;color:var(--muted-foreground)">{{ sig.hint }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <!-- UPGRADE BANNER -->
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:10px;border:1px solid var(--accent);background:var(--interactive-bg);padding:12px 16px">
+        <p style="flex:1;min-width:220px;margin:0;font-size:12px;line-height:1.6;color:var(--muted-foreground)"><strong style="color:var(--interactive-fg)">Visão financeira básica ativa.</strong> Previsões por ciclo, risco e comparativos históricos estão disponíveis no Pro.</p>
+        <button type="button" onclick="{{ toastNav('Planos') }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11px;font-weight:500;cursor:pointer">Conhecer o Pro</button>
+      </div>
+
+      <!-- PIX OVERVIEW -->
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Recebimentos rápidos</p><h2 style="margin:4px 0 0;font-size:16px;font-weight:600;color:var(--foreground)">PIX</h2></div>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ pixPaidMonthCount }} pagos no mês</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:12px">
+          <div style="border-radius:8px;border:1px solid var(--warning-border);background:color-mix(in srgb, var(--warning-bg) 65%, transparent);padding:14px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">PIX pendentes</p>
+            <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--warning-fg)">{{ pixPendingAmount }}</p>
+            <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ pixPendingCount }} em aberto</p>
+          </div>
+          <div style="border-radius:8px;border:1px solid var(--success-border);background:color-mix(in srgb, var(--success-bg) 65%, transparent);padding:14px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">PIX pagos hoje</p>
+            <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--money)">{{ pixTodayAmount }}</p>
+            <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ pixTodayCount }} confirmações</p>
+          </div>
+          <div style="border-radius:8px;border:1px solid color-mix(in srgb, var(--interactive) 20%, transparent);background:color-mix(in srgb, var(--interactive-bg) 65%, transparent);padding:14px">
+            <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">PIX no mês</p>
+            <p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:18px;font-weight:600;color:var(--interactive-fg)">{{ pixMonthAmount }}</p>
+            <p style="margin:2px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ pixPaidMonthCount }} pagos</p>
+          </div>
+        </div>
+
+        <!-- PIX history -->
+        <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <button type="button" onclick="{{ togglePixHistory }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:none;background:none;cursor:pointer;text-align:left">
+            <div><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Histórico de cobranças PIX</p><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Abra para revisar status, telefone e expiração das últimas cobranças.</p></div>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--interactive-fg);flex-shrink:0">últimas {{ pixChargesCount }} · {{ pixHistoryToggleLabel }}</span>
+          </button>
+          <sc-if value="{{ pixHistoryOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid var(--border)">
+              <div data-hide-md="true" style="display:grid;grid-template-columns:110px 80px 90px minmax(0,1fr) 90px 110px;gap:10px;padding:10px 16px;font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground);border-bottom:1px solid var(--border)">
+                <span>Data</span><span>Status</span><span>Tipo</span><span>Telefone</span><span style="text-align:right">Valor</span><span>Expira</span>
+              </div>
+              <sc-for list="{{ pixCharges }}" as="pc" hint-placeholder-count="4">
+                <div data-hide-md="true" style="display:grid;grid-template-columns:110px 80px 90px minmax(0,1fr) 90px 110px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11.5px">
+                  <span style="font-family:'Geist Mono',monospace;color:var(--muted-foreground)">{{ pc.dateLabel }}</span>
+                  <span><span style="{{ pc.statusStyle }}">{{ pc.statusLabel }}</span></span>
+                  <span style="color:var(--foreground)">{{ pc.purposeLabel }}</span>
+                  <span style="font-family:'Geist Mono',monospace;color:var(--muted-foreground)">{{ pc.phone }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-weight:600;text-align:right;color:var(--foreground)">{{ pc.amountLabel }}</span>
+                  <span style="color:var(--muted-foreground)">{{ pc.expiresLabel }}</span>
+                </div>
+              </sc-for>
+              <div data-mobile-only="true">
+                <sc-for list="{{ pixCharges }}" as="pcm" hint-placeholder-count="4">
+                  <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="{{ pcm.statusStyle }}">{{ pcm.statusLabel }}</span><span style="font-family:'Geist Mono',monospace;font-weight:600;font-size:13px">{{ pcm.amountLabel }}</span></div>
+                    <p style="margin:8px 0 0;font-size:11px;color:var(--muted-foreground)">{{ pcm.purposeLabel }} · {{ pcm.phone }}</p>
+                    <p style="margin:2px 0 0;font-size:10px;color:var(--muted-foreground)">{{ pcm.dateLabel }} · expira {{ pcm.expiresLabel }}</p>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+
+      <!-- REPORT FILTERS -->
+      <section style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Relatório de recebimentos</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Filtre, confira e exporte</h2></div>
+          <div style="display:flex;gap:8px">
+            <button type="button" onclick="{{ exportPdf }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path></svg>Exportar PDF</button>
+            <button type="button" onclick="{{ exportExcel }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.4"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>Exportar Excel</button>
+          </div>
+        </div>
+
+        <div style="border-radius:8px;border:1px solid var(--border);background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ shortcutOptions }}" as="sc" hint-placeholder-count="5"><button type="button" onclick="{{ sc.onClick }}" style="{{ sc.style }}">{{ sc.label }}</button></sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+            <div><p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Status do cliente</p>
+              <select onchange="{{ setFilterStatus }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12px;background:none;color:var(--foreground)">
+                <sc-for list="{{ statusFilterOptions }}" as="so" hint-placeholder-count="5"><option value="{{ so.value }}" selected="{{ so.selected }}">{{ so.label }}</option></sc-for>
+              </select>
+            </div>
+            <div><p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Forma de pagamento</p>
+              <select onchange="{{ setFilterPayment }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12px;background:none;color:var(--foreground)">
+                <sc-for list="{{ paymentFilterOptions }}" as="po" hint-placeholder-count="4"><option value="{{ po.value }}" selected="{{ po.selected }}">{{ po.label }}</option></sc-for>
+              </select>
+            </div>
+            <div><p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Serviço</p>
+              <select onchange="{{ setFilterService }}" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 10px;font-size:12px;background:none;color:var(--foreground)">
+                <sc-for list="{{ serviceFilterOptions }}" as="fo" hint-placeholder-count="5"><option value="{{ fo.value }}" selected="{{ fo.selected }}">{{ fo.label }}</option></sc-for>
+              </select>
+            </div>
+            <div style="grid-column:span 2;min-width:220px"><p style="margin:0 0 6px;font-size:11px;font-weight:500;color:var(--secondary-foreground)">Buscar</p>
+              <div style="position:relative">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input value="{{ filterSearch }}" oninput="{{ setFilterSearch }}" placeholder="Cliente, serviço ou forma de pagamento" style="width:100%;height:38px;border:1px solid var(--input);border-radius:7px;padding:0 12px 0 32px;font-size:12px;background:none;color:var(--foreground)"/>
+              </div>
+            </div>
+          </div>
+          <sc-if value="{{ hasReportFilter }}"><button type="button" onclick="{{ clearReportFilters }}" style="align-self:flex-start;height:32px;padding:0 4px;border:none;background:none;color:var(--danger);font-size:11.5px;font-weight:600;cursor:pointer">Limpar filtros</button></sc-if>
+        </div>
+
+        <!-- PERIOD METRICS -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;border-radius:8px;border:1px solid var(--border);background:var(--muted);padding:12px">
+          <sc-for list="{{ periodMetrics }}" as="pm" hint-placeholder-count="4">
+            <div style="border-radius:8px;border:1px solid {{ pm.border }};background:{{ pm.bg }};padding:14px">
+              <p style="margin:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">{{ pm.label }}</p>
+              <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:19px;font-weight:600;letter-spacing:-.02em;color:{{ pm.valueColor }}">{{ pm.value }}</p>
+              <p style="margin:4px 0 0;font-size:10.5px;color:var(--muted-foreground)">{{ pm.hint }}</p>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- DAILY BAR CHART: entradas/custos -->
+        <article style="overflow:hidden;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:14px 18px">
+            <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Entradas, custos e líquido <span style="font-weight:400;color:var(--muted-foreground);font-size:11px">{{ reportPeriodLabelLower }}</span></p>
+            <div style="display:flex;gap:12px;font-size:10px;color:var(--muted-foreground)"><span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--money)"></span>líquido</span><span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--interactive);opacity:.35"></span>custos</span></div>
+          </div>
+          <div ref="{{ dailyChartRef }}" style="padding:16px 18px 44px">
+            <svg viewBox="0 0 {{ dailyChartWidth }} 220" width="100%" height="220" preserveAspectRatio="xMinYMin meet" style="display:block;overflow:visible">
+              <defs>
+                <linearGradient id="dcLiqGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--money)" stop-opacity="0.95"></stop>
+                  <stop offset="100%" stop-color="var(--money)" stop-opacity="0.65"></stop>
+                </linearGradient>
+                <linearGradient id="dcRestGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--interactive)" stop-opacity="0.28"></stop>
+                  <stop offset="100%" stop-color="var(--interactive)" stop-opacity="0.12"></stop>
+                </linearGradient>
+              </defs>
+              <sc-for list="{{ dailyGrid }}" as="dg" hint-placeholder-count="4">
+                <line x1="44" y1="{{ dg.y }}" x2="{{ dailyChartWidth }}" y2="{{ dg.y }}" stroke="var(--border)" stroke-dasharray="3 4"></line>
+                <text x="38" y="{{ dg.y }}" dy="3" text-anchor="end" font-family="'Geist Mono',monospace" font-size="9" fill="var(--muted-foreground)">{{ dg.label }}</text>
+              </sc-for>
+              <sc-for list="{{ dailyBars }}" as="db" hint-placeholder-count="7">
+                <rect x="{{ db.x }}" y="{{ db.restY }}" width="{{ db.width }}" height="{{ db.totalH }}" rx="6" fill="var(--muted)"></rect>
+                <rect x="{{ db.x }}" y="{{ db.restY }}" width="{{ db.width }}" height="{{ db.restH }}" rx="6" fill="url(#dcRestGrad)"></rect>
+                <rect x="{{ db.x }}" y="{{ db.liqY }}" width="{{ db.width }}" height="{{ db.liqH }}" rx="6" fill="url(#dcLiqGrad)" style="{{ db.barTransition }}"></rect>
+                <text x="{{ db.cx }}" y="{{ db.liqY }}" dy="-6" text-anchor="middle" font-family="'Geist Mono',monospace" font-size="9.5" font-weight="600" fill="var(--money)" opacity="{{ db.labelOpacity }}">{{ db.liqShort }}</text>
+                <rect x="{{ db.hitX }}" y="0" width="{{ db.hitWidth }}" height="220" fill="transparent" style="cursor:pointer" onmouseenter="{{ db.onEnter }}" onmouseleave="{{ db.onLeave }}"></rect>
+              </sc-for>
+            </svg>
+            <div style="position:relative;left:20px;right:20px;margin-top:-30px;pointer-events:none;height:44px">
+              <sc-for list="{{ dailyBars }}" as="db2" hint-placeholder-count="7"><span style="position:absolute;top:6px;left:{{ db2.leftPct }}%;transform:translateX(-50%) rotate(-28deg);transform-origin:top center;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground);white-space:nowrap">{{ db2.label }}</span></sc-for>
+            </div>
+            <sc-if value="{{ hasDailyHover }}" hint-placeholder-val="{{ false }}">
+              <div style="position:relative"><div style="position:absolute;bottom:210px;left:{{ dailyHoverData.leftPct }}%;transform:translateX(-50%);pointer-events:none;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.14);padding:8px 10px;white-space:nowrap;z-index:5">
+                <p style="margin:0;font-size:10px;font-weight:600;color:var(--foreground)">{{ dailyHoverData.label }}</p>
+                <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--money)">Líquido {{ dailyHoverData.liqLabel }}</p>
+                <p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">Custos {{ dailyHoverData.custoLabel }}</p>
+              </div></div>
+            </sc-if>
+          </div>
+        </article>
+
+        <!-- REVENUE BY SERVICE -->
+        <article style="overflow:hidden;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="border-bottom:1px solid var(--border);padding:14px 18px"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Receita por serviço</p><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">Receita recebida no recorte selecionado.</p></div>
+          <div ref="{{ serviceChartRef }}" style="padding:16px 18px 44px">
+            <svg viewBox="0 0 {{ serviceChartWidth }} 220" width="100%" height="220" preserveAspectRatio="xMinYMin meet" style="display:block;overflow:visible">
+              <defs>
+                <linearGradient id="scBarGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--interactive)" stop-opacity="0.95"></stop>
+                  <stop offset="100%" stop-color="var(--interactive)" stop-opacity="0.55"></stop>
+                </linearGradient>
+              </defs>
+              <sc-for list="{{ serviceGrid }}" as="svg2" hint-placeholder-count="4">
+                <line x1="44" y1="{{ svg2.y }}" x2="{{ serviceChartWidth }}" y2="{{ svg2.y }}" stroke="var(--border)" stroke-dasharray="3 4"></line>
+                <text x="38" y="{{ svg2.y }}" dy="3" text-anchor="end" font-family="'Geist Mono',monospace" font-size="9" fill="var(--muted-foreground)">{{ svg2.label }}</text>
+              </sc-for>
+              <sc-for list="{{ serviceBars }}" as="sb" hint-placeholder-count="6">
+                <rect x="{{ sb.trackX }}" y="{{ sb.trackY }}" width="{{ sb.trackWidth }}" height="{{ sb.trackH }}" rx="7" fill="var(--muted)"></rect>
+                <rect x="{{ sb.x }}" y="{{ sb.y }}" width="{{ sb.width }}" height="{{ sb.height }}" rx="7" fill="url(#scBarGrad)" opacity="{{ sb.opacity }}"></rect>
+                <text x="{{ sb.cx }}" y="{{ sb.y }}" dy="-6" text-anchor="middle" font-family="'Geist Mono',monospace" font-size="9.5" font-weight="600" fill="var(--interactive-fg)">{{ sb.valueShort }}</text>
+                <rect x="{{ sb.hitX }}" y="0" width="{{ sb.hitWidth }}" height="220" fill="transparent" style="cursor:pointer" onmouseenter="{{ sb.onEnter }}" onmouseleave="{{ sb.onLeave }}"></rect>
+              </sc-for>
+            </svg>
+            <div style="position:relative;left:20px;right:20px;margin-top:-30px;pointer-events:none;height:44px">
+              <sc-for list="{{ serviceBars }}" as="sb2" hint-placeholder-count="6"><span style="position:absolute;top:6px;left:{{ sb2.leftPct }}%;transform:translateX(-50%) rotate(-28deg);transform-origin:top center;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground);white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis">{{ sb2.label }}</span></sc-for>
+            </div>
+            <sc-if value="{{ hasServiceHover }}" hint-placeholder-val="{{ false }}">
+              <div style="position:relative"><div style="position:absolute;bottom:210px;left:{{ serviceHoverData.leftPct }}%;transform:translateX(-50%);pointer-events:none;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.14);padding:8px 10px;white-space:nowrap;z-index:5">
+                <p style="margin:0;font-size:10px;font-weight:600;color:var(--foreground)">{{ serviceHoverData.label }}</p>
+                <p style="margin:3px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--interactive-fg)">{{ serviceHoverData.valueLabel }}</p>
+              </div></div>
+            </sc-if>
+          </div>
+        </article>
+      </section>
+
+      <!-- MOVEMENTS TABLE -->
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Movimentações detalhadas</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--foreground)">Todos os pagamentos filtrados</h2></div>
+
+        <div ref="{{ tableRef }}" style="border-radius:8px;border:1px solid var(--border);background:var(--card);overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:12px 16px;flex-wrap:wrap">
+            <p style="margin:0;font-size:12px;font-weight:500;color:var(--foreground)">{{ tableCountLabel }}</p>
+            <div style="position:relative">
+              <button type="button" onclick="{{ toggleColumnsMenu }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16M12 4v16M20 4v16"></path></svg>Colunas</button>
+              <sc-if value="{{ columnsMenuOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:36px;right:0;width:190px;background:var(--popover);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px;z-index:40">
+                  <sc-for list="{{ columnToggleOptions }}" as="ct" hint-placeholder-count="4">
+                    <button type="button" onclick="{{ ct.onToggle }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 9px;border:none;background:none;border-radius:6px;font-size:12px;color:var(--foreground);cursor:pointer;text-align:left">
+                      <span style="{{ ct.checkStyle }}"><sc-if value="{{ ct.checked }}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--background)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if></span>
+                      {{ ct.label }}
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ tableEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:48px 16px;text-align:center"><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nenhuma movimentação encontrada</p><p style="margin:4px 0 0;font-size:11.5px;color:var(--muted-foreground)">Ajuste os filtros ou escolha outro período.</p></div>
+          </sc-if>
+
+          <sc-if value="{{ tableHasRows }}" hint-placeholder-val="{{ true }}">
+            <div data-hide-md="true" style="{{ tableHeaderStyle }}">
+              <span>Data</span><span>Cliente</span>
+              <sc-if value="{{ showCategoryCol }}"><span>Serviço</span></sc-if>
+              <sc-if value="{{ showMethodCol }}"><span>Pagamento</span></sc-if>
+              <sc-if value="{{ showStatusCol }}"><span>Status</span></sc-if>
+              <span style="text-align:right">Valor</span>
+            </div>
+            <div data-hide-md="true">
+              <sc-for list="{{ pagedPayments }}" as="p" hint-placeholder-count="8">
+                <div style="{{ p.gridStyle }}">
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground);white-space:nowrap">{{ p.dateLabel }}</span>
+                  <span style="min-width:0"><span style="display:block;font-size:12.5px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.clientName }}</span><span style="display:block;font-size:10.5px;color:var(--muted-foreground)">{{ p.typeLabel }}</span></span>
+                  <sc-if value="{{ showCategoryCol }}"><span style="min-width:0;font-size:12px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.serviceLabel }}</span></sc-if>
+                  <sc-if value="{{ showMethodCol }}"><span style="font-size:12px;color:var(--muted-foreground)">{{ p.methodLabel }}</span></sc-if>
+                  <sc-if value="{{ showStatusCol }}"><span><span style="{{ p.statusStyle }}">{{ p.statusLabel }}</span></span></sc-if>
+                  <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--money)">{{ p.amountLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div data-mobile-only="true">
+              <sc-for list="{{ pagedPayments }}" as="pm2" hint-placeholder-count="4">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div><p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">{{ pm2.clientName }}</p><p style="margin:2px 0 0;font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ pm2.dateLabel }}</p></div><p style="margin:0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">{{ pm2.amountLabel }}</p></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:10.5px;color:var(--muted-foreground)"><span>{{ pm2.methodLabel }}</span><span>·</span><span>{{ pm2.serviceLabel }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;flex-wrap:wrap;border-top:1px solid var(--border)">
+              <p style="margin:0;font-size:11px;color:var(--muted-foreground)">página {{ currentPage }} de {{ totalPages }}</p>
+              <div style="display:flex;gap:6px">
+                <button type="button" onclick="{{ prevPage }}" disabled="{{ isFirstPage }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ prevOpacity }}">← Anterior</button>
+                <button type="button" onclick="{{ nextPage }}" disabled="{{ isLastPage }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ nextOpacity }}">Próxima →</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+
+      <!-- ANNUAL CASHFLOW + SERVICE DISTRIBUTION -->
+      <section style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start">
+        <article style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:16px 20px">
+            <div><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Evolução de caixa</h3><p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Receita e lucro confirmados mês a mês em {{ currentYear }}.</p></div>
+            <div style="display:flex;gap:10px;font-size:10px;color:var(--muted-foreground)"><span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:2px;background:var(--interactive)"></span>Receita</span><span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:2px;background:var(--money)"></span>Lucro</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border);background:var(--muted)">
+            <div style="padding:12px;border-right:1px solid var(--border);text-align:center"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Receita no ano</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ annualRevenueLabel }}</p></div>
+            <div style="padding:12px;border-right:1px solid var(--border);text-align:center"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Lucro no ano</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--money)">{{ annualProfitLabel }}</p></div>
+            <div style="padding:12px;text-align:center"><p style="margin:0;font-family:'Geist Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Margem</p><p style="margin:4px 0 0;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--foreground)">{{ annualMarginLabel }}</p></div>
+          </div>
+          <div ref="{{ cashflowChartRef }}" style="padding:14px 18px 34px">
+            <svg viewBox="0 0 {{ cashflowChartWidth }} 220" width="100%" height="220" preserveAspectRatio="xMinYMin meet" style="display:block;overflow:visible">
+              <sc-for list="{{ cashflowGrid }}" as="cg" hint-placeholder-count="4"><line x1="44" y1="{{ cg.y }}" x2="{{ cashflowChartWidth }}" y2="{{ cg.y }}" stroke="var(--border)" stroke-dasharray="3 4"></line></sc-for>
+              <polyline points="{{ cashflowRevenuePoints }}" fill="none" stroke="var(--interactive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <polyline points="{{ cashflowProfitPoints }}" fill="none" stroke="var(--money)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <sc-for list="{{ cashflowDots }}" as="cd" hint-placeholder-count="6">
+                <circle cx="{{ cd.cx }}" cy="{{ cd.revY }}" r="3" fill="var(--card)" stroke="var(--interactive)" stroke-width="2"></circle>
+                <circle cx="{{ cd.cx }}" cy="{{ cd.profY }}" r="3" fill="var(--card)" stroke="var(--money)" stroke-width="2"></circle>
+              </sc-for>
+            </svg>
+            <div style="position:relative;left:20px;right:20px;margin-top:-30px;pointer-events:none;height:24px">
+              <sc-for list="{{ cashflowDots }}" as="cd2" hint-placeholder-count="6"><span style="position:absolute;top:4px;left:{{ cd2.leftPct }}%;transform:translateX(-50%);font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground);white-space:nowrap">{{ cd2.label }}</span></sc-for>
+            </div>
+          </div>
+        </article>
+
+        <article style="overflow:hidden;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <div style="border-bottom:1px solid var(--border);padding:16px 20px"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--foreground)">Distribuição por serviços</h3><p style="margin:4px 0 0;font-size:11px;color:var(--muted-foreground)">Participação real dos serviços nos vínculos da carteira.</p></div>
+          <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:16px;padding:18px 20px;align-items:center">
+            <div style="position:relative;display:flex;justify-content:center">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none"><span style="font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:var(--foreground)">{{ serviceLinksTotal }}</span><span style="font-size:9.5px;color:var(--muted-foreground)">vínculos</span></div>
+              <svg width="180" height="180" viewBox="0 0 150 150">
+                <sc-for list="{{ serviceDonutRows }}" as="sd" hint-placeholder-count="5">
+                  <circle cx="75" cy="75" r="58" fill="none" stroke="{{ sd.color }}" stroke-width="{{ sd.strokeWidth }}" stroke-opacity="{{ sd.opacity }}" stroke-dasharray="{{ sd.dasharray }}" stroke-dashoffset="{{ sd.dashoffset }}" transform="rotate(-90 75 75)" style="cursor:pointer;transition:stroke-width .15s" onmouseenter="{{ sd.onEnter }}" onmouseleave="{{ sd.onLeave }}"></circle>
+                </sc-for>
+              </svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ serviceDonutRows }}" as="sd2" hint-placeholder-count="5">
+                <div onmouseenter="{{ sd2.onEnter }}" onmouseleave="{{ sd2.onLeave }}" style="cursor:pointer">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:9999px;background:{{ sd2.color }};flex-shrink:0"></span><span style="flex:1;min-width:0;font-size:12px;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sd2.label }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted-foreground)">{{ sd2.count }}</span></div>
+                  <div style="margin-top:6px;height:5px;border-radius:9999px;background:var(--muted);overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ sd2.color }};width:{{ sd2.barWidth }}%"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+  '--chart-1': '#2e7d54', '--chart-2': '#4055c8', '--chart-3': '#c98a1e', '--chart-4': '#a0522d', '--chart-5': '#6b6f8a', '--chart-6': '#8a5fb0',
+};
+
+const SERVICE_BASE = ['IPTV','Netflix','Disney+','HBO Max','Prime Video','Paramount+','Apple TV+','Globoplay','Star+','YouTube Premium','Spotify','Deezer','Crunchyroll','ESPN','Telecine','ExpressVPN','NordVPN','Cloud Backup','Antivírus','Office 365'];
+const SERVICE_TIERS = ['Básico','Gold','Ultra'];
+const SERVICES = SERVICE_BASE.flatMap((b) => SERVICE_TIERS.map((t) => `${b} ${t}`));
+const NAME_POOL = ['Ana Beatriz Souza','Carlos Eduardo Lima','Fernanda Torres','Juliana Prado','Marcos Vinícius','Patrícia Gomes','Rafael Nunes','Bruna Castro','Diego Martins','Lucas Andrade','Mariana Alves','Pedro Henrique','Camila Duarte','Rodrigo Farias','Beatriz Lima','Thiago Moreira','Larissa Pinto','Gustavo Rocha','Isabela Cardoso','Felipe Barros'];
+const STATUSES = ['active','active','active','vencido','pending','suspended','canceled'];
+const METHODS = ['pix','pix','money','card'];
+
+function fmt(v) { return 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function compactCurrency(v) { const av = Math.abs(v); if (av >= 1000000) return `R$ ${(v / 1000000).toFixed(1)}mi`; if (av >= 1000) return `R$ ${(v / 1000).toFixed(1)}mil`; return `R$ ${Math.round(v)}`; }
+function seeded(n) { const x = Math.sin(n) * 10000; return x - Math.floor(x); }
+const STATUS_LABELS = { active: 'Ativo', vencido: 'Vencido', pending: 'Pendente', suspended: 'Suspenso', canceled: 'Cancelado' };
+const METHOD_LABELS = { pix: 'PIX', money: 'Dinheiro', card: 'Cartão' };
+
+function buildPayments() {
+  const out = [];
+  const today = new Date();
+  for (let i = 0; i < 90; i++) {
+    const daysAgo = Math.floor(seeded(i * 1.7) * 58);
+    const d = new Date(today); d.setDate(d.getDate() - daysAgo);
+    const name = NAME_POOL[i % NAME_POOL.length];
+    const service = SERVICES[Math.floor(seeded(i * 2.3) * SERVICES.length)];
+    const amount = Math.round((19.9 + seeded(i * 3.1) * 60) * 100) / 100;
+    const netProfit = Math.round(amount * (0.45 + seeded(i * 4.4) * 0.25) * 100) / 100;
+    out.push({
+      id: 'p' + i, date: d, clientName: name, service,
+      amount, netProfit, status: STATUSES[i % STATUSES.length], method: METHODS[i % METHODS.length],
+    });
+  }
+  return out.sort((a, b) => b.date - a.date);
+}
+const PAYMENTS_ALL = buildPayments();
+
+function buildPixCharges() {
+  const purposes = ['renewal', 'charge', 'manual'];
+  const statuses = ['paid', 'pending', 'expired', 'cancelled'];
+  const today = new Date();
+  return Array.from({ length: 8 }, (_, i) => {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const expires = new Date(d); expires.setDate(expires.getDate() + 1);
+    return {
+      id: 'pix' + i, created: d, status: statuses[i % statuses.length], purpose: purposes[i % purposes.length],
+      phone: i % 4 === 0 ? null : `(11) 9${1000 + i}-00${i}0`, amount: Math.round((25 + seeded(i * 9) * 60) * 100) / 100, expires,
+    };
+  });
+}
+const PIX_CHARGES_ALL = buildPixCharges();
+
+class Component extends DCLogic {
+  state = {
+    privacyOn: false, clock: '',
+    goalEditing: false, goalDraft: '3500', monthlyGoal: 3500,
+    pixHistoryOpen: false,
+    shortcut: 'month', filterFrom: '', filterTo: '', filterStatus: 'all', filterPayment: 'all', filterService: 'all', filterSearch: '',
+    currentPage: 1, columnsMenuOpen: false, visibleCols: { category: true, paymentMethod: true, status: true },
+    dailyHoverIdx: null, serviceHoverIdx: null, cashflowHoverIdx: null, statusHoverIdx: null,
+    dailyChartW: 640, serviceChartW: 640, cashflowChartW: 480,
+    toasts: [],
+  };
+
+  pendingTimers = {};
+  toastSeq = 0;
+  dailyChartRef = React.createRef();
+  serviceChartRef = React.createRef();
+  cashflowChartRef = React.createRef();
+  tableRef = React.createRef();
+
+  componentDidMount() {
+    this.tick();
+    this.clockInterval = setInterval(() => this.tick(), 1000);
+    this.measure();
+    window.addEventListener('resize', this.measure);
+    this.measureInterval = setInterval(this.measure, 700);
+  }
+  componentWillUnmount() {
+    clearInterval(this.clockInterval);
+    clearInterval(this.measureInterval);
+    window.removeEventListener('resize', this.measure);
+    Object.values(this.pendingTimers).forEach((t) => clearTimeout(t));
+  }
+  measure = () => {
+    [['dailyChartRef', 'dailyChartW'], ['serviceChartRef', 'serviceChartW'], ['cashflowChartRef', 'cashflowChartW']].forEach(([refName, key]) => {
+      const el = this[refName].current;
+      if (el) { const w = Math.round(el.getBoundingClientRect().width); if (w > 0 && w !== this.state[key]) this.setState({ [key]: w }); }
+    });
+  };
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    const full = { id, duration: 3000, ...toast };
+    this.setState((s) => ({ toasts: [...s.toasts, full] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), full.duration);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  togglePrivacy = () => this.setState((s) => ({ privacyOn: !s.privacyOn }));
+  mask(label) { return this.state.privacyOn ? label.replace(/[0-9]/g, '•') : label; }
+
+  toggleGoalEdit = () => this.setState((s) => ({ goalEditing: !s.goalEditing, goalDraft: String(s.monthlyGoal) }));
+  setGoalDraft = (e) => this.setState({ goalDraft: e.target.value });
+  saveGoal = () => {
+    const v = Number(this.state.goalDraft.replace(',', '.'));
+    if (!Number.isFinite(v) || v <= 0) { this.addToast({ title: 'Informe uma meta maior que zero.' }); return; }
+    this.setState({ monthlyGoal: v, goalEditing: false });
+    this.addToast({ title: 'Meta mensal atualizada.' });
+  };
+
+  togglePixHistory = () => this.setState((s) => ({ pixHistoryOpen: !s.pixHistoryOpen }));
+
+  setShortcut(key) {
+    const today = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+    let from = iso(today), to = iso(today);
+    if (key === '7days') { const d = new Date(today); d.setDate(d.getDate() - 6); from = iso(d); }
+    else if (key === '30days') { const d = new Date(today); d.setDate(d.getDate() - 29); from = iso(d); }
+    else if (key === 'month') { from = iso(new Date(today.getFullYear(), today.getMonth(), 1)); }
+    else if (key === 'year') { from = iso(new Date(today.getFullYear(), 0, 1)); }
+    this.setState({ shortcut: key, filterFrom: from, filterTo: to, currentPage: 1 });
+  }
+  setFilterStatus = (e) => this.setState({ filterStatus: e.target.value, currentPage: 1 });
+  setFilterPayment = (e) => this.setState({ filterPayment: e.target.value, currentPage: 1 });
+  setFilterService = (e) => this.setState({ filterService: e.target.value, currentPage: 1 });
+  setFilterSearch = (e) => this.setState({ filterSearch: e.target.value, currentPage: 1 });
+  clearReportFilters = () => { this.setShortcut('month'); this.setState({ filterStatus: 'all', filterPayment: 'all', filterService: 'all', filterSearch: '' }); };
+
+  toggleColumnsMenu = () => this.setState((s) => ({ columnsMenuOpen: !s.columnsMenuOpen }));
+  toggleColumn(key) { this.setState((s) => ({ visibleCols: { ...s.visibleCols, [key]: !s.visibleCols[key] } })); }
+
+  exportPdf = () => this.addToast({ title: 'Relatório PDF gerado com sucesso.' });
+  exportExcel = () => this.addToast({ title: 'Relatório Excel gerado com sucesso.' });
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const monthName = today.toLocaleDateString('pt-BR', { month: 'long' });
+    const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const nextMonthName = nextMonthDate.toLocaleDateString('pt-BR', { month: 'long' });
+    const nextMonthLabel = nextMonthName.charAt(0).toUpperCase() + nextMonthName.slice(1);
+
+    const monthPayments = PAYMENTS_ALL.filter((p) => p.date.getMonth() === today.getMonth() && p.date.getFullYear() === today.getFullYear());
+    const received = monthPayments.reduce((t, p) => t + p.amount, 0);
+    const goalProgress = s.monthlyGoal > 0 ? Math.min(100, (received / s.monthlyGoal) * 100) : 0;
+    const remaining = Math.max(s.monthlyGoal - received, 0);
+    const exceeded = Math.max(received - s.monthlyGoal, 0);
+
+    const activeClientsCount = 74;
+    const nextMonthPotential = activeClientsCount * 42.3;
+    const upcoming7d = { count: 9, total: 9 * 44.5 };
+    const overdue = { count: 6, total: 6 * 39.9 };
+
+    const planningSignals = [
+      { icon: 'trend', iconGlyph: '↗', label: `Potencial de ${nextMonthLabel}`, value: this.mask(fmt(nextMonthPotential)), hint: `Base atual de ${activeClientsCount} clientes ativos; pode variar com atrasos e cancelamentos.`, border: 'color-mix(in srgb, var(--interactive) 20%, transparent)', bg: 'color-mix(in srgb, var(--interactive-bg) 65%, transparent)', iconFg: 'var(--interactive-fg)', valueColor: 'var(--foreground)' },
+      { icon: 'clock', iconGlyph: '⏱', label: 'Próximos 7 dias', value: this.mask(fmt(upcoming7d.total)), hint: `${upcoming7d.count} renovações previstas`, border: 'var(--warning-border)', bg: 'color-mix(in srgb, var(--warning-bg) 65%, transparent)', iconFg: 'var(--warning-fg)', valueColor: 'var(--foreground)' },
+      { icon: 'warn', iconGlyph: '!', label: 'Clientes em atraso', value: this.mask(fmt(overdue.total)), hint: `${overdue.count} clientes exigem atenção`, border: 'var(--danger-border)', bg: 'color-mix(in srgb, var(--danger-bg) 65%, transparent)', iconFg: 'var(--danger-fg)', valueColor: 'var(--danger)' },
+    ];
+
+    // PIX overview
+    const pixPaid = PIX_CHARGES_ALL.filter((c) => c.status === 'paid');
+    const pixPending = PIX_CHARGES_ALL.filter((c) => c.status === 'pending');
+    const pixPaidToday = pixPaid.filter((c) => c.created.toDateString() === today.toDateString());
+    const pixStatusMeta = { paid: { label: 'Pago', bg: 'color-mix(in srgb, var(--money) 12%, transparent)', fg: 'var(--money)' }, pending: { label: 'Pendente', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' }, expired: { label: 'Expirado', bg: 'var(--muted)', fg: 'var(--muted-foreground)' }, cancelled: { label: 'Cancelado', bg: 'var(--muted)', fg: 'var(--muted-foreground)' } };
+    const purposeLabels = { renewal: 'Renovação', charge: 'Cobrança', manual: 'Manual' };
+    const pixCharges = PIX_CHARGES_ALL.map((c) => {
+      const meta = pixStatusMeta[c.status];
+      return {
+        id: c.id, dateLabel: c.created.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        statusLabel: meta.label, statusStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        purposeLabel: purposeLabels[c.purpose], phone: c.phone || 'Sem telefone', amountLabel: this.mask(fmt(c.amount)),
+        expiresLabel: c.expires.toLocaleDateString('pt-BR'),
+      };
+    });
+
+    // Report filters + payments
+    const from = s.filterFrom || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    const to = s.filterTo || today.toISOString().slice(0, 10);
+    let filtered = PAYMENTS_ALL.filter((p) => {
+      const key = p.date.toISOString().slice(0, 10);
+      if (key < from || key > to) return false;
+      if (s.filterStatus !== 'all' && p.status !== s.filterStatus) return false;
+      if (s.filterPayment !== 'all' && p.method !== s.filterPayment) return false;
+      if (s.filterService !== 'all' && p.service !== s.filterService) return false;
+      const q = s.filterSearch.trim().toLowerCase();
+      if (q && !(p.clientName.toLowerCase().includes(q) || p.service.toLowerCase().includes(q) || METHOD_LABELS[p.method].toLowerCase().includes(q))) return false;
+      return true;
+    });
+
+    const revenue = filtered.reduce((t, p) => t + p.amount, 0);
+    const netProfit = filtered.reduce((t, p) => t + p.netProfit, 0);
+    const costs = revenue - netProfit;
+    const avgTicket = filtered.length > 0 ? revenue / filtered.length : 0;
+    const periodDays = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);
+    const prevTo = new Date(new Date(from).getTime() - 86400000);
+    const prevFrom = new Date(prevTo.getTime() - (periodDays - 1) * 86400000);
+    const prevRevenue = PAYMENTS_ALL.filter((p) => p.date >= prevFrom && p.date <= prevTo).reduce((t, p) => t + p.amount, 0);
+    const revenueGrowth = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : null;
+
+    const periodMetrics = [
+      { label: 'Receita recebida', value: this.mask(fmt(revenue)), hint: `${filtered.length} pagamento${filtered.length === 1 ? '' : 's'}`, border: 'var(--success-border,var(--border))', bg: 'color-mix(in srgb, var(--success-bg) 55%, transparent)', valueColor: 'var(--money)' },
+      { label: 'Lucro líquido', value: this.mask(fmt(netProfit)), hint: `margem ${revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0}%`, border: 'var(--success-border,var(--border))', bg: 'color-mix(in srgb, var(--success-bg) 55%, transparent)', valueColor: 'var(--money)' },
+      { label: 'Custos operacionais', value: this.mask(fmt(costs)), hint: 'registrados nos pagamentos', border: 'var(--danger-border)', bg: 'color-mix(in srgb, var(--danger-bg) 45%, transparent)', valueColor: 'var(--danger)' },
+      { label: 'Ticket médio', value: this.mask(fmt(avgTicket)), hint: 'por pagamento filtrado', border: 'var(--border)', bg: 'var(--card)', valueColor: 'var(--foreground)' },
+      { label: 'Crescimento', value: revenueGrowth === null ? '—' : `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toFixed(1)}%`, hint: revenueGrowth === null ? 'sem base no período anterior' : 'vs. período anterior', border: 'var(--border)', bg: 'var(--card)', valueColor: revenueGrowth === null ? 'var(--foreground)' : revenueGrowth >= 0 ? 'var(--money)' : 'var(--danger)' },
+    ];
+
+    const shortcutOptions = [{ key: 'today', label: 'Hoje' }, { key: '7days', label: '7 dias' }, { key: '30days', label: '30 dias' }, { key: 'month', label: 'Mês atual' }, { key: 'year', label: 'Ano atual' }].map((o) => ({
+      ...o, onClick: () => this.setShortcut(o.key),
+      style: `min-height:36px;border-radius:8px;padding:0 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid ${s.shortcut === o.key ? 'var(--foreground)' : 'var(--border)'};background:${s.shortcut === o.key ? 'var(--foreground)' : 'var(--card)'};color:${s.shortcut === o.key ? 'var(--background)' : 'var(--foreground)'}`,
+    }));
+    const statusFilterOptions = [{ value: 'all', label: 'Todos os status' }, ...Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))].map((o) => ({ ...o, selected: s.filterStatus === o.value }));
+    const paymentFilterOptions = [{ value: 'all', label: 'Todas as formas' }, ...Object.entries(METHOD_LABELS).map(([v, l]) => ({ value: v, label: l }))].map((o) => ({ ...o, selected: s.filterPayment === o.value }));
+    const serviceFilterOptions = [{ value: 'all', label: 'Todos os serviços' }, ...SERVICES.map((n) => ({ value: n, label: n }))].map((o) => ({ ...o, selected: s.filterService === o.value }));
+    const hasReportFilter = s.filterStatus !== 'all' || s.filterPayment !== 'all' || s.filterService !== 'all' || !!s.filterSearch;
+
+    const reportPeriodLabel = `${new Date(from).toLocaleDateString('pt-BR')} a ${new Date(to).toLocaleDateString('pt-BR')}`;
+
+    // Daily bar chart
+    const byDay = {};
+    filtered.forEach((p) => {
+      const key = p.date.toDateString();
+      if (!byDay[key]) byDay[key] = { label: `${p.date.getDate()} ${p.date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()}`, liquido: 0, resto: 0, order: p.date.getTime() };
+      byDay[key].liquido += p.netProfit;
+      byDay[key].resto += p.amount - p.netProfit;
+    });
+    const dailyRows = Object.values(byDay).sort((a, b) => a.order - b.order).slice(-10);
+    const DCW = Math.max(240, s.dailyChartW), padL = 44, padB = 30, padT = 32, plotH = 220 - padT - padB;
+    const dMax = Math.max(...dailyRows.map((r) => r.liquido + r.resto), 1) * 1.15;
+    const dSlot = dailyRows.length ? (DCW - padL - 8) / dailyRows.length : 0;
+    const dBarW = Math.max(14, Math.min(32, dSlot * 0.42));
+    const dailyBars = dailyRows.map((r, i) => {
+      const cx = padL + dSlot * i + dSlot / 2;
+      const liqH = (r.liquido / dMax) * plotH, restH = (r.resto / dMax) * plotH;
+      const liqY = 220 - padB - liqH, restY = liqY - restH;
+      const hovered = s.dailyHoverIdx === i;
+      return {
+        x: cx - dBarW / 2, cx, liqY, liqH: Math.max(1, liqH), restY, restH: Math.max(0, restH), totalH: Math.max(1, liqH + restH), width: dBarW,
+        label: r.label, leftPct: (cx / DCW) * 100, hitX: cx - dSlot / 2 + 1, hitWidth: dSlot - 2,
+        onEnter: () => this.setState({ dailyHoverIdx: i }), onLeave: () => this.setState({ dailyHoverIdx: null }),
+        liqLabel: fmt(r.liquido), custoLabel: fmt(r.resto), liqShort: compactCurrency(r.liquido),
+        labelOpacity: hovered ? 1 : 0.85, barTransition: 'transition:opacity .15s',
+      };
+    });
+    const dailyGrid = [0.25, 0.5, 0.75, 1].map((f) => ({ y: 220 - padB - f * plotH, label: compactCurrency(dMax * f).replace('R$ ', '') }));
+    const hasDailyHover = s.dailyHoverIdx !== null && dailyBars[s.dailyHoverIdx];
+    const dailyHoverData = hasDailyHover ? dailyBars[s.dailyHoverIdx] : null;
+
+    // Revenue by service chart
+    const byService = {};
+    filtered.forEach((p) => { byService[p.service] = (byService[p.service] || 0) + p.amount; });
+    const serviceRows = Object.entries(byService).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
+    const SCW = Math.max(240, s.serviceChartW);
+    const sMax = Math.max(...serviceRows.map((r) => r.value), 1) * 1.15;
+    const sSlot = serviceRows.length ? (SCW - padL - 8) / serviceRows.length : 0;
+    const sBarW = Math.max(20, Math.min(40, sSlot * 0.45));
+    const serviceBars = serviceRows.map((r, i) => {
+      const cx = padL + sSlot * i + sSlot / 2;
+      const h = (r.value / sMax) * plotH;
+      const hovered = s.serviceHoverIdx === i;
+      return {
+        x: cx - sBarW / 2, cx, y: 220 - padB - h, width: sBarW, height: Math.max(2, h), opacity: hovered ? 1 : 0.85,
+        trackX: cx - sBarW / 2 - 3, trackWidth: sBarW + 6, trackY: padT, trackH: plotH,
+        label: r.name, leftPct: (cx / SCW) * 100, hitX: cx - sSlot / 2 + 1, hitWidth: sSlot - 2,
+        onEnter: () => this.setState({ serviceHoverIdx: i }), onLeave: () => this.setState({ serviceHoverIdx: null }),
+        valueLabel: fmt(r.value), valueShort: compactCurrency(r.value),
+      };
+    });
+    const serviceGrid = [0.25, 0.5, 0.75, 1].map((f) => ({ y: 220 - padB - f * plotH, label: compactCurrency(sMax * f).replace('R$ ', '') }));
+    const hasServiceHover = s.serviceHoverIdx !== null && serviceBars[s.serviceHoverIdx];
+    const serviceHoverData = hasServiceHover ? serviceBars[s.serviceHoverIdx] : null;
+
+    // Table
+    const showCategoryCol = s.visibleCols.category, showMethodCol = s.visibleCols.paymentMethod, showStatusCol = s.visibleCols.status;
+    const gridTracks = ['96px', 'minmax(0,1fr)'];
+    if (showCategoryCol) gridTracks.push('minmax(0,.85fr)');
+    if (showMethodCol) gridTracks.push('96px');
+    if (showStatusCol) gridTracks.push('86px');
+    gridTracks.push('96px');
+    const tableHeaderStyle = `display:grid;grid-template-columns:${gridTracks.join(' ')};align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)`;
+    const rowStyle = `display:grid;grid-template-columns:${gridTracks.join(' ')};align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border)`;
+    const statusRowMeta = { active: { bg: 'var(--success-bg)', fg: 'var(--success-fg)' }, vencido: { bg: 'var(--danger-bg)', fg: 'var(--danger-fg)' }, pending: { bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' }, suspended: { bg: 'var(--secondary)', fg: 'var(--muted-foreground)' }, canceled: { bg: 'var(--secondary)', fg: 'var(--muted-foreground)' } };
+    const ITEMS_PER_PAGE = 8;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const currentPage = Math.min(s.currentPage, totalPages);
+    const pagedPayments = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((p) => {
+      const meta = statusRowMeta[p.status];
+      return {
+        id: p.id, dateLabel: p.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), clientName: p.clientName,
+        typeLabel: p.amount === 0 ? 'Promoção' : 'Receita', serviceLabel: p.service, methodLabel: METHOD_LABELS[p.method],
+        statusLabel: STATUS_LABELS[p.status], statusStyle: `display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;background:${meta.bg};color:${meta.fg}`,
+        amountLabel: this.mask(fmt(p.amount)), gridStyle: rowStyle,
+      };
+    });
+    const columnToggleOptions = [{ key: 'category', label: 'Serviço' }, { key: 'paymentMethod', label: 'Pagamento' }, { key: 'status', label: 'Status' }].map((c) => ({
+      ...c, checked: s.visibleCols[c.key], onToggle: () => this.toggleColumn(c.key),
+      checkStyle: `width:15px;height:15px;flex-shrink:0;border-radius:4px;border:1.5px solid ${s.visibleCols[c.key] ? 'var(--foreground)' : 'var(--input)'};background:${s.visibleCols[c.key] ? 'var(--foreground)' : 'none'};display:flex;align-items:center;justify-content:center`,
+    }));
+
+    // Annual cashflow
+    const months = Array.from({ length: today.getMonth() + 1 }, (_, i) => {
+      const revenue2 = PAYMENTS_ALL.filter((p) => p.date.getMonth() === i && p.date.getFullYear() === today.getFullYear()).reduce((t, p) => t + p.amount, 0);
+      const profit2 = PAYMENTS_ALL.filter((p) => p.date.getMonth() === i && p.date.getFullYear() === today.getFullYear()).reduce((t, p) => t + p.netProfit, 0);
+      return { label: new Date(today.getFullYear(), i, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''), revenue: revenue2, profit: profit2 };
+    });
+    const annualRevenue = months.reduce((t, m) => t + m.revenue, 0);
+    const annualProfit = months.reduce((t, m) => t + m.profit, 0);
+    const annualMargin = annualRevenue > 0 ? (annualProfit / annualRevenue) * 100 : 0;
+    const CFW = Math.max(240, s.cashflowChartW), cfPadB = 40, cfPlotH = 220 - padT - cfPadB;
+    const cfMax = Math.max(...months.map((m) => Math.max(m.revenue, m.profit)), 1) * 1.15;
+    const cfSlot = months.length > 1 ? (CFW - padL - 8) / (months.length - 1) : (CFW - padL - 8);
+    const cfValY = (v) => 220 - cfPadB - (v / cfMax) * cfPlotH;
+    const cashflowRevenuePoints = months.map((m, i) => `${padL + cfSlot * i},${cfValY(m.revenue)}`).join(' ');
+    const cashflowProfitPoints = months.map((m, i) => `${padL + cfSlot * i},${cfValY(m.profit)}`).join(' ');
+    const cashflowDots = months.map((m, i) => ({ cx: padL + cfSlot * i, revY: cfValY(m.revenue), profY: cfValY(m.profit), label: m.label, leftPct: ((padL + cfSlot * i) / CFW) * 100 }));
+    const cashflowGrid = [0.25, 0.5, 0.75, 1].map((f) => ({ y: 220 - cfPadB - f * cfPlotH }));
+
+    // Service distribution donut
+    const serviceLinkCounts = {};
+    PAYMENTS_ALL.forEach((p) => { serviceLinkCounts[p.service] = (serviceLinkCounts[p.service] || 0) + 1; });
+    const topServices = Object.entries(serviceLinkCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const serviceLinksTotal = topServices.reduce((t, [, c]) => t + c, 0);
+    const donutColors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+    const r2 = 58, circumference = 2 * Math.PI * r2;
+    let scum = 0;
+    const maxLinks = Math.max(...topServices.map(([, c]) => c), 1);
+    const serviceDonutRows = topServices.map(([name, count], i) => {
+      const frac = count / serviceLinksTotal;
+      const dash = frac * circumference;
+      const hovered = s.statusHoverIdx === i;
+      const row = {
+        color: donutColors[i % donutColors.length], dasharray: `${dash} ${circumference - dash}`, dashoffset: -scum * circumference,
+        label: name, count, barWidth: Math.round((count / maxLinks) * 100),
+        strokeWidth: hovered ? 24 : 20, opacity: s.statusHoverIdx === null || hovered ? 1 : 0.4,
+        onEnter: () => this.setState({ statusHoverIdx: i }), onLeave: () => this.setState({ statusHoverIdx: null }),
+      };
+      scum += frac;
+      return row;
+    });
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, togglePrivacy: this.togglePrivacy, privacyOn: s.privacyOn, privacyOff: !s.privacyOn,
+      monthLabel, monthLabelLower: monthLabel.toLowerCase(), nextMonthLabelLower: nextMonthLabel.toLowerCase(),
+      receivedLabel: this.mask(fmt(received)), goalEditing: s.goalEditing, goalDraft: s.goalDraft, setGoalDraft: this.setGoalDraft,
+      toggleGoalEdit: this.toggleGoalEdit, saveGoal: this.saveGoal, goalDisplayShow: s.goalEditing ? 'none' : 'block',
+      goalLabel: this.mask(fmt(s.monthlyGoal)), goalProgressPct: goalProgress.toFixed(1),
+      goalProgressLabel: `${Math.round(goalProgress)}% da meta realizada`,
+      goalRemainingLabel: exceeded > 0 ? `${this.mask(fmt(exceeded))} acima da meta` : `${this.mask(fmt(remaining))} para atingir`,
+      goalExceeded: exceeded > 0, goalOverflowPad: exceeded > 0 ? 44 : 0,
+      goalOverflowPct: s.monthlyGoal > 0 ? Math.round((exceeded / s.monthlyGoal) * 100) : 0,
+      planningSignals,
+
+      pixPendingAmount: this.mask(fmt(pixPending.reduce((t, c) => t + c.amount, 0))), pixPendingCount: pixPending.length,
+      pixTodayAmount: this.mask(fmt(pixPaidToday.reduce((t, c) => t + c.amount, 0))), pixTodayCount: pixPaidToday.length,
+      pixMonthAmount: this.mask(fmt(pixPaid.reduce((t, c) => t + c.amount, 0))), pixPaidMonthCount: pixPaid.length,
+      pixHistoryOpen: s.pixHistoryOpen, togglePixHistory: this.togglePixHistory, pixChargesCount: pixCharges.length,
+      pixHistoryToggleLabel: s.pixHistoryOpen ? 'fechar' : 'abrir', pixCharges,
+
+      shortcutOptions, statusFilterOptions, paymentFilterOptions, serviceFilterOptions,
+      setFilterStatus: this.setFilterStatus, setFilterPayment: this.setFilterPayment, setFilterService: this.setFilterService,
+      filterSearch: s.filterSearch, setFilterSearch: this.setFilterSearch, hasReportFilter, clearReportFilters: this.clearReportFilters,
+      exportPdf: this.exportPdf, exportExcel: this.exportExcel,
+
+      periodMetrics, reportPeriodLabelLower: reportPeriodLabel.toLowerCase(),
+      dailyChartRef: this.dailyChartRef, dailyChartWidth: DCW, dailyGrid, dailyBars, hasDailyHover, dailyHoverData,
+      serviceChartRef: this.serviceChartRef, serviceChartWidth: SCW, serviceGrid, serviceBars, hasServiceHover, serviceHoverData,
+
+      tableRef: this.tableRef, tableCountLabel: `${filtered.length} movimentaç${filtered.length === 1 ? 'ão' : 'ões'}`,
+      columnsMenuOpen: s.columnsMenuOpen, toggleColumnsMenu: this.toggleColumnsMenu, columnToggleOptions,
+      tableEmpty: filtered.length === 0, tableHasRows: filtered.length > 0,
+      tableHeaderStyle, showCategoryCol, showMethodCol, showStatusCol, pagedPayments,
+      currentPage, totalPages, isFirstPage: currentPage <= 1, isLastPage: currentPage >= totalPages,
+      prevOpacity: currentPage <= 1 ? '.5' : '1', nextOpacity: currentPage >= totalPages ? '.5' : '1',
+      prevPage: () => this.setState((st) => ({ currentPage: Math.max(1, st.currentPage - 1) })),
+      nextPage: () => this.setState((st) => ({ currentPage: Math.min(totalPages, st.currentPage + 1) })),
+
+      currentYear: String(today.getFullYear()), annualRevenueLabel: this.mask(fmt(annualRevenue)), annualProfitLabel: this.mask(fmt(annualProfit)), annualMarginLabel: `${annualMargin.toFixed(1)}%`,
+      cashflowChartRef: this.cashflowChartRef, cashflowChartWidth: CFW, cashflowGrid, cashflowRevenuePoints, cashflowProfitPoints, cashflowDots,
+
+      serviceLinksTotal, serviceDonutRows,
+
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

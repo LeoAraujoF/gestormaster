@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d5d4ce; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    a { color: var(--interactive); }
+    a:hover { color: var(--interactive-fg); }
+    @keyframes dcpop { from { opacity:0; transform:translateY(10px) scale(.985);} to {opacity:1; transform:none;} }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+    @media (max-width:1180px){[data-hide-narrow]{display:none!important}}
+    @media (max-width:768px){[data-hide-md]{display:none!important}}
+    [data-channel-grid]{grid-template-columns:repeat(3,minmax(0,1fr));}
+    @media (max-width:940px){[data-channel-grid]{grid-template-columns:minmax(0,1fr);}}
+    [data-support-shell]{grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr);}
+    @media (max-width:1024px){[data-support-shell]{grid-template-columns:minmax(0,1fr);}}
+  </style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--sidebar-border);overflow:hidden;width:256px">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 16px 10px 16px;min-height:36px">
+      <svg width="22" height="22" viewBox="0 0 132 132" style="flex-shrink:0" aria-hidden="true">
+        <rect x="9" y="9" width="114" height="114" rx="34" fill="#176B4D"></rect>
+        <path d="M39 39h54a18 18 0 0 1 18 18v27a18 18 0 0 1-18 18H65L45 116l4-14H39a18 18 0 0 1-18-18V57a18 18 0 0 1 18-18Z" fill="#FAF8F2"></path>
+        <path d="m47 70 14 14 27-31" fill="none" stroke="#176B4D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="104" cy="31" r="9" fill="#45D49A" stroke="#176B4D" stroke-width="5"></circle>
+      </svg>
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:-.02em;color:var(--foreground);white-space:nowrap">lembrado<span style="color:#45D49A">.</span></span>
+    </div>
+    <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 8px">
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Painel') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Painel</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">1</kbd>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Operação</p>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Clientes') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6"></path><path d="M16 8.3a2.8 2.8 0 1 1 3.3 2.75"></path><path d="M18 14c2.2.3 3.7 2 3.7 4.3"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clientes</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">2</kbd>
+      </a></div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Financeiro') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="6" width="18" height="13" rx="2.2"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Financeiro</span><kbd style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">3</kbd>
+      </a></div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Catálogo</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Serviços') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Serviços</a>
+          <a href="#" onclick="{{ toastNav('Promoções') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Promoções</a>
+        </div>
+      </div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Comunicação</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="7" r="2.3"></circle><circle cx="19" cy="7" r="2.3"></circle><circle cx="12" cy="17" r="2.3"></circle><path d="M7 8.2 10.3 15.4M17 8.2 13.7 15.4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Automação</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Central de automação') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Central de automação</a>
+          <a href="#" onclick="{{ toastNav('Aquecimento') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Aquecimento</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px"><a href="#" onclick="{{ toastNav('Leads') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 20c0-3.4 2.5-5.6 5.5-5.6s5.5 2.2 5.5 5.6"></path><path d="M18 8v5M15.5 10.5h5"></path></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Leads</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-foreground);background:var(--secondary);border-radius:4px;padding:2px 5px">Beta</span>
+      </a></div>
+      <p style="margin:12px 8px 4px;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Gestão</p>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><path d="M4 20V10M11 20V4M18 20v-7"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Insights</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Analytics') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Analytics</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><rect x="3" y="9" width="7" height="6" rx="2"></rect><rect x="14" y="9" width="7" height="6" rx="2"></rect><path d="M10 12h4"></path></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Integrações</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="#" onclick="{{ toastNav('Gateways e API') }}" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Gateways e API</a>
+        </div>
+      </div>
+      <div style="margin-bottom:2px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--sidebar-foreground)"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"></circle></svg>
+          <span style="flex:1;min-width:0;text-align:left;font-size:13px;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mais</span>
+        </div>
+        <div style="margin:2px 0 4px 30px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--sidebar-border);padding-left:10px">
+          <a href="Afiliados.dc.html" style="display:block;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--sidebar-foreground);text-decoration:none">Afiliados</a>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--sidebar-border)">
+      <div style="margin-bottom:4px"><a href="#" onclick="{{ toastNav('Configurações') }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;border:none;background:none;color:var(--sidebar-foreground);font-weight:500;cursor:pointer;text-decoration:none;box-sizing:border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+        <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Configurações</span>
+      </a></div>
+      <div style="margin-bottom:8px">
+        <div style="width:100%;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;background:var(--sidebar-accent);color:var(--sidebar-accent-fg);font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3"></circle><path d="m6 6 3.2 3.2M18 6l-3.2 3.2M18 18l-3.2-3.2M6 18l3.2-3.2"></path></svg>
+          <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Suporte</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--sidebar-border);background:var(--card);border-radius:10px;padding:4px">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 6px">
+          <div style="flex-shrink:0;width:28px;height:28px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">V</div>
+          <div style="min-width:0;flex:1"><p style="margin:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">Você</p><p style="margin:0;font-family:'Geist Mono',monospace;font-size:9px;color:var(--muted-foreground)">Starter</p></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header style="position:fixed;top:0;right:0;left:256px;z-index:30;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:color-mix(in srgb, var(--background) 90%, transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)">
+    <button type="button" onclick="{{ toastNav('Menu') }}" style="width:32px;height:32px;border:none;background:none;border-radius:6px;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+    </button>
+    <button type="button" onclick="{{ toastNav('Busca') }}" style="display:flex;align-items:center;gap:8px;height:32px;flex:1 1 200px;min-width:0;max-width:280px;border:1px solid var(--input);background:color-mix(in srgb, var(--secondary) 60%, transparent);border-radius:6px;padding:0 10px;color:var(--muted-foreground);font-size:12px;cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Buscar cliente…</span>
+      <kbd style="font-family:'Geist Mono',monospace;font-size:9px;border:1px solid var(--border);background:var(--card);border-radius:4px;padding:1px 4px">⌘K</kbd>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;color:var(--muted-foreground);border-radius:6px">
+        <time style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;color:var(--foreground)">{{ clockTime }}</time>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <a href="#" onclick="return false" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;text-decoration:none">
+        <div style="width:30px;height:30px;border-radius:9999px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">V</div>
+        <div><p style="margin:0;font-size:12px;font-weight:600;color:var(--foreground)">Você</p><p style="margin:0;font-size:10px;color:var(--muted-foreground)">Plano starter</p></div>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="margin-left:256px;padding-top:56px;min-height:100vh">
+    <div style="max-width:1400px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- PAGE HEADER -->
+      <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:{{ statusColor }}">
+              <span style="width:7px;height:7px;border-radius:9999px;background:{{ statusColor }};animation:{{ statusDotAnim }}"></span>
+              {{ statusLabel }}
+            </span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);border-radius:6px;padding:2px 7px">{{ hoursLabel }}</span>
+          </div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.045em;color:var(--foreground)">Suporte</h1>
+          <p style="margin:8px 0 0;max-width:620px;font-size:13px;line-height:1.6;color:var(--muted-foreground)">Resolva sozinho pelas respostas rápidas ou abra um chamado — respondemos em até {{ slaLabel }} no seu plano.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <button type="button" onclick="{{ openWhatsapp }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></svg>
+            WhatsApp
+          </button>
+          <button type="button" onclick="{{ openNewTicket }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Abrir chamado
+          </button>
+        </div>
+      </section>
+
+      <!-- SYSTEM STATUS -->
+      <section style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-radius:12px;border:1px solid {{ healthBorder }};background:{{ healthBg }};padding:13px 18px">
+        <span style="width:32px;height:32px;border-radius:9px;background:var(--card);color:{{ healthFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 3 10 2.5-5H21"></path></svg>
+        </span>
+        <div style="min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ healthTitle }}</p><p style="margin:3px 0 0;font-size:11px;color:var(--muted-foreground)">{{ healthSubtitle }}</p></div>
+        <div style="flex:1"></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;flex-shrink:0">
+          <sc-for list="{{ systemServices }}" as="svc" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="width:7px;height:7px;border-radius:9999px;background:{{ svc.color }};flex-shrink:0"></span>
+              <span style="font-size:11px;color:var(--muted-foreground);white-space:nowrap">{{ svc.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- CHANNELS -->
+      <section data-channel-grid style="display:grid;gap:12px">
+        <sc-for list="{{ channels }}" as="ch" hint-placeholder-count="3">
+          <button type="button" onclick="{{ ch.onClick }}" style="text-align:left;cursor:pointer;border-radius:16px;border:1px solid {{ ch.border }};background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+              <span style="width:36px;height:36px;border-radius:11px;background:{{ ch.iconBg }};color:{{ ch.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <sc-if value="{{ ch.isChat }}"><path d="M21 11.5a8.4 8.4 0 0 1-9.8 8.3A8.5 8.5 0 0 1 4 15l-2 5 5.3-1.7a8.4 8.4 0 1 1 13.7-6.8Z"></path></sc-if>
+                  <sc-if value="{{ ch.isTicket }}"><rect x="3" y="5" width="18" height="14" rx="2.2"></rect><path d="M7 10h10M7 14h6"></path></sc-if>
+                  <sc-if value="{{ ch.isDocs }}"><path d="M6 3h9l4 4v14H6Z"></path><path d="M14 3v5h5M9 13h7M9 17h5"></path></sc-if>
+                </svg>
+              </span>
+              <span style="{{ ch.badgeStyle }}">{{ ch.badge }}</span>
+            </div>
+            <div>
+              <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--foreground)">{{ ch.title }}</p>
+              <p style="margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--muted-foreground)">{{ ch.description }}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--interactive-fg)">
+              {{ ch.cta }}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+          </button>
+        </sc-for>
+      </section>
+
+      <!-- TABS -->
+      <nav style="border-radius:10px;border:1px solid var(--border);background:var(--muted);padding:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:320px;overflow-x:auto">
+          <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="2">
+            <button type="button" onclick="{{ tab.onClick }}" style="{{ tab.style }}">
+              {{ tab.label }}
+              <sc-if value="{{ tab.hasBadge }}"><span style="font-family:'Geist Mono',monospace;background:var(--warning-bg);color:var(--warning-fg);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">{{ tab.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </nav>
+
+      <!-- ===== TAB: AJUDA ===== -->
+      <sc-if value="{{ isHelpTab }}" hint-placeholder-val="{{ true }}">
+        <section data-support-shell style="display:grid;gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+            <div style="position:relative">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted-foreground)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ faqSearch }}" oninput="{{ setFaqSearch }}" placeholder="Buscar na base de conhecimento…" style="width:100%;height:44px;border:1px solid var(--input);border-radius:10px;padding:0 14px 0 36px;font-size:13px;background:var(--card);color:var(--foreground);outline:none"/>
+            </div>
+
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ faqCategories }}" as="fc" hint-placeholder-count="5">
+                <button type="button" onclick="{{ fc.onClick }}" style="{{ fc.style }}">{{ fc.label }} <span style="font-family:'Geist Mono',monospace;opacity:.7">{{ fc.count }}</span></button>
+              </sc-for>
+            </div>
+
+            <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+              <sc-if value="{{ faqEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:48px 20px;text-align:center">
+                  <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Nada encontrado</p>
+                  <p style="margin:5px 0 0;font-size:11.5px;color:var(--muted-foreground)">Não achamos resposta para “{{ faqSearchLabel }}”. Abra um chamado e resolvemos com você.</p>
+                  <button type="button" onclick="{{ openNewTicket }}" style="margin-top:14px;height:34px;padding:0 14px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;cursor:pointer">Abrir chamado</button>
+                </div>
+              </sc-if>
+              <sc-for list="{{ faqs }}" as="faq" hint-placeholder-count="6">
+                <div style="border-bottom:1px solid var(--border)">
+                  <button type="button" onclick="{{ faq.onToggle }}" style="width:100%;display:flex;align-items:center;gap:12px;border:none;background:none;padding:15px 18px;cursor:pointer;text-align:left">
+                    <span style="{{ faq.tagStyle }}">{{ faq.category }}</span>
+                    <span style="flex:1;min-width:0;font-size:13px;font-weight:{{ faq.titleWeight }};color:var(--foreground)">{{ faq.question }}</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ faq.chevronStyle }}"><path d="m6 9 6 6 6-6"></path></svg>
+                  </button>
+                  <sc-if value="{{ faq.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:0 18px 16px 18px">
+                      <p style="margin:0;max-width:640px;font-size:12.5px;line-height:1.65;color:var(--muted-foreground)">{{ faq.answer }}</p>
+                      <div style="display:flex;align-items:center;gap:10px;margin-top:13px;flex-wrap:wrap">
+                        <span style="font-size:10.5px;color:var(--muted-foreground)">Isso resolveu?</span>
+                        <button type="button" onclick="{{ faq.onHelpful }}" style="{{ faq.helpfulStyle }}">Sim</button>
+                        <button type="button" onclick="{{ faq.onNotHelpful }}" style="{{ faq.notHelpfulStyle }}">Não</button>
+                        <sc-if value="{{ faq.voted }}"><span style="font-size:10.5px;color:var(--money);font-weight:600">Obrigado pelo retorno!</span></sc-if>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <article style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.8A8 8 0 0 0 4 10.2C4 17.5 12 22 12 22Z"></path></svg></span>
+                <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Seu plano</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Starter</p></div>
+              </div>
+              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:11.5px;color:var(--muted-foreground)">Tempo de resposta</span><span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ slaLabel }}</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:11.5px;color:var(--muted-foreground)">Canais disponíveis</span><span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">Chamado · Docs</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:11.5px;color:var(--muted-foreground)">Chamados no mês</span><span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:var(--foreground)">{{ monthTicketsLabel }}</span></div>
+                <div style="border-top:1px solid var(--border);padding-top:12px">
+                  <p style="margin:0;font-size:11px;line-height:1.55;color:var(--muted-foreground)"><strong style="color:var(--foreground);font-weight:600">Pro e Master</strong> têm atendimento por WhatsApp prioritário e resposta em até 2 h.</p>
+                  <button type="button" onclick="{{ goPlanos }}" style="margin-top:10px;width:100%;height:34px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:12px;font-weight:500;cursor:pointer">Comparar planos</button>
+                </div>
+              </div>
+            </article>
+
+            <article style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:14px 18px">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--secondary);color:var(--secondary-foreground);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 15h10M4 11h16M4 7h7"></path></svg></span>
+                <div><h3 style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">Guias rápidos</h3><p style="margin:1px 0 0;font-size:10.5px;color:var(--muted-foreground)">Os mais acessados</p></div>
+              </div>
+              <div style="padding:10px 18px 14px;display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ guides }}" as="g" hint-placeholder-count="4">
+                  <button type="button" onclick="{{ g.onClick }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;border-radius:8px;padding:10px 4px;cursor:pointer;text-align:left;border-bottom:1px solid var(--border)">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:700;color:var(--muted-foreground);flex-shrink:0;width:16px">{{ g.index }}</span>
+                    <span style="flex:1;min-width:0;font-size:12px;font-weight:500;color:var(--foreground)">{{ g.title }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground);flex-shrink:0">{{ g.readTime }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </article>
+
+            <article style="border-radius:16px;border:1px solid var(--border);background:var(--muted);padding:16px 18px">
+              <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">Antes de abrir um chamado</p>
+              <ul style="margin:9px 0 0;padding:0 0 0 16px;display:flex;flex-direction:column;gap:7px;font-size:11.5px;line-height:1.55;color:var(--muted-foreground)">
+                <li>Descreva o que você esperava e o que aconteceu.</li>
+                <li>Informe o nome do cliente ou o ID da cobrança envolvida.</li>
+                <li>Anexe uma captura de tela — acelera bastante o diagnóstico.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ===== TAB: CHAMADOS ===== -->
+      <sc-if value="{{ isTicketsTab }}" hint-placeholder-val="{{ false }}">
+        <section style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="display:inline-flex;gap:4px;border-radius:9px;background:var(--muted);padding:4px">
+              <sc-for list="{{ ticketFilters }}" as="tf" hint-placeholder-count="4">
+                <button type="button" onclick="{{ tf.onClick }}" style="{{ tf.style }}">{{ tf.label }} <span style="font-family:'Geist Mono',monospace;opacity:.7">{{ tf.count }}</span></button>
+              </sc-for>
+            </div>
+            <span style="font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--muted-foreground)">{{ ticketCountLabel }}</span>
+          </div>
+
+          <div style="border-radius:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+            <sc-if value="{{ ticketsEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:56px 20px;text-align:center">
+                <span style="display:inline-flex;width:46px;height:46px;border-radius:14px;background:var(--success-bg);color:var(--success-fg);align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span>
+                <p style="margin:12px 0 0;font-size:13.5px;font-weight:600;color:var(--foreground)">{{ ticketsEmptyTitle }}</p>
+                <p style="margin:5px 0 0;font-size:11.5px;color:var(--muted-foreground)">{{ ticketsEmptySubtitle }}</p>
+              </div>
+            </sc-if>
+            <sc-for list="{{ tickets }}" as="tk" hint-placeholder-count="3">
+              <div style="border-bottom:1px solid var(--border)">
+                <button type="button" onclick="{{ tk.onToggle }}" style="width:100%;display:flex;align-items:flex-start;gap:12px;border:none;background:{{ tk.rowBg }};padding:15px 18px;cursor:pointer;text-align:left">
+                  <span style="width:34px;height:34px;border-radius:10px;background:{{ tk.iconBg }};color:{{ tk.iconFg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Geist Mono',monospace;font-size:9.5px;font-weight:700">{{ tk.shortId }}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                      <p style="margin:0;font-size:13px;font-weight:600;color:var(--foreground)">{{ tk.subject }}</p>
+                      <span style="{{ tk.statusStyle }}">{{ tk.statusLabel }}</span>
+                      <sc-if value="{{ tk.hasUnread }}"><span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;background:var(--interactive-bg);color:var(--interactive-fg);border-radius:4px;padding:2px 5px">NOVA RESPOSTA</span></sc-if>
+                    </div>
+                    <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tk.lastMessage }}</p>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap">
+                      <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ tk.idLabel }}</span>
+                      <span style="font-size:10.5px;color:var(--muted-foreground)">{{ tk.categoryLabel }}</span>
+                      <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--muted-foreground)">{{ tk.timeLabel }}</span>
+                    </div>
+                  </div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ tk.chevronStyle }}"><path d="m6 9 6 6 6-6"></path></svg>
+                </button>
+
+                <sc-if value="{{ tk.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-top:1px solid var(--border);background:color-mix(in srgb, var(--muted) 45%, transparent);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+                    <sc-for list="{{ tk.messages }}" as="msg" hint-placeholder-count="2">
+                      <div style="{{ msg.wrapStyle }}">
+                        <div style="{{ msg.bubbleStyle }}">
+                          <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:{{ msg.authorColor }}">{{ msg.author }}</p>
+                          <p style="margin:5px 0 0;font-size:12px;line-height:1.6;color:var(--foreground);white-space:pre-wrap">{{ msg.body }}</p>
+                          <p style="margin:6px 0 0;font-family:'Geist Mono',monospace;font-size:9.5px;color:var(--muted-foreground)">{{ msg.timeLabel }}</p>
+                        </div>
+                      </div>
+                    </sc-for>
+
+                    <sc-if value="{{ tk.isOpen }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;gap:8px;align-items:flex-end;margin-top:4px">
+                        <textarea value="{{ tk.draft }}" oninput="{{ tk.onDraft }}" rows="2" placeholder="Escreva sua resposta…" style="flex:1;border:1px solid var(--input);border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;background:var(--card);color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+                        <button type="button" onclick="{{ tk.onReply }}" style="height:38px;padding:0 14px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;cursor:pointer;flex-shrink:0">Responder</button>
+                      </div>
+                      <div style="display:flex;justify-content:flex-end">
+                        <button type="button" onclick="{{ tk.onResolve }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--money);cursor:pointer;padding:2px 0">Marcar como resolvido</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ tk.isResolved }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:9px;border:1px solid var(--success-bg);background:var(--success-bg);padding:11px 13px;flex-wrap:wrap">
+                        <p style="margin:0;font-size:11.5px;font-weight:600;color:var(--success-fg)">Chamado resolvido</p>
+                        <button type="button" onclick="{{ tk.onReopen }}" style="border:none;background:none;font-size:11px;font-weight:600;color:var(--interactive-fg);cursor:pointer">Reabrir</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <!-- TOASTS -->
+  <div style="position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;width:340px">
+    <sc-for list="{{ toasts }}" as="toast" hint-placeholder-count="0">
+      <div style="animation:dcpop .18s ease-out;border-radius:8px;border:1px solid var(--border);background:var(--popover);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="width:8px;height:8px;border-radius:9999px;margin-top:5px;background:var(--interactive);flex-shrink:0"></span>
+        <div style="flex:1;min-width:0"><p style="margin:0;font-size:12.5px;font-weight:600;color:var(--foreground)">{{ toast.title }}</p></div>
+        <button type="button" onclick="{{ toast.onClose }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0;padding:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- NEW TICKET MODAL -->
+  <sc-if value="{{ newTicketOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(20,20,22,.44);display:flex;align-items:flex-start;justify-content:center;padding:28px;z-index:95;overflow:auto" onclick="{{ closeNewTicket }}">
+      <div style="width:100%;max-width:520px;background:var(--card);border-radius:13px;box-shadow:0 24px 56px rgba(0,0,0,.26);overflow:hidden" onclick="{{ stop }}">
+        <div style="display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);padding:17px 22px">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--interactive-bg);color:var(--interactive-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.2"></rect><path d="M7 10h10M7 14h6"></path></svg></span>
+          <div style="flex:1;min-width:0"><h3 style="margin:0;font-size:15px;font-weight:600;color:var(--foreground)">Abrir chamado</h3><p style="margin:2px 0 0;font-size:11px;color:var(--muted-foreground)">Resposta em até {{ slaLabel }} no plano Starter</p></div>
+          <button type="button" onclick="{{ closeNewTicket }}" style="border:none;background:none;color:var(--muted-foreground);cursor:pointer;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 5 14 14M19 5 5 19"></path></svg></button>
+        </div>
+        <div style="max-height:66vh;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Categoria</p>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ formCategories }}" as="fcat" hint-placeholder-count="5"><button type="button" onclick="{{ fcat.onSelect }}" style="{{ fcat.style }}">{{ fcat.label }}</button></sc-for>
+            </div>
+          </div>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Prioridade</p>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ formPriorities }}" as="fp" hint-placeholder-count="3"><button type="button" onclick="{{ fp.onSelect }}" style="{{ fp.style }}">{{ fp.label }}</button></sc-for>
+            </div>
+          </div>
+          <label style="display:block">
+            <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Assunto</span>
+            <input value="{{ form.subject }}" oninput="{{ setFormSubject }}" placeholder="Resuma o problema em uma linha" style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:7px;padding:10px 12px;font-size:12.5px;background:none;color:var(--foreground);outline:none"/>
+          </label>
+          <label style="display:block">
+            <span style="display:block;font-size:11.5px;font-weight:500;color:var(--secondary-foreground)">Descrição</span>
+            <textarea value="{{ form.description }}" oninput="{{ setFormDescription }}" rows="5" placeholder="O que você esperava, o que aconteceu e desde quando." style="margin-top:6px;width:100%;border:1px solid var(--input);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.6;background:none;color:var(--foreground);outline:none;resize:vertical;font-family:inherit"></textarea>
+            <span style="display:block;margin-top:5px;font-family:'Geist Mono',monospace;font-size:10px;color:{{ descCountColor }}">{{ descCountLabel }}</span>
+          </label>
+          <div>
+            <p style="margin:0 0 8px;font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Anexo (opcional)</p>
+            <button type="button" onclick="{{ attachFile }}" style="width:100%;border:1px dashed var(--input);border-radius:9px;padding:15px;background:none;font-size:11.5px;color:var(--muted-foreground);cursor:pointer">{{ attachLabel }}</button>
+          </div>
+          <sc-if value="{{ hasSuggestion }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid color-mix(in srgb, var(--interactive) 24%, transparent);background:var(--interactive-bg);padding:12px 14px">
+              <p style="margin:0;font-size:11px;font-weight:600;color:var(--interactive-fg)">Talvez isto já resolva:</p>
+              <button type="button" onclick="{{ openSuggestion }}" style="margin-top:7px;border:none;background:none;padding:0;text-align:left;font-size:12px;font-weight:600;color:var(--foreground);cursor:pointer;text-decoration:underline">{{ suggestionTitle }}</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);padding:14px 22px">
+          <button type="button" onclick="{{ closeNewTicket }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--background);color:var(--foreground);font-size:13px;font-weight:500;cursor:pointer">Cancelar</button>
+          <button type="button" onclick="{{ submitTicket }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;cursor:pointer">Enviar chamado</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const LIGHT_VARS = {
+  '--background': '#fbfbfa', '--foreground': '#26272b', '--card': '#ffffff', '--card-foreground': '#26272b',
+  '--popover': '#ffffff', '--popover-foreground': '#26272b', '--primary': '#191a1e', '--primary-foreground': '#ffffff',
+  '--secondary': '#f1f0ee', '--secondary-foreground': '#55565c', '--muted': '#f7f7f5', '--muted-foreground': '#6f6e69',
+  '--accent': '#e9e9ff', '--accent-foreground': '#3140a8', '--border': '#ecebe7', '--input': '#8a8983', '--ring': '#4055c8',
+  '--interactive': '#4055c8', '--money': '#2e7d54', '--warning': '#8a5f0e', '--danger': '#b23c3c',
+  '--success-bg': '#e2efe6', '--success-fg': '#256b45', '--warning-bg': '#f2e8d4', '--warning-border': '#e8d9b5', '--warning-fg': '#715815',
+  '--danger-bg': '#f6e4e4', '--danger-fg': '#a13636', '--danger-border': '#f0d9d9',
+  '--interactive-bg': '#eef0ff', '--interactive-fg': '#3140a8',
+  '--sidebar': '#f5f5f3', '--sidebar-border': '#e7e6e2', '--sidebar-accent': '#e9e9ff', '--sidebar-accent-fg': '#3140a8', '--sidebar-foreground': '#55565c',
+};
+const CATEGORIES = [
+  { key: 'cobranca', label: 'Cobranças' },
+  { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'pagamento', label: 'Pagamentos' },
+  { key: 'clientes', label: 'Clientes' },
+  { key: 'conta', label: 'Conta e plano' },
+];
+const FAQS = [
+  { id: 'f1', category: 'whatsapp', question: 'Meu WhatsApp desconectou sozinho, o que faço?', answer: 'Isso acontece quando o aparelho fica muito tempo offline ou o WhatsApp encerra a sessão. Vá em Automação › Conectar número e pareie novamente com código ou QR Code. Suas regras e histórico continuam intactos — apenas os disparos ficam pausados enquanto nenhuma instância está online.' },
+  { id: 'f2', category: 'cobranca', question: 'A régua de cobrança não enviou no horário configurado', answer: 'Verifique três coisas: se a régua está ativa (Automação › Régua financeira), se há alguma instância online no momento do disparo, e se o cliente tem WhatsApp cadastrado. Clientes sem número são ignorados silenciosamente pela régua — o campo aparece vazio na Ficha 360.' },
+  { id: 'f3', category: 'pagamento', question: 'Recebi o PIX mas o cliente continua como vencido', answer: 'A baixa automática só acontece em PIX gerado dentro do sistema, com o gateway conectado em Integrações › Gateways e API. PIX recebido direto na sua conta bancária precisa de baixa manual: abra o cliente e use Renovar, escolhendo o período pago.' },
+  { id: 'f4', category: 'cobranca', question: 'Como faço para cobrar vários clientes de uma vez?', answer: 'No Painel, a Fila de ação tem o botão "Cobrar todos" que dispara para todos os clientes da prioridade selecionada (vencidos, hoje ou próximos 7 dias). Cada um recebe a mensagem da regra de automação correspondente, respeitando o intervalo antibloqueio.' },
+  { id: 'f5', category: 'clientes', question: 'Importei um CSV e alguns clientes ficaram sem plano', answer: 'A importação inteligente identifica colunas por nome. Se a sua planilha usa um cabeçalho fora do padrão (ex: "mensalidade" em vez de "valor"), remapeie a coluna na etapa de conferência antes de confirmar. Linhas sem valor entram com plano zerado e aparecem marcadas na revisão.' },
+  { id: 'f6', category: 'whatsapp', question: 'Meu número foi bloqueado pelo WhatsApp. Como evitar?', answer: 'Use o Aquecimento antes de disparar volume: chips novos devem começar com poucas mensagens por dia e crescer ao longo de 21 dias. Mantenha o intervalo antibloqueio em pelo menos 25s, evite mensagens idênticas para toda a base e nunca dispare para números que nunca falaram com você.' },
+  { id: 'f7', category: 'conta', question: 'Qual a diferença entre os planos Starter, Pro e Master?', answer: 'Starter cobre a operação essencial: clientes, cobranças, régua e relatórios básicos. Pro libera previsões, MRR, indicadores de saúde financeira, Analytics completo e suporte por WhatsApp. Master adiciona revendas, multiusuário com permissões avançadas e API dedicada.' },
+  { id: 'f8', category: 'conta', question: 'Posso dar acesso à minha equipe sem mostrar o financeiro?', answer: 'Sim. Em Configurações › Equipe, convide a pessoa com a permissão Operador: ela gerencia clientes e cobranças, mas não vê o financeiro consolidado. Somente leitura apenas visualiza, sem editar nada.' },
+  { id: 'f9', category: 'pagamento', question: 'O gateway está conectado mas o PIX não gera', answer: 'Confira se a chave de API está no ambiente correto (produção, não sandbox) em Integrações › Gateways e API, e se a chave PIX cadastrada está ativa no seu banco. O painel de integrações mostra o último erro retornado pelo gateway, o que geralmente aponta a causa exata.' },
+];
+const GUIDES = [
+  { id: 'g1', title: 'Primeiros passos: do cadastro à primeira cobrança', readTime: '6 min' },
+  { id: 'g2', title: 'Configurando a régua financeira sem irritar o cliente', readTime: '4 min' },
+  { id: 'g3', title: 'Aquecimento de chips: o guia completo', readTime: '8 min' },
+  { id: 'g4', title: 'Importando sua base de outro sistema', readTime: '5 min' },
+];
+const PRIORITIES = [
+  { key: 'low', label: 'Baixa' }, { key: 'normal', label: 'Normal' }, { key: 'high', label: 'Urgente' },
+];
+function mins(n) { return new Date(Date.now() - n * 60000); }
+function buildTickets() {
+  return [
+    {
+      id: 'CH-2841', subject: 'PIX gerado não deu baixa automática', category: 'pagamento', status: 'waiting_us',
+      time: mins(95), unread: true, open: false, draft: '',
+      messages: [
+        { author: 'você', body: 'Gerei um PIX pelo sistema para a cliente Ana Beatriz, ela pagou às 14h e o status continua como vencido.', time: mins(180) },
+        { author: 'suporte', body: 'Obrigado pelo detalhe! Localizei a transação no gateway — houve um atraso no webhook. Já reprocessamos e a baixa deve aparecer em alguns minutos. Pode confirmar?', time: mins(95) },
+      ],
+    },
+    {
+      id: 'CH-2836', subject: 'Como migrar minha base de outro painel', category: 'clientes', status: 'waiting_you',
+      time: mins(1400), unread: false, open: false, draft: '',
+      messages: [
+        { author: 'você', body: 'Tenho cerca de 300 clientes em outro sistema. Existe importação em massa?', time: mins(1500) },
+        { author: 'suporte', body: 'Sim! Exporte em CSV e use Clientes › Importar — a importação identifica as colunas automaticamente. Pode nos enviar as primeiras linhas do seu arquivo para conferirmos o formato?', time: mins(1400) },
+      ],
+    },
+    {
+      id: 'CH-2802', subject: 'Chip bloqueado após disparo em massa', category: 'whatsapp', status: 'resolved',
+      time: mins(6200), unread: false, open: false, draft: '',
+      messages: [
+        { author: 'você', body: 'Disparei para 200 clientes de uma vez e o número foi bloqueado no mesmo dia.', time: mins(7000) },
+        { author: 'suporte', body: 'O volume foi alto para um chip sem aquecimento. Recomendamos subir o intervalo antibloqueio para 25–90s e aquecer o número por 21 dias antes de voltar ao volume cheio.', time: mins(6600) },
+        { author: 'você', body: 'Aqueci o chip como orientado e não tive mais bloqueio. Obrigado!', time: mins(6200) },
+      ],
+    },
+  ];
+}
+
+class Component extends DCLogic {
+  state = {
+    clock: '', toasts: [], activeTab: 'help',
+    faqSearch: '', faqCategory: 'all', openFaqIds: {}, votedFaqIds: {},
+    tickets: buildTickets(), ticketFilter: 'all',
+    newTicketOpen: false, form: { category: 'cobranca', priority: 'normal', subject: '', description: '' }, attached: false,
+  };
+  pendingTimers = {};
+  toastSeq = 0;
+
+  componentDidMount() { this.tick(); this.clockInterval = setInterval(() => this.tick(), 1000); }
+  componentWillUnmount() { clearInterval(this.clockInterval); Object.values(this.pendingTimers).forEach((t) => clearTimeout(t)); }
+  tick() {
+    const now = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    this.setState({ clock: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}` });
+  }
+  addToast(toast) {
+    const id = ++this.toastSeq;
+    this.setState((s) => ({ toasts: [...s.toasts, { id, ...toast }] }));
+    this.pendingTimers['t' + id] = setTimeout(() => this.removeToast(id), 3200);
+  }
+  removeToast(id) { clearTimeout(this.pendingTimers['t' + id]); this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })); }
+  toastNav = (name) => () => this.addToast({ title: `Navegaria para ${name}` });
+  stop = (e) => e.stopPropagation();
+
+  setTab(k) { this.setState({ activeTab: k }); }
+  goPlanos = () => this.addToast({ title: 'Navegaria para Planos' });
+  openWhatsapp = () => this.addToast({ title: 'WhatsApp prioritário é exclusivo dos planos Pro e Master.' });
+
+  setFaqSearch = (e) => this.setState({ faqSearch: e.target.value });
+  setFaqCategory(k) { this.setState({ faqCategory: k }); }
+  toggleFaq(id) {
+    this.setState((s) => {
+      const next = { ...s.openFaqIds };
+      if (next[id]) delete next[id]; else next[id] = true;
+      return { openFaqIds: next };
+    });
+  }
+  voteFaq(id, helpful) {
+    this.setState((s) => ({ votedFaqIds: { ...s.votedFaqIds, [id]: helpful ? 'yes' : 'no' } }));
+    if (!helpful) this.addToast({ title: 'Obrigado — considere abrir um chamado para resolvermos junto.' });
+  }
+  openGuide(title) { this.addToast({ title: `Abriria o guia: ${title}` }); }
+
+  setTicketFilter(k) { this.setState({ ticketFilter: k }); }
+  toggleTicket(id) {
+    this.setState((s) => ({
+      tickets: s.tickets.map((t) => t.id === id ? { ...t, open: !t.open, unread: false } : t),
+    }));
+  }
+  setTicketDraft(id, e) {
+    const v = e.target.value;
+    this.setState((s) => ({ tickets: s.tickets.map((t) => t.id === id ? { ...t, draft: v } : t) }));
+  }
+  replyTicket(id) {
+    const ticket = this.state.tickets.find((t) => t.id === id);
+    if (!ticket.draft.trim()) { this.addToast({ title: 'Escreva sua resposta antes de enviar.' }); return; }
+    this.setState((s) => ({
+      tickets: s.tickets.map((t) => t.id === id ? {
+        ...t, draft: '', status: 'waiting_us', time: new Date(),
+        messages: [...t.messages, { author: 'você', body: ticket.draft.trim(), time: new Date() }],
+      } : t),
+    }));
+    this.addToast({ title: 'Resposta enviada ao suporte.' });
+  }
+  resolveTicket(id) {
+    this.setState((s) => ({ tickets: s.tickets.map((t) => t.id === id ? { ...t, status: 'resolved', time: new Date() } : t) }));
+    this.addToast({ title: 'Chamado marcado como resolvido.' });
+  }
+  reopenTicket(id) {
+    this.setState((s) => ({ tickets: s.tickets.map((t) => t.id === id ? { ...t, status: 'waiting_us', time: new Date() } : t) }));
+    this.addToast({ title: 'Chamado reaberto.' });
+  }
+
+  openNewTicket = () => this.setState({ newTicketOpen: true, form: { category: 'cobranca', priority: 'normal', subject: '', description: '' }, attached: false });
+  closeNewTicket = () => this.setState({ newTicketOpen: false });
+  setFormCategory(k) { this.setState((s) => ({ form: { ...s.form, category: k } })); }
+  setFormPriority(k) { this.setState((s) => ({ form: { ...s.form, priority: k } })); }
+  setFormSubject = (e) => { const v = e.target.value; this.setState((s) => ({ form: { ...s.form, subject: v } })); };
+  setFormDescription = (e) => { const v = e.target.value; this.setState((s) => ({ form: { ...s.form, description: v } })); };
+  attachFile = () => { this.setState({ attached: true }); this.addToast({ title: 'Anexo adicionado (exemplo).' }); };
+  submitTicket = () => {
+    const { subject, description, category, priority } = this.state.form;
+    if (!subject.trim()) { this.addToast({ title: 'Informe o assunto do chamado.' }); return; }
+    if (description.trim().length < 20) { this.addToast({ title: 'Descreva o problema com pelo menos 20 caracteres.' }); return; }
+    const id = 'CH-' + (2842 + this.state.tickets.length);
+    this.setState((s) => ({
+      tickets: [{
+        id, subject: subject.trim(), category, status: 'waiting_us', time: new Date(), unread: false, open: false, draft: '', priority,
+        messages: [{ author: 'você', body: description.trim(), time: new Date() }],
+      }, ...s.tickets],
+      newTicketOpen: false, activeTab: 'tickets',
+    }));
+    this.addToast({ title: `Chamado ${id} aberto — respondemos em até 8 h.` });
+  };
+  openSuggestionFaq(id) {
+    this.setState((s) => ({ newTicketOpen: false, activeTab: 'help', openFaqIds: { ...s.openFaqIds, [id]: true } }));
+    this.addToast({ title: 'Abrimos a resposta relacionada.' });
+  }
+
+  relTime(d) {
+    const diff = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return 'agora';
+    if (diff < 60) return `há ${diff} min`;
+    const h = Math.round(diff / 60);
+    if (h < 24) return `há ${h} h`;
+    const days = Math.round(h / 24);
+    return days === 1 ? 'ontem' : `há ${days} dias`;
+  }
+  catLabel(k) { return (CATEGORIES.find((c) => c.key === k) || { label: k }).label; }
+
+  renderVals() {
+    const s = this.state;
+    const rootStyle = { ...LIGHT_VARS, background: 'var(--background)', color: 'var(--foreground)', fontFamily: "'Geist',ui-sans-serif,system-ui,sans-serif", minHeight: '100vh', position: 'relative' };
+
+    const hour = new Date().getHours();
+    const online = hour >= 8 && hour < 20;
+    const openTickets = s.tickets.filter((t) => t.status !== 'resolved');
+    const unreadTickets = s.tickets.filter((t) => t.unread).length;
+
+    // channels
+    const channelDefs = [
+      { key: 'whatsapp', title: 'WhatsApp prioritário', description: 'Atendimento direto com um especialista, sem fila. Disponível nos planos Pro e Master.', cta: 'Ver planos', badge: 'PRO', badgeTone: 'locked', onClick: this.openWhatsapp },
+      { key: 'ticket', title: 'Abrir chamado', description: 'Registre o problema com detalhes e anexos. Acompanhe todo o histórico por aqui.', cta: 'Criar chamado', badge: `até ${'8 h'}`, badgeTone: 'ok', onClick: this.openNewTicket },
+      { key: 'docs', title: 'Base de conhecimento', description: 'Respostas para as dúvidas mais comuns e guias passo a passo da operação.', cta: 'Explorar respostas', badge: `${FAQS.length} artigos`, badgeTone: 'neutral', onClick: () => this.setTab('help') },
+    ];
+    const badgeStyles = {
+      locked: 'font-family:\'Geist Mono\',monospace;font-size:9px;font-weight:700;border-radius:5px;padding:3px 6px;background:var(--warning-bg);color:var(--warning-fg);flex-shrink:0',
+      ok: 'font-family:\'Geist Mono\',monospace;font-size:9px;font-weight:700;border-radius:5px;padding:3px 6px;background:var(--success-bg);color:var(--success-fg);flex-shrink:0',
+      neutral: 'font-family:\'Geist Mono\',monospace;font-size:9px;font-weight:700;border-radius:5px;padding:3px 6px;background:var(--secondary);color:var(--secondary-foreground);flex-shrink:0',
+    };
+    const channels = channelDefs.map((c) => ({
+      key: c.key, title: c.title, description: c.description, cta: c.cta, badge: c.badge, badgeStyle: badgeStyles[c.badgeTone],
+      border: c.key === 'ticket' ? 'color-mix(in srgb, var(--interactive) 26%, var(--border))' : 'var(--border)',
+      iconBg: c.key === 'whatsapp' ? 'var(--success-bg)' : c.key === 'ticket' ? 'var(--interactive-bg)' : 'var(--secondary)',
+      iconFg: c.key === 'whatsapp' ? 'var(--success-fg)' : c.key === 'ticket' ? 'var(--interactive-fg)' : 'var(--secondary-foreground)',
+      isChat: c.key === 'whatsapp', isTicket: c.key === 'ticket', isDocs: c.key === 'docs',
+      onClick: c.onClick,
+    }));
+
+    // system status
+    const serviceDefs = [
+      { key: 'app', label: 'Aplicação', ok: true }, { key: 'zap', label: 'WhatsApp API', ok: true },
+      { key: 'pay', label: 'Gateways', ok: true }, { key: 'auto', label: 'Automação', ok: true },
+    ];
+    const allOk = serviceDefs.every((x) => x.ok);
+    const systemServices = serviceDefs.map((x) => ({ key: x.key, label: x.label, color: x.ok ? 'var(--money)' : 'var(--danger)' }));
+
+    const tabs = [
+      { key: 'help', label: 'Respostas rápidas', badge: '' },
+      { key: 'tickets', label: 'Meus chamados', badge: unreadTickets > 0 ? String(unreadTickets) : '' },
+    ].map((t) => ({
+      key: t.key, label: t.label, hasBadge: !!t.badge, badge: t.badge, onClick: () => this.setTab(t.key),
+      style: `display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:${s.activeTab === t.key ? 'var(--card)' : 'none'};color:${s.activeTab === t.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.activeTab === t.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+
+    // FAQ
+    const q = s.faqSearch.trim().toLowerCase();
+    const pillStyle = (isActive) => `min-height:30px;border-radius:8px;padding:0 11px;font-size:11.5px;font-weight:${isActive ? '600' : '500'};cursor:pointer;border:1px solid ${isActive ? 'var(--interactive)' : 'var(--border)'};background:${isActive ? 'var(--interactive-bg)' : 'var(--card)'};color:${isActive ? 'var(--interactive-fg)' : 'var(--muted-foreground)'}`;
+    const faqCategories = [{ key: 'all', label: 'Todas', count: FAQS.length }].concat(
+      CATEGORIES.map((c) => ({ key: c.key, label: c.label, count: FAQS.filter((f) => f.category === c.key).length }))
+    ).map((c) => ({ key: c.key, label: c.label, count: c.count, onClick: () => this.setFaqCategory(c.key), style: pillStyle(s.faqCategory === c.key) }));
+
+    const filteredFaqs = FAQS
+      .filter((f) => s.faqCategory === 'all' || f.category === s.faqCategory)
+      .filter((f) => !q || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q));
+
+    const faqs = filteredFaqs.map((f) => {
+      const isOpen = !!s.openFaqIds[f.id];
+      const vote = s.votedFaqIds[f.id];
+      return {
+        id: f.id, question: f.question, answer: f.answer, category: this.catLabel(f.category), open: isOpen,
+        titleWeight: isOpen ? '600' : '500',
+        tagStyle: 'font-family:\'Geist Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:3px 6px;background:var(--secondary);color:var(--secondary-foreground);flex-shrink:0',
+        chevronStyle: `flex-shrink:0;color:var(--muted-foreground);transition:transform .15s;transform:rotate(${isOpen ? 180 : 0}deg)`,
+        onToggle: () => this.toggleFaq(f.id),
+        voted: !!vote,
+        helpfulStyle: `height:26px;padding:0 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${vote === 'yes' ? 'var(--money)' : 'var(--border)'};background:${vote === 'yes' ? 'var(--success-bg)' : 'var(--card)'};color:${vote === 'yes' ? 'var(--success-fg)' : 'var(--muted-foreground)'}`,
+        notHelpfulStyle: `height:26px;padding:0 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${vote === 'no' ? 'var(--danger-border)' : 'var(--border)'};background:${vote === 'no' ? 'var(--danger-bg)' : 'var(--card)'};color:${vote === 'no' ? 'var(--danger-fg)' : 'var(--muted-foreground)'}`,
+        onHelpful: () => this.voteFaq(f.id, true), onNotHelpful: () => this.voteFaq(f.id, false),
+      };
+    });
+
+    const guides = GUIDES.map((g, i) => ({
+      id: g.id, index: String(i + 1).padStart(2, '0'), title: g.title, readTime: g.readTime,
+      onClick: () => this.openGuide(g.title),
+    }));
+
+    // tickets
+    const statusMeta = {
+      waiting_us: { label: 'Com o suporte', bg: 'var(--interactive-bg)', fg: 'var(--interactive-fg)' },
+      waiting_you: { label: 'Aguardando você', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
+      resolved: { label: 'Resolvido', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
+    };
+    const ticketFilterDefs = [
+      { key: 'all', label: 'Todos', count: s.tickets.length },
+      { key: 'waiting_us', label: 'Com o suporte', count: s.tickets.filter((t) => t.status === 'waiting_us').length },
+      { key: 'waiting_you', label: 'Aguardando você', count: s.tickets.filter((t) => t.status === 'waiting_you').length },
+      { key: 'resolved', label: 'Resolvidos', count: s.tickets.filter((t) => t.status === 'resolved').length },
+    ];
+    const ticketFilters = ticketFilterDefs.map((f) => ({
+      key: f.key, label: f.label, count: f.count, onClick: () => this.setTicketFilter(f.key),
+      style: `min-height:32px;border-radius:6px;padding:0 12px;font-size:12px;font-weight:${s.ticketFilter === f.key ? '600' : '500'};border:none;cursor:pointer;background:${s.ticketFilter === f.key ? 'var(--card)' : 'transparent'};color:${s.ticketFilter === f.key ? 'var(--foreground)' : 'var(--muted-foreground)'};box-shadow:${s.ticketFilter === f.key ? '0 1px 2px rgba(0,0,0,.04)' : 'none'}`,
+    }));
+
+    const filteredTickets = s.tickets
+      .filter((t) => s.ticketFilter === 'all' || t.status === s.ticketFilter)
+      .slice()
+      .sort((a, b) => b.time - a.time);
+
+    const tickets = filteredTickets.map((t) => {
+      const meta = statusMeta[t.status];
+      const last = t.messages[t.messages.length - 1];
+      return {
+        id: t.id, idLabel: t.id, shortId: t.id.replace('CH-', ''), subject: t.subject,
+        statusLabel: meta.label, statusStyle: `font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:${meta.bg};color:${meta.fg};flex-shrink:0`,
+        iconBg: meta.bg, iconFg: meta.fg,
+        categoryLabel: this.catLabel(t.category), timeLabel: this.relTime(t.time),
+        lastMessage: `${last.author === 'você' ? 'Você' : 'Suporte'}: ${last.body}`,
+        hasUnread: t.unread, open: t.open, rowBg: t.unread ? 'color-mix(in srgb, var(--interactive-bg) 45%, transparent)' : 'none',
+        chevronStyle: `flex-shrink:0;margin-top:9px;color:var(--muted-foreground);transition:transform .15s;transform:rotate(${t.open ? 180 : 0}deg)`,
+        onToggle: () => this.toggleTicket(t.id),
+        isOpen: t.status !== 'resolved', isResolved: t.status === 'resolved',
+        draft: t.draft, onDraft: (e) => this.setTicketDraft(t.id, e),
+        onReply: () => this.replyTicket(t.id), onResolve: () => this.resolveTicket(t.id), onReopen: () => this.reopenTicket(t.id),
+        messages: t.messages.map((m, i) => {
+          const mine = m.author === 'você';
+          return {
+            key: i, author: mine ? 'Você' : 'Suporte Lembrado', authorColor: mine ? 'var(--interactive-fg)' : 'var(--money)',
+            body: m.body, timeLabel: this.relTime(m.time),
+            wrapStyle: `display:flex;justify-content:${mine ? 'flex-end' : 'flex-start'}`,
+            bubbleStyle: `max-width:86%;border-radius:${mine ? '11px 11px 3px 11px' : '11px 11px 11px 3px'};border:1px solid ${mine ? 'color-mix(in srgb, var(--interactive) 20%, transparent)' : 'var(--border)'};background:${mine ? 'var(--interactive-bg)' : 'var(--card)'};padding:11px 13px`,
+          };
+        }),
+      };
+    });
+
+    const emptyByFilter = {
+      waiting_us: { title: 'Nada com o suporte agora', subtitle: 'Nenhum chamado aguardando nossa resposta.' },
+      waiting_you: { title: 'Nada aguardando você', subtitle: 'Você respondeu tudo que precisava.' },
+      resolved: { title: 'Nenhum chamado resolvido ainda', subtitle: 'Chamados encerrados aparecem aqui para consulta.' },
+      all: { title: 'Nenhum chamado aberto', subtitle: 'Quando precisar, abra um chamado e acompanhe tudo por aqui.' },
+    };
+    const emptyMeta = emptyByFilter[s.ticketFilter] || emptyByFilter.all;
+
+    // new ticket form
+    const formCategories = CATEGORIES.map((c) => ({
+      key: c.key, label: c.label, onSelect: () => this.setFormCategory(c.key),
+      style: `min-height:32px;border-radius:7px;padding:0 11px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.form.category === c.key ? 'var(--interactive)' : 'var(--border)'};background:${s.form.category === c.key ? 'var(--interactive-bg)' : 'var(--card)'};color:${s.form.category === c.key ? 'var(--interactive-fg)' : 'var(--foreground)'}`,
+    }));
+    const formPriorities = PRIORITIES.map((p) => ({
+      key: p.key, label: p.label, onSelect: () => this.setFormPriority(p.key),
+      style: `flex:1;min-height:34px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ${s.form.priority === p.key ? (p.key === 'high' ? 'var(--danger)' : 'var(--interactive)') : 'var(--border)'};background:${s.form.priority === p.key ? (p.key === 'high' ? 'var(--danger-bg)' : 'var(--interactive-bg)') : 'var(--card)'};color:${s.form.priority === p.key ? (p.key === 'high' ? 'var(--danger-fg)' : 'var(--interactive-fg)') : 'var(--foreground)'}`,
+    }));
+    const descLen = s.form.description.trim().length;
+    const subjectQ = s.form.subject.trim().toLowerCase();
+    const suggestion = subjectQ.length >= 4
+      ? FAQS.find((f) => f.category === s.form.category && subjectQ.split(/\s+/).some((w) => w.length > 3 && f.question.toLowerCase().includes(w)))
+      : null;
+
+    return {
+      rootStyle, clockTime: s.clock || '--:--:--', toastNav: this.toastNav, stop: this.stop,
+      toasts: s.toasts.map((t) => ({ id: t.id, title: t.title, onClose: () => this.removeToast(t.id) })),
+
+      statusColor: online ? 'var(--money)' : 'var(--muted-foreground)',
+      statusDotAnim: online ? 'pulseDot 2s ease-in-out infinite' : 'none',
+      statusLabel: online ? 'Suporte online' : 'Fora do horário de atendimento',
+      hoursLabel: 'Seg a sáb · 08:00–20:00', slaLabel: '8 h',
+      openWhatsapp: this.openWhatsapp, openNewTicket: this.openNewTicket, goPlanos: this.goPlanos,
+
+      healthBorder: allOk ? 'color-mix(in srgb, var(--money) 26%, var(--border))' : 'var(--danger-border)',
+      healthBg: allOk ? 'color-mix(in srgb, var(--success-bg) 38%, transparent)' : 'var(--danger-bg)',
+      healthFg: allOk ? 'var(--success-fg)' : 'var(--danger-fg)',
+      healthTitle: allOk ? 'Todos os sistemas operando normalmente' : 'Instabilidade detectada',
+      healthSubtitle: allOk ? 'Nenhum incidente nas últimas 24 horas' : 'Estamos investigando — acompanhe por aqui',
+      systemServices,
+
+      channels, tabs, isHelpTab: s.activeTab === 'help', isTicketsTab: s.activeTab === 'tickets',
+
+      faqSearch: s.faqSearch, setFaqSearch: this.setFaqSearch, faqSearchLabel: s.faqSearch.trim(),
+      faqCategories, faqs, faqEmpty: faqs.length === 0, guides,
+      monthTicketsLabel: `${s.tickets.length} de 5`,
+
+      ticketFilters, tickets, ticketsEmpty: tickets.length === 0,
+      ticketsEmptyTitle: emptyMeta.title, ticketsEmptySubtitle: emptyMeta.subtitle,
+      ticketCountLabel: openTickets.length === 1 ? '1 chamado em aberto' : `${openTickets.length} chamados em aberto`,
+
+      newTicketOpen: s.newTicketOpen, closeNewTicket: this.closeNewTicket,
+      formCategories, formPriorities, form: s.form,
+      setFormSubject: this.setFormSubject, setFormDescription: this.setFormDescription,
+      descCountLabel: descLen < 20 ? `${descLen}/20 caracteres mínimos` : `${descLen} caracteres`,
+      descCountColor: descLen < 20 ? 'var(--warning-fg)' : 'var(--muted-foreground)',
+      attachFile: this.attachFile, attachLabel: s.attached ? 'captura-de-tela.png · anexado' : '+ Anexar captura de tela ou arquivo',
+      hasSuggestion: !!suggestion, suggestionTitle: suggestion ? suggestion.question : '',
+      openSuggestion: () => suggestion && this.openSuggestionFaq(suggestion.id),
+      submitTicket: this.submitTicket,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

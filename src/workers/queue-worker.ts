@@ -19,7 +19,7 @@ import { MESSAGE_PRIORITY } from '../lib/message-priority';
 import { millisecondsUntilSendWindow } from '../lib/contact-policy';
 import { resolveOrganizationDailyMessageLimit, resolveOrganizationSendPolicy } from '../lib/organization-send-policy';
 import { releaseInstanceDailyQuota, reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep } from '../lib/whatsapp-safety';
-import { pickUsableInstance } from '../lib/instance-routing';
+import { pickUsableInstance, type RoutableInstance } from '../lib/instance-routing';
 import { isRetryableWhatsAppError, shouldPauseWhatsAppInstance, whatsappErrorCode } from '../providers/whatsapp/provider-error';
 
 startOperationalHeartbeat('message_worker');
@@ -160,6 +160,32 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
   // Pausa por rajada ("além do intervalo de envio"): 0 em qualquer um desativa.
   let instanceBurstMessageCount = 0;
   let instanceBurstPauseMinutes = 0;
+
+  // Propósito do envio, usado na escolha de instância. Massa nunca pode cair no
+  // número principal — em 10/09/2026 foi assim que uma campanha consumiu a cota
+  // diária dele e travou lembretes e boas-vindas.
+  const purposeDoJob = (): 'mass' | 'alerts' =>
+    massRunId || contactCategory === 'promotion' ? 'mass' : 'alerts';
+
+  // Troca a instância do envio em curso. Vive aqui, e não duplicado nos dois
+  // pontos que alternam (instância pausada e cota esgotada), para que os dois
+  // caminhos apliquem exatamente os mesmos limites do número novo.
+  const adotarInstancia = (alvo: RoutableInstance) => {
+    instanceId = alvo.id;
+    instanceName = alvo.instance_name;
+    instanceUrl = alvo.base_url;
+    apiKey = alvo.api_key;
+    connectionMode = alvo.connection_mode;
+    instanceSendingPaused = false;
+    instanceSendingPauseReason = null;
+    // O teto diário NÃO é tocado aqui: ele vem do plano da organização e é o
+    // mesmo para todos os números dela. Reatribuir da coluna da instância
+    // devolveria o 80 legado justamente no caminho de troca por cota esgotada.
+    instanceMessageMinIntervalMs = Math.max(alvo.message_min_interval_ms || 0, (alvo.min_delay || 0) * 1000, 1000);
+    instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (alvo.max_delay || 25) * 1000);
+    instanceBurstMessageCount = alvo.burst_message_count || 0;
+    instanceBurstPauseMinutes = alvo.burst_pause_minutes || 0;
+  };
 
   let finalMessage = normalizedJob.finalMessage;
   let organizationId = normalizedJob.organizationId;
@@ -546,27 +572,12 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
             organizationId,
             userId,
             excludeInstanceId: instanceId,
-            // Campanha de leads (massRunId) e disparo em massa de promoção a
-            // clientes (category 'promotion', vindo de /send-mass) contam como
-            // massa. Cobrança, renovação, aviso de vencimento e boas-vindas são
-            // alerta, e é o canal que o principal existe para proteger.
-            purpose: massRunId || contactCategory === 'promotion' ? 'mass' : 'alerts',
+            purpose: purposeDoJob(),
             massRunId,
           });
           if (fallback) {
             logger.warn(`[Job ${job.id}] Instância ${instanceName} pausada (${instanceSendingPauseReason}); alternando para ${fallback.instance_name}.`);
-            instanceId = fallback.id;
-            instanceName = fallback.instance_name;
-            instanceUrl = fallback.base_url;
-            apiKey = fallback.api_key;
-            connectionMode = fallback.connection_mode;
-            instanceSendingPaused = false;
-            instanceSendingPauseReason = null;
-            instanceDailyMessageLimit = fallback.daily_message_limit || instanceDailyMessageLimit;
-            instanceMessageMinIntervalMs = Math.max(fallback.message_min_interval_ms || 0, (fallback.min_delay || 0) * 1000, 1000);
-            instanceMessageMaxIntervalMs = Math.max(instanceMessageMinIntervalMs, (fallback.max_delay || 25) * 1000);
-            instanceBurstMessageCount = fallback.burst_message_count || 0;
-            instanceBurstPauseMinutes = fallback.burst_pause_minutes || 0;
+            adotarInstancia(fallback);
           }
         }
       }
@@ -749,10 +760,38 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         // mínimo e pausa por rajada — continua valendo, e é o que de fato protege
         // o número de bloqueio. Por isso o gate é só aqui, e não no bloco todo.
         if (planDailyLimit !== null) {
-          const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit, sendPolicy.timeZone);
+          let quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit, sendPolicy.timeZone);
+
+          // Cota esgotada não é motivo para esperar o dia virar se existe outro
+          // número disponível. Até 10/09/2026 o worker apenas reagendava aqui, e
+          // foi o que deixou lembretes e boas-vindas presos a um número no teto
+          // enquanto outro seguia conectado e sem uso. A alternância respeita o
+          // propósito: massa não toma o número de lembrete.
+          if (!quota.allowed) {
+            const alternativa = await pickUsableInstance({
+              organizationId,
+              userId,
+              excludeInstanceId: instanceId,
+              purpose: purposeDoJob(),
+              massRunId,
+            });
+            if (alternativa) {
+              const quotaAlternativa = await reserveInstanceDailyQuota(alternativa.id, planDailyLimit, sendPolicy.timeZone);
+              if (quotaAlternativa.allowed) {
+                logger.warn(`[Job ${job.id}] Limite diário atingido em ${instanceName}; alternando para ${alternativa.instance_name}.`);
+                adotarInstancia(alternativa);
+                quota = quotaAlternativa;
+              }
+              // Nada a devolver quando a alternativa nega: reserveInstanceDailyQuota
+              // já decrementa o contador antes de retornar allowed: false. Um
+              // release aqui decrementaria duas vezes e deixaria o contador abaixo
+              // do real, liberando envios acima do teto no resto do dia.
+            }
+          }
+
           if (!quota.allowed) {
             const delay = quota.resetInMs + Math.floor(Math.random() * 60000);
-            logger.warn(`[Job ${job.id}] Limite diário do plano atingido (${instanceDailyMessageLimit}/dia); reagendando em ${Math.ceil(delay / 60000)} min.`);
+            logger.warn(`[Job ${job.id}] Limite diário do plano atingido (${instanceDailyMessageLimit}/dia) e sem número alternativo; reagendando em ${Math.ceil(delay / 60000)} min.`);
             await updateAlertStatus('pending', { error_message: 'INSTANCE_DAILY_LIMIT_REACHED' });
             await releaseCoordinationHold('INSTANCE_DAILY_LIMIT_REACHED');
             await deferJob(job, delay, 'INSTANCE_DAILY_LIMIT_REACHED', { quotaKey: null, slotInstanceId: null });

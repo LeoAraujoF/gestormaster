@@ -1,20 +1,21 @@
 import Link from "next/link"
-import { BrainCircuit, Flame, Workflow } from "lucide-react"
+import { BrainCircuit, Flame, ListOrdered, Workflow } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-type AutomationRoute = "central" | "collections" | "warmup"
+type AutomationRoute = "central" | "queue" | "collections" | "warmup"
 
 export function AutomationNavigation({ active }: { active: AutomationRoute }) {
   const items = [
     { id: "central" as const, label: "Central", href: "/automacao", icon: Workflow },
+    { id: "queue" as const, label: "Fila de envios", href: "/automacao/fila", icon: ListOrdered },
     { id: "collections" as const, label: "Cobrança inteligente", href: "/cobranca-inteligente", icon: BrainCircuit },
     { id: "warmup" as const, label: "Aquecimento", href: "/aquecimento", icon: Flame },
   ]
 
   return (
     <nav aria-label="Navegação de automação" className="overflow-x-auto rounded-xl border border-border bg-muted/50 p-1">
-      <div className="grid min-w-[620px] grid-cols-3 gap-1">
+      <div className="grid min-w-[760px] grid-cols-4 gap-1">
         {items.map((item) => {
           const Icon = item.icon
           return (

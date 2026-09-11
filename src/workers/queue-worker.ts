@@ -531,11 +531,28 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         // instância especificamente. Se ela caiu depois de enfileirada — o caso
         // de uma fila grande que demora horas para escoar —, procura outra
         // conectada e não pausada da mesma organização em vez de esperar esta
-        // voltar. Prioriza a principal (a busca já ordena por `is_primary`);
-        // nunca envia pelas duas ao mesmo tempo, porque só troca quando a
+        // voltar. Nunca envia pelas duas ao mesmo tempo, porque só troca quando a
         // originalmente escolhida está comprovadamente indisponível.
+        //
+        // O propósito é decisivo aqui. Sem ele, em 10/09/2026 a alternância levou
+        // 43 mensagens de campanha para o número principal quando o secundário
+        // começou a devolver HTTP 500 — consumiu a cota diária do principal e os
+        // lembretes das 18h05 e as boas-vindas não saíram
+        // (INSTANCE_DAILY_LIMIT_REACHED). Agora massa só troca por outro número
+        // liberado para massa; sem alternativa, a mensagem espera em vez de
+        // invadir o canal de lembretes.
         if (instanceSendingPaused) {
-          const fallback = await pickUsableInstance({ organizationId, userId, excludeInstanceId: instanceId });
+          const fallback = await pickUsableInstance({
+            organizationId,
+            userId,
+            excludeInstanceId: instanceId,
+            // Campanha de leads (massRunId) e disparo em massa de promoção a
+            // clientes (category 'promotion', vindo de /send-mass) contam como
+            // massa. Cobrança, renovação, aviso de vencimento e boas-vindas são
+            // alerta, e é o canal que o principal existe para proteger.
+            purpose: massRunId || contactCategory === 'promotion' ? 'mass' : 'alerts',
+            massRunId,
+          });
           if (fallback) {
             logger.warn(`[Job ${job.id}] Instância ${instanceName} pausada (${instanceSendingPauseReason}); alternando para ${fallback.instance_name}.`);
             instanceId = fallback.id;

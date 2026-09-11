@@ -28,6 +28,25 @@ export async function reserveInstanceDailyQuota(
 }
 
 /**
+ * Lê o consumo diário da instância **sem reservar nada**.
+ *
+ * Existe porque o contador vive só no Redis: até aqui o operador não tinha como
+ * saber quanto já foi enviado nem por que um envio parou — em 10/09/2026 um teto
+ * de 80/dia barrou lembretes e boas-vindas de forma completamente invisível na
+ * interface.
+ */
+export async function peekInstanceDailyUsage(
+  instanceId: string,
+  timeZone: string = DEFAULT_TIMEZONE,
+  date = new Date(),
+): Promise<{ used: number; resetInMs: number }> {
+  const zone = safeTimeZone(timeZone)
+  const key = `whatsapp:instance-daily:${instanceId}:${dateInTimezone(date, zone)}`
+  const raw = await redisConnection.get(key)
+  return { used: Math.max(0, Number(raw) || 0), resetInMs: millisecondsUntilNextDay(date, zone) }
+}
+
+/**
  * Devolve uma reserva de quota diária que não virou envio.
  *
  * Sem isso cada nova tentativa de entrega queima mais um slot do limite diário,

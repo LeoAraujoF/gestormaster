@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { DailyQuotaAlert } from "@/components/daily-quota-alert"
 import { PixRapidoModal } from "@/components/pix-rapido-modal"
 import { ClientFormDialog } from "@/components/client-form-dialog"
 import { RenewDialog } from "@/components/client-action-dialogs"
@@ -315,6 +316,10 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
+      {/* Antes do resumo: se o limite esgotou, nada do que vem abaixo explica por
+          que as cobranças pararam de sair. */}
+      <DailyQuotaAlert />
+
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
         <PainelHero
           eyebrow={`${weekday}, ${dayMonth}`}

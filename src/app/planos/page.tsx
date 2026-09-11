@@ -14,9 +14,9 @@ type CheckoutPlan = PlanCatalogItem & { checkout: { stripe: boolean; pix: boolea
 type PayMethod = 'pix' | 'card' | 'credit'
 
 const PLAN_FEATURES: Record<PlanId, string[]> = {
-  starter: ['Até 100 clientes', '1 WhatsApp conectado', 'Painel e financeiro básico', 'Automação básica', 'Promoções'],
-  pro: ['Até 500 clientes', '2 WhatsApps conectados', 'Cobrança Inteligente e Autoatendimento', 'Analytics e Portal do Cliente', 'Promoções'],
-  master: ['Clientes ilimitados', '3 WhatsApps conectados', 'Todos os recursos do Pro', 'Lembrado Intelligence', 'Revendas, API e Promoções'],
+  starter: ['Até 100 clientes', '1 WhatsApp conectado', '80 mensagens por dia em cada número', 'Painel e financeiro básico', 'Automação básica'],
+  pro: ['Até 500 clientes', '2 WhatsApps conectados', '300 mensagens por dia em cada número', 'Cobrança Inteligente e Autoatendimento', 'Analytics e Portal do Cliente'],
+  master: ['Clientes ilimitados', '3 WhatsApps conectados', 'Mensagens por dia sem limite', 'Todos os recursos do Pro', 'Lembrado Intelligence, Revendas e API'],
 }
 
 export default function PlanosPage() {

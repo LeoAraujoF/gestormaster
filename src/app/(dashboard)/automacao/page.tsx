@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AutomationNavigation } from "@/components/automation-navigation"
+import { DailyQuotaAlert } from "@/components/daily-quota-alert"
 import { MetricGrid, PageHeader, PageShell } from "@/components/page-layout"
 
 const externalConnectionSchema = z.object({
@@ -892,6 +893,8 @@ export default function AutomacaoPage() {
       />
 
       <AutomationNavigation active="central" />
+
+      <DailyQuotaAlert />
 
       {isStarter && (
         <div className="mb-4 rounded-lg border border-accent bg-interactive-bg px-3.5 py-3 text-[11.5px] text-interactive-fg">

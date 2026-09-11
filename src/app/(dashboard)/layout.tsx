@@ -30,7 +30,7 @@ export default async function DashboardLayout({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const membership = user ? await getOrganizationMembership(supabase, user.id) : null
-  const plan = membership ? await getOrganizationPlanContext(membership.organizationId) : { plan: 'starter' as const, active: false, expiresAt: null, limits: { clients: 100, whatsappInstances: 1 }, capabilities: [] }
+  const plan = membership ? await getOrganizationPlanContext(membership.organizationId) : { plan: 'starter' as const, active: false, expiresAt: null, limits: { clients: 100, whatsappInstances: 1, dailyMessagesPerInstance: 80 }, capabilities: [] }
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário"
   const userInitials = userName
     .trim()

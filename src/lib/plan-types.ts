@@ -14,6 +14,8 @@ export type PlanCatalogItem = {
   monthlyPriceCents: number | null
   clientLimit: number | null
   whatsappInstanceLimit: number
+  /** Mensagens por dia por número de WhatsApp. `null` = ilimitado, igual a `clientLimit`. */
+  dailyMessageLimit: number | null
   capabilities: PlanCapability[]
   isPublic: boolean
   isPurchasable: boolean
@@ -24,14 +26,14 @@ export type OrganizationPlanContext = {
   plan: PlanId
   active: boolean
   expiresAt: string | null
-  limits: { clients: number | null; whatsappInstances: number }
+  limits: { clients: number | null; whatsappInstances: number; dailyMessagesPerInstance: number | null }
   capabilities: PlanCapability[]
 }
 
-export const PLAN_RESOURCE_LIMITS: Record<PlanId, { clients: number | null; whatsappInstances: number }> = {
-  starter: { clients: 100, whatsappInstances: 1 },
-  pro: { clients: 500, whatsappInstances: 2 },
-  master: { clients: null, whatsappInstances: 3 },
+export const PLAN_RESOURCE_LIMITS: Record<PlanId, { clients: number | null; whatsappInstances: number; dailyMessagesPerInstance: number | null }> = {
+  starter: { clients: 100, whatsappInstances: 1, dailyMessagesPerInstance: 80 },
+  pro: { clients: 500, whatsappInstances: 2, dailyMessagesPerInstance: 300 },
+  master: { clients: null, whatsappInstances: 3, dailyMessagesPerInstance: null },
 }
 
 export function isWithinPlanLimit(current: number, increment: number, limit: number | null) {

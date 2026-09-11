@@ -4,9 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase/service-role'
 import type { OrganizationPlanContext, PlanCapability, PlanCatalogItem, PlanId } from '@/lib/plan-types'
 
 const FALLBACK_CATALOG: PlanCatalogItem[] = [
-  { id: 'starter', name: 'Starter', description: 'Organização essencial para operações que estão começando.', monthlyPriceCents: 2000, clientLimit: 100, whatsappInstanceLimit: 1, capabilities: ['dashboard','clients','services','finance_basic','pix_manual','promotions','settings','support','automation_basic'], isPublic: true, isPurchasable: true, sortOrder: 1 },
-  { id: 'pro', name: 'Pro', description: 'Automação, cobrança inteligente e crescimento para operações em escala.', monthlyPriceCents: 3000, clientLimit: 500, whatsappInstanceLimit: 2, capabilities: ['dashboard','clients','services','finance_basic','finance_advanced','pix_manual','pix_automatic','promotions','settings','support','automation_basic','automation','intelligent_collections','self_service','analytics','client_portal','leads','warmup','iptv_panels','integrations'], isPublic: true, isPurchasable: true, sortOrder: 2 },
-  { id: 'master', name: 'Master', description: 'Inteligência e recursos avançados para operações de alto volume.', monthlyPriceCents: 4000, clientLimit: null, whatsappInstanceLimit: 3, capabilities: ['dashboard','clients','services','finance_basic','finance_advanced','pix_manual','pix_automatic','promotions','settings','support','automation_basic','automation','intelligent_collections','self_service','analytics','client_portal','leads','warmup','iptv_panels','integrations','intelligence','resellers','developer_api'], isPublic: true, isPurchasable: true, sortOrder: 3 },
+  { id: 'starter', name: 'Starter', description: 'Organização essencial para operações que estão começando.', monthlyPriceCents: 2000, clientLimit: 100, whatsappInstanceLimit: 1, dailyMessageLimit: 80, capabilities: ['dashboard','clients','services','finance_basic','pix_manual','promotions','settings','support','automation_basic'], isPublic: true, isPurchasable: true, sortOrder: 1 },
+  { id: 'pro', name: 'Pro', description: 'Automação, cobrança inteligente e crescimento para operações em escala.', monthlyPriceCents: 3000, clientLimit: 500, whatsappInstanceLimit: 2, dailyMessageLimit: 300, capabilities: ['dashboard','clients','services','finance_basic','finance_advanced','pix_manual','pix_automatic','promotions','settings','support','automation_basic','automation','intelligent_collections','self_service','analytics','client_portal','leads','warmup','iptv_panels','integrations'], isPublic: true, isPurchasable: true, sortOrder: 2 },
+  { id: 'master', name: 'Master', description: 'Inteligência e recursos avançados para operações de alto volume.', monthlyPriceCents: 4000, clientLimit: null, whatsappInstanceLimit: 3, dailyMessageLimit: null, capabilities: ['dashboard','clients','services','finance_basic','finance_advanced','pix_manual','pix_automatic','promotions','settings','support','automation_basic','automation','intelligent_collections','self_service','analytics','client_portal','leads','warmup','iptv_panels','integrations','intelligence','resellers','developer_api'], isPublic: true, isPurchasable: true, sortOrder: 3 },
 ]
 
 function mapRow(row: Record<string, unknown>): PlanCatalogItem {
@@ -17,6 +17,11 @@ function mapRow(row: Record<string, unknown>): PlanCatalogItem {
     monthlyPriceCents: row.monthly_price_cents == null ? null : Number(row.monthly_price_cents),
     clientLimit: row.client_limit == null ? null : Number(row.client_limit),
     whatsappInstanceLimit: Number(row.whatsapp_instance_limit),
+    // NULL no banco é ilimitado. `undefined` (coluna ainda não migrada) cai no
+    // teto do Starter, que é o comportamento conservador.
+    dailyMessageLimit: row.daily_message_limit === null
+      ? null
+      : row.daily_message_limit === undefined ? 80 : Number(row.daily_message_limit),
     capabilities: (row.capabilities || []) as PlanCapability[],
     isPublic: Boolean(row.is_public),
     isPurchasable: Boolean(row.is_purchasable),
@@ -63,7 +68,11 @@ export async function getOrganizationPlanContext(organizationId: string): Promis
     plan: plan.id,
     active,
     expiresAt: entitlement?.expires_at || null,
-    limits: { clients: plan.clientLimit, whatsappInstances: plan.whatsappInstanceLimit },
+    limits: {
+      clients: plan.clientLimit,
+      whatsappInstances: plan.whatsappInstanceLimit,
+      dailyMessagesPerInstance: plan.dailyMessageLimit,
+    },
     capabilities: active ? plan.capabilities : [],
   }
 }

@@ -17,7 +17,7 @@ import { normalizeSendMessageJob } from '../lib/message-job-contract';
 import { normalizeWhatsAppNumber } from '../lib/phone';
 import { MESSAGE_PRIORITY } from '../lib/message-priority';
 import { millisecondsUntilSendWindow } from '../lib/contact-policy';
-import { resolveOrganizationSendPolicy } from '../lib/organization-send-policy';
+import { resolveOrganizationDailyMessageLimit, resolveOrganizationSendPolicy } from '../lib/organization-send-policy';
 import { releaseInstanceDailyQuota, reserveInstanceDailyQuota, reserveInstanceSendSlot, sleep } from '../lib/whatsapp-safety';
 import { pickUsableInstance } from '../lib/instance-routing';
 import { isRetryableWhatsAppError, shouldPauseWhatsAppInstance, whatsappErrorCode } from '../providers/whatsapp/provider-error';
@@ -729,6 +729,14 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
     // 8. Pacing da instância: quota diária + intervalo mínimo entre mensagens.
     // Ambos são reservados antes do envio e viajam no job, para que o
     // reagendamento não reserve duas vezes.
+    // O teto diário é do plano, não da instância: Starter e Pro têm número,
+    // Master é ilimitado (`null`). A coluna evolution_instances.daily_message_limit
+    // não manda mais no teto — ela nunca teve controle na interface e o DEFAULT 80
+    // virava um limite invisível. O ritmo do número continua protegido pelo
+    // intervalo mínimo e pela pausa por rajada, que não dependem deste teto.
+    const planDailyLimit = await resolveOrganizationDailyMessageLimit(organizationId);
+    if (planDailyLimit !== null) instanceDailyMessageLimit = planDailyLimit;
+
     let reservedQuotaKey: string | null = null;
     if (instanceId) {
       const paced = currentAttemptState(job);
@@ -737,15 +745,20 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         const remainingMs = paced.readyAt - Date.now();
         if (remainingMs > 0) await sleep(Math.min(remainingMs, MAX_INLINE_WAIT_MS));
       } else {
-        const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit, sendPolicy.timeZone);
-        if (!quota.allowed) {
-          const delay = quota.resetInMs + Math.floor(Math.random() * 60000);
-          logger.warn(`[Job ${job.id}] Limite diário da instância atingido; reagendando em ${Math.ceil(delay / 60000)} min.`);
-          await updateAlertStatus('pending', { error_message: 'INSTANCE_DAILY_LIMIT_REACHED' });
-          await releaseCoordinationHold('INSTANCE_DAILY_LIMIT_REACHED');
-          await deferJob(job, delay, 'INSTANCE_DAILY_LIMIT_REACHED', { quotaKey: null, slotInstanceId: null });
+        // Plano ilimitado (Master) não reserva cota. O que vem depois — intervalo
+        // mínimo e pausa por rajada — continua valendo, e é o que de fato protege
+        // o número de bloqueio. Por isso o gate é só aqui, e não no bloco todo.
+        if (planDailyLimit !== null) {
+          const quota = await reserveInstanceDailyQuota(instanceId, instanceDailyMessageLimit, sendPolicy.timeZone);
+          if (!quota.allowed) {
+            const delay = quota.resetInMs + Math.floor(Math.random() * 60000);
+            logger.warn(`[Job ${job.id}] Limite diário do plano atingido (${instanceDailyMessageLimit}/dia); reagendando em ${Math.ceil(delay / 60000)} min.`);
+            await updateAlertStatus('pending', { error_message: 'INSTANCE_DAILY_LIMIT_REACHED' });
+            await releaseCoordinationHold('INSTANCE_DAILY_LIMIT_REACHED');
+            await deferJob(job, delay, 'INSTANCE_DAILY_LIMIT_REACHED', { quotaKey: null, slotInstanceId: null });
+          }
+          reservedQuotaKey = quota.key;
         }
-        reservedQuotaKey = quota.key;
 
         const intervalRange = Math.max(0, instanceMessageMaxIntervalMs - instanceMessageMinIntervalMs);
         const interval = instanceMessageMinIntervalMs + Math.floor(Math.random() * (intervalRange + 1));
@@ -755,7 +768,8 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
         });
         if (waitMs === null) {
           logger.warn(`[Job ${job.id}] Fila da instância ${targetInstanceName} saturada; reagendando sem reservar slot.`);
-          await releaseInstanceDailyQuota(reservedQuotaKey);
+          // Pode não haver reserva: plano ilimitado não reserva cota.
+          if (reservedQuotaKey) await releaseInstanceDailyQuota(reservedQuotaKey);
           reservedQuotaKey = null;
           await updateAlertStatus('pending', { error_message: 'INSTANCE_SEND_SLOT_SATURATED' });
           await releaseCoordinationHold('INSTANCE_SEND_SLOT_SATURATED');

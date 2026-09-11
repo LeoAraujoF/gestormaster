@@ -636,6 +636,26 @@ const worker = new Worker(MESSAGE_QUEUE_NAME, async (job: Job) => {
 
     // 6. Circuit breaker por provedor: uma Evolution externa de um tenant fora do
     // ar não pode interromper os envios de quem usa outro servidor.
+    // 6.4 Cancelamento pelo operador.
+    //
+    // Vale para qualquer origem — régua, cobrança, boas-vindas, campanha, reenvio
+    // manual — porque a checagem é na própria linha do histórico, e não no
+    // mecanismo que a criou. Antes de 11/09/2026 cancelar exigia pausar a régua
+    // inteira, parar a campanha ou remover o job no Bull Board; nenhum desses era
+    // "cancelar esta mensagem", e nada disso estava visível na interface.
+    if (alertHistoryId) {
+      const { data: historico } = await supabaseAdmin
+        .from('alert_history')
+        .select('status')
+        .eq('id', alertHistoryId)
+        .maybeSingle();
+      if (historico?.status === 'cancelled') {
+        logger.info(`[Job ${job.id}] Mensagem cancelada pelo operador; não enviando.`);
+        await releaseCoordinationHold('CANCELLED_BY_OPERATOR');
+        return;
+      }
+    }
+
     // 6.5 Freio da campanha em massa.
     //
     // Até 10/09/2026 não havia como parar uma campanha já enfileirada: o botão
